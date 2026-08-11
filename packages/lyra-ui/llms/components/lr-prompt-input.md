@@ -25,6 +25,11 @@ request. `label` names the prompt section; it is not generic field chrome.
 **Properties:** `value: string = ''`; `status: 'idle' | 'sending' | 'streaming' = 'idle'`;
 `placeholder: string = ''`; `disabled: boolean = false` (reflected);
 `submitOnEnter: boolean = true` (attribute `submit-on-enter`, string-aware true-default converter);
+`spellcheck: boolean = true` (string-aware true-default converter), `autocapitalize: string = ''`,
+`autoCorrect: string = ''` (attribute `autocorrect`), `wrap: 'hard' | 'soft' | 'off' = 'soft'`,
+`autocomplete: string = ''`, `inputMode: string = ''` (attribute `inputmode`), and
+`enterKeyHint: string = ''` (attribute `enterkeyhint`) forward unchanged to the composed native
+textarea; empty string hints preserve the browser default.
 `attachments: PromptInputAttachment[] = []`, `attachmentCapabilities: AttachmentCapability[] =
 ['files', 'image', 'audio']`, `mentionItems: PromptSuggestion[] = []`, `commandItems:
 PromptSuggestion[] = []`, `modelCatalog?: LyraModelCatalog`, `voiceCatalog?: LyraVoiceCatalog`,
@@ -38,7 +43,13 @@ mimeType?, uri?, version? }` with `file?`, `size?`, attachment-chip `status?`, a
 `progress?`.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the composed chat input;
-`select()` selects its native text surface. `click()` is inert while disabled.
+`select()` selects its native text surface. `click()` is inert while disabled. `input:
+HTMLTextAreaElement | null`, `selectionStart: number | null`, `selectionEnd: number | null`, and
+`selectionDirection: ChatComposerSelectionDirection | null` mirror the composed textarea.
+`setSelectionRange(start, end, direction?)` and overloaded
+`setRangeText(replacement[, start, end, selectMode])` use the same native range-editing contract;
+`setRangeText()` synchronizes outer `value` without emitting `lr-input`. Selection and range calls
+are no-ops before the textarea has rendered.
 
 **Events:** `lr-input` (`{ value }`), `lr-submit` (`{ value }`), `lr-stop`,
 `lr-mention-select` (`{ id, label, trigger }`), `lr-attachments-add` (`{ files, capability }`),

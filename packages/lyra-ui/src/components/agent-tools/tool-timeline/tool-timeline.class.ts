@@ -10,7 +10,7 @@ import { styles } from './tool-timeline.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_retry, LYRA_DEFAULT_toolTimelineDetailsFor } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_approve, LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_deny, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_retry, LYRA_DEFAULT_toolTimelineDetailsFor } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -187,8 +187,10 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    approve: LYRA_DEFAULT_approve,
     confirmApproved: LYRA_DEFAULT_confirmApproved,
     confirmDenied: LYRA_DEFAULT_confirmDenied,
+    deny: LYRA_DEFAULT_deny,
     envListValueHidden: LYRA_DEFAULT_envListValueHidden,
     retry: LYRA_DEFAULT_retry,
     toolTimelineDetailsFor: LYRA_DEFAULT_toolTimelineDetailsFor,

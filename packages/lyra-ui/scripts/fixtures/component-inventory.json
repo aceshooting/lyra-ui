@@ -8012,6 +8012,12 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-audio-visualizer-ambient-duration",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-duration-ambient)"
+          },
+          {
             "name": "--lr-audio-visualizer-color",
             "deprecated": null,
             "hasDefault": true,
@@ -9869,7 +9875,7 @@
           {
             "name": "type",
             "property": "type",
-            "type": "LyraChartType",
+            "type": "'bar'",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -10170,7 +10176,7 @@
           {
             "name": "type",
             "attribute": "type",
-            "type": "LyraChartType",
+            "type": "'bar'",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -10542,9 +10548,7 @@
       "rootExclusion": "optional-peer-family",
       "optionalPeers": [
         "@sgratzl/chartjs-chart-boxplot",
-        "chart.js",
-        "chartjs-plugin-datalabels",
-        "chartjs-plugin-zoom"
+        "chart.js"
       ],
       "maturity": {
         "status": "stable",
@@ -11928,7 +11932,7 @@
           {
             "name": "type",
             "property": "type",
-            "type": "LyraChartType",
+            "type": "'bubble'",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -12229,7 +12233,7 @@
           {
             "name": "type",
             "attribute": "type",
-            "type": "LyraChartType",
+            "type": "'bubble'",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -22343,6 +22347,18 @@
             "default": "var(--lr-color-brand)"
           },
           {
+            "name": "--lr-code-block-font",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-mono)"
+          },
+          {
+            "name": "--lr-code-block-max-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "none"
+          },
+          {
             "name": "--lr-code-block-tab-size",
             "deprecated": null,
             "hasDefault": true,
@@ -27099,6 +27115,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-compare-panel-selected-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
           }
         ],
         "cssStates": [],
@@ -37830,7 +37852,7 @@
           {
             "name": "type",
             "property": "type",
-            "type": "LyraChartType",
+            "type": "'doughnut'",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -38131,7 +38153,7 @@
           {
             "name": "type",
             "attribute": "type",
-            "type": "LyraChartType",
+            "type": "'doughnut'",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -43058,6 +43080,36 @@
             "default": ""
           },
           {
+            "name": "autocapitalize",
+            "property": "autocapitalize",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autocomplete",
+            "property": "autocomplete",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autocorrect",
+            "property": "autoCorrect",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "disabled",
             "property": "disabled",
             "type": "boolean",
@@ -43066,6 +43118,26 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "enterkeyhint",
+            "property": "enterKeyHint",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "inputmode",
+            "property": "inputMode",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "label",
@@ -43096,12 +43168,52 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "spellcheck",
+            "property": "spellcheck",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
           }
         ],
         "properties": [
           {
             "name": "accept",
             "attribute": "accept",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autocapitalize",
+            "attribute": "autocapitalize",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autocomplete",
+            "attribute": "autocomplete",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autoCorrect",
+            "attribute": "autocorrect",
             "type": "string",
             "readonly": false,
             "reflects": false,
@@ -43118,6 +43230,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "enterKeyHint",
+            "attribute": "enterkeyhint",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "examples",
@@ -43138,6 +43260,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "['csv', 'json']"
+          },
+          {
+            "name": "inputMode",
+            "attribute": "inputmode",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "label",
@@ -43168,6 +43300,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "spellcheck",
+            "attribute": "spellcheck",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
           }
         ],
         "slots": [],
@@ -60145,7 +60287,7 @@
           {
             "name": "type",
             "property": "type",
-            "type": "LyraChartType",
+            "type": "'line'",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -60446,7 +60588,7 @@
           {
             "name": "type",
             "attribute": "type",
-            "type": "LyraChartType",
+            "type": "'line'",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -66431,7 +66573,38 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-message-parts-audio-transcript-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-message-parts-error-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger-quiet)"
+          },
+          {
+            "name": "--lr-message-parts-error-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-message-parts-error-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-message-parts-streaming-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "form": {
@@ -67288,6 +67461,18 @@
             "default": "var(--lr-form-control-font-size)"
           },
           {
+            "name": "--lr-model-select-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-model-select-open-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
             "name": "--lr-model-select-option-active-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -67316,6 +67501,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-model-select-option-synthetic-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-model-select-option-synthetic-border-style",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "dashed"
+          },
+          {
+            "name": "--lr-model-select-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
           },
           {
             "name": "--lr-model-select-trigger-min-height",
@@ -77375,7 +77578,7 @@
           {
             "name": "type",
             "property": "type",
-            "type": "LyraChartType",
+            "type": "'pie'",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -77676,7 +77879,7 @@
           {
             "name": "type",
             "attribute": "type",
-            "type": "LyraChartType",
+            "type": "'pie'",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -78651,7 +78854,7 @@
           {
             "name": "type",
             "property": "type",
-            "type": "LyraChartType",
+            "type": "'polarArea'",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -78952,7 +79155,7 @@
           {
             "name": "type",
             "attribute": "type",
-            "type": "LyraChartType",
+            "type": "'polarArea'",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -81748,6 +81951,36 @@
             "default": null
           },
           {
+            "name": "autocapitalize",
+            "property": "autocapitalize",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autocomplete",
+            "property": "autocomplete",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autocorrect",
+            "property": "autoCorrect",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "disabled",
             "property": "disabled",
             "type": "boolean",
@@ -81756,6 +81989,26 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "enterkeyhint",
+            "property": "enterKeyHint",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "inputmode",
+            "property": "inputMode",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "label",
@@ -81798,6 +82051,16 @@
             "default": ""
           },
           {
+            "name": "spellcheck",
+            "property": "spellcheck",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
             "name": "status",
             "property": "status",
             "type": "ChatComposerStatus",
@@ -81836,6 +82099,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "wrap",
+            "property": "wrap",
+            "type": "ChatComposerWrap",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "soft"
           }
         ],
         "properties": [
@@ -81850,6 +82123,36 @@
             "default": null
           },
           {
+            "name": "autocapitalize",
+            "attribute": "autocapitalize",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autocomplete",
+            "attribute": "autocomplete",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autoCorrect",
+            "attribute": "autocorrect",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "disabled",
             "attribute": "disabled",
             "type": "boolean",
@@ -81858,6 +82161,35 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "enterKeyHint",
+            "attribute": "enterkeyhint",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "input",
+            "attribute": null,
+            "type": "HTMLTextAreaElement | null",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "inputMode",
+            "attribute": "inputmode",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "label",
@@ -81900,6 +82232,16 @@
             "default": ""
           },
           {
+            "name": "spellcheck",
+            "attribute": "spellcheck",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
             "name": "status",
             "attribute": "status",
             "type": "ChatComposerStatus",
@@ -81938,6 +82280,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "wrap",
+            "attribute": "wrap",
+            "type": "ChatComposerWrap",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "soft"
           }
         ],
         "slots": [
@@ -82141,6 +82493,108 @@
                 "returnType": "void"
               }
             ]
+          },
+          {
+            "name": "setRangeText",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "replacement",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "start",
+                    "type": "number",
+                    "optional": true,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "end",
+                    "type": "number",
+                    "optional": true,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "selectMode",
+                    "type": "SelectionMode",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              },
+              {
+                "parameters": [
+                  {
+                    "name": "replacement",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "start",
+                    "type": "number",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "end",
+                    "type": "number",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "selectMode",
+                    "type": "SelectionMode",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              },
+              {
+                "parameters": [
+                  {
+                    "name": "replacement",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "setSelectionRange",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "start",
+                    "type": "number | null",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "end",
+                    "type": "number | null",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "direction",
+                    "type": "ChatComposerSelectionDirection",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
           }
         ],
         "form": {
@@ -82157,7 +82611,9 @@
             "blur",
             "click",
             "focus",
-            "select"
+            "select",
+            "setRangeText",
+            "setSelectionRange"
           ]
         }
       }
@@ -82404,6 +82860,26 @@
       "surface": {
         "attributes": [
           {
+            "name": "autocapitalize",
+            "property": "autocapitalize",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autocorrect",
+            "property": "autoCorrect",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "disabled",
             "property": "disabled",
             "type": "boolean",
@@ -82434,6 +82910,16 @@
             "default": ""
           },
           {
+            "name": "reorderable",
+            "property": "reorderable",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "running",
             "property": "running",
             "type": "boolean",
@@ -82452,9 +82938,49 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "spellcheck",
+            "property": "spellcheck",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
+            "name": "wrap",
+            "property": "wrap",
+            "type": "PromptStudioWrap",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "soft"
           }
         ],
         "properties": [
+          {
+            "name": "autocapitalize",
+            "attribute": "autocapitalize",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autoCorrect",
+            "attribute": "autocorrect",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
           {
             "name": "disabled",
             "attribute": "disabled",
@@ -82486,6 +83012,16 @@
             "default": ""
           },
           {
+            "name": "reorderable",
+            "attribute": "reorderable",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "running",
             "attribute": "running",
             "type": "boolean",
@@ -82504,6 +83040,26 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "spellcheck",
+            "attribute": "spellcheck",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
+            "name": "wrap",
+            "attribute": "wrap",
+            "type": "PromptStudioWrap",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "soft"
           }
         ],
         "slots": [],
@@ -82525,6 +83081,12 @@
             "name": "lr-change",
             "type": "CustomEvent<PromptStudioState>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-message-reorder",
+            "type": "CustomEvent<PromptStudioMessageReorderDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -82564,6 +83126,10 @@
             "deprecated": null
           },
           {
+            "name": "message-actions",
+            "deprecated": null
+          },
+          {
             "name": "message-content",
             "deprecated": null
           },
@@ -82573,6 +83139,14 @@
           },
           {
             "name": "messages",
+            "deprecated": null
+          },
+          {
+            "name": "move-message-down",
+            "deprecated": null
+          },
+          {
+            "name": "move-message-up",
             "deprecated": null
           },
           {
@@ -82641,7 +83215,7 @@
             "name": "--lr-prompt-studio-version-selected-hover-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-brand-quiet)"
+            "default": "color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
           }
         ],
         "cssStates": [],
@@ -84050,7 +84624,7 @@
           {
             "name": "type",
             "property": "type",
-            "type": "LyraChartType",
+            "type": "'radar'",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -84351,7 +84925,7 @@
           {
             "name": "type",
             "attribute": "type",
-            "type": "LyraChartType",
+            "type": "'radar'",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -92133,7 +92707,7 @@
           {
             "name": "type",
             "property": "type",
-            "type": "LyraChartType",
+            "type": "'scatter'",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -92434,7 +93008,7 @@
           {
             "name": "type",
             "attribute": "type",
-            "type": "LyraChartType",
+            "type": "'scatter'",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -99563,7 +100137,7 @@
           },
           {
             "name": "lr-frame-select",
-            "type": "CustomEvent<{ file?: string; line?: number; column?: number; raw: string }>",
+            "type": "CustomEvent<{ file: string; line: number; column?: number; raw: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -104968,6 +105542,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "reorderable",
+            "property": "reorderable",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "properties": [
@@ -105040,6 +105624,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "reorderable",
+            "attribute": "reorderable",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "slots": [
@@ -105049,6 +105643,12 @@
           }
         ],
         "events": [
+          {
+            "name": "lr-reorder",
+            "type": "CustomEvent<{ id: string; parentId: string | null; fromIndex: number; toIndex: number }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
           {
             "name": "lr-toggle",
             "type": "CustomEvent<TaskListToggleDetail>",
@@ -107186,6 +107786,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "compact",
+            "property": "compact",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "duration-ms",
             "property": "durationMs",
             "type": "number | undefined",
@@ -107203,6 +107813,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "frame",
+            "property": "frame",
+            "type": "LyraFrame",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
           },
           {
             "name": "label",
@@ -107237,6 +107857,16 @@
         ],
         "properties": [
           {
+            "name": "compact",
+            "attribute": "compact",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "durationMs",
             "attribute": "duration-ms",
             "type": "number | undefined",
@@ -107254,6 +107884,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "frame",
+            "attribute": "frame",
+            "type": "LyraFrame",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
           },
           {
             "name": "label",
@@ -107327,6 +107967,24 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-thinking-panel-compact-body-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-thinking-panel-compact-header-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-thinking-panel-compact-header-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs) var(--lr-space-s)"
+          },
           {
             "name": "--lr-thinking-panel-max-block-size",
             "deprecated": null,
@@ -113178,6 +113836,18 @@
             "default": "var(--lr-color-overlay)"
           },
           {
+            "name": "--lr-tool-result-dialog-pending-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
+          },
+          {
+            "name": "--lr-tool-result-dialog-pending-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
             "name": "--lr-tool-result-dialog-running-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -113783,7 +114453,7 @@
           {
             "name": "lr-change",
             "type": "CustomEvent<ToolSelectionChangeDetail>",
-            "cancelable": "never",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -114033,6 +114703,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "pendingApproval",
+            "attribute": null,
+            "type": "ToolTimelineApprovalPending",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "slots": [],
@@ -114168,6 +114847,12 @@
             "default": "var(--lr-color-warning)"
           },
           {
+            "name": "--lr-tool-timeline-pending-marker-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
             "name": "--lr-tool-timeline-running-marker-color",
             "deprecated": null,
             "hasDefault": true,
@@ -114181,7 +114866,26 @@
           }
         ],
         "cssStates": [],
-        "methods": [],
+        "methods": [
+          {
+            "name": "finalizePendingApproval",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "revertPendingApproval",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          }
+        ],
         "form": {
           "associated": false,
           "properties": [],
@@ -119046,6 +119750,15 @@
             "default": ""
           },
           {
+            "name": "input",
+            "attribute": null,
+            "type": "HTMLInputElement | null",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "inputMode",
             "attribute": "inputmode",
             "type": "string",
@@ -119520,6 +120233,15 @@
             ]
           },
           {
+            "name": "select",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "setCustomValidity",
             "overloads": [
               {
@@ -119528,6 +120250,108 @@
                     "name": "message",
                     "type": "string",
                     "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "setRangeText",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "replacement",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "start",
+                    "type": "number",
+                    "optional": true,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "end",
+                    "type": "number",
+                    "optional": true,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "selectMode",
+                    "type": "SelectionMode",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              },
+              {
+                "parameters": [
+                  {
+                    "name": "replacement",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "start",
+                    "type": "number",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "end",
+                    "type": "number",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "selectMode",
+                    "type": "SelectionMode",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              },
+              {
+                "parameters": [
+                  {
+                    "name": "replacement",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "setSelectionRange",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "start",
+                    "type": "number | null",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "end",
+                    "type": "number | null",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "direction",
+                    "type": "LyraVoicePickerSelectionDirection",
+                    "optional": true,
                     "hasDefault": false
                   }
                 ],
@@ -119567,7 +120391,10 @@
           "delegatedMethods": [
             "blur",
             "click",
-            "focus"
+            "focus",
+            "select",
+            "setRangeText",
+            "setSelectionRange"
           ]
         }
       }
@@ -174843,7 +175670,7 @@
             "memberKind": "attribute",
             "member": "type",
             "upstream": "ChartType",
-            "target": "LyraChartType"
+            "target": "'bar'"
           }
         ],
         "methodParameterTypeEquivalences": [],
@@ -175060,7 +175887,7 @@
             "memberKind": "attribute",
             "member": "type",
             "upstream": "ChartType",
-            "target": "LyraChartType"
+            "target": "'bubble'"
           }
         ],
         "methodParameterTypeEquivalences": [],
@@ -177066,7 +177893,7 @@
             "memberKind": "attribute",
             "member": "type",
             "upstream": "ChartType",
-            "target": "LyraChartType"
+            "target": "'doughnut'"
           }
         ],
         "methodParameterTypeEquivalences": [],
@@ -178176,7 +179003,7 @@
             "memberKind": "attribute",
             "member": "type",
             "upstream": "ChartType",
-            "target": "LyraChartType"
+            "target": "'line'"
           }
         ],
         "methodParameterTypeEquivalences": [],
@@ -178799,7 +179626,7 @@
             "memberKind": "attribute",
             "member": "type",
             "upstream": "ChartType",
-            "target": "LyraChartType"
+            "target": "'pie'"
           }
         ],
         "methodParameterTypeEquivalences": [],
@@ -178888,7 +179715,7 @@
             "memberKind": "attribute",
             "member": "type",
             "upstream": "ChartType",
-            "target": "LyraChartType"
+            "target": "'polarArea'"
           }
         ],
         "methodParameterTypeEquivalences": [],
@@ -179357,7 +180184,7 @@
             "memberKind": "attribute",
             "member": "type",
             "upstream": "ChartType",
-            "target": "LyraChartType"
+            "target": "'radar'"
           }
         ],
         "methodParameterTypeEquivalences": [],
@@ -179931,7 +180758,7 @@
             "memberKind": "attribute",
             "member": "type",
             "upstream": "ChartType",
-            "target": "LyraChartType"
+            "target": "'scatter'"
           }
         ],
         "methodParameterTypeEquivalences": [],

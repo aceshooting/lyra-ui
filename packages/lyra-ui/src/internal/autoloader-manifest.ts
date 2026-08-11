@@ -102,7 +102,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/charts/chart/bar-chart.class.js').then((module) => module.LyraBarChart),
   },
   'lr-box-plot': {
-    optionalPeers: ['@sgratzl/chartjs-chart-boxplot', 'chart.js', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
+    optionalPeers: ['@sgratzl/chartjs-chart-boxplot', 'chart.js'],
     load: () => import('../components/charts/chart/box-plot.class.js').then((module) => module.LyraBoxPlot),
   },
   'lr-branch-picker': {

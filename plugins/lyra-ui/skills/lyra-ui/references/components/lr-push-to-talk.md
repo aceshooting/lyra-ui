@@ -21,6 +21,9 @@ microphone — no SDK, no LiveKit/ElevenLabs import, native browser APIs only. `
 default) is a press-and-hold gesture; `mode="toggle"` is click-to-start/click-to-stop with
 `aria-pressed`. Escape cancels the in-progress take in either mode.
 
+While recording, the optional elapsed timer uses the effective locale's decimal digits, suppresses
+grouping, and pads its seconds field to two locale-aware digits.
+
 **Properties:** `mode: 'hold' | 'toggle' = 'hold'` (reflected), `timesliceMs: number = 0` (attribute
 `timeslice-ms`) — `> 0` passes a timeslice to `MediaRecorder.start()` and emits `lr-record-chunk` per
 slice, `mimeType: string = ''` (attribute `mime-type`) — a `MediaRecorder` MIME type, `deviceId:
@@ -52,7 +55,7 @@ Blob }`, only when `timeslice-ms > 0`), `lr-record-stop` (`detail: { blob: Blob;
 (`detail: { state: 'idle' | 'requesting' | 'denied' | 'recording' | 'error' }`).
 
 **CSS parts:** `trigger` (the capture button), `icon`, `pulse` (rendered only while recording),
-`timer` (the `M:SS` elapsed-time readout, only while recording and `show-timer`), and `status`
+`timer` (the localized `M:SS` elapsed-time readout, only while recording and `show-timer`), and `status`
 (visible status text for the `requesting`/`denied`/`error`/unsupported states).
 
 **Themeable custom properties:** `--lr-push-to-talk-size` (default `var(--lr-size-3rem)`) — the

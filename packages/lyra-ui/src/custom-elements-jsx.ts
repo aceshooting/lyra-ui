@@ -884,6 +884,7 @@ export type LyraAudioVisualizerReactProps = LyraReactElementProps<
   | 'variant',
   {},
 never,
+  | '--lr-audio-visualizer-ambient-duration'
   | '--lr-audio-visualizer-color'
   | '--lr-audio-visualizer-height'
   | '--lr-audio-visualizer-quiet-color',
@@ -2034,6 +2035,8 @@ export type LyraCodeBlockCoreReactProps = LyraReactElementProps<
   | 'lr-text-select'
   | 'lr-toggle',
   | '--lr-code-block-active-line-outline-color'
+  | '--lr-code-block-font'
+  | '--lr-code-block-max-height'
   | '--lr-code-block-tab-size',
   {
     'active-highlight-id'?: LyraCodeBlockCore['activeHighlightId'];
@@ -2365,7 +2368,8 @@ export type LyraComparePanelReactProps = LyraReactElementProps<
   | '--lr-compare-panel-max-height'
   | '--lr-compare-panel-selected-background'
   | '--lr-compare-panel-selected-border-color'
-  | '--lr-compare-panel-selected-color',
+  | '--lr-compare-panel-selected-color'
+  | '--lr-compare-panel-selected-font-weight',
   {
     'hide-both-bad'?: LyraComparePanel['hideBothBad'];
     'hide-tie'?: LyraComparePanel['hideTie'];
@@ -3622,12 +3626,18 @@ export type LyraEnvListReactProps = LyraReactElementProps<
 export type LyraEvalDatasetReactProps = LyraReactElementProps<
   LyraEvalDataset,
   | 'accept'
+  | 'autocapitalize'
+  | 'autocomplete'
+  | 'autoCorrect'
   | 'disabled'
+  | 'enterKeyHint'
   | 'examples'
   | 'exportFormats'
+  | 'inputMode'
   | 'label'
   | 'locale'
   | 'searchable'
+  | 'spellcheck'
   | 'strings',
   LyraEvalDatasetEventMap,
   | 'blur'
@@ -3638,7 +3648,11 @@ export type LyraEvalDatasetReactProps = LyraReactElementProps<
   | 'lr-export-request'
   | 'lr-import-request',
 never,
-  {}
+  {
+    'autocorrect'?: LyraEvalDataset['autoCorrect'];
+    'enterkeyhint'?: LyraEvalDataset['enterKeyHint'];
+    'inputmode'?: LyraEvalDataset['inputMode'];
+  }
 >;
 
 export type LyraEvalResultReactProps = LyraReactElementProps<
@@ -5549,7 +5563,11 @@ export type LyraMessagePartsReactProps = LyraReactElementProps<
   | 'lr-tool-chip-select'
   | 'lr-widget-action'
   | 'lr-widget-state-change',
-never,
+  | '--lr-message-parts-audio-transcript-color'
+  | '--lr-message-parts-error-background'
+  | '--lr-message-parts-error-border-color'
+  | '--lr-message-parts-error-color'
+  | '--lr-message-parts-streaming-color',
   {
     'aria-label'?: LyraMessageParts['accessibleLabel'];
     'render-markdown'?: LyraMessageParts['renderMarkdown'];
@@ -5617,11 +5635,16 @@ export type LyraModelSelectReactProps = LyraReactElementProps<
   | '--lr-form-control-required-offset'
   | '--lr-model-select-expand-size'
   | '--lr-model-select-font-size'
+  | '--lr-model-select-gap'
+  | '--lr-model-select-open-border-color'
   | '--lr-model-select-option-active-bg'
   | '--lr-model-select-option-selected-bg'
   | '--lr-model-select-option-selected-border'
   | '--lr-model-select-option-selected-color'
   | '--lr-model-select-option-selected-font-weight'
+  | '--lr-model-select-option-synthetic-border-color'
+  | '--lr-model-select-option-synthetic-border-style'
+  | '--lr-model-select-radius'
   | '--lr-model-select-trigger-min-height'
   | '--lr-model-select-trigger-padding',
   {
@@ -6695,8 +6718,13 @@ export type LyraPromptInputReactProps = LyraReactElementProps<
   | 'accessibleLabel'
   | 'attachmentCapabilities'
   | 'attachments'
+  | 'autocapitalize'
+  | 'autocomplete'
+  | 'autoCorrect'
   | 'commandItems'
   | 'disabled'
+  | 'enterKeyHint'
+  | 'inputMode'
   | 'label'
   | 'locale'
   | 'mentionItems'
@@ -6705,13 +6733,18 @@ export type LyraPromptInputReactProps = LyraReactElementProps<
   | 'placeholder'
   | 'queue'
   | 'selectedSourceIds'
+  | 'selectionDirection'
+  | 'selectionEnd'
+  | 'selectionStart'
   | 'sources'
+  | 'spellcheck'
   | 'status'
   | 'strings'
   | 'submitOnEnter'
   | 'value'
   | 'voice'
-  | 'voiceCatalog',
+  | 'voiceCatalog'
+  | 'wrap',
   LyraPromptInputEventMap,
   | 'lr-attachment-preview'
   | 'lr-attachment-remove'
@@ -6731,6 +6764,9 @@ export type LyraPromptInputReactProps = LyraReactElementProps<
 never,
   {
     'aria-label'?: LyraPromptInput['accessibleLabel'];
+    'autocorrect'?: LyraPromptInput['autoCorrect'];
+    'enterkeyhint'?: LyraPromptInput['enterKeyHint'];
+    'inputmode'?: LyraPromptInput['inputMode'];
     'submit-on-enter'?: LyraPromptInput['submitOnEnter'];
   }
 >;
@@ -6755,19 +6791,25 @@ never,
 
 export type LyraPromptStudioReactProps = LyraReactElementProps<
   LyraPromptStudio,
+  | 'autocapitalize'
+  | 'autoCorrect'
   | 'disabled'
   | 'label'
   | 'locale'
   | 'messages'
+  | 'reorderable'
   | 'running'
   | 'selectedVersionId'
+  | 'spellcheck'
   | 'strings'
   | 'variables'
-  | 'versions',
+  | 'versions'
+  | 'wrap',
   LyraPromptStudioEventMap,
   | 'blur'
   | 'focus'
   | 'lr-change'
+  | 'lr-message-reorder'
   | 'lr-run'
   | 'lr-save'
   | 'lr-version-select',
@@ -6777,6 +6819,7 @@ export type LyraPromptStudioReactProps = LyraReactElementProps<
   | '--lr-prompt-studio-version-selected-color'
   | '--lr-prompt-studio-version-selected-hover-bg',
   {
+    'autocorrect'?: LyraPromptStudio['autoCorrect'];
     'selected-version-id'?: LyraPromptStudio['selectedVersionId'];
   }
 >;
@@ -8586,8 +8629,10 @@ export type LyraTaskListReactProps = LyraReactElementProps<
   | 'items'
   | 'label'
   | 'locale'
+  | 'reorderable'
   | 'strings',
   LyraTaskListEventMap,
+  | 'lr-reorder'
   | 'lr-toggle',
   | '--lr-task-list-compact-body-padding'
   | '--lr-task-list-compact-gap'
@@ -8741,14 +8786,19 @@ export type LyraTextareaReactProps = LyraReactElementProps<
 
 export type LyraThinkingPanelReactProps = LyraReactElementProps<
   LyraThinkingPanel,
+  | 'compact'
   | 'durationMs'
   | 'expanded'
+  | 'frame'
   | 'label'
   | 'locale'
   | 'mode'
   | 'strings',
   LyraThinkingPanelEventMap,
   | 'lr-toggle',
+  | '--lr-thinking-panel-compact-body-padding'
+  | '--lr-thinking-panel-compact-header-gap'
+  | '--lr-thinking-panel-compact-header-padding'
   | '--lr-thinking-panel-max-block-size'
   | '--lr-thinking-panel-pending-color',
   {
@@ -9192,6 +9242,8 @@ export type LyraToolResultDialogReactProps = LyraReactElementProps<
   | '--lr-tool-result-dialog-error-color'
   | '--lr-tool-result-dialog-maximized-inset'
   | '--lr-tool-result-dialog-overlay-color'
+  | '--lr-tool-result-dialog-pending-bg'
+  | '--lr-tool-result-dialog-pending-color'
   | '--lr-tool-result-dialog-running-bg'
   | '--lr-tool-result-dialog-running-color'
   | '--lr-tool-result-dialog-spin'
@@ -9276,6 +9328,7 @@ export type LyraToolTimelineReactProps = LyraReactElementProps<
   | '--lr-tool-timeline-gap'
   | '--lr-tool-timeline-marker-size'
   | '--lr-tool-timeline-pending-approval-border-color'
+  | '--lr-tool-timeline-pending-marker-color'
   | '--lr-tool-timeline-running-marker-color'
   | '--lr-tool-timeline-success-marker-color',
   {
@@ -9649,6 +9702,9 @@ export type LyraVoicePickerReactProps = LyraReactElementProps<
   | 'preview'
   | 'provider'
   | 'required'
+  | 'selectionDirection'
+  | 'selectionEnd'
+  | 'selectionStart'
   | 'size'
   | 'spellcheck'
   | 'strings'

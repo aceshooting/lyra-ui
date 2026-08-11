@@ -18,8 +18,9 @@
 Parses common V8/JS-TS, Firefox/Safari, and Python stack traces into a leading message plus
 activatable frames, splitting chained/caused-by errors (`Caused by:`, `[cause]:`, Python's "direct
 cause"/"During handling" separators) into separate groups. Frames matching `internalPatterns` fold
-behind a count-labeled toggle. Falls back to verbatim raw text when nothing parses. First-party
-invention (no Web Awesome equivalent).
+behind a count-labeled toggle. A malformed or non-safe-integer location remains visible as raw,
+non-activatable text. Falls back to verbatim raw text when nothing parses. First-party invention
+(no Web Awesome equivalent).
 
 **Properties:**
 - `trace: string = ''` — the raw stack trace text to parse and render.
@@ -39,9 +40,10 @@ invention (no Web Awesome equivalent).
   alias `StackTraceAppearance` is retained as a name for the same union.
 
 **Events:**
-- `lr-frame-select` (`detail: { file?: string; line?: number; column?: number; raw: string }`) —
-  a frame was activated. `column` is always undefined for Python frames, which carry no column
-  information.
+- `lr-frame-select` (`detail: { file: string; line: number; column?: number; raw: string }`) — a
+  frame with a safe parsed location was activated. `column` is always undefined for Python frames,
+  which carry no column information. Malformed or unsafe locations render as raw text and never
+  emit this event.
 - `lr-copy` (`detail: { text: string }`) — the raw, unparsed trace text, fired on copy-button
   activation regardless of whether the clipboard write actually succeeded.
 
@@ -49,11 +51,12 @@ invention (no Web Awesome equivalent).
 
 **CSS parts:** `base` (the root wrapper; respects `max-height`, and drops its card chrome under
 `frame="plain"`), `message` (the leading error
-message text for a group), `group` (one chained-error group of frames), `frame` (a single frame
-button; carries `data-internal` for internal frames), `frame-function` (the frame's function
-name), `frame-location` (the frame's `file:line:col` text), `internal-toggle` (the collapse/expand
-toggle for a run of internal frames), `raw` (the verbatim fallback when zero structured frames
-parsed), `copy-button` (only rendered while `copyable`).
+message text for a group), `group` (one chained-error group of frames), `frame` (a selectable
+frame button, carrying `data-internal` for internal frames, or a non-activatable raw row for an
+unsafe location), `frame-function` (the frame's function name), `frame-location` (the frame's
+`file:line:col` text), `internal-toggle` (the collapse/expand toggle for a run of internal frames),
+`raw` (the verbatim fallback when zero structured frames parsed), `copy-button` (only rendered
+while `copyable`).
 
 **Themeable custom properties:** `--lr-stack-trace-max-height` (default `none`),
 `--lr-stack-trace-font` (default `var(--lr-font-mono)`),
@@ -87,5 +90,8 @@ standalone so a consumer can parse or unit-test traces without instantiating the
   (there is nothing useful to fold).
 - when `trace` doesn't match any of the supported formats, `parseStackTrace()` returns `[]` and the
   component renders the text verbatim in a `raw` part instead of silently dropping content.
+- every coordinate of an activatable frame must be a JavaScript safe integer. A malformed or
+  overlarge location remains visible as a non-activatable raw row; if no safe frame is left, the
+  component uses the verbatim `raw` fallback.
 
 ---

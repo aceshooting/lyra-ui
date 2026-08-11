@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -23,6 +23,14 @@ plain text) — this component has no dependency on either.
 
 **Properties:**
 - `label: string = 'Thinking'`
+- `compact: boolean = false` (reflected) — tightens the header/body padding and the header's
+  internal gap for dense transcript rows. This is only a density control: its card border and
+  surface remain, so use `frame="plain"` when surrounding message chrome already supplies them.
+- `frame: LyraFrame = 'card'` (reflected) — the library-wide container-frame vocabulary
+  (`'card' | 'plain'`). `'card'` keeps the bordered, filled outer container. `'plain'` removes its
+  border, background, and corner radius so a nested panel does not double an existing frame;
+  it retains the header/body divider and the active regular or compact padding. The exported
+  `ThinkingPanelAppearance` alias names this same union.
 - `expanded: boolean = false` (reflected) — starts collapsed, matching `<lr-source-list>`'s
   default.
 - `mode: 'live' | 'post-hoc' = 'live'` (reflected) — `'live'` while reasoning is actively streaming
@@ -47,7 +55,12 @@ jump-to-latest action of its own.
 before it scrolls internally; not
 exposed as a component property since it's a pure layout knob, not something a template branches
 on), and `--lr-thinking-panel-pending-color` (default `var(--lr-color-brand)`) — the live-mode
-pending duration/toggle accent without changing the shared brand token. Plus shared
+pending duration/toggle accent without changing the shared brand token;
+`--lr-thinking-panel-compact-header-padding` (default `var(--lr-space-2xs) var(--lr-space-s)`) —
+`[part="header"]` padding while `compact`; `--lr-thinking-panel-compact-header-gap` (default
+`var(--lr-space-2xs)`) — gap between the toggle, label, and duration while `compact`; and
+`--lr-thinking-panel-compact-body-padding` (default `var(--lr-space-s)`) — `[part="body"]`
+padding while `compact`. Plus shared
 `--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`/`-brand-quiet`,
 `--lr-space-xs`/`-s`/`-m`, `--lr-radius`, `--lr-focus-ring-width`/`-color`/`-offset`,
 `--lr-transition-fast`/`-base`.
@@ -62,6 +75,12 @@ pending duration/toggle accent without changing the shared brand token. Plus sha
 <lr-thinking-panel label="Reasoning" mode="post-hoc" duration-ms="4200">
   <p>Finished reasoning, collapsed by default.</p>
 </lr-thinking-panel>
+
+<div class="message-frame">
+  <lr-thinking-panel compact frame="plain" expanded>
+    Reasoning nested inside message chrome without a second card frame.
+  </lr-thinking-panel>
+</div>
 ```
 
 `mode` drives two concrete behavior differences, not just a styling hook. **Header hint:** while

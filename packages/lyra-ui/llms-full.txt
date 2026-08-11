@@ -21416,6 +21416,14 @@ control sizes against, so a tier is restated in exactly one place. `--lr-model-s
 `--lr-icon-button-size` via `min()`); this one is a glyph box rather than a control metric, so the
 shared ladder has no equivalent and its per-tier values stay local. `size` is the primary lever;
 override a cssprop directly only to retune a single element or step outside the scale entirely.
+`--lr-model-select-gap` (default `var(--lr-space-xs)`) controls the child gap in the trigger,
+combobox, and option rows; `--lr-model-select-radius` (default `var(--lr-radius)`) controls the
+corner radius of the trigger, combobox, listbox, and option rows. Both remain inheritable fallback
+arms, so set them on an ancestor to retheme a group without changing unrelated controls.
+`--lr-model-select-open-border-color` (default `var(--lr-color-brand)`) controls the trigger
+border while the listbox is open. A synthetic stale-value row has independent
+`--lr-model-select-option-synthetic-border-style` (default `dashed`) and
+`--lr-model-select-option-synthetic-border-color` (default `var(--lr-color-border)`) hooks.
 `--lr-model-select-option-active-bg` (default
 `var(--lr-color-brand-quiet)`) — background of a hovered or keyboard-active `[part="option"]` row;
 declared as a `var()` fallback at the point of use, not on `:host`, so it isn't tied to `size`. The
@@ -22006,9 +22014,11 @@ internally (both imported unconditionally as side effects, not optional).
 
 The internal `lr-slider` renders with its own value readout suppressed (`.showValue=${false}`);
 the current temperature is instead shown via this component's own `[part="temperature-value"]` span,
-which interpolates `temperature` verbatim with no `toFixed`/formatting applied — a value like `0.1`
-shows as `0.1`, and any floating-point noise a slider drag produces would render digit-for-digit. The
-panel's own `temperature` property mirrors the nested slider's _live_ value on every one of its
+which formats `temperature` through the cached `Intl.NumberFormat` for the effective locale with up
+to 20 fractional digits, matching `lr-slider`'s own numeric readout. For example, `temperature="0.7"`
+under `locale="de-DE"` displays `0,7`.
+
+The panel's own `temperature` property mirrors the nested slider's _live_ value on every one of its
 `lr-input` events (drag/key-repeat), not just its committed `lr-change` — so `temperature` (and
 the visible readout) tick continuously during a drag, but the panel's own `lr-change` event only
 fires once the slider's own `lr-change` commits (pointerup/keyup) or the model changes; reading
@@ -22060,7 +22070,10 @@ itself carries `role="img"` and the accessible name).
 **Themeable custom properties:** `--lr-audio-visualizer-color` (default `var(--lr-color-brand)` —
 active bar/waveform color), `--lr-audio-visualizer-quiet-color` (default
 `var(--lr-color-brand-quiet)` — inactive/idle color), and `--lr-audio-visualizer-height` (default
-`var(--lr-size-3rem)` — the host's block size).
+`var(--lr-size-3rem)` — the host's block size). `--lr-audio-visualizer-ambient-duration` (default
+`var(--lr-duration-ambient)`) is the time-only `ms`/`s` duration of one signal-less ambient pulse
+or sweep. It retimes this visualizer alone; compound transition values and invalid values fall back
+to the shared duration, while reduced-motion ambient output remains static.
 
 ## `lr-branch-picker`
 
@@ -22185,6 +22198,9 @@ microphone — no SDK, no LiveKit/ElevenLabs import, native browser APIs only. `
 default) is a press-and-hold gesture; `mode="toggle"` is click-to-start/click-to-stop with
 `aria-pressed`. Escape cancels the in-progress take in either mode.
 
+While recording, the optional elapsed timer uses the effective locale's decimal digits, suppresses
+grouping, and pads its seconds field to two locale-aware digits.
+
 **Properties:** `mode: 'hold' | 'toggle' = 'hold'` (reflected), `timesliceMs: number = 0` (attribute
 `timeslice-ms`) — `> 0` passes a timeslice to `MediaRecorder.start()` and emits `lr-record-chunk` per
 slice, `mimeType: string = ''` (attribute `mime-type`) — a `MediaRecorder` MIME type, `deviceId:
@@ -22216,7 +22232,7 @@ Blob }`, only when `timeslice-ms > 0`), `lr-record-stop` (`detail: { blob: Blob;
 (`detail: { state: 'idle' | 'requesting' | 'denied' | 'recording' | 'error' }`).
 
 **CSS parts:** `trigger` (the capture button), `icon`, `pulse` (rendered only while recording),
-`timer` (the `M:SS` elapsed-time readout, only while recording and `show-timer`), and `status`
+`timer` (the localized `M:SS` elapsed-time readout, only while recording and `show-timer`), and `status`
 (visible status text for the `requesting`/`denied`/`error`/unsupported states).
 
 **Themeable custom properties:** `--lr-push-to-talk-size` (default `var(--lr-size-3rem)`) — the
@@ -22830,7 +22846,8 @@ description?: string; previewUrl?: string }` — `language`/`description` render
 `[part="option-meta"]` second line. `LyraVoiceCatalog = string[] | LyraVoiceCatalogEntry[]` —
 homogeneous, same union contract as `LyraModelCatalog`. `LyraVoicePickerSize` aliases the shared
 canonical `LyraSizeStep`; the public `size` property additionally accepts the long-form aliases in
-`LyraSize`.
+`LyraSize`. `LyraVoicePickerSelectionDirection = 'forward' | 'backward' | 'none'` is the native
+selection direction exposed in free-text mode.
 
 **Properties:** `provider: string = ''` — informational only (e.g. `'elevenlabs'`); rendered as a
 small leading badge. `catalog?: LyraVoiceCatalog` (attribute: false) — the full voice list; omit (or
@@ -22878,6 +22895,13 @@ to the trigger `<button>`, whose own `@click` handler opens it; free-text mode i
 wired to the input's native `focus` event, not a `click` handler on the input itself. Mirrors
 `<lr-button>`'s identical host `click()` forwarding.
 `focus(options?)` and `blur()` forward to whichever internal control the active mode renders.
+In free-text mode, `input: HTMLInputElement | null`, `selectionStart: number | null`,
+`selectionEnd: number | null`, and `selectionDirection: LyraVoicePickerSelectionDirection | null`
+mirror the native input. `select()`, `setSelectionRange(start, end, direction?)`, and overloaded
+`setRangeText(replacement[, start, end, selectMode])` likewise forward native editing operations;
+`setRangeText()` synchronizes the picker `value`, form entry, and validity without emitting user
+`input`/`change` events. Those text APIs return `null` or are no-ops in closed-dropdown mode and
+before the input renders.
 
 **Events:** `lr-change` — `detail: { value, inCatalog }`. `lr-preview-request` — `detail: {
 voiceId, previewUrl? }`, cancelable. `lr-preview-change` — `detail: { voiceId }`, internal playback
@@ -22996,7 +23020,8 @@ Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspe
 **Properties (composer / chrome):**
 
 - `showComposer: boolean = true` (attribute `show-composer`, reflected) — whether the built-in
-  composer renders when no `composer` slot is supplied
+  plain-frame composer renders when no `composer` slot is supplied. Its workspace-owned dock supplies
+  the border and padding; a supplied `composer` slot keeps its own frame.
 - `composerValue: string = ''` (attribute `composer-value`) — controlled composer value
 - `composerStatus: ChatComposerStatus = 'idle'` (attribute `composer-status`) — `'idle' | 'sending' |
 'streaming'`, `lr-chat-composer`'s own union
@@ -23026,8 +23051,8 @@ messageId?: string }`, from `@aceshooting/lyra-ui/ai`) — forwarded from the bu
 
 **Slots:** `messages` (replaces the data-driven transcript message list), `details` (replaces the
 built-in run/tool/retrieval/grounding/context details pane while keeping the responsive shell),
-`composer` (replaces the built-in `lr-chat-composer`), `header-actions` (model selection, settings,
-export controls).
+`composer` (replaces the built-in plain-frame `lr-chat-composer`; supplied content keeps its own
+frame), `header-actions` (model selection, settings, export controls).
 
 **CSS parts:** `base`, `header`, `heading`, `header-actions`, `body`, `conversation`, `viewport` (the
 composed `lr-chat-viewport`), `messages`, `messages-empty`, `details`, `details-content`, `section`
@@ -23066,6 +23091,15 @@ events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`
 
 **CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-result`,
 `citation`, `attachment`, `data`, `audio`, `audio-transcript`, `error`, `retry`.
+
+**Themeable custom properties:** `--lr-message-parts-streaming-color` (default
+`var(--lr-color-text-quiet)`) controls a streaming wrapper's inherited text color.
+`--lr-message-parts-audio-transcript-color` (default `var(--lr-color-text-quiet)`) controls an
+audio transcript's text color. Error parts have separate
+`--lr-message-parts-error-border-color` (default `var(--lr-color-danger)`),
+`--lr-message-parts-error-background` (default `var(--lr-color-danger-quiet)`), and
+`--lr-message-parts-error-color` (default `var(--lr-color-danger)`) hooks. All five are inline
+fallbacks, so setting one on an ancestor rethemes only that state longhand.
 
 **Slots:** none. **Optional peer deps:** those of composed content only: Markdown can use
 `marked`/`dompurify`, and code content can use `shiki`; every composed primitive retains its own
@@ -23111,6 +23145,11 @@ request. `label` names the prompt section; it is not generic field chrome.
 **Properties:** `value: string = ''`; `status: 'idle' | 'sending' | 'streaming' = 'idle'`;
 `placeholder: string = ''`; `disabled: boolean = false` (reflected);
 `submitOnEnter: boolean = true` (attribute `submit-on-enter`, string-aware true-default converter);
+`spellcheck: boolean = true` (string-aware true-default converter), `autocapitalize: string = ''`,
+`autoCorrect: string = ''` (attribute `autocorrect`), `wrap: 'hard' | 'soft' | 'off' = 'soft'`,
+`autocomplete: string = ''`, `inputMode: string = ''` (attribute `inputmode`), and
+`enterKeyHint: string = ''` (attribute `enterkeyhint`) forward unchanged to the composed native
+textarea; empty string hints preserve the browser default.
 `attachments: PromptInputAttachment[] = []`, `attachmentCapabilities: AttachmentCapability[] =
 ['files', 'image', 'audio']`, `mentionItems: PromptSuggestion[] = []`, `commandItems:
 PromptSuggestion[] = []`, `modelCatalog?: LyraModelCatalog`, `voiceCatalog?: LyraVoiceCatalog`,
@@ -23124,7 +23163,13 @@ mimeType?, uri?, version? }` with `file?`, `size?`, attachment-chip `status?`, a
 `progress?`.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the composed chat input;
-`select()` selects its native text surface. `click()` is inert while disabled.
+`select()` selects its native text surface. `click()` is inert while disabled. `input:
+HTMLTextAreaElement | null`, `selectionStart: number | null`, `selectionEnd: number | null`, and
+`selectionDirection: ChatComposerSelectionDirection | null` mirror the composed textarea.
+`setSelectionRange(start, end, direction?)` and overloaded
+`setRangeText(replacement[, start, end, selectMode])` use the same native range-editing contract;
+`setRangeText()` synchronizes outer `value` without emitting `lr-input`. Selection and range calls
+are no-ops before the textarea has rendered.
 
 **Events:** `lr-input` (`{ value }`), `lr-submit` (`{ value }`), `lr-stop`,
 `lr-mention-select` (`{ id, label, trigger }`), `lr-attachments-add` (`{ files, capability }`),
@@ -23663,6 +23708,8 @@ state, so no additional scroll-lock/focus-trap bookkeeping is needed for that tr
 
 - `--lr-tool-result-dialog-running-color` — Running status foreground. Default: `var(--lr-color-brand)`.
 - `--lr-tool-result-dialog-running-bg` — Running status background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-tool-result-dialog-pending-color` — Pending status foreground. Default: `var(--lr-color-text-quiet)`.
+- `--lr-tool-result-dialog-pending-bg` — Pending status background. Default: `transparent`.
 - `--lr-tool-result-dialog-success-color` — Success status foreground. Default: `var(--lr-color-success)`.
 - `--lr-tool-result-dialog-success-bg` — Success status background. Default: `var(--lr-color-success-quiet)`.
 - `--lr-tool-result-dialog-error-color` — Error status foreground. Default: `var(--lr-color-danger)`.
@@ -23721,10 +23768,14 @@ shared overlay stack. First-party invention (no Web Awesome equivalent).
 **Methods:** `close(reason: ToolSelectDialogCloseReason = 'api'): void` — closes the dialog, emits
 `lr-close` with `reason`, and returns focus to whatever had it before the dialog opened.
 
-**Events:** `lr-change` (`detail: ToolSelectionChangeDetail` — the enabled-tool selection or the
-`useDefaults` toggle changed), `lr-close` (`detail: ToolSelectDialogCloseReason` — fired exactly once
-per dismissal, via Escape, a backdrop click, or a `close()` call), and no-detail `focus`/`blur`
-events re-dispatched when the internal search input gains or loses focus.
+**Events:** `lr-change` (`detail: ToolSelectionChangeDetail` — the proposed enabled-tool selection and
+`useDefaults` state) is cancelable and fires before either property changes. Calling
+`preventDefault()` retains the current `selected`/`useDefaults` values and restores the built-in
+checkbox or switch. A host can prevent a proposal while it validates or persists it, then assign
+the desired detail values after that work succeeds. `lr-close`
+(`detail: ToolSelectDialogCloseReason` — fired exactly once per dismissal, via Escape, a backdrop
+click, or a `close()` call), and no-detail `focus`/`blur` events re-dispatched when the
+internal search input gains or loses focus.
 
 **Slots:** `footer` — optional action buttons (e.g. a "Done" button), rendered in a bottom row. Changes
 already apply live via `lr-change`, so this slot is purely optional; only visually shown once it has
@@ -23799,6 +23850,14 @@ plain text) — this component has no dependency on either.
 
 **Properties:**
 - `label: string = 'Thinking'`
+- `compact: boolean = false` (reflected) — tightens the header/body padding and the header's
+  internal gap for dense transcript rows. This is only a density control: its card border and
+  surface remain, so use `frame="plain"` when surrounding message chrome already supplies them.
+- `frame: LyraFrame = 'card'` (reflected) — the library-wide container-frame vocabulary
+  (`'card' | 'plain'`). `'card'` keeps the bordered, filled outer container. `'plain'` removes its
+  border, background, and corner radius so a nested panel does not double an existing frame;
+  it retains the header/body divider and the active regular or compact padding. The exported
+  `ThinkingPanelAppearance` alias names this same union.
 - `expanded: boolean = false` (reflected) — starts collapsed, matching `<lr-source-list>`'s
   default.
 - `mode: 'live' | 'post-hoc' = 'live'` (reflected) — `'live'` while reasoning is actively streaming
@@ -23823,7 +23882,12 @@ jump-to-latest action of its own.
 before it scrolls internally; not
 exposed as a component property since it's a pure layout knob, not something a template branches
 on), and `--lr-thinking-panel-pending-color` (default `var(--lr-color-brand)`) — the live-mode
-pending duration/toggle accent without changing the shared brand token. Plus shared
+pending duration/toggle accent without changing the shared brand token;
+`--lr-thinking-panel-compact-header-padding` (default `var(--lr-space-2xs) var(--lr-space-s)`) —
+`[part="header"]` padding while `compact`; `--lr-thinking-panel-compact-header-gap` (default
+`var(--lr-space-2xs)`) — gap between the toggle, label, and duration while `compact`; and
+`--lr-thinking-panel-compact-body-padding` (default `var(--lr-space-s)`) — `[part="body"]`
+padding while `compact`. Plus shared
 `--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`/`-brand-quiet`,
 `--lr-space-xs`/`-s`/`-m`, `--lr-radius`, `--lr-focus-ring-width`/`-color`/`-offset`,
 `--lr-transition-fast`/`-base`.
@@ -23838,6 +23902,12 @@ pending duration/toggle accent without changing the shared brand token. Plus sha
 <lr-thinking-panel label="Reasoning" mode="post-hoc" duration-ms="4200">
   <p>Finished reasoning, collapsed by default.</p>
 </lr-thinking-panel>
+
+<div class="message-frame">
+  <lr-thinking-panel compact frame="plain" expanded>
+    Reasoning nested inside message chrome without a second card frame.
+  </lr-thinking-panel>
+</div>
 ```
 
 `mode` drives two concrete behavior differences, not just a styling hook. **Header hint:** while
@@ -23879,8 +23949,9 @@ stream.
 Parses common V8/JS-TS, Firefox/Safari, and Python stack traces into a leading message plus
 activatable frames, splitting chained/caused-by errors (`Caused by:`, `[cause]:`, Python's "direct
 cause"/"During handling" separators) into separate groups. Frames matching `internalPatterns` fold
-behind a count-labeled toggle. Falls back to verbatim raw text when nothing parses. First-party
-invention (no Web Awesome equivalent).
+behind a count-labeled toggle. A malformed or non-safe-integer location remains visible as raw,
+non-activatable text. Falls back to verbatim raw text when nothing parses. First-party invention
+(no Web Awesome equivalent).
 
 **Properties:**
 - `trace: string = ''` — the raw stack trace text to parse and render.
@@ -23900,9 +23971,10 @@ invention (no Web Awesome equivalent).
   alias `StackTraceAppearance` is retained as a name for the same union.
 
 **Events:**
-- `lr-frame-select` (`detail: { file?: string; line?: number; column?: number; raw: string }`) —
-  a frame was activated. `column` is always undefined for Python frames, which carry no column
-  information.
+- `lr-frame-select` (`detail: { file: string; line: number; column?: number; raw: string }`) — a
+  frame with a safe parsed location was activated. `column` is always undefined for Python frames,
+  which carry no column information. Malformed or unsafe locations render as raw text and never
+  emit this event.
 - `lr-copy` (`detail: { text: string }`) — the raw, unparsed trace text, fired on copy-button
   activation regardless of whether the clipboard write actually succeeded.
 
@@ -23910,11 +23982,12 @@ invention (no Web Awesome equivalent).
 
 **CSS parts:** `base` (the root wrapper; respects `max-height`, and drops its card chrome under
 `frame="plain"`), `message` (the leading error
-message text for a group), `group` (one chained-error group of frames), `frame` (a single frame
-button; carries `data-internal` for internal frames), `frame-function` (the frame's function
-name), `frame-location` (the frame's `file:line:col` text), `internal-toggle` (the collapse/expand
-toggle for a run of internal frames), `raw` (the verbatim fallback when zero structured frames
-parsed), `copy-button` (only rendered while `copyable`).
+message text for a group), `group` (one chained-error group of frames), `frame` (a selectable
+frame button, carrying `data-internal` for internal frames, or a non-activatable raw row for an
+unsafe location), `frame-function` (the frame's function name), `frame-location` (the frame's
+`file:line:col` text), `internal-toggle` (the collapse/expand toggle for a run of internal frames),
+`raw` (the verbatim fallback when zero structured frames parsed), `copy-button` (only rendered
+while `copyable`).
 
 **Themeable custom properties:** `--lr-stack-trace-max-height` (default `none`),
 `--lr-stack-trace-font` (default `var(--lr-font-mono)`),
@@ -23948,6 +24021,9 @@ standalone so a consumer can parse or unit-test traces without instantiating the
   (there is nothing useful to fold).
 - when `trace` doesn't match any of the supported formats, `parseStackTrace()` returns `[]` and the
   component renders the text verbatim in a `raw` part instead of silently dropping content.
+- every coordinate of an activatable frame must be a JavaScript safe integer. A malformed or
+  overlarge location remains visible as a non-activatable raw row; if no safe frame is left, the
+  component uses the verbatim `raw` fallback.
 
 ---
 
@@ -24430,8 +24506,9 @@ internal vote-announcement live region).
 cap on each pane's scroll region before it scrolls internally;
 `--lr-compare-panel-selected-background` (default `var(--lr-color-brand-quiet)`),
 `--lr-compare-panel-selected-border-color` (default `var(--lr-color-brand)`), and
-`--lr-compare-panel-selected-color` (default `var(--lr-color-brand)`) style the selected vote
-button without changing shared brand tokens.
+`--lr-compare-panel-selected-color` (default `var(--lr-color-brand)`), and
+`--lr-compare-panel-selected-font-weight` (default `var(--lr-font-weight-semibold)`) style the
+selected vote button without changing shared brand tokens.
 
 ## `lr-span-waterfall`
 
@@ -24490,15 +24567,20 @@ property below works the same way.
 
 A live, collapsible tracker for an agent's plan: ordered steps with per-step lifecycle status and one
 level of nested sub-steps, embedded in the transcript. `items` is controlled and never mutated by this
-component. Unlike `<lr-stepper>`'s single-`current` navigation, task-list is a read-only status
-report: several steps may be `running` at once, there is no selection, and status changes are
-announced through an internal `<lr-live-region>`.
+component. Unlike `<lr-stepper>`'s single-`current` navigation, task-list has no selection and
+several steps may be `running` at once. By default it is a status report; `reorderable` adds
+controlled keyboard reorder requests without changing ownership of `items`. Status changes and
+confirmed moves are announced through an internal `<lr-live-region>`.
 
 **Properties:** `items: TaskItem[] = []` (attribute: false) — `TaskItem { id: string; label: string;
 status: TaskStatus; detail?: string; children?: TaskItem[] }` with `TaskStatus = 'pending' |
 'running' | 'success' | 'error'` (both exported here). `detail` is an optional secondary plain-text
 line; `children` is exactly **one** level of sub-steps — a child's own `children` is ignored with a
-`console.warn`. `label: string = 'Tasks'`, `expanded: boolean = true` (reflected), and
+`console.warn`. While `reorderable`, every top-level task and direct child must have a globally unique
+`id`; duplicate data stays visible but fails closed, with no row keyboard stops or reorder requests.
+`reorderable: boolean = false` (reflected) enables Ctrl/Cmd+ArrowUp/ArrowDown on a focused task.
+It emits a request only; the host must assign a new reordered `items` array before the task visibly
+moves or an announcement is made. `label: string = 'Tasks'`, `expanded: boolean = true` (reflected), and
 `collapsible: boolean = true`. `compact: boolean = false` (reflected) — tighter header/body padding
 and item gap for dense contexts (a plan tracker nested in an already-padded transcript row), same
 convention as `<lr-agent-run>`'s/`<lr-source-card>`'s `compact`; purely a density knob, the border
@@ -24512,14 +24594,18 @@ retained as a name for the same union.
 that item's label, typically a `<lr-tool-call-chip>` or file `<lr-chip>`.
 
 **Events:** `lr-toggle` — the header was activated, expanding or collapsing the panel. `detail: {
-expanded }`.
+expanded }`. `lr-reorder` — Ctrl/Cmd+ArrowUp/ArrowDown requests moving the focused task within its
+own sibling list. `detail: { id, parentId, fromIndex, toIndex }`; `parentId` is `null` for a
+top-level task and indices are sibling-scoped. It fires only while `reorderable` with unique ids.
+A boundary key is a silent no-op, so it never reparents a child; the component announces success only
+after the host's rendered array confirms the exact requested swap.
 
 **CSS parts:** `base`, `header` (a `<button>` when `collapsible`, a plain heading otherwise), `label`,
 `summary` (the visible "N of M completed" summary, top-level items only), `toggle` (the chevron
 indicator, only rendered when `collapsible`), `body` (the list of items, `hidden` while collapsed),
-`item` (`role="listitem"`; carries `data-status`/`data-id`/`data-depth`), `status-icon`, `item-label`,
-`item-detail`, and `item-children` (the nested `role="list"` wrapper around a top-level item's
-children).
+`item` (`role="listitem"`; carries `data-status`/`data-id`/`data-depth` and is focusable only for
+valid `reorderable` data), `status-icon`, `item-label`, `item-detail`, and `item-children` (the
+nested `role="list"` wrapper around a top-level item's children).
 
 **Themeable custom properties:** `--lr-task-list-spin` (default `var(--lr-transition-ambient)`, i.e.
 `1.8s ease-in-out`, collapsing to `0.001ms linear` under `prefers-reduced-motion`) — running-status
@@ -25252,6 +25338,11 @@ Filterable and taggable evaluation-example list with add, remove, import, and ex
   controlled: add/remove/import/export are all *requests*; the host mutates and passes the array back
 - `searchable: boolean = false` (reflected) — built-in free-text search over `input`,
   `expectedOutput`, and `tags` (case-insensitive substring)
+- `autocomplete: string = ''`, `spellcheck: boolean = true`, `autocapitalize: string = ''`,
+  `autoCorrect: string = ''` (attribute `autocorrect`), `inputMode: string = ''` (attribute
+  `inputmode`), and `enterKeyHint: string = ''` (attribute `enterkeyhint`) — native
+  editing-assistance and virtual-keyboard hints forwarded only to the internal search input while
+  `searchable`; empty string leaves the corresponding browser default in effect
 - `accept: string = ''` — forwarded to the internal `lr-file-input`'s `accept` (e.g. `'.json,.csv'`);
   empty accepts any type
 - `exportFormats: ExportFormatOption[] = ['csv', 'json']` (attribute: false) — forwarded to the
@@ -25274,6 +25365,8 @@ loses focus, since native focus neither bubbles nor crosses the shadow boundary.
 - Shrinking `examples` out from under live UI state is handled: a `selectedId` that no longer matches
   any row resets to `null`, and an active tag filter that no longer matches any row's `tags` is
   dropped rather than silently matching zero rows forever.
+- A search or tag filter that hides the selected row also clears that selection and emits
+  `lr-example-select` with `{ id: null }`, so the Remove control never acts on an invisible row.
 
 ## `lr-eval-result`
 
@@ -25414,6 +25507,14 @@ primitives, with retry counts and sensitive-field redaction.
   works
 - `formatTimestamp?: (date: Date) => string` (attribute: false) — overrides the default
   `hour:minute` rendering of each entry's `startedAt`
+- `pendingApproval: ToolTimelineApprovalPending = null` (read-only) — `'approve'` or `'deny'` while
+  a listener has vetoed `lr-tool-approval-decide` and the timeline is holding the shared dialog for
+  host persistence; otherwise `null`
+
+**Methods:** `finalizePendingApproval(): void` closes a held dialog after the host has persisted and
+applied its controlled `entries` update (it never mutates `entries` itself). `revertPendingApproval():
+void` releases a held dialog after persistence fails, retaining the reviewer’s current argument edit
+so they can retry. Both are no-ops when no decision is held.
 
 **Events:** `lr-tool-approval-decide` (`detail: ToolTimelineApprovalDetail` =
 `ToolApprovalEventDetail & { args?: unknown }` = `{ invocationId: string; approved: boolean; args?:
@@ -25422,8 +25523,21 @@ unknown }`, extending the shared detail from `@aceshooting/lyra-ui/ai`). `args` 
 edit step can hand back different arguments. A listener that only needs `{ invocationId, approved }`
 can ignore it; one actually executing the tool needs it. This is a cancelable veto point:
 `preventDefault()` preserves the pending approval dialog and its current inline argument edits
-instead of closing/resetting them, so asynchronous host validation can finish before resolving the
-decision.
+instead of closing/resetting them, sets `pendingApproval`, and requires the host to call
+`finalizePendingApproval()` after persistence succeeds or `revertPendingApproval()` after it fails.
+
+```ts
+timeline.addEventListener('lr-tool-approval-decide', async (event) => {
+  event.preventDefault();
+  try {
+    await persistDecision(event.detail);
+    timeline.entries = applyDecision(timeline.entries, event.detail);
+    timeline.finalizePendingApproval();
+  } catch {
+    timeline.revertPendingApproval();
+  }
+});
+```
 
 **CSS parts:** `base`,
 `entry`, `entry-marker`, `entry-header`, `entry-timestamp`, `entry-body`, `entry-details`,
@@ -25437,7 +25551,9 @@ gap between entries; `--lr-tool-timeline-marker-size` (default `var(--lr-size-0-
 per-entry timeline marker dot's size, which also sets the entry grid's leading column width;
 `--lr-tool-timeline-denied-marker-color` (default `var(--lr-color-warning)`) — rail-dot color for a
 `status="denied"` entry, decoupled from the pending-approval border color below so either can be
-retinted independently; `--lr-tool-timeline-pending-approval-border-color` (default
+retinted independently; `--lr-tool-timeline-pending-marker-color` (default
+`var(--lr-color-text-quiet)`) — rail-dot color for a `status="pending"` entry;
+`--lr-tool-timeline-pending-approval-border-color` (default
 `var(--lr-color-warning)`) — color of the entry body's leading border while that entry's
 `data-pending-approval` is `"true"`.
 
@@ -25563,26 +25679,36 @@ host-owned.
 current arrays before `lr-change` is emitted, while the host remains responsible for persistence.
 `versions: PromptStudioVersion[] = []` is a property-only host-controlled input;
 `selectedVersionId: string = ''` (attribute `selected-version-id`); `label: string = ''`;
-`running: boolean = false` and `disabled: boolean = false` (both reflected).
+`running: boolean = false`, `disabled: boolean = false`, and `reorderable: boolean = false`
+(all reflected). `reorderable` adds native move-up/move-down controls for each message. A move first
+emits a cancelable request, so a host can veto it while persisting the proposed order and later
+assign the accepted `messages` array. Native prose-editing assistance is forwarded to every message
+textarea and variable input through `spellcheck: boolean = true`, `autocapitalize: string = ''`,
+and `autoCorrect: string = ''` (attribute `autocorrect`); `wrap: PromptStudioWrap = 'soft'` applies
+to message textareas only.
 
 **Exported types:** `PromptStudioRole = 'system' | 'user' | 'assistant' | 'tool'`;
 `PromptStudioMessage = { id, role, content, name? }`; `PromptStudioVariable = { name, value,
 description? }`; `PromptStudioVersion = { id: string; label: string; messages:
 PromptStudioMessage[]; variables?: PromptStudioVariable[]; createdAt?: string }`; and
-`PromptStudioState = { messages, variables }`.
+`PromptStudioState = { messages, variables }`; `PromptStudioWrap = 'hard' | 'soft' | 'off'`; and
+`PromptStudioMessageReorderDetail = { messages, messageId, fromIndex, toIndex }`.
 
 **Events:** `lr-change`, `lr-run`, `lr-save` (all carry complete messages/variables);
-`lr-version-select` (`{ version }`). Plus `focus` and `blur` (no detail), re-dispatched from the
-host — bubbling and composed — whenever a message textarea or a variable input gains or loses
-focus. They exist because the native `focus`/`blur` events neither bubble nor cross the shadow
+`lr-version-select` (`{ version }`); and cancelable `lr-message-reorder`
+(`{ messages, messageId, fromIndex, toIndex }`) before an accepted move updates the component and
+emits `lr-change`. Prevent `lr-message-reorder` to keep the current order; the listener may persist
+`detail.messages` and assign it back when ready. Plus `focus` and `blur` (no detail), re-dispatched
+from the host — bubbling and composed — whenever a message textarea or a variable input gains or
+loses focus. They exist because the native `focus`/`blur` events neither bubble nor cross the shadow
 boundary, so without the re-dispatch an
 `editor.addEventListener('focus', …)` would never fire at all. They are re-dispatches of real
 focus movement, not a synthetic host-level focus signal: moving between two fields inside the
 studio emits a `blur` and then a `focus`.
 
 **CSS parts:** `base`, `toolbar`, `editor`, `messages`, `message`, `message-role`,
-`message-content`, `remove-message`, `add-message`, `variables`, `variable`, `versions`, `version`,
-`preview`, `save`, `run`.
+`message-content`, `message-actions`, `move-message-up`, `move-message-down`, `remove-message`,
+`add-message`, `variables`, `variable`, `versions`, `version`, `preview`, `save`, `run`.
 
 Each message's role select and content editor has a localized contextual accessible name containing
 its one-based message index and purpose (plus the current role for content), so repeated controls do
@@ -25600,7 +25726,7 @@ import '@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.
 - `--lr-prompt-studio-version-selected-border` — Selected version border. Default: `var(--lr-color-brand)`.
 - `--lr-prompt-studio-version-selected-bg` — Selected version background. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-prompt-studio-version-selected-color` — Selected version foreground. Default: `var(--lr-color-text)`.
-- `--lr-prompt-studio-version-selected-hover-bg` — Selected version hover background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-prompt-studio-version-selected-hover-bg` — Selected version hover background. Default: `color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`.
 
 ## `lr-schema-viewer`
 

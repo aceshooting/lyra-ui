@@ -30,7 +30,8 @@ description?: string; previewUrl?: string }` — `language`/`description` render
 `[part="option-meta"]` second line. `LyraVoiceCatalog = string[] | LyraVoiceCatalogEntry[]` —
 homogeneous, same union contract as `LyraModelCatalog`. `LyraVoicePickerSize` aliases the shared
 canonical `LyraSizeStep`; the public `size` property additionally accepts the long-form aliases in
-`LyraSize`.
+`LyraSize`. `LyraVoicePickerSelectionDirection = 'forward' | 'backward' | 'none'` is the native
+selection direction exposed in free-text mode.
 
 **Properties:** `provider: string = ''` — informational only (e.g. `'elevenlabs'`); rendered as a
 small leading badge. `catalog?: LyraVoiceCatalog` (attribute: false) — the full voice list; omit (or
@@ -78,6 +79,13 @@ to the trigger `<button>`, whose own `@click` handler opens it; free-text mode i
 wired to the input's native `focus` event, not a `click` handler on the input itself. Mirrors
 `<lr-button>`'s identical host `click()` forwarding.
 `focus(options?)` and `blur()` forward to whichever internal control the active mode renders.
+In free-text mode, `input: HTMLInputElement | null`, `selectionStart: number | null`,
+`selectionEnd: number | null`, and `selectionDirection: LyraVoicePickerSelectionDirection | null`
+mirror the native input. `select()`, `setSelectionRange(start, end, direction?)`, and overloaded
+`setRangeText(replacement[, start, end, selectMode])` likewise forward native editing operations;
+`setRangeText()` synchronizes the picker `value`, form entry, and validity without emitting user
+`input`/`change` events. Those text APIs return `null` or are no-ops in closed-dropdown mode and
+before the input renders.
 
 **Events:** `lr-change` — `detail: { value, inCatalog }`. `lr-preview-request` — `detail: {
 voiceId, previewUrl? }`, cancelable. `lr-preview-change` — `detail: { voiceId }`, internal playback

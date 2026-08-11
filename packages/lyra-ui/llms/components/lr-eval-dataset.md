@@ -26,6 +26,11 @@ Filterable and taggable evaluation-example list with add, remove, import, and ex
   controlled: add/remove/import/export are all *requests*; the host mutates and passes the array back
 - `searchable: boolean = false` (reflected) — built-in free-text search over `input`,
   `expectedOutput`, and `tags` (case-insensitive substring)
+- `autocomplete: string = ''`, `spellcheck: boolean = true`, `autocapitalize: string = ''`,
+  `autoCorrect: string = ''` (attribute `autocorrect`), `inputMode: string = ''` (attribute
+  `inputmode`), and `enterKeyHint: string = ''` (attribute `enterkeyhint`) — native
+  editing-assistance and virtual-keyboard hints forwarded only to the internal search input while
+  `searchable`; empty string leaves the corresponding browser default in effect
 - `accept: string = ''` — forwarded to the internal `lr-file-input`'s `accept` (e.g. `'.json,.csv'`);
   empty accepts any type
 - `exportFormats: ExportFormatOption[] = ['csv', 'json']` (attribute: false) — forwarded to the
@@ -48,3 +53,5 @@ loses focus, since native focus neither bubbles nor crosses the shadow boundary.
 - Shrinking `examples` out from under live UI state is handled: a `selectedId` that no longer matches
   any row resets to `null`, and an active tag filter that no longer matches any row's `tags` is
   dropped rather than silently matching zero rows forever.
+- A search or tag filter that hides the selected row also clears that selection and emits
+  `lr-example-select` with `{ id: null }`, so the Remove control never acts on an invisible row.

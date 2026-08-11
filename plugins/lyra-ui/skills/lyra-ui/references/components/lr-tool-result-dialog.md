@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -113,6 +113,8 @@ state, so no additional scroll-lock/focus-trap bookkeeping is needed for that tr
 
 - `--lr-tool-result-dialog-running-color` — Running status foreground. Default: `var(--lr-color-brand)`.
 - `--lr-tool-result-dialog-running-bg` — Running status background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-tool-result-dialog-pending-color` — Pending status foreground. Default: `var(--lr-color-text-quiet)`.
+- `--lr-tool-result-dialog-pending-bg` — Pending status background. Default: `transparent`.
 - `--lr-tool-result-dialog-success-color` — Success status foreground. Default: `var(--lr-color-success)`.
 - `--lr-tool-result-dialog-success-bg` — Success status background. Default: `var(--lr-color-success-quiet)`.
 - `--lr-tool-result-dialog-error-color` — Error status foreground. Default: `var(--lr-color-danger)`.

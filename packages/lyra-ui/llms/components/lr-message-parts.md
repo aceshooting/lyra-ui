@@ -8,7 +8,7 @@
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecated event** `lr-tool-chip-select` since `7.0.0`; use event `lr-tool-call-chip-select`; removal not before `9.0.0` — The replacement names the selected tool-call component precisely; the shorter event remains as a bubbling compatibility alias.
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 14 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -40,6 +40,15 @@ events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`
 
 **CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-result`,
 `citation`, `attachment`, `data`, `audio`, `audio-transcript`, `error`, `retry`.
+
+**Themeable custom properties:** `--lr-message-parts-streaming-color` (default
+`var(--lr-color-text-quiet)`) controls a streaming wrapper's inherited text color.
+`--lr-message-parts-audio-transcript-color` (default `var(--lr-color-text-quiet)`) controls an
+audio transcript's text color. Error parts have separate
+`--lr-message-parts-error-border-color` (default `var(--lr-color-danger)`),
+`--lr-message-parts-error-background` (default `var(--lr-color-danger-quiet)`), and
+`--lr-message-parts-error-color` (default `var(--lr-color-danger)`) hooks. All five are inline
+fallbacks, so setting one on an ancestor rethemes only that state longhand.
 
 **Slots:** none. **Optional peer deps:** those of composed content only: Markdown can use
 `marked`/`dompurify`, and code content can use `shiki`; every composed primitive retains its own

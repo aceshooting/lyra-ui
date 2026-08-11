@@ -8,7 +8,7 @@
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -25,26 +25,36 @@ host-owned.
 current arrays before `lr-change` is emitted, while the host remains responsible for persistence.
 `versions: PromptStudioVersion[] = []` is a property-only host-controlled input;
 `selectedVersionId: string = ''` (attribute `selected-version-id`); `label: string = ''`;
-`running: boolean = false` and `disabled: boolean = false` (both reflected).
+`running: boolean = false`, `disabled: boolean = false`, and `reorderable: boolean = false`
+(all reflected). `reorderable` adds native move-up/move-down controls for each message. A move first
+emits a cancelable request, so a host can veto it while persisting the proposed order and later
+assign the accepted `messages` array. Native prose-editing assistance is forwarded to every message
+textarea and variable input through `spellcheck: boolean = true`, `autocapitalize: string = ''`,
+and `autoCorrect: string = ''` (attribute `autocorrect`); `wrap: PromptStudioWrap = 'soft'` applies
+to message textareas only.
 
 **Exported types:** `PromptStudioRole = 'system' | 'user' | 'assistant' | 'tool'`;
 `PromptStudioMessage = { id, role, content, name? }`; `PromptStudioVariable = { name, value,
 description? }`; `PromptStudioVersion = { id: string; label: string; messages:
 PromptStudioMessage[]; variables?: PromptStudioVariable[]; createdAt?: string }`; and
-`PromptStudioState = { messages, variables }`.
+`PromptStudioState = { messages, variables }`; `PromptStudioWrap = 'hard' | 'soft' | 'off'`; and
+`PromptStudioMessageReorderDetail = { messages, messageId, fromIndex, toIndex }`.
 
 **Events:** `lr-change`, `lr-run`, `lr-save` (all carry complete messages/variables);
-`lr-version-select` (`{ version }`). Plus `focus` and `blur` (no detail), re-dispatched from the
-host — bubbling and composed — whenever a message textarea or a variable input gains or loses
-focus. They exist because the native `focus`/`blur` events neither bubble nor cross the shadow
+`lr-version-select` (`{ version }`); and cancelable `lr-message-reorder`
+(`{ messages, messageId, fromIndex, toIndex }`) before an accepted move updates the component and
+emits `lr-change`. Prevent `lr-message-reorder` to keep the current order; the listener may persist
+`detail.messages` and assign it back when ready. Plus `focus` and `blur` (no detail), re-dispatched
+from the host — bubbling and composed — whenever a message textarea or a variable input gains or
+loses focus. They exist because the native `focus`/`blur` events neither bubble nor cross the shadow
 boundary, so without the re-dispatch an
 `editor.addEventListener('focus', …)` would never fire at all. They are re-dispatches of real
 focus movement, not a synthetic host-level focus signal: moving between two fields inside the
 studio emits a `blur` and then a `focus`.
 
 **CSS parts:** `base`, `toolbar`, `editor`, `messages`, `message`, `message-role`,
-`message-content`, `remove-message`, `add-message`, `variables`, `variable`, `versions`, `version`,
-`preview`, `save`, `run`.
+`message-content`, `message-actions`, `move-message-up`, `move-message-down`, `remove-message`,
+`add-message`, `variables`, `variable`, `versions`, `version`, `preview`, `save`, `run`.
 
 Each message's role select and content editor has a localized contextual accessible name containing
 its one-based message index and purpose (plus the current role for content), so repeated controls do
@@ -62,4 +72,4 @@ import '@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.
 - `--lr-prompt-studio-version-selected-border` — Selected version border. Default: `var(--lr-color-brand)`.
 - `--lr-prompt-studio-version-selected-bg` — Selected version background. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-prompt-studio-version-selected-color` — Selected version foreground. Default: `var(--lr-color-text)`.
-- `--lr-prompt-studio-version-selected-hover-bg` — Selected version hover background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-prompt-studio-version-selected-hover-bg` — Selected version hover background. Default: `color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`.

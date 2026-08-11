@@ -32,8 +32,8 @@ changes the component library version without installing a supported SheetJS rel
 | `@aiden0z/pptx-renderer` | `^1.2.4` | `lr-pptx-viewer` |
 | `@sgratzl/chartjs-chart-boxplot` | `^4.4.5` | `lr-box-plot` |
 | `chart.js` | `^4.5.1` | `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
-| `chartjs-plugin-datalabels` | `^2.2.0` | `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
-| `chartjs-plugin-zoom` | `^2.2.0` | `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
+| `chartjs-plugin-datalabels` | `^2.2.0` | `lr-bar-chart`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
+| `chartjs-plugin-zoom` | `^2.2.0` | `lr-bar-chart`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
 | `d3-drag` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
 | `d3-force` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
 | `d3-selection` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |

@@ -81,9 +81,11 @@ internally (both imported unconditionally as side effects, not optional).
 
 The internal `lr-slider` renders with its own value readout suppressed (`.showValue=${false}`);
 the current temperature is instead shown via this component's own `[part="temperature-value"]` span,
-which interpolates `temperature` verbatim with no `toFixed`/formatting applied — a value like `0.1`
-shows as `0.1`, and any floating-point noise a slider drag produces would render digit-for-digit. The
-panel's own `temperature` property mirrors the nested slider's _live_ value on every one of its
+which formats `temperature` through the cached `Intl.NumberFormat` for the effective locale with up
+to 20 fractional digits, matching `lr-slider`'s own numeric readout. For example, `temperature="0.7"`
+under `locale="de-DE"` displays `0,7`.
+
+The panel's own `temperature` property mirrors the nested slider's _live_ value on every one of its
 `lr-input` events (drag/key-repeat), not just its committed `lr-change` — so `temperature` (and
 the visible readout) tick continuously during a drag, but the panel's own `lr-change` event only
 fires once the slider's own `lr-change` commits (pointerup/keyup) or the model changes; reading

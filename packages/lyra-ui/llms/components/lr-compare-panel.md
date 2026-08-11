@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -44,5 +44,6 @@ internal vote-announcement live region).
 cap on each pane's scroll region before it scrolls internally;
 `--lr-compare-panel-selected-background` (default `var(--lr-color-brand-quiet)`),
 `--lr-compare-panel-selected-border-color` (default `var(--lr-color-brand)`), and
-`--lr-compare-panel-selected-color` (default `var(--lr-color-brand)`) style the selected vote
-button without changing shared brand tokens.
+`--lr-compare-panel-selected-color` (default `var(--lr-color-brand)`), and
+`--lr-compare-panel-selected-font-weight` (default `var(--lr-font-weight-semibold)`) style the
+selected vote button without changing shared brand tokens.

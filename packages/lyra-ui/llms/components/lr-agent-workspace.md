@@ -74,7 +74,8 @@ Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspe
 **Properties (composer / chrome):**
 
 - `showComposer: boolean = true` (attribute `show-composer`, reflected) — whether the built-in
-  composer renders when no `composer` slot is supplied
+  plain-frame composer renders when no `composer` slot is supplied. Its workspace-owned dock supplies
+  the border and padding; a supplied `composer` slot keeps its own frame.
 - `composerValue: string = ''` (attribute `composer-value`) — controlled composer value
 - `composerStatus: ChatComposerStatus = 'idle'` (attribute `composer-status`) — `'idle' | 'sending' |
 'streaming'`, `lr-chat-composer`'s own union
@@ -104,8 +105,8 @@ messageId?: string }`, from `@aceshooting/lyra-ui/ai`) — forwarded from the bu
 
 **Slots:** `messages` (replaces the data-driven transcript message list), `details` (replaces the
 built-in run/tool/retrieval/grounding/context details pane while keeping the responsive shell),
-`composer` (replaces the built-in `lr-chat-composer`), `header-actions` (model selection, settings,
-export controls).
+`composer` (replaces the built-in plain-frame `lr-chat-composer`; supplied content keeps its own
+frame), `header-actions` (model selection, settings, export controls).
 
 **CSS parts:** `base`, `header`, `heading`, `header-actions`, `body`, `conversation`, `viewport` (the
 composed `lr-chat-viewport`), `messages`, `messages-empty`, `details`, `details-content`, `section`

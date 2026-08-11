@@ -422,7 +422,7 @@
         },
         {
           "name": "lr-agent-workspace",
-          "description": "`<lr-agent-workspace>` — a responsive, controlled shell for an AI conversation and its\nsupporting agent state. It renders the transcript and composer in the main pane, and composes\nexisting run, tool, retrieval, grounding, and context primitives in an optional details pane.\n\nThe component performs no network requests, model calls, retrieval, or persistence. Assign new\ndata to the public properties as the host application receives updates. The `messages` fallback\nrenders ordered `message.parts` through `<lr-message-parts>` when supplied, otherwise sanitized\nMarkdown from the legacy `message.text`; applications can replace the entire region with the\n`messages` slot. The `details` slot similarly replaces the built-in details pane while keeping\nthe responsive shell. To keep the data-driven fallback bounded, at most the latest 500 messages\nare materialized; applications needing a larger retained transcript can supply a virtualized\n`messages` slot.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.2.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `composer` | Replaces the built-in `<lr-chat-composer>`. |\n| `details` | Replaces the built-in run/tool/retrieval/grounding/context details pane. |\n| `header-actions` | Header actions such as model selection, settings, or export controls. |\n| `messages` | Replaces the data-driven transcript message list. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root workspace wrapper. |\n| `body` | The main conversation/details layout. |\n| `composer` | The composer region. |\n| `composer-input` | The built-in `<lr-chat-composer>`. |\n| `conversation` | The main transcript pane. |\n| `details` | The responsive details pane. |\n| `details-content` | The built-in details content wrapper. |\n| `header` | The workspace heading and header-actions slot. |\n| `header-actions` | The header-actions slot wrapper. |\n| `heading` | The visible workspace heading. |\n| `messages` | The transcript message wrapper. |\n| `messages-empty` | The empty transcript state. |\n| `section` | A built-in run, tools, retrieval, grounding, or context section. |\n| `section-heading` | A built-in details section heading. |\n| `viewport` | The composed `<lr-chat-viewport>`. |",
+          "description": "`<lr-agent-workspace>` — a responsive, controlled shell for an AI conversation and its\nsupporting agent state. It renders the transcript and composer in the main pane, and composes\nexisting run, tool, retrieval, grounding, and context primitives in an optional details pane.\n\nThe component performs no network requests, model calls, retrieval, or persistence. Assign new\ndata to the public properties as the host application receives updates. The `messages` fallback\nrenders ordered `message.parts` through `<lr-message-parts>` when supplied, otherwise sanitized\nMarkdown from the legacy `message.text`; applications can replace the entire region with the\n`messages` slot. The `details` slot similarly replaces the built-in details pane while keeping\nthe responsive shell. To keep the data-driven fallback bounded, at most the latest 500 messages\nare materialized; applications needing a larger retained transcript can supply a virtualized\n`messages` slot.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.2.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `composer` | Replaces the built-in plain-frame `<lr-chat-composer>`; a supplied composer keeps its own frame. |\n| `details` | Replaces the built-in run/tool/retrieval/grounding/context details pane. |\n| `header-actions` | Header actions such as model selection, settings, or export controls. |\n| `messages` | Replaces the data-driven transcript message list. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root workspace wrapper. |\n| `body` | The main conversation/details layout. |\n| `composer` | The composer region. |\n| `composer-input` | The built-in `<lr-chat-composer>`. |\n| `conversation` | The main transcript pane. |\n| `details` | The responsive details pane. |\n| `details-content` | The built-in details content wrapper. |\n| `header` | The workspace heading and header-actions slot. |\n| `header-actions` | The header-actions slot wrapper. |\n| `heading` | The visible workspace heading. |\n| `messages` | The transcript message wrapper. |\n| `messages-empty` | The empty transcript state. |\n| `section` | A built-in run, tools, retrieval, grounding, or context section. |\n| `section-heading` | A built-in details section heading. |\n| `viewport` | The composed `<lr-chat-viewport>`. |",
           "attributes": [
             {
               "name": "aria-label",
@@ -540,7 +540,7 @@
             },
             {
               "name": "show-composer",
-              "description": "Whether the built-in composer is available when no `composer` slot is supplied.\n\nType: `boolean`  \nDefault: `true`",
+              "description": "Whether the built-in plain-frame composer is available when no `composer` slot is supplied.\n\nType: `boolean`  \nDefault: `true`",
               "value": {
                 "type": [
                   "boolean"
@@ -1407,7 +1407,7 @@
         },
         {
           "name": "lr-audio-visualizer",
-          "description": "`<lr-audio-visualizer>` — a presentational, canvas-drawn voice-activity visualization (bars or\nwaveform), the LiveKit-BarVisualizer counterpart for this library. Driven by a `MediaStream`\n(lazily wired to a WebAudio `AnalyserNode`), a numeric `level` for hosts that already compute\nlevels (e.g. `lr-push-to-talk`'s `lr-level`), or `state` alone for an ambient animation when no\nreal signal exists. A real signal (`stream` or `level`) always drives amplitude regardless of\n`prefers-reduced-motion` — that is live, user-controlled feedback, not decorative motion; only the\nsignal-less ambient animation is throttled and simplified under reduced motion.\n\nAnimation frames are only scheduled while the drawn output is actually time-varying (live analyser\ndata, or a non-reduced ambient pulse/sweep). Static output — a constant `level`, idle bars, or the\nflattened reduced-motion ambient patterns — draws once and stops; any change that could alter the\nnext frame (properties, stream/`AudioContext` state, size, theme, motion preference) re-enters the\nloop via `scheduleDraw()`. The loop is also paused while the host is scrolled off-screen (an\n`IntersectionObserver`-gated `visible` flag, mirroring `<lr-chart>`'s own `draw()` gating), so a\nlive-signal visualizer buried behind later transcript messages doesn't keep repainting for nobody.\nCanvas-bound theme colors are materialized through a live DOM color probe before drawing, so\n`currentColor`, inherited expressions, and invalid values cannot silently paint as stale black.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `canvas` | The drawing surface (`aria-hidden`; the host itself carries `role=\"img\"` and the accessible name). |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-audio-visualizer-color` (default: `var(--lr-color-brand)`) — Active bar/waveform color.\n- `--lr-audio-visualizer-height` (default: `var(--lr-size-3rem)`) — The host's block size, which the canvas fills at 100%.\n- `--lr-audio-visualizer-quiet-color` (default: `var(--lr-color-brand-quiet)`) — Inactive/idle color.",
+          "description": "`<lr-audio-visualizer>` — a presentational, canvas-drawn voice-activity visualization (bars or\nwaveform), the LiveKit-BarVisualizer counterpart for this library. Driven by a `MediaStream`\n(lazily wired to a WebAudio `AnalyserNode`), a numeric `level` for hosts that already compute\nlevels (e.g. `lr-push-to-talk`'s `lr-level`), or `state` alone for an ambient animation when no\nreal signal exists. A real signal (`stream` or `level`) always drives amplitude regardless of\n`prefers-reduced-motion` — that is live, user-controlled feedback, not decorative motion; only the\nsignal-less ambient animation is throttled and simplified under reduced motion.\n\nAnimation frames are only scheduled while the drawn output is actually time-varying (live analyser\ndata, or a non-reduced ambient pulse/sweep). Static output — a constant `level`, idle bars, or the\nflattened reduced-motion ambient patterns — draws once and stops; any change that could alter the\nnext frame (properties, stream/`AudioContext` state, size, theme, motion preference) re-enters the\nloop via `scheduleDraw()`. The loop is also paused while the host is scrolled off-screen (an\n`IntersectionObserver`-gated `visible` flag, mirroring `<lr-chart>`'s own `draw()` gating), so a\nlive-signal visualizer buried behind later transcript messages doesn't keep repainting for nobody.\nCanvas-bound theme colors are materialized through a live DOM color probe before drawing, so\n`currentColor`, inherited expressions, and invalid values cannot silently paint as stale black.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `canvas` | The drawing surface (`aria-hidden`; the host itself carries `role=\"img\"` and the accessible name). |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-audio-visualizer-ambient-duration` (default: `var(--lr-duration-ambient)`) — Time-only duration of one signal-less ambient pulse or sweep cycle.\n- `--lr-audio-visualizer-color` (default: `var(--lr-color-brand)`) — Active bar/waveform color.\n- `--lr-audio-visualizer-height` (default: `var(--lr-size-3rem)`) — The host's block size, which the canvas fills at 100%.\n- `--lr-audio-visualizer-quiet-color` (default: `var(--lr-color-brand-quiet)`) — Inactive/idle color.",
           "attributes": [
             {
               "name": "bar-count",
@@ -2002,17 +2002,10 @@
             },
             {
               "name": "type",
-              "description": "Type: `LyraChartType`  \nDefault: `'bar'`",
+              "description": "Type: `'bar'`  \nDefault: `'bar'`",
               "value": {
                 "type": [
-                  "'line'",
-                  "'bar'",
-                  "'scatter'",
-                  "'pie'",
-                  "'doughnut'",
-                  "'radar'",
-                  "'polarArea'",
-                  "'bubble'"
+                  "'bar'"
                 ]
               }
             },
@@ -2493,16 +2486,9 @@
             },
             {
               "name": "type",
-              "description": "Type: `LyraChartType`  \nDefault: `'bubble'`",
+              "description": "Type: `'bubble'`  \nDefault: `'bubble'`",
               "value": {
                 "type": [
-                  "'line'",
-                  "'bar'",
-                  "'scatter'",
-                  "'pie'",
-                  "'doughnut'",
-                  "'radar'",
-                  "'polarArea'",
                   "'bubble'"
                 ]
               }
@@ -4673,7 +4659,7 @@
         },
         {
           "name": "lr-code-block-core",
-          "description": "`<lr-code-block-core>` — a build-lean variant of `<lr-code-block>` for\na consumer whose `languages` map already covers every language it will\never render. It only ever calls `loadShikiHighlighterCore(this.languages)`\n(from the peer-neutral Shiki capability leaf) — never `loadShikiHighlighter()`, the default\n~200-language dynamic-import table loader `<lr-code-block>` calls\nunconditionally unless its runtime `languagesOnly` flag is `true`. A\nruntime flag on that same module can't be proven always-`true` by a\nbundler, so the unconditional call (and everything shiki's main entry\npoint can reach from it) always stays in the build output regardless of\nhow that flag is used. This component's own module never textually\ncontains a call to (or import of) `loadShikiHighlighter` at all, so a\nconsumer importing this entry point instead of `code-block.js` gets a\ngenuinely shiki-full-table-free build.\n\nA `language` value absent from `languages` always renders the plain\n`<pre><code>` fallback — there is no default/full-table highlighter here\nto fall back to, unlike `<lr-code-block>`'s dynamic-import path for an\nunmapped language. That fallback is the *default* rendering path, not a\ndegraded one, same as `<lr-code-block>`'s own plain-text fallback.\n\nEverything else — `code`/`language`/`filename`/`copyable`/`collapsible`/\n`collapsed`/`maxHeight`, the copy button, the collapse header toggle, the\nloading-skeleton behavior while the fine-grained highlighter itself\nresolves — matches `<lr-code-block>` exactly. A host `aria-label` (or\nthe matching `accessibleLabel` property) is forwarded to the internal\nfocusable element that owns the named `group` role.\n\nAdopts the `line-range` slice of this library's shared anchor-target contract, identical to\n`<lr-code-block>`: `highlights`/`activeHighlightId` paint (and `highlight-lines` additionally\nmarks) per-line emphasis in both the shiki and plain-text-fallback rendering paths identically,\nand `scrollToAnchor()` resolves a `line-range` anchor. `interactive-lines` is a separate, purely\nlocal affordance that turns the (`line-numbers`-gated) gutter into a keyboard-navigable,\nclickable roving-tabindex group emitting `lr-line-click` — it doesn't require `highlights` to\nbe set. If controlled `code` shrinks while a line owns focus, focus follows the clamped\nsurviving line through both plain and highlighted DOM replacement; an explicit move to another\ncontrol during the update is never overridden.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outer container. |\n| `body` | The scrollable region wrapping the code (or the loading skeleton); respects `max-height`, `hidden` while `collapsible` and `collapsed`. |\n| `code` | The rendered `<code>`, same split as `pre` above. |\n| `copy-button` | The copy-to-clipboard button, when `copyable`. |\n| `filename` | The `filename` text, when set. |\n| `header` | The row above the code (filename/language/copy/toggle), present whenever there's anything to put in it. |\n| `language` | The `language` badge, when set, so the language is exposed to assistive tech as visible text rather than only a `language` attribute a screen reader would never announce. |\n| `line-button` | A gutter line-number button, only rendered while `interactive-lines` and `line-numbers` are both set. |\n| `line-highlight` | A line marked by `highlight-lines` or a `line-range` entry in `highlights`. |\n| `pre` | The rendered `<pre>` — shiki's own in the highlighted path, this component's own plain one in the fallback path. |\n| `toggle` | The collapse/expand chevron button, when `collapsible`. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-code-block-active-line-outline-color` (default: `var(--lr-color-brand)`) — Outline color of the line marked active by `active-highlight-id`, leaving every other `--lr-color-brand` surface in the component alone.\n- `--lr-code-block-tab-size` (default: `2`) — Tab width for the rendered code, applied to `pre`. Shared with `lr-code-block` (this component reuses its stylesheet), `lr-code-editor`, and the markdown viewers' own `code-block` part, so every code surface agrees on a tab's width.",
+          "description": "`<lr-code-block-core>` — a build-lean variant of `<lr-code-block>` for\na consumer whose `languages` map already covers every language it will\never render. It only ever calls `loadShikiHighlighterCore(this.languages)`\n(from the peer-neutral Shiki capability leaf) — never `loadShikiHighlighter()`, the default\n~200-language dynamic-import table loader `<lr-code-block>` calls\nunconditionally unless its runtime `languagesOnly` flag is `true`. A\nruntime flag on that same module can't be proven always-`true` by a\nbundler, so the unconditional call (and everything shiki's main entry\npoint can reach from it) always stays in the build output regardless of\nhow that flag is used. This component's own module never textually\ncontains a call to (or import of) `loadShikiHighlighter` at all, so a\nconsumer importing this entry point instead of `code-block.js` gets a\ngenuinely shiki-full-table-free build.\n\nA `language` value absent from `languages` always renders the plain\n`<pre><code>` fallback — there is no default/full-table highlighter here\nto fall back to, unlike `<lr-code-block>`'s dynamic-import path for an\nunmapped language. That fallback is the *default* rendering path, not a\ndegraded one, same as `<lr-code-block>`'s own plain-text fallback.\n\nEverything else — `code`/`language`/`filename`/`copyable`/`collapsible`/\n`collapsed`/`maxHeight`, the copy button, the collapse header toggle, the\nloading-skeleton behavior while the fine-grained highlighter itself\nresolves — matches `<lr-code-block>` exactly. A host `aria-label` (or\nthe matching `accessibleLabel` property) is forwarded to the internal\nfocusable element that owns the named `group` role.\n\nAdopts the `line-range` slice of this library's shared anchor-target contract, identical to\n`<lr-code-block>`: `highlights`/`activeHighlightId` paint (and `highlight-lines` additionally\nmarks) per-line emphasis in both the shiki and plain-text-fallback rendering paths identically,\nand `scrollToAnchor()` resolves a `line-range` anchor. `interactive-lines` is a separate, purely\nlocal affordance that turns the (`line-numbers`-gated) gutter into a keyboard-navigable,\nclickable roving-tabindex group emitting `lr-line-click` — it doesn't require `highlights` to\nbe set. If controlled `code` shrinks while a line owns focus, focus follows the clamped\nsurviving line through both plain and highlighted DOM replacement; an explicit move to another\ncontrol during the update is never overridden.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outer container. |\n| `body` | The scrollable region wrapping the code (or the loading skeleton); respects `max-height`, `hidden` while `collapsible` and `collapsed`. |\n| `code` | The rendered `<code>`, same split as `pre` above. |\n| `copy-button` | The copy-to-clipboard button, when `copyable`. |\n| `filename` | The `filename` text, when set. |\n| `header` | The row above the code (filename/language/copy/toggle), present whenever there's anything to put in it. |\n| `language` | The `language` badge, when set, so the language is exposed to assistive tech as visible text rather than only a `language` attribute a screen reader would never announce. |\n| `line-button` | A gutter line-number button, only rendered while `interactive-lines` and `line-numbers` are both set. |\n| `line-highlight` | A line marked by `highlight-lines` or a `line-range` entry in `highlights`. |\n| `pre` | The rendered `<pre>` — shiki's own in the highlighted path, this component's own plain one in the fallback path. |\n| `toggle` | The collapse/expand chevron button, when `collapsible`. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-code-block-active-line-outline-color` (default: `var(--lr-color-brand)`) — Outline color of the line marked active by `active-highlight-id`, leaving every other `--lr-color-brand` surface in the component alone.\n- `--lr-code-block-font` (default: `var(--lr-font-mono)`) — Monospace family for the rendered `pre` and `code`.\n- `--lr-code-block-max-height` (default: `none`) — Scroll cap applied to `body`. The `max-height` attribute, when set, writes this same property inline on `body` and therefore wins.\n- `--lr-code-block-tab-size` (default: `2`) — Tab width for the rendered code, applied to `pre`. Shared with `lr-code-block` (this component reuses its stylesheet), `lr-code-editor`, and the markdown viewers' own `code-block` part, so every code surface agrees on a tab's width.",
           "attributes": [
             {
               "name": "active-highlight-id",
@@ -5683,7 +5669,7 @@
         },
         {
           "name": "lr-compare-panel",
-          "description": "`<lr-compare-panel>` — side-by-side A/B output comparison with a winner\nvote (LMSYS-arena / LangSmith-pairwise style): two slotted panes, a vote\nbar, synchronized reading.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `a` | The first output (any content — a chat message, markdown, a viewer). |\n| `b` | The second output. |\n| `prompt` | Optional shared-input header above both panes. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outer wrapper. |\n| `live-region` | The internal vote-announcement live region. |\n| `pane-a` | The first pane's labeled scroll region. |\n| `pane-b` | The second pane's labeled scroll region. |\n| `pane-header` | A pane's visible heading. |\n| `panes` | The row (or, under 640px, column) wrapping both panes. |\n| `prompt` | The optional prompt header, hidden when the `prompt` slot is empty. |\n| `vote-bar` | The `role=\"group\"` row of vote buttons. |\n| `vote-button` | One vote button. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-compare-panel-max-height` (default: `var(--lr-size-24rem)`) — Cap on how tall each pane's scroll region grows before it scrolls internally.\n- `--lr-compare-panel-selected-background` (default: `var(--lr-color-brand-quiet)`) — Selected vote button background.\n- `--lr-compare-panel-selected-border-color` (default: `var(--lr-color-brand)`) — Selected vote button border color.\n- `--lr-compare-panel-selected-color` (default: `var(--lr-color-brand)`) — Selected vote button text color.",
+          "description": "`<lr-compare-panel>` — side-by-side A/B output comparison with a winner\nvote (LMSYS-arena / LangSmith-pairwise style): two slotted panes, a vote\nbar, synchronized reading.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `a` | The first output (any content — a chat message, markdown, a viewer). |\n| `b` | The second output. |\n| `prompt` | Optional shared-input header above both panes. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outer wrapper. |\n| `live-region` | The internal vote-announcement live region. |\n| `pane-a` | The first pane's labeled scroll region. |\n| `pane-b` | The second pane's labeled scroll region. |\n| `pane-header` | A pane's visible heading. |\n| `panes` | The row (or, under 640px, column) wrapping both panes. |\n| `prompt` | The optional prompt header, hidden when the `prompt` slot is empty. |\n| `vote-bar` | The `role=\"group\"` row of vote buttons. |\n| `vote-button` | One vote button. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-compare-panel-max-height` (default: `var(--lr-size-24rem)`) — Cap on how tall each pane's scroll region grows before it scrolls internally.\n- `--lr-compare-panel-selected-background` (default: `var(--lr-color-brand-quiet)`) — Selected vote button background.\n- `--lr-compare-panel-selected-border-color` (default: `var(--lr-color-brand)`) — Selected vote button border color.\n- `--lr-compare-panel-selected-color` (default: `var(--lr-color-brand)`) — Selected vote button text color.\n- `--lr-compare-panel-selected-font-weight` (default: `var(--lr-font-weight-semibold)`) — Selected vote button font weight.",
           "attributes": [
             {
               "name": "disabled",
@@ -8124,17 +8110,10 @@
             },
             {
               "name": "type",
-              "description": "Type: `LyraChartType`  \nDefault: `'doughnut'`",
+              "description": "Type: `'doughnut'`  \nDefault: `'doughnut'`",
               "value": {
                 "type": [
-                  "'line'",
-                  "'bar'",
-                  "'scatter'",
-                  "'pie'",
-                  "'doughnut'",
-                  "'radar'",
-                  "'polarArea'",
-                  "'bubble'"
+                  "'doughnut'"
                 ]
               }
             },
@@ -9140,11 +9119,56 @@
               }
             },
             {
+              "name": "autocapitalize",
+              "description": "Native capitalization hint forwarded to the built-in search input while `searchable`.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "autocomplete",
+              "description": "Native autocomplete hint forwarded to the built-in search input while `searchable`. An empty\nstring (the default) leaves the browser default in effect.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "autocorrect",
+              "description": "Native autocorrection hint forwarded to the built-in search input while `searchable`.\n`autoCorrect` maps to the standard lowercase `autocorrect` attribute without colliding with\nthe incompatible inherited `HTMLElement.autocorrect` type.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
               "name": "disabled",
               "description": "Disables every add/remove/import/export affordance -- e.g. while a host-side mutation from a\nprevious request is still in flight.\n\nType: `boolean`  \nDefault: `false`",
               "value": {
                 "type": [
                   "boolean"
+                ]
+              }
+            },
+            {
+              "name": "enterkeyhint",
+              "description": "Native virtual-keyboard enter-key hint forwarded to the built-in search input while\n`searchable`.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "inputmode",
+              "description": "Native virtual-keyboard input-mode hint forwarded to the built-in search input while\n`searchable`.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
                 ]
               }
             },
@@ -9169,6 +9193,15 @@
             {
               "name": "searchable",
               "description": "Shows the built-in free-text search field, filtering by a case-insensitive substring match\nagainst `input`, `expectedOutput`, and `tags`.\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "spellcheck",
+              "description": "Whether the browser spellchecks the built-in search input. Defaults to `true`; the literal\n`spellcheck=\"false\"` attribute is deliberately parsed as false instead of as a presence-based\nboolean.\n\nType: `boolean`  \nDefault: `true`",
               "value": {
                 "type": [
                   "boolean"
@@ -12833,17 +12866,10 @@
             },
             {
               "name": "type",
-              "description": "Type: `LyraChartType`  \nDefault: `'line'`",
+              "description": "Type: `'line'`  \nDefault: `'line'`",
               "value": {
                 "type": [
-                  "'line'",
-                  "'bar'",
-                  "'scatter'",
-                  "'pie'",
-                  "'doughnut'",
-                  "'radar'",
-                  "'polarArea'",
-                  "'bubble'"
+                  "'line'"
                 ]
               }
             },
@@ -14010,7 +14036,7 @@
         },
         {
           "name": "lr-message-parts",
-          "description": "`<lr-message-parts>` — renders ordered, interleavable provider-neutral AI message parts. It\ncomposes Lyra's existing Markdown, reasoning, tool, citation, attachment, widget, JSON, and\nmedia primitives while keeping streaming order stable by part id.\nStreaming text and reasoning parts forward that state into their nested Markdown renderer, so\nparsing/highlighting coalesces until the same-id part becomes complete.\nCitation ranks are derived in one linear render prepass, including for mixed streaming arrays.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `7.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n- Deprecated event `lr-tool-chip-select`: Deprecated since `7.0.0`. Use event `lr-tool-call-chip-select`. Removal is not permitted before `9.0.0`. The replacement names the selected tool-call component precisely; the shorter event remains as a bubbling compatibility alias.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `attachment` | An attachment part. |\n| `audio` | An audio part. |\n| `audio-transcript` | An audio part's transcript. |\n| `base` | The ordered message-part list. |\n| `citation` | A citation part. |\n| `data` | A data or widget part. |\n| `error` | An error part. |\n| `part` | Every rendered part wrapper. |\n| `part-streaming` | Additional part name on a streaming part. |\n| `reasoning` | A reasoning part. |\n| `retry` | A retryable error part's action. |\n| `text` | A text part. |\n| `tool-call` | A tool-call part. |\n| `tool-result` | A tool-result part. |",
+          "description": "`<lr-message-parts>` — renders ordered, interleavable provider-neutral AI message parts. It\ncomposes Lyra's existing Markdown, reasoning, tool, citation, attachment, widget, JSON, and\nmedia primitives while keeping streaming order stable by part id.\nStreaming text and reasoning parts forward that state into their nested Markdown renderer, so\nparsing/highlighting coalesces until the same-id part becomes complete.\nCitation ranks are derived in one linear render prepass, including for mixed streaming arrays.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `7.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n- Deprecated event `lr-tool-chip-select`: Deprecated since `7.0.0`. Use event `lr-tool-call-chip-select`. Removal is not permitted before `9.0.0`. The replacement names the selected tool-call component precisely; the shorter event remains as a bubbling compatibility alias.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `attachment` | An attachment part. |\n| `audio` | An audio part. |\n| `audio-transcript` | An audio part's transcript. |\n| `base` | The ordered message-part list. |\n| `citation` | A citation part. |\n| `data` | A data or widget part. |\n| `error` | An error part. |\n| `part` | Every rendered part wrapper. |\n| `part-streaming` | Additional part name on a streaming part. |\n| `reasoning` | A reasoning part. |\n| `retry` | A retryable error part's action. |\n| `text` | A text part. |\n| `tool-call` | A tool-call part. |\n| `tool-result` | A tool-result part. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-message-parts-audio-transcript-color` (default: `var(--lr-color-text-quiet)`) — Text color of an audio transcript.\n- `--lr-message-parts-error-background` (default: `var(--lr-color-danger-quiet)`) — Background color of an error part.\n- `--lr-message-parts-error-border-color` (default: `var(--lr-color-danger)`) — Border color of an error part.\n- `--lr-message-parts-error-color` (default: `var(--lr-color-danger)`) — Text color of an error part.\n- `--lr-message-parts-streaming-color` (default: `var(--lr-color-text-quiet)`) — Text color of a streaming part wrapper.",
           "attributes": [
             {
               "name": "aria-label",
@@ -14089,7 +14115,7 @@
         },
         {
           "name": "lr-model-select",
-          "description": "`<lr-model-select>` — a provider/model picker that renders as a closed\ndropdown when a fixed `catalog` is available, or as a filterable free-text\ncombobox when it isn't (or when `allow-custom` explicitly permits typing\nsomething outside the catalog). Built directly on the shared\ntrigger-button/aria-activedescendant listbox technique `<lr-select>` uses\nand the filter-as-you-type suggestion-popup technique `<lr-combobox>`\nuses — not by composing either element, since the mode switch and the\nstale-value handling below are specific to this control.\n\nA `value` that isn't present in `catalog` (e.g. a model id saved from a\nprovider whose live catalog has since changed) is never silently dropped:\n`effectiveEntries` appends it to the rendered option list as a synthetic,\nvisually-distinct row (dashed border, italic label, \"not in catalog\"\nbadge — see `model-select.styles.ts`) computed fresh from `catalog` +\n`value` on every render, without ever mutating the `catalog` property\nitself.\n\nShips the standard label/hint/error form-control chrome: properties, matching named slots, and\nthe complete `form-control` frame. Each surface is opt-in; left unset, it renders no chrome.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `error` | Custom error content. |\n| `hint` | Custom hint content. |\n| `label` | Custom visible label content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `combobox` | The text-input container (free-text mode's positioning anchor). |\n| `combobox-input` | The free-text mode's text input. |\n| `empty` | The empty-listbox message, shown when no rows match. |\n| `error` | The error message. |\n| `expand-icon` | The dropdown indicator. |\n| `form-control` | The complete label, control, hint, error, and listbox frame. |\n| `form-control-label` | The `<label>` element containing the `label` property and slot. |\n| `hint` | The hint message. |\n| `listbox` | The options popover (shared by both modes). |\n| `option` | An option row. |\n| `option-badge` | The \"not in catalog\" badge on a synthetic stale-value row. |\n| `option-label` | An option row's label. |\n| `provider-badge` | The optional leading `provider` label. |\n| `trigger` | The trigger button (closed-dropdown mode's positioning anchor). |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-form-control-required-color` (default: `var(--lr-color-danger)`) — Required-marker color, themeable independently of error text and invalid borders.\n- `--lr-form-control-required-content` (default: `' *'`) — The required marker appended to `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it.\n- `--lr-form-control-required-offset` (default: `0`) — Inline space between the label text and the required marker.\n- `--lr-model-select-expand-size` (default: `var(--lr-size-1-75rem)`) — Decorative expand-icon box size, scaled by `size`.\n- `--lr-model-select-font-size` (default: `var(--lr-form-control-font-size)`) — Trigger/combobox font size, scaled by `size` off the shared control ladder.\n- `--lr-model-select-option-active-bg` (default: `var(--lr-color-brand-quiet)`) — Background of a hovered or keyboard-active option row.\n- `--lr-model-select-option-selected-bg` (default: `transparent`) — Background of the currently-selected option row. Not declared on `:host`; retheme without hijacking `--lr-color-brand`.\n- `--lr-model-select-option-selected-border` (default: `var(--lr-color-brand)`) — Border color of the selected option row.\n- `--lr-model-select-option-selected-color` (default: `var(--lr-color-brand)`) — Text color of the selected option row.\n- `--lr-model-select-option-selected-font-weight` (default: `var(--lr-font-weight-semibold)`) — Font weight of the selected option row.\n- `--lr-model-select-trigger-min-height` (default: `var(--lr-form-control-height)`) — Trigger/combobox block-size floor, scaled by `size` off the shared control ladder.\n- `--lr-model-select-trigger-padding` (default: `var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)`) — Trigger/combobox padding shorthand, scaled by `size` off the shared control ladder.",
+          "description": "`<lr-model-select>` — a provider/model picker that renders as a closed\ndropdown when a fixed `catalog` is available, or as a filterable free-text\ncombobox when it isn't (or when `allow-custom` explicitly permits typing\nsomething outside the catalog). Built directly on the shared\ntrigger-button/aria-activedescendant listbox technique `<lr-select>` uses\nand the filter-as-you-type suggestion-popup technique `<lr-combobox>`\nuses — not by composing either element, since the mode switch and the\nstale-value handling below are specific to this control.\n\nA `value` that isn't present in `catalog` (e.g. a model id saved from a\nprovider whose live catalog has since changed) is never silently dropped:\n`effectiveEntries` appends it to the rendered option list as a synthetic,\nvisually-distinct row (dashed border, italic label, \"not in catalog\"\nbadge — see `model-select.styles.ts`) computed fresh from `catalog` +\n`value` on every render, without ever mutating the `catalog` property\nitself.\n\nShips the standard label/hint/error form-control chrome: properties, matching named slots, and\nthe complete `form-control` frame. Each surface is opt-in; left unset, it renders no chrome.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `error` | Custom error content. |\n| `hint` | Custom hint content. |\n| `label` | Custom visible label content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `combobox` | The text-input container (free-text mode's positioning anchor). |\n| `combobox-input` | The free-text mode's text input. |\n| `empty` | The empty-listbox message, shown when no rows match. |\n| `error` | The error message. |\n| `expand-icon` | The dropdown indicator. |\n| `form-control` | The complete label, control, hint, error, and listbox frame. |\n| `form-control-label` | The `<label>` element containing the `label` property and slot. |\n| `hint` | The hint message. |\n| `listbox` | The options popover (shared by both modes). |\n| `option` | An option row. |\n| `option-badge` | The \"not in catalog\" badge on a synthetic stale-value row. |\n| `option-label` | An option row's label. |\n| `provider-badge` | The optional leading `provider` label. |\n| `trigger` | The trigger button (closed-dropdown mode's positioning anchor). |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-form-control-required-color` (default: `var(--lr-color-danger)`) — Required-marker color, themeable independently of error text and invalid borders.\n- `--lr-form-control-required-content` (default: `' *'`) — The required marker appended to `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it.\n- `--lr-form-control-required-offset` (default: `0`) — Inline space between the label text and the required marker.\n- `--lr-model-select-expand-size` (default: `var(--lr-size-1-75rem)`) — Decorative expand-icon box size, scaled by `size`.\n- `--lr-model-select-font-size` (default: `var(--lr-form-control-font-size)`) — Trigger/combobox font size, scaled by `size` off the shared control ladder.\n- `--lr-model-select-gap` (default: `var(--lr-space-xs)`) — Trigger, combobox, and option child gap.\n- `--lr-model-select-open-border-color` (default: `var(--lr-color-brand)`) — Open trigger border color.\n- `--lr-model-select-option-active-bg` (default: `var(--lr-color-brand-quiet)`) — Background of a hovered or keyboard-active option row.\n- `--lr-model-select-option-selected-bg` (default: `transparent`) — Background of the currently-selected option row. Not declared on `:host`; retheme without hijacking `--lr-color-brand`.\n- `--lr-model-select-option-selected-border` (default: `var(--lr-color-brand)`) — Border color of the selected option row.\n- `--lr-model-select-option-selected-color` (default: `var(--lr-color-brand)`) — Text color of the selected option row.\n- `--lr-model-select-option-selected-font-weight` (default: `var(--lr-font-weight-semibold)`) — Font weight of the selected option row.\n- `--lr-model-select-option-synthetic-border-color` (default: `var(--lr-color-border)`) — Border color of a synthetic stale-value option row.\n- `--lr-model-select-option-synthetic-border-style` (default: `dashed`) — Border style of a synthetic stale-value option row.\n- `--lr-model-select-radius` (default: `var(--lr-radius)`) — Trigger, combobox, listbox, and option corner radius.\n- `--lr-model-select-trigger-min-height` (default: `var(--lr-form-control-height)`) — Trigger/combobox block-size floor, scaled by `size` off the shared control ladder.\n- `--lr-model-select-trigger-padding` (default: `var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)`) — Trigger/combobox padding shorthand, scaled by `size` off the shared control ladder.",
           "attributes": [
             {
               "name": "allow-custom",
@@ -14278,7 +14304,7 @@
         },
         {
           "name": "lr-model-settings-panel",
-          "description": "`<lr-model-settings-panel>` — a fixed composition of `<lr-model-select>`\nand `<lr-slider>` into one agent-configuration card: pick a provider's\nmodel, then tune its sampling temperature. Not a generic layout shell (no\nslots) — it exists so a consumer doesn't have to re-wire the same two\nchild `lr-change` events into one combined settings object by hand every\ntime this pairing comes up.\n\nEvery prop here is a plain pass-through to (or mirror of) the matching\nchild control's own prop of the same/similar name; see the child\ncomponents themselves for the exact semantics of `catalog`/`allowCustom`\nand `temperatureMin`/`temperatureMax`/`temperatureStep`.\n\nThe panel's own `temperature` readout mirrors the slider's *live* value —\nupdated on every `lr-input` (drag/key-repeat), not just the committed\n`lr-change` — and is re-clamped into `[temperatureMin, temperatureMax]`\n(snapped to `temperatureStep`) whenever those three properties change, so\nit can never drift from what the nested `lr-slider` itself shows.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outermost wrapping container. |\n| `model-row` | The row wrapping the internal `lr-model-select`. |\n| `temperature-label` | The visible \"Temperature\" caption. |\n| `temperature-row` | The row wrapping the temperature label/slider/value. |\n| `temperature-value` | The visible current temperature readout. |",
+          "description": "`<lr-model-settings-panel>` — a fixed composition of `<lr-model-select>`\nand `<lr-slider>` into one agent-configuration card: pick a provider's\nmodel, then tune its sampling temperature. Not a generic layout shell (no\nslots) — it exists so a consumer doesn't have to re-wire the same two\nchild `lr-change` events into one combined settings object by hand every\ntime this pairing comes up.\n\nEvery prop here is a plain pass-through to (or mirror of) the matching\nchild control's own prop of the same/similar name; see the child\ncomponents themselves for the exact semantics of `catalog`/`allowCustom`\nand `temperatureMin`/`temperatureMax`/`temperatureStep`.\n\nThe panel's own `temperature` readout mirrors the slider's *live* value —\nupdated on every `lr-input` (drag/key-repeat), not just the committed\n`lr-change` — and is re-clamped into `[temperatureMin, temperatureMax]`\n(snapped to `temperatureStep`) whenever those three properties change, so\nit can never drift from what the nested `lr-slider` itself shows.\nThe visible temperature readout uses the effective locale with up to 20 fractional digits,\nmatching `<lr-slider>` rather than exposing JavaScript's raw number serialization.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outermost wrapping container. |\n| `model-row` | The row wrapping the internal `lr-model-select`. |\n| `temperature-label` | The visible \"Temperature\" caption. |\n| `temperature-row` | The row wrapping the temperature label/slider/value. |\n| `temperature-value` | The visible current temperature readout. |",
           "attributes": [
             {
               "name": "allow-custom",
@@ -16507,17 +16533,10 @@
             },
             {
               "name": "type",
-              "description": "Type: `LyraChartType`  \nDefault: `'pie'`",
+              "description": "Type: `'pie'`  \nDefault: `'pie'`",
               "value": {
                 "type": [
-                  "'line'",
-                  "'bar'",
-                  "'scatter'",
-                  "'pie'",
-                  "'doughnut'",
-                  "'radar'",
-                  "'polarArea'",
-                  "'bubble'"
+                  "'pie'"
                 ]
               }
             },
@@ -16810,17 +16829,10 @@
             },
             {
               "name": "type",
-              "description": "Type: `LyraChartType`  \nDefault: `'polarArea'`",
+              "description": "Type: `'polarArea'`  \nDefault: `'polarArea'`",
               "value": {
                 "type": [
-                  "'line'",
-                  "'bar'",
-                  "'scatter'",
-                  "'pie'",
-                  "'doughnut'",
-                  "'radar'",
-                  "'polarArea'",
-                  "'bubble'"
+                  "'polarArea'"
                 ]
               }
             },
@@ -17453,11 +17465,38 @@
         },
         {
           "name": "lr-prompt-input",
-          "description": "`<lr-prompt-input>` — a composed AI prompt surface combining the chat composer with attachments,\nmodel and voice selection, retrieval sources, mentions, slash commands, and a queued-turn list.\nIt performs no upload, model call, retrieval, or persistence.\n\nDeliberately not form-associated: this is a composite application interaction whose complete\nstate includes attachments, source scope, model, voice, and queued turns, not one successful\nstring form entry. Observe `lr-input` for controlled text and handle `lr-submit` as the\nsubmission request. `label` names the prompt section; it is not generic field chrome.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `7.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `chips` | Replaces the data-driven attachment chips. |\n| `controls` | Replaces the data-driven model, voice, and source controls. |\n| `footer` | Content below the composer. |\n| `leading` | Replaces the default attachment trigger. |\n| `trailing` | Replaces the composer's send/stop action. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The prompt surface. |\n| `chips` | The attachment-chip tray. |\n| `composer` | The composed chat composer. |\n| `controls` | Model, voice, and source controls. |\n| `footer` | The footer slot. |\n| `leading` | The composer's leading attachment control. |\n| `queue` | The composed prompt queue. |\n| `source-picker` | The composed source picker. |\n| `sources` | The collapsible source-picker region. |\n| `sources-summary` | The source-picker disclosure. |",
+          "description": "`<lr-prompt-input>` — a composed AI prompt surface combining the chat composer with attachments,\nmodel and voice selection, retrieval sources, mentions, slash commands, and a queued-turn list.\nIt performs no upload, model call, retrieval, or persistence.\n\nDeliberately not form-associated: this is a composite application interaction whose complete\nstate includes attachments, source scope, model, voice, and queued turns, not one successful\nstring form entry. Observe `lr-input` for controlled text and handle `lr-submit` as the\nsubmission request. `label` names the prompt section; it is not generic field chrome.\n\nThe composed text surface exposes the same native editing-assistance, selection, and range-edit\nAPIs as `<lr-chat-composer>`. Silent `setRangeText()` calls keep this outer `value` synchronized\nwithout emitting `lr-input`; selection APIs are no-ops before the nested textarea renders.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `7.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `chips` | Replaces the data-driven attachment chips. |\n| `controls` | Replaces the data-driven model, voice, and source controls. |\n| `footer` | Content below the composer. |\n| `leading` | Replaces the default attachment trigger. |\n| `trailing` | Replaces the composer's send/stop action. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The prompt surface. |\n| `chips` | The attachment-chip tray. |\n| `composer` | The composed chat composer. |\n| `controls` | Model, voice, and source controls. |\n| `footer` | The footer slot. |\n| `leading` | The composer's leading attachment control. |\n| `queue` | The composed prompt queue. |\n| `source-picker` | The composed source picker. |\n| `sources` | The collapsible source-picker region. |\n| `sources-summary` | The source-picker disclosure. |",
           "attributes": [
             {
               "name": "aria-label",
               "description": "Type: `string | null`  \nDefault: `null`"
+            },
+            {
+              "name": "autocapitalize",
+              "description": "Forwarded to the composed native textarea's own `autocapitalize`. Empty string omits the\nattribute and preserves the browser default.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "autocomplete",
+              "description": "Native autocomplete hint forwarded to the composed textarea.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "autocorrect",
+              "description": "Forwarded to the composed native textarea's own `autocorrect` (Safari/WebKit-specific).\n`autoCorrect` preserves the lowercase `autocorrect` attribute without colliding with the DOM\nboolean IDL member.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
             },
             {
               "name": "disabled",
@@ -17465,6 +17504,24 @@
               "value": {
                 "type": [
                   "boolean"
+                ]
+              }
+            },
+            {
+              "name": "enterkeyhint",
+              "description": "Virtual-keyboard enter-action hint forwarded to the composed textarea.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "inputmode",
+              "description": "Virtual-keyboard input hint forwarded to the composed textarea.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
                 ]
               }
             },
@@ -17505,6 +17562,15 @@
               }
             },
             {
+              "name": "spellcheck",
+              "description": "Forwarded to the composed native textarea. `spellcheck=\"false\"` parses as `false`, matching\nthe textarea's true default while remaining usable from plain HTML.\n\nType: `boolean`  \nDefault: `true`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
               "name": "status",
               "description": "Type: `ChatComposerStatus`  \nDefault: `'idle'`",
               "value": {
@@ -17539,6 +17605,17 @@
               "value": {
                 "type": [
                   "string"
+                ]
+              }
+            },
+            {
+              "name": "wrap",
+              "description": "Native wrapping behavior forwarded to the composed textarea.\n\nType: `ChatComposerWrap`  \nDefault: `'soft'`",
+              "value": {
+                "type": [
+                  "'hard'",
+                  "'soft'",
+                  "'off'"
                 ]
               }
             }
@@ -17592,8 +17669,26 @@
         },
         {
           "name": "lr-prompt-studio",
-          "description": "`<lr-prompt-studio>` — a provider-neutral prompt-development workbench for ordered role\nmessages, `{{variable}}` substitution, version selection, preview, save, and run intents.\nThe host owns persistence and model execution.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `7.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `add-message` | The add-message action. |\n| `base` | The named studio region. |\n| `editor` | Messages and variables workspace. |\n| `message` | One prompt message. |\n| `message-content` | A message textarea. |\n| `message-role` | A message role selector. |\n| `messages` | Ordered prompt-message editor. |\n| `preview` | Resolved read-only preview. |\n| `remove-message` | A message removal action. |\n| `run` | The run action. |\n| `save` | The save action. |\n| `toolbar` | Save/run controls. |\n| `variable` | One variable row. |\n| `variables` | Variable editor. |\n| `version` | One saved version. |\n| `versions` | Saved-version controls. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-prompt-studio-field-hover-border` (default: `var(--lr-color-brand)`) — Enabled field hover border.\n- `--lr-prompt-studio-version-selected-bg` (default: `var(--lr-color-brand-quiet)`) — Selected version background.\n- `--lr-prompt-studio-version-selected-border` (default: `var(--lr-color-brand)`) — Selected version border.\n- `--lr-prompt-studio-version-selected-color` (default: `var(--lr-color-text)`) — Selected version foreground.\n- `--lr-prompt-studio-version-selected-hover-bg` (default: `var(--lr-color-brand-quiet)`) — Selected version hover background.",
+          "description": "`<lr-prompt-studio>` — a provider-neutral prompt-development workbench for ordered role\nmessages, `{{variable}}` substitution, version selection, preview, save, and run intents.\nThe host owns persistence and model execution. Opting into message reordering exposes native,\nkeyboard-operable move controls; every proposed move is cancelable before the editor state changes.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `7.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `add-message` | The add-message action. |\n| `base` | The named studio region. |\n| `editor` | Messages and variables workspace. |\n| `message` | One prompt message. |\n| `message-actions` | Reorder and removal actions for one message, when reordering is enabled. |\n| `message-content` | A message textarea. |\n| `message-role` | A message role selector. |\n| `messages` | Ordered prompt-message editor. |\n| `move-message-down` | A move-message-down action. |\n| `move-message-up` | A move-message-up action. |\n| `preview` | Resolved read-only preview. |\n| `remove-message` | A message removal action. |\n| `run` | The run action. |\n| `save` | The save action. |\n| `toolbar` | Save/run controls. |\n| `variable` | One variable row. |\n| `variables` | Variable editor. |\n| `version` | One saved version. |\n| `versions` | Saved-version controls. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-prompt-studio-field-hover-border` (default: `var(--lr-color-brand)`) — Enabled field hover border.\n- `--lr-prompt-studio-version-selected-bg` (default: `var(--lr-color-brand-quiet)`) — Selected version background.\n- `--lr-prompt-studio-version-selected-border` (default: `var(--lr-color-brand)`) — Selected version border.\n- `--lr-prompt-studio-version-selected-color` (default: `var(--lr-color-text)`) — Selected version foreground.\n- `--lr-prompt-studio-version-selected-hover-bg` (default: `color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) — Selected version hover background.",
           "attributes": [
+            {
+              "name": "autocapitalize",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "autocorrect",
+              "description": "Named `autoCorrect` to avoid the boolean `HTMLElement.autocorrect` DOM typing collision while\npreserving the native lowercase `autocorrect` attribute.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
             {
               "name": "disabled",
               "description": "Type: `boolean`  \nDefault: `false`",
@@ -17622,6 +17717,15 @@
               }
             },
             {
+              "name": "reorderable",
+              "description": "Opts into native move-up/move-down buttons for each message. A move first emits the\ncancelable `lr-message-reorder` request, so a host that needs asynchronous persistence can\nprevent it and later assign its accepted message order.\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
               "name": "running",
               "description": "Type: `boolean`  \nDefault: `false`",
               "value": {
@@ -17636,6 +17740,26 @@
               "value": {
                 "type": [
                   "string"
+                ]
+              }
+            },
+            {
+              "name": "spellcheck",
+              "description": "Native editing-assistance attributes forwarded to the message textarea and variable inputs.\n\nType: `boolean`  \nDefault: `true`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "wrap",
+              "description": "Native `<textarea>` wrapping mode. Variable `<input>` controls do not support `wrap`.\n\nType: `PromptStudioWrap`  \nDefault: `'soft'`",
+              "value": {
+                "type": [
+                  "'hard'",
+                  "'soft'",
+                  "'off'"
                 ]
               }
             }
@@ -17667,7 +17791,7 @@
         },
         {
           "name": "lr-push-to-talk",
-          "description": "`<lr-push-to-talk>` — a mic capture button owning the full `getUserMedia` + `MediaRecorder`\nlifecycle: permission request, recording, optional chunked streaming, teardown. The one place in\nthis library that touches the microphone — no SDK, no LiveKit/ElevenLabs import, native browser\nAPIs only.\n\n`mode=\"hold\"` (the default) is a press-and-hold gesture: pointerdown/Enter-or-Space-keydown starts,\npointerup/keyup/blur stops. `mode=\"toggle\"` is click-to-start/click-to-stop with `aria-pressed`.\nEscape cancels the in-progress take in either mode (discarding it — `lr-record-cancel`, never\n`lr-record-stop`). `state` is a read-only lifecycle reflected to the `data-state` attribute (not\n`state`, avoiding any ambiguity with a native form-control `state`): `'idle' | 'requesting' |\n'denied' | 'recording' | 'error'`. A host-level `aria-label` (set on `<lr-push-to-talk>` itself)\noverrides the computed trigger label.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `icon` | Replaces the default mic glyph. Decorative: assigned content is inert and hidden from accessibility APIs because it is rendered inside the named trigger button. |\n| `recording-icon` | Replaces the default recording-state pulse glyph. Decorative and inert. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `icon` | Wrapper around the `icon` slot / default mic glyph. |\n| `pulse` | Wrapper around the `recording-icon` slot / default pulse glyph, rendered only while recording. |\n| `status` | Visible status text for the `requesting`/`denied`/`error`/unsupported states. |\n| `timer` | The `M:SS` elapsed-time readout, rendered only while recording and `show-timer`. |\n| `trigger` | The capture button. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-push-to-talk-recording-color` (default: `var(--lr-color-danger)`) — Border and text color of `[part=\"trigger\"]` while `state` is `recording`. Recolors only the recording treatment, leaving every other danger-toned surface on the page untouched.\n- `--lr-push-to-talk-size` (default: `var(--lr-size-3rem)`) — Preferred inline and block size of the circular `trigger` button; `--lr-icon-button-size` remains its minimum hit-area floor.",
+          "description": "`<lr-push-to-talk>` — a mic capture button owning the full `getUserMedia` + `MediaRecorder`\nlifecycle: permission request, recording, optional chunked streaming, teardown. The one place in\nthis library that touches the microphone — no SDK, no LiveKit/ElevenLabs import, native browser\nAPIs only.\n\n`mode=\"hold\"` (the default) is a press-and-hold gesture: pointerdown/Enter-or-Space-keydown starts,\npointerup/keyup/blur stops. `mode=\"toggle\"` is click-to-start/click-to-stop with `aria-pressed`.\nEscape cancels the in-progress take in either mode (discarding it — `lr-record-cancel`, never\n`lr-record-stop`). `state` is a read-only lifecycle reflected to the `data-state` attribute (not\n`state`, avoiding any ambiguity with a native form-control `state`): `'idle' | 'requesting' |\n'denied' | 'recording' | 'error'`. A host-level `aria-label` (set on `<lr-push-to-talk>` itself)\noverrides the computed trigger label.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `icon` | Replaces the default mic glyph. Decorative: assigned content is inert and hidden from accessibility APIs because it is rendered inside the named trigger button. |\n| `recording-icon` | Replaces the default recording-state pulse glyph. Decorative and inert. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `icon` | Wrapper around the `icon` slot / default mic glyph. |\n| `pulse` | Wrapper around the `recording-icon` slot / default pulse glyph, rendered only while recording. |\n| `status` | Visible status text for the `requesting`/`denied`/`error`/unsupported states. |\n| `timer` | The localized `M:SS` elapsed-time readout, rendered only while recording and `show-timer`. |\n| `trigger` | The capture button. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-push-to-talk-recording-color` (default: `var(--lr-color-danger)`) — Border and text color of `[part=\"trigger\"]` while `state` is `recording`. Recolors only the recording treatment, leaving every other danger-toned surface on the page untouched.\n- `--lr-push-to-talk-size` (default: `var(--lr-size-3rem)`) — Preferred inline and block size of the circular `trigger` button; `--lr-icon-button-size` remains its minimum hit-area floor.",
           "attributes": [
             {
               "name": "device-id",
@@ -18039,17 +18163,10 @@
             },
             {
               "name": "type",
-              "description": "Type: `LyraChartType`  \nDefault: `'radar'`",
+              "description": "Type: `'radar'`  \nDefault: `'radar'`",
               "value": {
                 "type": [
-                  "'line'",
-                  "'bar'",
-                  "'scatter'",
-                  "'pie'",
-                  "'doughnut'",
-                  "'radar'",
-                  "'polarArea'",
-                  "'bubble'"
+                  "'radar'"
                 ]
               }
             },
@@ -19747,17 +19864,10 @@
             },
             {
               "name": "type",
-              "description": "Type: `LyraChartType`  \nDefault: `'scatter'`",
+              "description": "Type: `'scatter'`  \nDefault: `'scatter'`",
               "value": {
                 "type": [
-                  "'line'",
-                  "'bar'",
-                  "'scatter'",
-                  "'pie'",
-                  "'doughnut'",
-                  "'radar'",
-                  "'polarArea'",
-                  "'bubble'"
+                  "'scatter'"
                 ]
               }
             },
@@ -21224,7 +21334,7 @@
         },
         {
           "name": "lr-stack-trace",
-          "description": "`<lr-stack-trace>` — parses common V8/JS-TS, Firefox/Safari, and Python stack traces into a\nleading message plus activatable frames, splitting chained/caused-by errors into separate\ngroups. Frames matching `internalPatterns` (`node_modules/`, `node:internal`,\n`site-packages/`, ... by default) fold behind a count-labeled toggle. Falls back to verbatim\nraw text when nothing parses. First-party invention (no Web Awesome equivalent).\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper; respects `max-height`. Drops its card chrome under `frame=\"plain\"`. |\n| `copy-button` | The copy-to-clipboard button, only rendered while `copyable`. |\n| `frame` | A single frame button; carries `data-internal` for internal frames. |\n| `frame-function` | The frame's function name. |\n| `frame-location` | The frame's `file:line:col` text. |\n| `group` | One chained-error group of frames. |\n| `internal-toggle` | The collapse/expand toggle for a run of internal frames. |\n| `message` | The leading error message text for a group. |\n| `raw` | The verbatim `<pre>` fallback when zero structured frames parsed. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-stack-trace-font` (default: `var(--lr-font-mono)`) — Font family for the parsed frames and the verbatim raw fallback.\n- `--lr-stack-trace-interactive-color` (default: `var(--lr-color-brand)`) — Interactive frame/toggle accent.\n- `--lr-stack-trace-internal-frame-color` (default: `var(--lr-color-text-quiet)`) — Internal frame foreground.\n- `--lr-stack-trace-max-height` (default: `none`) — Cap on how tall `[part=\"base\"]` grows before it scrolls internally. `none` lets the component grow with its content; the `max-height` attribute sets this token.",
+          "description": "`<lr-stack-trace>` — parses common V8/JS-TS, Firefox/Safari, and Python stack traces into a\nleading message plus activatable frames, splitting chained/caused-by errors into separate\ngroups. Frames matching `internalPatterns` (`node_modules/`, `node:internal`,\n`site-packages/`, ... by default) fold behind a count-labeled toggle. Falls back to verbatim\nraw text when nothing parses. A malformed or unsafe numeric location remains visible as raw,\nnon-activatable trace text rather than becoming an invalid navigation target. First-party\ninvention (no Web Awesome equivalent).\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper; respects `max-height`. Drops its card chrome under `frame=\"plain\"`. |\n| `copy-button` | The copy-to-clipboard button, only rendered while `copyable`. |\n| `frame` | A selectable frame button (carrying `data-internal` for internal frames), or a non-activatable raw row when the source location is malformed or unsafe. |\n| `frame-function` | The frame's function name. |\n| `frame-location` | The frame's `file:line:col` text. |\n| `group` | One chained-error group of frames. |\n| `internal-toggle` | The collapse/expand toggle for a run of internal frames. |\n| `message` | The leading error message text for a group. |\n| `raw` | The verbatim `<pre>` fallback when zero structured frames parsed. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-stack-trace-font` (default: `var(--lr-font-mono)`) — Font family for the parsed frames and the verbatim raw fallback.\n- `--lr-stack-trace-interactive-color` (default: `var(--lr-color-brand)`) — Interactive frame/toggle accent.\n- `--lr-stack-trace-internal-frame-color` (default: `var(--lr-color-text-quiet)`) — Internal frame foreground.\n- `--lr-stack-trace-max-height` (default: `none`) — Cap on how tall `[part=\"base\"]` grows before it scrolls internally. `none` lets the component grow with its content; the `max-height` attribute sets this token.",
           "attributes": [
             {
               "name": "collapse-internal",
@@ -22482,7 +22592,7 @@
         },
         {
           "name": "lr-task-list",
-          "description": "`<lr-task-list>` — a live, collapsible tracker for an agent's plan: ordered steps with\nper-step lifecycle status and one level of nested sub-steps, embedded in the transcript.\n`items` is controlled and never mutated by this component, mirroring `<lr-stepper>`'s `steps`\ncontract -- but unlike stepper's single-`current` navigation control, task-list is a read-only\nstatus report: several steps may be `running` at once, there is no selection, and status changes\nare announced through an internal `<lr-live-region>`.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `detail-<id>` | Dynamic, one per item id (e.g. `slot=\"detail-step-3\"`). Rich detail under that item's label, after its `detail` text -- typically a `<lr-tool-call-chip>` or file `<lr-chip>`. Plain-HTML friendly, no render props. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outer container. |\n| `body` | The list of items, `hidden` while collapsed. |\n| `header` | The clickable header (a `<button>` when `collapsible`, a plain heading otherwise). |\n| `item` | One item row (`role=\"listitem\"`); carries `data-status`, `data-id`, `data-depth` (`\"0\"` for a top-level item, `\"1\"` for a child). |\n| `item-children` | The nested `role=\"list\"` wrapper around a top-level item's children. |\n| `item-detail` | The item's optional `detail` text. |\n| `item-label` | The item's `label` text. |\n| `label` | The `label` text. |\n| `status-icon` | The per-item status glyph. |\n| `summary` | The visible \"N of M completed\" summary, counting only top-level items. |\n| `toggle` | The chevron indicator inside the header. Only rendered when `collapsible`. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-task-list-compact-body-padding` (default: `var(--lr-space-2xs) var(--lr-space-s) var(--lr-space-s)`) — `[part=\"body\"]` padding while `compact`.\n- `--lr-task-list-compact-gap` (default: `var(--lr-space-2xs)`) — Gap between `[part=\"body\"]`'s item rows while `compact`.\n- `--lr-task-list-compact-header-gap` (default: `var(--lr-space-2xs)`) — Gap between `[part=\"header\"]`'s toggle/label/summary while `compact`.\n- `--lr-task-list-compact-header-padding` (default: `var(--lr-space-2xs) var(--lr-space-s)`) — `[part=\"header\"]` padding while `compact`.\n- `--lr-task-list-error-color` (default: `var(--lr-color-danger)`) — Error status icon color.\n- `--lr-task-list-pending-color` (default: `var(--lr-color-text-quiet)`) — Pending status icon color.\n- `--lr-task-list-running-color` (default: `var(--lr-color-brand)`) — Running status icon color.\n- `--lr-task-list-spin` (default: `var(--lr-transition-ambient)`) — Running-status icon spin animation duration/timing.\n- `--lr-task-list-success-color` (default: `var(--lr-color-success)`) — Success status icon color.",
+          "description": "`<lr-task-list>` — a live, collapsible tracker for an agent's plan: ordered steps with\nper-step lifecycle status and one level of nested sub-steps, embedded in the transcript.\n`items` is controlled and never mutated by this component, mirroring `<lr-stepper>`'s `steps`\ncontract. Unlike stepper's single-`current` navigation control, task-list has no selection and\nseveral steps may be `running` at once. Set `reorderable` to request sibling-scoped keyboard\nmoves; the host applies the reordered `items` array. Reordering requires globally unique ids\namong every top-level task and direct child; duplicate data stays visible but fails closed.\nStatus changes and confirmed moves are announced through an internal `<lr-live-region>`.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `detail-<id>` | Dynamic, one per item id (e.g. `slot=\"detail-step-3\"`). Rich detail under that item's label, after its `detail` text -- typically a `<lr-tool-call-chip>` or file `<lr-chip>`. Plain-HTML friendly, no render props. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outer container. |\n| `body` | The list of items, `hidden` while collapsed. |\n| `header` | The clickable header (a `<button>` when `collapsible`, a plain heading otherwise). |\n| `item` | One item row (`role=\"listitem\"`); carries `data-status`, `data-id`, `data-depth` (`\"0\"` for a top-level item, `\"1\"` for a child), and is keyboard-focusable only for valid `reorderable` data. |\n| `item-children` | The nested `role=\"list\"` wrapper around a top-level item's children. |\n| `item-detail` | The item's optional `detail` text. |\n| `item-label` | The item's `label` text. |\n| `label` | The `label` text. |\n| `status-icon` | The per-item status glyph. |\n| `summary` | The visible \"N of M completed\" summary, counting only top-level items. |\n| `toggle` | The chevron indicator inside the header. Only rendered when `collapsible`. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-task-list-compact-body-padding` (default: `var(--lr-space-2xs) var(--lr-space-s) var(--lr-space-s)`) — `[part=\"body\"]` padding while `compact`.\n- `--lr-task-list-compact-gap` (default: `var(--lr-space-2xs)`) — Gap between `[part=\"body\"]`'s item rows while `compact`.\n- `--lr-task-list-compact-header-gap` (default: `var(--lr-space-2xs)`) — Gap between `[part=\"header\"]`'s toggle/label/summary while `compact`.\n- `--lr-task-list-compact-header-padding` (default: `var(--lr-space-2xs) var(--lr-space-s)`) — `[part=\"header\"]` padding while `compact`.\n- `--lr-task-list-error-color` (default: `var(--lr-color-danger)`) — Error status icon color.\n- `--lr-task-list-pending-color` (default: `var(--lr-color-text-quiet)`) — Pending status icon color.\n- `--lr-task-list-running-color` (default: `var(--lr-color-brand)`) — Running status icon color.\n- `--lr-task-list-spin` (default: `var(--lr-transition-ambient)`) — Running-status icon spin animation duration/timing.\n- `--lr-task-list-success-color` (default: `var(--lr-color-success)`) — Success status icon color.",
           "attributes": [
             {
               "name": "collapsible",
@@ -22536,6 +22646,15 @@
               "value": {
                 "type": [
                   "string"
+                ]
+              }
+            },
+            {
+              "name": "reorderable",
+              "description": "Opts into Ctrl/Cmd+ArrowUp/ArrowDown reorder requests. `items` remains host-owned: the\ncomponent never moves a task until the host reassigns a confirmed sibling order. All ids\nacross top-level tasks and direct children must be unique; otherwise the feature fails closed\nwith no row tab stops or `lr-reorder` requests.\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
                 ]
               }
             }
@@ -22972,8 +23091,17 @@
         },
         {
           "name": "lr-thinking-panel",
-          "description": "`<lr-thinking-panel>` — a collapsible panel for an AI agent's\nintermediate reasoning/\"thinking\" transcript, kept visually and\nsemantically distinct from its final response. Same collapsible\nheader-button-plus-region shape as `<lr-source-list>`; the default slot\nis entirely free-form (a consumer-composed `<lr-streaming-text>`,\n`<lr-markdown>`, or plain text) — this component has no dependency on\neither and imposes no structure on what's slotted.\n\n`mode` (`'live'` while reasoning is actively streaming in, `'post-hoc'`\nonce it's complete and being reviewed after the fact) drives two concrete\nbehavior differences, not just a styling hook:\n- **Header hint.** While `duration-ms` is unset, `'live'` shows a pulsing\n  \"Thinking…\" placeholder in `[part=\"duration\"]`; `'post-hoc'` shows\n  nothing there instead (a finished review with no known duration has\n  nothing useful to say in that slot). Once `duration-ms` is set, both\n  modes show the same static `\"Thought for …\"` text — a `'post-hoc'`\n  consumer that captured a duration is free to supply it too.\n- **Auto-scroll.** Only `'live'` mode auto-follows new content appended to\n  the default slot while `expanded` (see below); `'post-hoc'` never\n  scrolls on its own, since reviewing finished reasoning is expected to\n  start from the top like reading any other completed document. This\n  library otherwise defaults to *not* editorializing about a host's data\n  (see `<lr-empty>`'s plain-`description` stance), but scroll position\n  is presentation, not data, so this one behavior difference earns its\n  keep rather than being left as a bare visual/semantic hint the host\n  would have to reimplement identically itself.\n\nLive-mode auto-scroll (\"stick to bottom\") is the classic chat-transcript\nconvention: while `mode=\"live\"` and `expanded`, new content keeps the\npanel scrolled to its latest line — *unless* the user has manually\nscrolled up to (re-)read earlier content, in which case their position is\nnever yanked away from them. This is tracked continuously via a `scroll`\nlistener on `[part=\"body\"]` (not recomputed from the mutation itself,\nwhich necessarily observes the DOM only *after* it has already changed):\nevery user-driven scroll records whether the body was left within\n`NEAR_BOTTOM_PX` of its own max scroll position, and only a mutation that\narrives while that's still true triggers a follow-up scroll-to-bottom.\nOpening an already-`'live'` panel (or one that later becomes `'live'`)\nalways resets this to \"anchored\" and jumps to the latest content, the same\nway a chat app's own transcript does when you re-open it.\n\nNew content is detected via a `MutationObserver` on this element's own\nlight DOM (`childList`+`subtree`+`characterData`) rather than the default\nslot's `slotchange` event, because `slotchange` only fires when the set of\ntop-level assigned nodes changes — never for a text node mutating *inside*\nan already-slotted element, which is the more likely shape for streamed\nreasoning (a consumer appending chunks to an existing node's `textContent`\nrather than re-slotting a whole new element per token). The one thing this\ncan't see is a mutation entirely inside a slotted custom element's own\nshadow root (e.g. a `<lr-markdown>` re-rendering its shadow tree after a\n`content` property change) — Shadow DOM encapsulation blocks that by\ndesign, and there is no way for this component to reach across that\nboundary. A slotted element whose *own* internal updates should drive this\npanel's auto-scroll needs to append/mutate visible light-DOM text itself\n(as `<lr-streaming-text>` is expected to), or the host can call this\npanel's own `scrollToBottom()` directly.\n\n`aria-controls` linking the header to the body region uses `nextId()`\n(`../../internal/a11y.js`) for a collision-safe id, the same convention\n`<lr-source-list>` and `<lr-widget>` already establish for every\ntoggle-controls-region pairing in this library.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | The reasoning/thinking content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outer container. |\n| `body` | The wrapper around the default slot, `hidden` while collapsed. Independently keyboard-focusable (`tabindex=\"0\"`, `role=\"group\"` named from `label`) since it's its own capped-height scrollable region. |\n| `duration` | The formatted duration / \"Thinking…\" placeholder, when shown. |\n| `header` | The clickable header (`<button>`) toggling `expanded`. |\n| `label` | The `label` text. |\n| `toggle` | The chevron indicator inside the header. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-thinking-panel-max-block-size` (default: `var(--lr-size-16rem)`) — Cap on how tall the expanded reasoning transcript grows before `[part=\"body\"]` scrolls internally.\n- `--lr-thinking-panel-pending-color` (default: `var(--lr-color-brand)`) — Live pending-state color.",
+          "description": "`<lr-thinking-panel>` — a collapsible panel for an AI agent's\nintermediate reasoning/\"thinking\" transcript, kept visually and\nsemantically distinct from its final response. Same collapsible\nheader-button-plus-region shape as `<lr-source-list>`; the default slot\nis entirely free-form (a consumer-composed `<lr-streaming-text>`,\n`<lr-markdown>`, or plain text) — this component has no dependency on\neither and imposes no structure on what's slotted.\n\n`compact` tightens the header and transcript-body padding for dense\ntranscript rows. `frame=\"plain\"` removes the outside card chrome when a\ncontaining message or panel already supplies it; the header/body divider\nand their layout remain, so the disclosure keeps its internal structure.\n\n`mode` (`'live'` while reasoning is actively streaming in, `'post-hoc'`\nonce it's complete and being reviewed after the fact) drives two concrete\nbehavior differences, not just a styling hook:\n- **Header hint.** While `duration-ms` is unset, `'live'` shows a pulsing\n  \"Thinking…\" placeholder in `[part=\"duration\"]`; `'post-hoc'` shows\n  nothing there instead (a finished review with no known duration has\n  nothing useful to say in that slot). Once `duration-ms` is set, both\n  modes show the same static `\"Thought for …\"` text — a `'post-hoc'`\n  consumer that captured a duration is free to supply it too.\n- **Auto-scroll.** Only `'live'` mode auto-follows new content appended to\n  the default slot while `expanded` (see below); `'post-hoc'` never\n  scrolls on its own, since reviewing finished reasoning is expected to\n  start from the top like reading any other completed document. This\n  library otherwise defaults to *not* editorializing about a host's data\n  (see `<lr-empty>`'s plain-`description` stance), but scroll position\n  is presentation, not data, so this one behavior difference earns its\n  keep rather than being left as a bare visual/semantic hint the host\n  would have to reimplement identically itself.\n\nLive-mode auto-scroll (\"stick to bottom\") is the classic chat-transcript\nconvention: while `mode=\"live\"` and `expanded`, new content keeps the\npanel scrolled to its latest line — *unless* the user has manually\nscrolled up to (re-)read earlier content, in which case their position is\nnever yanked away from them. This is tracked continuously via a `scroll`\nlistener on `[part=\"body\"]` (not recomputed from the mutation itself,\nwhich necessarily observes the DOM only *after* it has already changed):\nevery user-driven scroll records whether the body was left within\n`NEAR_BOTTOM_PX` of its own max scroll position, and only a mutation that\narrives while that's still true triggers a follow-up scroll-to-bottom.\nOpening an already-`'live'` panel (or one that later becomes `'live'`)\nalways resets this to \"anchored\" and jumps to the latest content, the same\nway a chat app's own transcript does when you re-open it.\n\nNew content is detected via a `MutationObserver` on this element's own\nlight DOM (`childList`+`subtree`+`characterData`) rather than the default\nslot's `slotchange` event, because `slotchange` only fires when the set of\ntop-level assigned nodes changes — never for a text node mutating *inside*\nan already-slotted element, which is the more likely shape for streamed\nreasoning (a consumer appending chunks to an existing node's `textContent`\nrather than re-slotting a whole new element per token). The one thing this\ncan't see is a mutation entirely inside a slotted custom element's own\nshadow root (e.g. a `<lr-markdown>` re-rendering its shadow tree after a\n`content` property change) — Shadow DOM encapsulation blocks that by\ndesign, and there is no way for this component to reach across that\nboundary. A slotted element whose *own* internal updates should drive this\npanel's auto-scroll needs to append/mutate visible light-DOM text itself\n(as `<lr-streaming-text>` is expected to), or the host can call this\npanel's own `scrollToBottom()` directly.\n\n`aria-controls` linking the header to the body region uses `nextId()`\n(`../../internal/a11y.js`) for a collision-safe id, the same convention\n`<lr-source-list>` and `<lr-widget>` already establish for every\ntoggle-controls-region pairing in this library.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | The reasoning/thinking content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outer container. |\n| `body` | The wrapper around the default slot, `hidden` while collapsed. Independently keyboard-focusable (`tabindex=\"0\"`, `role=\"group\"` named from `label`) since it's its own capped-height scrollable region. |\n| `duration` | The formatted duration / \"Thinking…\" placeholder, when shown. |\n| `header` | The clickable header (`<button>`) toggling `expanded`. |\n| `label` | The `label` text. |\n| `toggle` | The chevron indicator inside the header. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-thinking-panel-compact-body-padding` (default: `var(--lr-space-s)`) — `[part=\"body\"]` padding while `compact`.\n- `--lr-thinking-panel-compact-header-gap` (default: `var(--lr-space-2xs)`) — Gap between the header toggle, label, and duration while `compact`.\n- `--lr-thinking-panel-compact-header-padding` (default: `var(--lr-space-2xs) var(--lr-space-s)`) — `[part=\"header\"]` padding while `compact`.\n- `--lr-thinking-panel-max-block-size` (default: `var(--lr-size-16rem)`) — Cap on how tall the expanded reasoning transcript grows before `[part=\"body\"]` scrolls internally.\n- `--lr-thinking-panel-pending-color` (default: `var(--lr-color-brand)`) — Live pending-state color.",
           "attributes": [
+            {
+              "name": "compact",
+              "description": "Tighter header/body padding and header gap for dense transcript contexts. Defaults to\n`false`, preserving the regular-density treatment. This changes density only; the outer\nborder and surface remain, so use `frame=\"plain\"` to remove card chrome.\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
             {
               "name": "duration-ms",
               "description": "How long the reasoning took, in milliseconds, once known. Omitted\nentirely (nothing rendered in `'post-hoc'`, a pulsing placeholder in\n`'live'`) while unset.\n\nType: `number | undefined`"
@@ -22984,6 +23112,16 @@
               "value": {
                 "type": [
                   "boolean"
+                ]
+              }
+            },
+            {
+              "name": "frame",
+              "description": "Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)\nkeeps the bordered, filled outer container. `'plain'` removes that outer border, background,\nand corner radius so a thinking panel nested inside existing message chrome does not double\nit. Plain preserves the header/body divider and whichever regular or compact padding applies.\n\nType: `LyraFrame`  \nDefault: `'card'`",
+              "value": {
+                "type": [
+                  "'card'",
+                  "'plain'"
                 ]
               }
             },
@@ -24044,7 +24182,7 @@
         },
         {
           "name": "lr-tool-result-dialog",
-          "description": "`<lr-tool-result-dialog>` — a full tool-call detail overlay: a status/\nduration header plus a `body` slot where a consumer typically places a\n`<lr-tab-group>` with Input/Preview/JSON/Raw panels. This component knows\nnothing about what's inside that slot — it only supplies the modal chrome\naround it.\n\nThis is its own standalone overlay implementation (`role=\"dialog\"`,\nfocus-trapped, Escape/backdrop-dismissible, scroll-locking) rather than\nnesting a `<lr-dialog>` in its shadow template — see `<lr-dialog>`'s\nown header comment for why a new overlay component in this library\nduplicates that pattern locally instead of composing the previous one:\nslot-forwarding into a nested `<lr-dialog>` would put a forwarding\n`<slot>` where a light-DOM-scanning descendant (e.g. a slotted\n`<lr-tab-group>`'s own `Array.from(this.children)` scan) expects real\nprojected content.\n\n`maximized` toggles between a constrained modal size and a near-fullscreen\nsize within the same open dialog and open/close lifecycle — unlike\n`<lr-widget>`'s fullscreen mode, there's no non-modal resting state to\nreturn to, so no separate scroll-lock/focus-trap bookkeeping is needed for\nthe transition itself.\n\nStacking: opening more than one of these dialogs at once is supported --\nEscape and the Tab focus trap only ever act on the topmost open instance,\nso instances beneath it stay open and untouched until the one on top closes.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `body` | The dialog's main content — typically a `<lr-tab-group>` with Input/Preview/JSON/Raw panels, entirely consumer-assembled. |\n| `footer` | Optional action buttons, rendered in a bottom row. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `backdrop` | The full-viewport scrim behind the panel. |\n| `body` | The wrapper around the `body` slot. |\n| `close-button` | The built-in close button. |\n| `duration` | The formatted `duration-ms` text. |\n| `footer` | The wrapper around the `footer` slot. |\n| `header` | The row containing the tool name, status, duration, and toggle/close buttons. |\n| `header-actions` | The wrapper around the maximize and close buttons. |\n| `maximize-button` | The built-in maximize/restore toggle button. |\n| `panel` | The dialog panel itself (`role=\"dialog\"` while open). |\n| `status` | The status badge (icon + text). |\n| `title` | The wrapper around the tool name, status, and duration. |\n| `tool-name` | The `tool-name` text. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-tool-result-dialog-denied-bg` (default: `var(--lr-color-warning-quiet)`) — Denied status background.\n- `--lr-tool-result-dialog-denied-color` (default: `var(--lr-color-warning)`) — Denied status foreground.\n- `--lr-tool-result-dialog-error-bg` (default: `var(--lr-color-danger-quiet)`) — Error status background.\n- `--lr-tool-result-dialog-error-color` (default: `var(--lr-color-danger)`) — Error status foreground.\n- `--lr-tool-result-dialog-maximized-inset` — Insets for the maximized panel.\n- `--lr-tool-result-dialog-overlay-color` (default: `var(--lr-color-overlay)`) — Backdrop color.\n- `--lr-tool-result-dialog-running-bg` (default: `var(--lr-color-brand-quiet)`) — Running status background.\n- `--lr-tool-result-dialog-running-color` (default: `var(--lr-color-brand)`) — Running status foreground.\n- `--lr-tool-result-dialog-spin` (default: `var(--lr-transition-ambient)`) — Running-status animation duration and timing.\n- `--lr-tool-result-dialog-success-bg` (default: `var(--lr-color-success-quiet)`) — Success status background.\n- `--lr-tool-result-dialog-success-color` (default: `var(--lr-color-success)`) — Success status foreground.",
+          "description": "`<lr-tool-result-dialog>` — a full tool-call detail overlay: a status/\nduration header plus a `body` slot where a consumer typically places a\n`<lr-tab-group>` with Input/Preview/JSON/Raw panels. This component knows\nnothing about what's inside that slot — it only supplies the modal chrome\naround it.\n\nThis is its own standalone overlay implementation (`role=\"dialog\"`,\nfocus-trapped, Escape/backdrop-dismissible, scroll-locking) rather than\nnesting a `<lr-dialog>` in its shadow template — see `<lr-dialog>`'s\nown header comment for why a new overlay component in this library\nduplicates that pattern locally instead of composing the previous one:\nslot-forwarding into a nested `<lr-dialog>` would put a forwarding\n`<slot>` where a light-DOM-scanning descendant (e.g. a slotted\n`<lr-tab-group>`'s own `Array.from(this.children)` scan) expects real\nprojected content.\n\n`maximized` toggles between a constrained modal size and a near-fullscreen\nsize within the same open dialog and open/close lifecycle — unlike\n`<lr-widget>`'s fullscreen mode, there's no non-modal resting state to\nreturn to, so no separate scroll-lock/focus-trap bookkeeping is needed for\nthe transition itself.\n\nStacking: opening more than one of these dialogs at once is supported --\nEscape and the Tab focus trap only ever act on the topmost open instance,\nso instances beneath it stay open and untouched until the one on top closes.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `body` | The dialog's main content — typically a `<lr-tab-group>` with Input/Preview/JSON/Raw panels, entirely consumer-assembled. |\n| `footer` | Optional action buttons, rendered in a bottom row. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `backdrop` | The full-viewport scrim behind the panel. |\n| `body` | The wrapper around the `body` slot. |\n| `close-button` | The built-in close button. |\n| `duration` | The formatted `duration-ms` text. |\n| `footer` | The wrapper around the `footer` slot. |\n| `header` | The row containing the tool name, status, duration, and toggle/close buttons. |\n| `header-actions` | The wrapper around the maximize and close buttons. |\n| `maximize-button` | The built-in maximize/restore toggle button. |\n| `panel` | The dialog panel itself (`role=\"dialog\"` while open). |\n| `status` | The status badge (icon + text). |\n| `title` | The wrapper around the tool name, status, and duration. |\n| `tool-name` | The `tool-name` text. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-tool-result-dialog-denied-bg` (default: `var(--lr-color-warning-quiet)`) — Denied status background.\n- `--lr-tool-result-dialog-denied-color` (default: `var(--lr-color-warning)`) — Denied status foreground.\n- `--lr-tool-result-dialog-error-bg` (default: `var(--lr-color-danger-quiet)`) — Error status background.\n- `--lr-tool-result-dialog-error-color` (default: `var(--lr-color-danger)`) — Error status foreground.\n- `--lr-tool-result-dialog-maximized-inset` — Insets for the maximized panel.\n- `--lr-tool-result-dialog-overlay-color` (default: `var(--lr-color-overlay)`) — Backdrop color.\n- `--lr-tool-result-dialog-pending-bg` (default: `transparent`) — Pending status background.\n- `--lr-tool-result-dialog-pending-color` (default: `var(--lr-color-text-quiet)`) — Pending status foreground.\n- `--lr-tool-result-dialog-running-bg` (default: `var(--lr-color-brand-quiet)`) — Running status background.\n- `--lr-tool-result-dialog-running-color` (default: `var(--lr-color-brand)`) — Running status foreground.\n- `--lr-tool-result-dialog-spin` (default: `var(--lr-transition-ambient)`) — Running-status animation duration and timing.\n- `--lr-tool-result-dialog-success-bg` (default: `var(--lr-color-success-quiet)`) — Success status background.\n- `--lr-tool-result-dialog-success-color` (default: `var(--lr-color-success)`) — Success status foreground.",
           "attributes": [
             {
               "name": "aria-label",
@@ -24271,7 +24409,7 @@
         },
         {
           "name": "lr-tool-timeline",
-          "description": "`<lr-tool-timeline>` — a chronological list of an agent run's tool/function calls, each\nrendered through `<lr-tool-call-chip>` (name/status/duration) and `<lr-tool-result-view>`\n(args/result), with per-entry retry counts, sensitive-field redaction, and a shared\n`<lr-tool-approval-dialog>` for entries gated behind a human approval decision. This component\nowns none of the actual per-call rendering -- that is entirely those three existing\nprimitives -- its own job is ordering `entries` chronologically, computing each entry's\nduration from `startedAt`/`endedAt`, masking `redactedFields` before handing `args`/`result` to\n`<lr-tool-result-view>`, and opening/closing the one shared approval dialog for whichever entry\nis currently pending a decision.\n\nOrdering: `entries` is sorted ascending by `startedAt`; an entry with no `startedAt` sorts after\nevery timed entry, keeping its position relative to any other untimed entries stable (input\norder is preserved among ties) — a still-pending call with no timestamp yet naturally lands at\nthe end without needing to be pre-sorted by the host.\n\nRedaction only ever affects the read-only detail view: the copy of `args` handed to the\napproval dialog is always the entry's real, unmasked value. Approving a masked-args call must\nlet the reviewer see (and, if `approvalEditable`, edit) what will actually be sent — handing the\ndialog a placeholder string in place of a real field would silently corrupt the decision.\n\nApproval: activating the chip (`lr-tool-call-chip-select`) of an entry with `needsApproval` and\nan undecided `approved` opens the shared dialog for that entry; approving or denying emits this\ncomponent's own `lr-tool-approval-decide` and closes the dialog. This component never mutates\n`entries` itself — a host applies the decision (and any resulting status change) and re-assigns\n`entries`; if the entry currently under review disappears or no longer qualifies as pending\n(its `approved` was resolved some other way) by the time `entries` changes, the dialog closes on\nits own rather than staying open over stale data. A chip belonging to an entry that isn't\npending approval is left alone — its own `lr-tool-call-chip-select` (and deprecated\n`lr-tool-chip-select` alias) still bubble out normally for a host that wants to react to raw\nchip selection for its own purposes.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.1.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `approval-dialog` | The single shared `<lr-tool-approval-dialog>` instance. |\n| `base` | The root `<ol>`. |\n| `entry` | One entry's `<li>`; carries `data-status` (the entry's `status`) and `data-pending-approval` (`\"true\"`/`\"false\"`). |\n| `entry-approval-status` | The \"Approved\"/\"Denied\" badge, only rendered once `approved` is set; carries `data-decision` (`\"approved\"`/`\"denied\"`). |\n| `entry-body` | Wrapper around one entry's header and details. |\n| `entry-details` | The `<lr-details>` disclosure wrapping the entry's result view. |\n| `entry-error` | The entry's `error` text, only rendered when set. |\n| `entry-header` | Wrapper around the timestamp, chip, retry badge, and approval status. |\n| `entry-marker` | The decorative rail dot/connector for one entry. |\n| `entry-redacted-indicator` | A decorative marker shown when `redactedFields` is non-empty for that entry. |\n| `entry-result` | The entry's `<lr-tool-result-view>`. |\n| `entry-retries` | The retry-count badge, only rendered while `retryCount > 0`. |\n| `entry-retries-count` | The formatted retry count within the retry badge. |\n| `entry-retries-label` | The localized \"Retry\" text within the retry badge. |\n| `entry-timestamp` | The formatted `startedAt`, only rendered while it's set. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-tool-timeline-approved-bg` (default: `var(--lr-color-success-quiet)`) — Approved badge background.\n- `--lr-tool-timeline-approved-color` (default: `var(--lr-color-success)`) — Approved badge foreground.\n- `--lr-tool-timeline-denied-bg` (default: `var(--lr-color-danger-quiet)`) — Denied badge background.\n- `--lr-tool-timeline-denied-color` (default: `var(--lr-color-danger)`) — Denied badge foreground.\n- `--lr-tool-timeline-denied-marker-color` (default: `var(--lr-color-warning)`) — Rail-dot color for a `status=\"denied\"` entry, decoupled from the pending-approval border below so a consumer can retint either independently.\n- `--lr-tool-timeline-error-color` (default: `var(--lr-color-danger)`) — Expanded error text.\n- `--lr-tool-timeline-error-marker-color` (default: `var(--lr-color-danger)`) — Error rail dot.\n- `--lr-tool-timeline-gap` (default: `var(--lr-space-l)`) — Vertical gap between entries.\n- `--lr-tool-timeline-marker-size` (default: `var(--lr-size-0-625rem)`) — Diameter of an entry's rail dot; also the width of the marker gutter column.\n- `--lr-tool-timeline-pending-approval-border-color` (default: `var(--lr-color-warning)`) — Color of the entry body's leading border while `data-pending-approval=\"true\"`.\n- `--lr-tool-timeline-running-marker-color` (default: `var(--lr-color-brand)`) — Running rail dot.\n- `--lr-tool-timeline-success-marker-color` (default: `var(--lr-color-success)`) — Success rail dot.",
+          "description": "`<lr-tool-timeline>` — a chronological list of an agent run's tool/function calls, each\nrendered through `<lr-tool-call-chip>` (name/status/duration) and `<lr-tool-result-view>`\n(args/result), with per-entry retry counts, sensitive-field redaction, and a shared\n`<lr-tool-approval-dialog>` for entries gated behind a human approval decision. This component\nowns none of the actual per-call rendering -- that is entirely those three existing\nprimitives -- its own job is ordering `entries` chronologically, computing each entry's\nduration from `startedAt`/`endedAt`, masking `redactedFields` before handing `args`/`result` to\n`<lr-tool-result-view>`, and opening/closing the one shared approval dialog for whichever entry\nis currently pending a decision.\n\nOrdering: `entries` is sorted ascending by `startedAt`; an entry with no `startedAt` sorts after\nevery timed entry, keeping its position relative to any other untimed entries stable (input\norder is preserved among ties) — a still-pending call with no timestamp yet naturally lands at\nthe end without needing to be pre-sorted by the host.\n\nRedaction only ever affects the read-only detail view: the copy of `args` handed to the\napproval dialog is always the entry's real, unmasked value. Approving a masked-args call must\nlet the reviewer see (and, if `approvalEditable`, edit) what will actually be sent — handing the\ndialog a placeholder string in place of a real field would silently corrupt the decision.\n\nApproval: activating the chip (`lr-tool-call-chip-select`) of an entry with `needsApproval` and\nan undecided `approved` opens the shared dialog for that entry; approving or denying emits this\ncomponent's own `lr-tool-approval-decide` and closes the dialog. This component never mutates\n`entries` itself — a host applies the decision (and any resulting status change) and re-assigns\n`entries`; if the entry currently under review disappears or no longer qualifies as pending\n(its `approved` was resolved some other way) by the time `entries` changes, the dialog closes on\nits own rather than staying open over stale data. If a host cancels `lr-tool-approval-decide` to\npersist it asynchronously, `pendingApproval` identifies the held action. After success, update\nthe controlled entries and call `finalizePendingApproval()`; after failure, call\n`revertPendingApproval()` to restore the same open dialog and its draft for retry. A chip\nbelonging to an entry that isn't pending approval is left alone — its own\n`lr-tool-call-chip-select` (and deprecated `lr-tool-chip-select` alias) still bubble out\nnormally for a host that wants to react to raw chip selection for its own purposes.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.1.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `approval-dialog` | The single shared `<lr-tool-approval-dialog>` instance. |\n| `base` | The root `<ol>`. |\n| `entry` | One entry's `<li>`; carries `data-status` (the entry's `status`) and `data-pending-approval` (`\"true\"`/`\"false\"`). |\n| `entry-approval-status` | The \"Approved\"/\"Denied\" badge, only rendered once `approved` is set; carries `data-decision` (`\"approved\"`/`\"denied\"`). |\n| `entry-body` | Wrapper around one entry's header and details. |\n| `entry-details` | The `<lr-details>` disclosure wrapping the entry's result view. |\n| `entry-error` | The entry's `error` text, only rendered when set. |\n| `entry-header` | Wrapper around the timestamp, chip, retry badge, and approval status. |\n| `entry-marker` | The decorative rail dot/connector for one entry. |\n| `entry-redacted-indicator` | A decorative marker shown when `redactedFields` is non-empty for that entry. |\n| `entry-result` | The entry's `<lr-tool-result-view>`. |\n| `entry-retries` | The retry-count badge, only rendered while `retryCount > 0`. |\n| `entry-retries-count` | The formatted retry count within the retry badge. |\n| `entry-retries-label` | The localized \"Retry\" text within the retry badge. |\n| `entry-timestamp` | The formatted `startedAt`, only rendered while it's set. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-tool-timeline-approved-bg` (default: `var(--lr-color-success-quiet)`) — Approved badge background.\n- `--lr-tool-timeline-approved-color` (default: `var(--lr-color-success)`) — Approved badge foreground.\n- `--lr-tool-timeline-denied-bg` (default: `var(--lr-color-danger-quiet)`) — Denied badge background.\n- `--lr-tool-timeline-denied-color` (default: `var(--lr-color-danger)`) — Denied badge foreground.\n- `--lr-tool-timeline-denied-marker-color` (default: `var(--lr-color-warning)`) — Rail-dot color for a `status=\"denied\"` entry, decoupled from the pending-approval border below so a consumer can retint either independently.\n- `--lr-tool-timeline-error-color` (default: `var(--lr-color-danger)`) — Expanded error text.\n- `--lr-tool-timeline-error-marker-color` (default: `var(--lr-color-danger)`) — Error rail dot.\n- `--lr-tool-timeline-gap` (default: `var(--lr-space-l)`) — Vertical gap between entries.\n- `--lr-tool-timeline-marker-size` (default: `var(--lr-size-0-625rem)`) — Diameter of an entry's rail dot; also the width of the marker gutter column.\n- `--lr-tool-timeline-pending-approval-border-color` (default: `var(--lr-color-warning)`) — Color of the entry body's leading border while `data-pending-approval=\"true\"`.\n- `--lr-tool-timeline-pending-marker-color` (default: `var(--lr-color-text-quiet)`) — Rail-dot color for a `status=\"pending\"` entry.\n- `--lr-tool-timeline-running-marker-color` (default: `var(--lr-color-brand)`) — Running rail dot.\n- `--lr-tool-timeline-success-marker-color` (default: `var(--lr-color-success)`) — Success rail dot.",
           "attributes": [
             {
               "name": "approval-editable",
@@ -25161,7 +25299,7 @@
         },
         {
           "name": "lr-voice-picker",
-          "description": "`<lr-voice-picker>` — a TTS voice selector over a host-supplied `catalog`, mirroring\n`lr-model-select`'s closed-dropdown/free-text-combobox dual mode, stale-value handling, and\nform-association verbatim (see that class's own doc for the full mode-switching contract this one\nshares), extended with a TTS-agnostic preview affordance: a standalone, always-tab-reachable\n`[part=\"preview-button\"]` beside the trigger previews the active option while open, else the\ncommitted value; per-row `[part=\"option-preview\"]` icons are pointer-only duplicates\n(`tabindex=\"-1\"`, `aria-hidden=\"true\"`) since a listbox option must not contain a focusable\ndescendant.\n\nPreview is event-first: `lr-preview-request` always fires first and is cancelable. Left\nun-prevented, a `previewUrl` plays through one internal native `<audio>` (the URL passes\n`safeMediaSrc()` first); `preventDefault()` or no URL leaves playback entirely to the host's own\nTTS. Requesting the same voice while it is already playing internally stops it instead of\nre-requesting; requesting a different voice switches. `lr-preview-change` reports internal\nplayback start/stop (`voiceId: null` on stop/end/error).\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `error` | Custom error content. |\n| `hint` | Custom hint content. |\n| `label` | Custom visible label content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `combobox` | The text-input container (free-text mode). |\n| `combobox-input` | The free-text `<input>`. |\n| `empty` | The empty-listbox message. |\n| `error` | The error message. |\n| `expand-icon` | The dropdown indicator. |\n| `form-control` | The complete label, control, hint, error, and listbox frame. |\n| `form-control-label` | The `<label>` element containing the `label` property and slot. |\n| `hint` | The hint message. |\n| `listbox` | The options popover. |\n| `option` | An option row. |\n| `option-badge` | The \"not in catalog\" badge on a synthetic stale-value row. |\n| `option-label` | An option row's label/meta wrapper. |\n| `option-meta` | An option row's quiet `language · description` second line. |\n| `option-preview` | A pointer-only per-row preview icon (`tabindex=\"-1\"`, `aria-hidden`). |\n| `preview-button` | The standalone, keyboard-reachable preview toggle beside the trigger. |\n| `provider-badge` | The optional leading `provider` label. |\n| `trigger` | The trigger button (closed-dropdown mode). |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-form-control-required-color` (default: `var(--lr-color-danger)`) — Required-marker color, themeable independently of error text and invalid borders.\n- `--lr-form-control-required-content` (default: `' *'`) — The required marker appended to `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it.\n- `--lr-form-control-required-offset` (default: `0`) — Inline space between the label text and the required marker.\n- `--lr-voice-picker-option-active-bg` (default: `var(--lr-color-brand-quiet)`) — Active option fill.\n- `--lr-voice-picker-option-selected-bg` (default: `transparent`) — Selected option fill.\n- `--lr-voice-picker-option-selected-border` (default: `var(--lr-color-brand)`) — Selected option border.\n- `--lr-voice-picker-option-selected-color` (default: `var(--lr-color-brand)`) — Selected option text.\n- `--lr-voice-picker-option-selected-font-weight` (default: `var(--lr-font-weight-semibold)`) — Selected option label weight.\n- `--lr-voice-picker-preview-active-border` (default: `var(--lr-color-brand)`) — Active preview border.\n- `--lr-voice-picker-preview-active-color` (default: `var(--lr-color-brand)`) — Active preview icon.\n- `--lr-voice-picker-preview-hover-bg` (default: `var(--lr-color-brand-quiet)`) — Preview hover fill.\n- `--lr-voice-picker-preview-hover-color` (default: `var(--lr-color-brand)`) — Preview hover icon.",
+          "description": "`<lr-voice-picker>` — a TTS voice selector over a host-supplied `catalog`, mirroring\n`lr-model-select`'s closed-dropdown/free-text-combobox dual mode, stale-value handling, and\nform-association verbatim (see that class's own doc for the full mode-switching contract this one\nshares), extended with a TTS-agnostic preview affordance: a standalone, always-tab-reachable\n`[part=\"preview-button\"]` beside the trigger previews the active option while open, else the\ncommitted value; per-row `[part=\"option-preview\"]` icons are pointer-only duplicates\n(`tabindex=\"-1\"`, `aria-hidden=\"true\"`) since a listbox option must not contain a focusable\ndescendant.\n\nPreview is event-first: `lr-preview-request` always fires first and is cancelable. Left\nun-prevented, a `previewUrl` plays through one internal native `<audio>` (the URL passes\n`safeMediaSrc()` first); `preventDefault()` or no URL leaves playback entirely to the host's own\nTTS. Requesting the same voice while it is already playing internally stops it instead of\nre-requesting; requesting a different voice switches. `lr-preview-change` reports internal\nplayback start/stop (`voiceId: null` on stop/end/error).\n\nIn free-text mode, `input` and the native selection/range-editing APIs expose the editable\ncombobox text. `setRangeText()` synchronizes `value`, form data, and validity without emitting\nuser-input events. These APIs are no-ops in closed-dropdown mode and before render.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `error` | Custom error content. |\n| `hint` | Custom hint content. |\n| `label` | Custom visible label content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `combobox` | The text-input container (free-text mode). |\n| `combobox-input` | The free-text `<input>`. |\n| `empty` | The empty-listbox message. |\n| `error` | The error message. |\n| `expand-icon` | The dropdown indicator. |\n| `form-control` | The complete label, control, hint, error, and listbox frame. |\n| `form-control-label` | The `<label>` element containing the `label` property and slot. |\n| `hint` | The hint message. |\n| `listbox` | The options popover. |\n| `option` | An option row. |\n| `option-badge` | The \"not in catalog\" badge on a synthetic stale-value row. |\n| `option-label` | An option row's label/meta wrapper. |\n| `option-meta` | An option row's quiet `language · description` second line. |\n| `option-preview` | A pointer-only per-row preview icon (`tabindex=\"-1\"`, `aria-hidden`). |\n| `preview-button` | The standalone, keyboard-reachable preview toggle beside the trigger. |\n| `provider-badge` | The optional leading `provider` label. |\n| `trigger` | The trigger button (closed-dropdown mode). |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-form-control-required-color` (default: `var(--lr-color-danger)`) — Required-marker color, themeable independently of error text and invalid borders.\n- `--lr-form-control-required-content` (default: `' *'`) — The required marker appended to `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it.\n- `--lr-form-control-required-offset` (default: `0`) — Inline space between the label text and the required marker.\n- `--lr-voice-picker-option-active-bg` (default: `var(--lr-color-brand-quiet)`) — Active option fill.\n- `--lr-voice-picker-option-selected-bg` (default: `transparent`) — Selected option fill.\n- `--lr-voice-picker-option-selected-border` (default: `var(--lr-color-brand)`) — Selected option border.\n- `--lr-voice-picker-option-selected-color` (default: `var(--lr-color-brand)`) — Selected option text.\n- `--lr-voice-picker-option-selected-font-weight` (default: `var(--lr-font-weight-semibold)`) — Selected option label weight.\n- `--lr-voice-picker-preview-active-border` (default: `var(--lr-color-brand)`) — Active preview border.\n- `--lr-voice-picker-preview-active-color` (default: `var(--lr-color-brand)`) — Active preview icon.\n- `--lr-voice-picker-preview-hover-bg` (default: `var(--lr-color-brand-quiet)`) — Preview hover fill.\n- `--lr-voice-picker-preview-hover-color` (default: `var(--lr-color-brand)`) — Preview hover icon.",
           "attributes": [
             {
               "name": "allow-custom",
@@ -26406,6 +26544,10 @@
           "description": "**`<lr-attachment-chip>`** (default: `0.8s`) — Duration of one indeterminate upload-spinner rotation. The ambient loop stops under reduced motion."
         },
         {
+          "name": "--lr-audio-visualizer-ambient-duration",
+          "description": "**`<lr-audio-visualizer>`** (default: `var(--lr-duration-ambient)`) — Time-only duration of one signal-less ambient pulse or sweep cycle."
+        },
+        {
           "name": "--lr-audio-visualizer-color",
           "description": "**`<lr-audio-visualizer>`** (default: `var(--lr-color-brand)`) — Active bar/waveform color."
         },
@@ -27151,11 +27293,11 @@
         },
         {
           "name": "--lr-code-block-font",
-          "description": "**`<lr-code-block>`** (default: `var(--lr-font-mono)`) — Monospace family for the rendered `pre` and `code`."
+          "description": "**`<lr-code-block>`, `<lr-code-block-core>`** (default: `var(--lr-font-mono)`) — Monospace family for the rendered `pre` and `code`."
         },
         {
           "name": "--lr-code-block-max-height",
-          "description": "**`<lr-code-block>`** (default: `none`) — Scroll cap applied to `body`. The `max-height` attribute, when set, writes this same property inline on `body` and therefore wins."
+          "description": "**`<lr-code-block>`, `<lr-code-block-core>`** (default: `none`) — Scroll cap applied to `body`. The `max-height` attribute, when set, writes this same property inline on `body` and therefore wins."
         },
         {
           "name": "--lr-code-block-tab-size",
@@ -27684,6 +27826,10 @@
         {
           "name": "--lr-compare-panel-selected-color",
           "description": "**`<lr-compare-panel>`** (default: `var(--lr-color-brand)`) — Selected vote button text color."
+        },
+        {
+          "name": "--lr-compare-panel-selected-font-weight",
+          "description": "**`<lr-compare-panel>`** (default: `var(--lr-font-weight-semibold)`) — Selected vote button font weight."
         },
         {
           "name": "--lr-confirm-bar-approved-color",
@@ -29314,6 +29460,26 @@
           "description": "**`<lr-message-feedback>`** (default: `var(--lr-color-success)`) — Glyph color of the pressed thumbs-up button. Not declared on `:host`, so it can be set on the element or any ancestor; scoped to the pressed state, unlike overriding the shared `--lr-color-success`."
         },
         {
+          "name": "--lr-message-parts-audio-transcript-color",
+          "description": "**`<lr-message-parts>`** (default: `var(--lr-color-text-quiet)`) — Text color of an audio transcript."
+        },
+        {
+          "name": "--lr-message-parts-error-background",
+          "description": "**`<lr-message-parts>`** (default: `var(--lr-color-danger-quiet)`) — Background color of an error part."
+        },
+        {
+          "name": "--lr-message-parts-error-border-color",
+          "description": "**`<lr-message-parts>`** (default: `var(--lr-color-danger)`) — Border color of an error part."
+        },
+        {
+          "name": "--lr-message-parts-error-color",
+          "description": "**`<lr-message-parts>`** (default: `var(--lr-color-danger)`) — Text color of an error part."
+        },
+        {
+          "name": "--lr-message-parts-streaming-color",
+          "description": "**`<lr-message-parts>`** (default: `var(--lr-color-text-quiet)`) — Text color of a streaming part wrapper."
+        },
+        {
           "name": "--lr-mind-map-node-hover-halo",
           "description": "**`<lr-mind-map>`** (default: `var(--lr-color-brand-quiet)`) — Stroke color of the hover halo drawn around a topic node's dot, giving mouse users the same \"this is clickable\" feedback keyboard users get from the drawn focus ring."
         },
@@ -29328,6 +29494,14 @@
         {
           "name": "--lr-model-select-font-size",
           "description": "**`<lr-model-select>`** (default: `var(--lr-form-control-font-size)`) — Trigger/combobox font size, scaled by `size` off the shared control ladder."
+        },
+        {
+          "name": "--lr-model-select-gap",
+          "description": "**`<lr-model-select>`** (default: `var(--lr-space-xs)`) — Trigger, combobox, and option child gap."
+        },
+        {
+          "name": "--lr-model-select-open-border-color",
+          "description": "**`<lr-model-select>`** (default: `var(--lr-color-brand)`) — Open trigger border color."
         },
         {
           "name": "--lr-model-select-option-active-bg",
@@ -29348,6 +29522,18 @@
         {
           "name": "--lr-model-select-option-selected-font-weight",
           "description": "**`<lr-model-select>`** (default: `var(--lr-font-weight-semibold)`) — Font weight of the selected option row."
+        },
+        {
+          "name": "--lr-model-select-option-synthetic-border-color",
+          "description": "**`<lr-model-select>`** (default: `var(--lr-color-border)`) — Border color of a synthetic stale-value option row."
+        },
+        {
+          "name": "--lr-model-select-option-synthetic-border-style",
+          "description": "**`<lr-model-select>`** (default: `dashed`) — Border style of a synthetic stale-value option row."
+        },
+        {
+          "name": "--lr-model-select-radius",
+          "description": "**`<lr-model-select>`** (default: `var(--lr-radius)`) — Trigger, combobox, listbox, and option corner radius."
         },
         {
           "name": "--lr-model-select-trigger-min-height",
@@ -29719,7 +29905,7 @@
         },
         {
           "name": "--lr-prompt-studio-version-selected-hover-bg",
-          "description": "**`<lr-prompt-studio>`** (default: `var(--lr-color-brand-quiet)`) — Selected version hover background."
+          "description": "**`<lr-prompt-studio>`** (default: `color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) — Selected version hover background."
         },
         {
           "name": "--lr-push-to-talk-recording-color",
@@ -32518,6 +32704,18 @@
           "description": "**Application theme input** — Canonical application theme input for z index toast."
         },
         {
+          "name": "--lr-thinking-panel-compact-body-padding",
+          "description": "**`<lr-thinking-panel>`** (default: `var(--lr-space-s)`) — `[part=\"body\"]` padding while `compact`."
+        },
+        {
+          "name": "--lr-thinking-panel-compact-header-gap",
+          "description": "**`<lr-thinking-panel>`** (default: `var(--lr-space-2xs)`) — Gap between the header toggle, label, and duration while `compact`."
+        },
+        {
+          "name": "--lr-thinking-panel-compact-header-padding",
+          "description": "**`<lr-thinking-panel>`** (default: `var(--lr-space-2xs) var(--lr-space-s)`) — `[part=\"header\"]` padding while `compact`."
+        },
+        {
           "name": "--lr-thinking-panel-max-block-size",
           "description": "**`<lr-thinking-panel>`** (default: `var(--lr-size-16rem)`) — Cap on how tall the expanded reasoning transcript grows before `[part=\"body\"]` scrolls internally."
         },
@@ -32894,6 +33092,14 @@
           "description": "**`<lr-tool-result-dialog>`** (default: `var(--lr-color-overlay)`) — Backdrop color."
         },
         {
+          "name": "--lr-tool-result-dialog-pending-bg",
+          "description": "**`<lr-tool-result-dialog>`** (default: `transparent`) — Pending status background."
+        },
+        {
+          "name": "--lr-tool-result-dialog-pending-color",
+          "description": "**`<lr-tool-result-dialog>`** (default: `var(--lr-color-text-quiet)`) — Pending status foreground."
+        },
+        {
           "name": "--lr-tool-result-dialog-running-bg",
           "description": "**`<lr-tool-result-dialog>`** (default: `var(--lr-color-brand-quiet)`) — Running status background."
         },
@@ -32960,6 +33166,10 @@
         {
           "name": "--lr-tool-timeline-pending-approval-border-color",
           "description": "**`<lr-tool-timeline>`** (default: `var(--lr-color-warning)`) — Color of the entry body's leading border while `data-pending-approval=\"true\"`."
+        },
+        {
+          "name": "--lr-tool-timeline-pending-marker-color",
+          "description": "**`<lr-tool-timeline>`** (default: `var(--lr-color-text-quiet)`) — Rail-dot color for a `status=\"pending\"` entry."
         },
         {
           "name": "--lr-tool-timeline-running-marker-color",

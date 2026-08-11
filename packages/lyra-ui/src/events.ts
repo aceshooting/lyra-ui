@@ -1657,6 +1657,13 @@ export type LyraMenuItemStateChangeEvent = LyraMenuItemEventMap['lr-menu-item-st
 export type LyraMenuSelectEvent = LyraMenuEventMap['lr-menu-select'];
 
 /**
+ * `lr-message-reorder` — dispatched by `<lr-prompt-studio>`.
+ *
+ * Detail type: `LyraPromptStudioEventMap['lr-message-reorder']`.
+ */
+export type LyraMessageReorderEvent = LyraPromptStudioEventMap['lr-message-reorder'];
+
+/**
  * `lr-message-retry` — dispatched by `<lr-agent-workspace>`.
  *
  * Detail type: `LyraAgentWorkspaceEventMap['lr-message-retry']`.
@@ -2149,13 +2156,14 @@ export type LyraRenderErrorEvent =
   | LyraXmlViewerEventMap['lr-render-error'];
 
 /**
- * `lr-reorder` — dispatched by 2 components: `<lr-reorder-list>`, `<lr-tree>`.
+ * `lr-reorder` — dispatched by 3 components: `<lr-reorder-list>`, `<lr-task-list>`, `<lr-tree>`.
  *
- * A union of 2 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 3 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g. `LyraReorderListEventMap['lr-reorder']`.
  */
 export type LyraReorderEvent =
   | LyraReorderListEventMap['lr-reorder']
+  | LyraTaskListEventMap['lr-reorder']
   | LyraTreeEventMap['lr-reorder'];
 
 /**
@@ -3190,6 +3198,7 @@ export interface LyraGlobalEventMap {
   'lr-menu-item-select': LyraMenuItemSelectEvent;
   'lr-menu-item-state-change': LyraMenuItemStateChangeEvent;
   'lr-menu-select': LyraMenuSelectEvent;
+  'lr-message-reorder': LyraMessageReorderEvent;
   'lr-message-retry': LyraMessageRetryEvent;
   'lr-metric-change': LyraMetricChangeEvent;
   'lr-mode-change': LyraModeChangeEvent;

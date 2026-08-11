@@ -17,15 +17,20 @@
 
 A live, collapsible tracker for an agent's plan: ordered steps with per-step lifecycle status and one
 level of nested sub-steps, embedded in the transcript. `items` is controlled and never mutated by this
-component. Unlike `<lr-stepper>`'s single-`current` navigation, task-list is a read-only status
-report: several steps may be `running` at once, there is no selection, and status changes are
-announced through an internal `<lr-live-region>`.
+component. Unlike `<lr-stepper>`'s single-`current` navigation, task-list has no selection and
+several steps may be `running` at once. By default it is a status report; `reorderable` adds
+controlled keyboard reorder requests without changing ownership of `items`. Status changes and
+confirmed moves are announced through an internal `<lr-live-region>`.
 
 **Properties:** `items: TaskItem[] = []` (attribute: false) — `TaskItem { id: string; label: string;
 status: TaskStatus; detail?: string; children?: TaskItem[] }` with `TaskStatus = 'pending' |
 'running' | 'success' | 'error'` (both exported here). `detail` is an optional secondary plain-text
 line; `children` is exactly **one** level of sub-steps — a child's own `children` is ignored with a
-`console.warn`. `label: string = 'Tasks'`, `expanded: boolean = true` (reflected), and
+`console.warn`. While `reorderable`, every top-level task and direct child must have a globally unique
+`id`; duplicate data stays visible but fails closed, with no row keyboard stops or reorder requests.
+`reorderable: boolean = false` (reflected) enables Ctrl/Cmd+ArrowUp/ArrowDown on a focused task.
+It emits a request only; the host must assign a new reordered `items` array before the task visibly
+moves or an announcement is made. `label: string = 'Tasks'`, `expanded: boolean = true` (reflected), and
 `collapsible: boolean = true`. `compact: boolean = false` (reflected) — tighter header/body padding
 and item gap for dense contexts (a plan tracker nested in an already-padded transcript row), same
 convention as `<lr-agent-run>`'s/`<lr-source-card>`'s `compact`; purely a density knob, the border
@@ -39,14 +44,18 @@ retained as a name for the same union.
 that item's label, typically a `<lr-tool-call-chip>` or file `<lr-chip>`.
 
 **Events:** `lr-toggle` — the header was activated, expanding or collapsing the panel. `detail: {
-expanded }`.
+expanded }`. `lr-reorder` — Ctrl/Cmd+ArrowUp/ArrowDown requests moving the focused task within its
+own sibling list. `detail: { id, parentId, fromIndex, toIndex }`; `parentId` is `null` for a
+top-level task and indices are sibling-scoped. It fires only while `reorderable` with unique ids.
+A boundary key is a silent no-op, so it never reparents a child; the component announces success only
+after the host's rendered array confirms the exact requested swap.
 
 **CSS parts:** `base`, `header` (a `<button>` when `collapsible`, a plain heading otherwise), `label`,
 `summary` (the visible "N of M completed" summary, top-level items only), `toggle` (the chevron
 indicator, only rendered when `collapsible`), `body` (the list of items, `hidden` while collapsed),
-`item` (`role="listitem"`; carries `data-status`/`data-id`/`data-depth`), `status-icon`, `item-label`,
-`item-detail`, and `item-children` (the nested `role="list"` wrapper around a top-level item's
-children).
+`item` (`role="listitem"`; carries `data-status`/`data-id`/`data-depth` and is focusable only for
+valid `reorderable` data), `status-icon`, `item-label`, `item-detail`, and `item-children` (the
+nested `role="list"` wrapper around a top-level item's children).
 
 **Themeable custom properties:** `--lr-task-list-spin` (default `var(--lr-transition-ambient)`, i.e.
 `1.8s ease-in-out`, collapsing to `0.001ms linear` under `prefers-reduced-motion`) — running-status

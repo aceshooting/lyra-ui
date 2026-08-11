@@ -1234,6 +1234,13 @@
       }
     },
     {
+      "name": "--lr-audio-visualizer-ambient-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-audio-visualizer>`** (default: `var(--lr-duration-ambient)`) — Time-only duration of one signal-less ambient pulse or sweep cycle."
+      }
+    },
+    {
       "name": "--lr-audio-visualizer-color",
       "description": {
         "kind": "markdown",
@@ -2539,14 +2546,14 @@
       "name": "--lr-code-block-font",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-code-block>`** (default: `var(--lr-font-mono)`) — Monospace family for the rendered `pre` and `code`."
+        "value": "**`<lr-code-block>`, `<lr-code-block-core>`** (default: `var(--lr-font-mono)`) — Monospace family for the rendered `pre` and `code`."
       }
     },
     {
       "name": "--lr-code-block-max-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-code-block>`** (default: `none`) — Scroll cap applied to `body`. The `max-height` attribute, when set, writes this same property inline on `body` and therefore wins."
+        "value": "**`<lr-code-block>`, `<lr-code-block-core>`** (default: `none`) — Scroll cap applied to `body`. The `max-height` attribute, when set, writes this same property inline on `body` and therefore wins."
       }
     },
     {
@@ -3471,6 +3478,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-compare-panel>`** (default: `var(--lr-color-brand)`) — Selected vote button text color."
+      }
+    },
+    {
+      "name": "--lr-compare-panel-selected-font-weight",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-compare-panel>`** (default: `var(--lr-font-weight-semibold)`) — Selected vote button font weight."
       }
     },
     {
@@ -6323,6 +6337,41 @@
       }
     },
     {
+      "name": "--lr-message-parts-audio-transcript-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-message-parts>`** (default: `var(--lr-color-text-quiet)`) — Text color of an audio transcript."
+      }
+    },
+    {
+      "name": "--lr-message-parts-error-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-message-parts>`** (default: `var(--lr-color-danger-quiet)`) — Background color of an error part."
+      }
+    },
+    {
+      "name": "--lr-message-parts-error-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-message-parts>`** (default: `var(--lr-color-danger)`) — Border color of an error part."
+      }
+    },
+    {
+      "name": "--lr-message-parts-error-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-message-parts>`** (default: `var(--lr-color-danger)`) — Text color of an error part."
+      }
+    },
+    {
+      "name": "--lr-message-parts-streaming-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-message-parts>`** (default: `var(--lr-color-text-quiet)`) — Text color of a streaming part wrapper."
+      }
+    },
+    {
       "name": "--lr-mind-map-node-hover-halo",
       "description": {
         "kind": "markdown",
@@ -6348,6 +6397,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-model-select>`** (default: `var(--lr-form-control-font-size)`) — Trigger/combobox font size, scaled by `size` off the shared control ladder."
+      }
+    },
+    {
+      "name": "--lr-model-select-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-model-select>`** (default: `var(--lr-space-xs)`) — Trigger, combobox, and option child gap."
+      }
+    },
+    {
+      "name": "--lr-model-select-open-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-model-select>`** (default: `var(--lr-color-brand)`) — Open trigger border color."
       }
     },
     {
@@ -6383,6 +6446,27 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-model-select>`** (default: `var(--lr-font-weight-semibold)`) — Font weight of the selected option row."
+      }
+    },
+    {
+      "name": "--lr-model-select-option-synthetic-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-model-select>`** (default: `var(--lr-color-border)`) — Border color of a synthetic stale-value option row."
+      }
+    },
+    {
+      "name": "--lr-model-select-option-synthetic-border-style",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-model-select>`** (default: `dashed`) — Border style of a synthetic stale-value option row."
+      }
+    },
+    {
+      "name": "--lr-model-select-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-model-select>`** (default: `var(--lr-radius)`) — Trigger, combobox, listbox, and option corner radius."
       }
     },
     {
@@ -7033,7 +7117,7 @@
       "name": "--lr-prompt-studio-version-selected-hover-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-prompt-studio>`** (default: `var(--lr-color-brand-quiet)`) — Selected version hover background."
+        "value": "**`<lr-prompt-studio>`** (default: `color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) — Selected version hover background."
       }
     },
     {
@@ -11930,6 +12014,27 @@
       }
     },
     {
+      "name": "--lr-thinking-panel-compact-body-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-thinking-panel>`** (default: `var(--lr-space-s)`) — `[part=\"body\"]` padding while `compact`."
+      }
+    },
+    {
+      "name": "--lr-thinking-panel-compact-header-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-thinking-panel>`** (default: `var(--lr-space-2xs)`) — Gap between the header toggle, label, and duration while `compact`."
+      }
+    },
+    {
+      "name": "--lr-thinking-panel-compact-header-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-thinking-panel>`** (default: `var(--lr-space-2xs) var(--lr-space-s)`) — `[part=\"header\"]` padding while `compact`."
+      }
+    },
+    {
       "name": "--lr-thinking-panel-max-block-size",
       "description": {
         "kind": "markdown",
@@ -12588,6 +12693,20 @@
       }
     },
     {
+      "name": "--lr-tool-result-dialog-pending-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-result-dialog>`** (default: `transparent`) — Pending status background."
+      }
+    },
+    {
+      "name": "--lr-tool-result-dialog-pending-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-result-dialog>`** (default: `var(--lr-color-text-quiet)`) — Pending status foreground."
+      }
+    },
+    {
       "name": "--lr-tool-result-dialog-running-bg",
       "description": {
         "kind": "markdown",
@@ -12704,6 +12823,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-tool-timeline>`** (default: `var(--lr-color-warning)`) — Color of the entry body's leading border while `data-pending-approval=\"true\"`."
+      }
+    },
+    {
+      "name": "--lr-tool-timeline-pending-marker-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-timeline>`** (default: `var(--lr-color-text-quiet)`) — Rail-dot color for a `status=\"pending\"` entry."
       }
     },
     {

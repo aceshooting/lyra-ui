@@ -452,14 +452,14 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/activity-feed/activity-feed.test.ts",
-              "line": 632,
+              "line": 643,
               "test": "is accessible in the ${label} path",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/activity-feed/activity-feed.test.ts",
-              "line": 679,
+              "line": 690,
               "test": "is accessible expanded, with entries, icons, variants, and timestamps",
               "target": "el",
               "state": "populated"
@@ -485,7 +485,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/activity-feed/activity-feed.test.ts",
-              "line": 501,
+              "line": 512,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -624,7 +624,6 @@
         "evidenceGaps": [
           "keyboard",
           "rtl",
-          "narrowAllocation",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -665,9 +664,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.test.ts",
+              "line": 92,
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -747,7 +751,6 @@
         "Interactive implementation detected without a recorded component keyboard-test signal.",
         "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -1123,7 +1126,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "rtl",
-          "narrowAllocation",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -1136,7 +1138,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/agent-workspace/agent-workspace.test.ts",
-              "line": 217,
+              "line": 284,
               "test": "is accessible in a populated state",
               "target": "el",
               "state": "populated"
@@ -1164,9 +1166,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/conversation/agent-workspace/agent-workspace.test.ts",
+              "line": 250,
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -1246,7 +1253,6 @@
         "No component-owned interactive surface was detected; applicability is re-evaluated when the source changes.",
         "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -2158,7 +2164,6 @@
         "evidenceGaps": [
           "keyboard",
           "rtl",
-          "narrowAllocation",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -2199,9 +2204,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/approval-queue/approval-queue.test.ts",
+              "line": 204,
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -2281,7 +2291,6 @@
         "Interactive implementation detected without a recorded component keyboard-test signal.",
         "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -2495,7 +2504,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "keyboard",
-          "narrowAllocation",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -2548,9 +2556,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/artifact-panel/artifact-panel.test.ts",
+              "line": 319,
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -2629,7 +2642,6 @@
       "knownLimitations": [
         "Interactive implementation detected without a recorded component keyboard-test signal.",
         "No component-owned motion declaration or programmatic animation was detected.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -3001,7 +3013,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/audio-visualizer/audio-visualizer.test.ts",
-              "line": 378,
+              "line": 466,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -3038,7 +3050,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/audio-visualizer/audio-visualizer.test.ts",
-              "line": 223,
+              "line": 311,
               "kind": "320px allocation test signal"
             }
           ]
@@ -6860,7 +6872,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "rtl",
-          "narrowAllocation",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -6873,14 +6884,14 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-composer/chat-composer.test.ts",
-              "line": 985,
+              "line": 1041,
               "test": "is accessible in a populated, busy, chip-laden state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/chat-composer/chat-composer.test.ts",
-              "line": 1186,
+              "line": 1242,
               "test": "is accessible under frame=\"plain\" with the textarea focused",
               "target": "el",
               "state": "populated"
@@ -6894,7 +6905,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-composer/chat-composer.test.ts",
-              "line": 27,
+              "line": 28,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -6911,16 +6922,21 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-composer/chat-composer.test.ts",
-              "line": 1172,
+              "line": 1228,
               "kind": "reduced-motion test signal"
             }
           ]
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/conversation/chat-composer/chat-composer.test.ts",
+              "line": 633,
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -6998,7 +7014,6 @@
       },
       "knownLimitations": [
         "No component-local rendered RTL assertion is recorded.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -7762,14 +7777,14 @@
           "evidence": [
             {
               "file": "src/components/conversation/checkpoint/checkpoint.test.ts",
-              "line": 254,
+              "line": 274,
               "test": "is accessible mid-confirm",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/checkpoint/checkpoint.test.ts",
-              "line": 261,
+              "line": 281,
               "test": "is accessible non-restorable",
               "target": "el",
               "state": "populated"
@@ -8793,7 +8808,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "rtl",
-          "narrowAllocation",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -8840,7 +8854,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.test.ts",
-              "line": 696,
+              "line": 721,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -8864,9 +8878,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/conversation/code-block/code-block-core.test.ts",
+              "line": 112,
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -8943,7 +8962,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.class.ts",
-              "line": 285,
+              "line": 289,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -8967,7 +8986,6 @@
       },
       "knownLimitations": [
         "No component-local rendered RTL assertion is recorded.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
@@ -9001,7 +9019,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "rtl",
-          "narrowAllocation",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -9014,7 +9031,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.test.ts",
-              "line": 269,
+              "line": 294,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -9028,7 +9045,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.test.ts",
-              "line": 696,
+              "line": 721,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -9052,9 +9069,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/conversation/code-block/code-block-core.test.ts",
+              "line": 112,
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -9120,7 +9142,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.class.ts",
-              "line": 285,
+              "line": 289,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -9144,7 +9166,6 @@
       },
       "knownLimitations": [
         "No component-local rendered RTL assertion is recorded.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -9929,21 +9950,21 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/commit-card/commit-card.test.ts",
-              "line": 269,
+              "line": 292,
               "test": "is accessible with hash, message, author, timestamp, and files",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/commit-card/commit-card.test.ts",
-              "line": 387,
+              "line": 410,
               "test": "is accessible in the populated compact + plain states",
               "target": "compactEl",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/commit-card/commit-card.test.ts",
-              "line": 387,
+              "line": 410,
               "test": "is accessible in the populated compact + plain states",
               "target": "plainEl",
               "state": "populated"
@@ -9975,7 +9996,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/commit-card/commit-card.test.ts",
-              "line": 406,
+              "line": 429,
               "kind": "320px allocation test signal"
             }
           ]
@@ -10253,7 +10274,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/compare-panel/compare-panel.test.ts",
-              "line": 352,
+              "line": 388,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -16827,7 +16848,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/eval-dataset/eval-dataset.test.ts",
-              "line": 279,
+              "line": 363,
               "test": "is accessible fully populated: searchable, tag filters, a selection, and rendered rows",
               "target": "el",
               "state": "populated"
@@ -16847,7 +16868,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/eval-dataset/eval-dataset.test.ts",
-              "line": 292,
+              "line": 376,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -16864,7 +16885,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/eval-dataset/eval-dataset.test.ts",
-              "line": 303,
+              "line": 387,
               "kind": "320px allocation test signal"
             }
           ]
@@ -24426,7 +24447,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/lite-chart.test.ts",
-              "line": 472,
+              "line": 476,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -27176,7 +27197,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/message-parts/message-parts.test.ts",
-              "line": 229,
+              "line": 255,
               "test": "is accessible with populated mixed content",
               "target": "el",
               "state": "populated"
@@ -27483,7 +27504,6 @@
         "evidenceGaps": [
           "rtl",
           "reducedMotion",
-          "narrowAllocation",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -27496,35 +27516,35 @@
           "evidence": [
             {
               "file": "src/components/conversation/model-select/model-select.test.ts",
-              "line": 1323,
+              "line": 1412,
               "test": "is accessible (closed dropdown, default and open)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/conversation/model-select/model-select.test.ts",
-              "line": 1323,
+              "line": 1412,
               "test": "is accessible (closed dropdown, default and open)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/conversation/model-select/model-select.test.ts",
-              "line": 1342,
+              "line": 1431,
               "test": "is accessible (free-text mode, default and open)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/conversation/model-select/model-select.test.ts",
-              "line": 1342,
+              "line": 1431,
               "test": "is accessible (free-text mode, default and open)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/conversation/model-select/model-select.test.ts",
-              "line": 1314,
+              "line": 1403,
               "test": "is accessible with a visible label set",
               "target": "el",
               "state": "populated"
@@ -27538,7 +27558,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/model-select/model-select.test.ts",
-              "line": 181,
+              "line": 182,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -27557,9 +27577,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/conversation/model-select/model-select.test.ts",
+              "line": 387,
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -27638,7 +27663,6 @@
       "knownLimitations": [
         "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -27679,14 +27703,14 @@
           "evidence": [
             {
               "file": "src/components/conversation/model-settings-panel/model-settings-panel.test.ts",
-              "line": 396,
+              "line": 405,
               "test": "is accessible with a populated catalog and non-default temperature",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/model-settings-panel/model-settings-panel.test.ts",
-              "line": 408,
+              "line": 417,
               "test": "is accessible in compact layout",
               "target": "el",
               "state": "populated"
@@ -27718,7 +27742,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/model-settings-panel/model-settings-panel.test.ts",
-              "line": 107,
+              "line": 116,
               "kind": "320px allocation test signal"
             }
           ]
@@ -32263,7 +32287,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.test.ts",
-              "line": 523,
+              "line": 541,
               "test": "is accessible with its composed controls populated",
               "target": "el",
               "state": "populated"
@@ -32277,7 +32301,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.test.ts",
-              "line": 106,
+              "line": 124,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -32558,7 +32582,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "keyboard",
           "rtl",
           "narrowAllocation",
           "visual",
@@ -32573,8 +32596,15 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/prompt-studio/prompt-studio.test.ts",
-              "line": 45,
+              "line": 57,
               "test": "is accessible when populated and gates all editing controls while disabled",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/agent-tools/prompt-studio/prompt-studio.test.ts",
+              "line": 376,
+              "test": "keeps message reordering opt-in and disables boundary actions",
               "target": "el",
               "state": "populated"
             }
@@ -32583,9 +32613,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/prompt-studio/prompt-studio.test.ts",
+              "line": 2,
+              "kind": "component keyboard assertion signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -32680,7 +32715,6 @@
         }
       },
       "knownLimitations": [
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
@@ -32879,21 +32913,21 @@
           "evidence": [
             {
               "file": "src/components/conversation/push-to-talk/push-to-talk.test.ts",
-              "line": 1271,
+              "line": 1287,
               "test": "makes interactive icon-slot content decorative and unfocusable inside the trigger",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/push-to-talk/push-to-talk.test.ts",
-              "line": 1290,
+              "line": 1306,
               "test": "is accessible in toggle mode while recording",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/push-to-talk/push-to-talk.test.ts",
-              "line": 1358,
+              "line": 1374,
               "test": "is accessible with the recording-state prop themed",
               "target": "el",
               "state": "populated"
@@ -32907,7 +32941,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/push-to-talk/push-to-talk.test.ts",
-              "line": 585,
+              "line": 601,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -40176,14 +40210,14 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/stack-trace/stack-trace.test.ts",
-              "line": 229,
+              "line": 270,
               "test": "is accessible with a parsed, internal-collapsed trace",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/stack-trace/stack-trace.test.ts",
-              "line": 312,
+              "line": 353,
               "test": "is accessible with a parsed trace under frame=\"plain\"",
               "target": "el",
               "state": "populated"
@@ -42953,8 +42987,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "keyboard",
-          "rtl",
           "reducedMotion",
           "narrowAllocation",
           "visual",
@@ -42968,8 +43000,15 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/agent-tools/task-list/task-list-reorderable.test.ts",
+              "line": 387,
+              "test": "is accessible with populated keyboard-reorderable tasks",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/agent-tools/task-list/task-list.test.ts",
-              "line": 335,
+              "line": 358,
               "test": "is accessible expanded, with items, children, and detail text",
               "target": "el",
               "state": "populated"
@@ -42979,15 +43018,25 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/task-list/task-list-reorderable.test.ts",
+              "line": 37,
+              "kind": "component keyboard assertion signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/task-list/task-list-reorderable.test.ts",
+              "line": 328,
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "applicable",
@@ -43076,8 +43125,6 @@
         }
       },
       "knownLimitations": [
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
@@ -43091,6 +43138,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/task-list/task-list-reorderable.test.ts",
           "src/components/agent-tools/task-list/task-list.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -43622,7 +43670,14 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/thinking-panel/thinking-panel.test.ts",
-              "line": 471,
+              "line": 276,
+              "test": "is accessible with populated compact plain chrome",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/agent-tools/thinking-panel/thinking-panel.test.ts",
+              "line": 587,
               "test": "is accessible with content, expanded, and a duration set",
               "target": "el",
               "state": "populated"
@@ -43642,7 +43697,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/thinking-panel/thinking-panel.test.ts",
-              "line": 431,
+              "line": 547,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -45997,8 +46052,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "rtl",
-          "narrowAllocation",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -46011,21 +46064,21 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-select-dialog/tool-select-dialog.test.ts",
-              "line": 678,
+              "line": 807,
               "test": "is accessible while open with grouped, disabled, and use-defaults-locked tools",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/agent-tools/tool-select-dialog/tool-select-dialog.test.ts",
-              "line": 678,
+              "line": 807,
               "test": "is accessible while open with grouped, disabled, and use-defaults-locked tools",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/agent-tools/tool-select-dialog/tool-select-dialog.test.ts",
-              "line": 673,
+              "line": 802,
               "test": "is accessible while closed",
               "target": "el",
               "state": "populated"
@@ -46039,16 +46092,21 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-select-dialog/tool-select-dialog.test.ts",
-              "line": 463,
+              "line": 592,
               "kind": "component keyboard assertion signal"
             }
           ]
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/tool-select-dialog/tool-select-dialog.test.ts",
+              "line": 269,
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "not-applicable",
@@ -46058,9 +46116,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/tool-select-dialog/tool-select-dialog.test.ts",
+              "line": 213,
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -46137,9 +46200,7 @@
         }
       },
       "knownLimitations": [
-        "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -46179,7 +46240,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-timeline/tool-timeline.test.ts",
-              "line": 437,
+              "line": 509,
               "test": "is accessible with a populated timeline and the approval dialog open",
               "target": "el",
               "state": "populated"
@@ -46199,7 +46260,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-timeline/tool-timeline.test.ts",
-              "line": 350,
+              "line": 413,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -46216,7 +46277,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-timeline/tool-timeline.test.ts",
-              "line": 364,
+              "line": 427,
               "kind": "320px allocation test signal"
             }
           ]
@@ -48519,14 +48580,14 @@
           "evidence": [
             {
               "file": "src/components/conversation/voice-picker/voice-picker.test.ts",
-              "line": 398,
+              "line": 474,
               "test": "is accessible in closed-dropdown mode with a selected value",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/voice-picker/voice-picker.test.ts",
-              "line": 405,
+              "line": 481,
               "test": "is accessible in free-text mode",
               "target": "el",
               "state": "populated"
@@ -48540,7 +48601,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/voice-picker/voice-picker.test.ts",
-              "line": 655,
+              "line": 731,
               "kind": "component keyboard assertion signal"
             }
           ]
