@@ -2366,6 +2366,70 @@ describe('visibility-gated canvas redraws', () => {
       window.IntersectionObserver = originalIntersectionObserver;
     }
   });
+
+  it('ignores a retired visibility observer after reconnecting before new data is painted', async () => {
+    const originalIntersectionObserver = window.IntersectionObserver;
+    const records: Array<{
+      callback: IntersectionObserverCallback;
+      disconnected: boolean;
+      observer: IntersectionObserver;
+    }> = [];
+    class TestIntersectionObserver {
+      readonly record: (typeof records)[number];
+      constructor(callback: IntersectionObserverCallback) {
+        this.record = {
+          callback,
+          disconnected: false,
+          observer: this as unknown as IntersectionObserver,
+        };
+        records.push(this.record);
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {
+        this.record.disconnected = true;
+      }
+      takeRecords(): IntersectionObserverEntry[] {
+        return [];
+      }
+      readonly root = null;
+      readonly rootMargin = '0px';
+      readonly thresholds = [0];
+    }
+    window.IntersectionObserver = TestIntersectionObserver as unknown as typeof IntersectionObserver;
+
+    let el: LyraHeatmap | undefined;
+    try {
+      el = (await fixture(html`<lr-heatmap cell-size="20"></lr-heatmap>`)) as LyraHeatmap;
+      el.rowLabels = ['row'];
+      el.colLabels = ['column'];
+      el.values = [[1]];
+      el.cellColor = (_pos, value) => (value === 1 ? 'rgb(1, 2, 3)' : 'rgb(4, 5, 6)');
+      await el.updateComplete;
+
+      const originalCanvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+      expect(pixelRgb(originalCanvas.getContext('2d')!, 70, 30)).to.deep.equal([1, 2, 3]);
+      const parent = el.parentElement!;
+      el.remove();
+      expect(records[0]!.disconnected).to.equal(true);
+      parent.append(el);
+      await el.updateComplete;
+      expect(records.length).to.equal(2);
+
+      records[0]!.callback(
+        [{ target: el, isIntersecting: false } as IntersectionObserverEntry],
+        records[0]!.observer,
+      );
+      el.values = [[2]];
+      await el.updateComplete;
+
+      const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+      expect(pixelRgb(canvas.getContext('2d')!, 70, 30)).to.deep.equal([4, 5, 6]);
+    } finally {
+      el?.remove();
+      window.IntersectionObserver = originalIntersectionObserver;
+    }
+  });
 });
 
 describe('coverage: draw guard branches', () => {

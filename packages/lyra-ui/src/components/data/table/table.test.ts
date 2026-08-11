@@ -2793,6 +2793,52 @@ describe('cellStyle column hook', () => {
     expect(cell.style.background).to.equal('green');
     expect(cell.style.getPropertyValue('--lr-table-sticky-offset')).to.not.equal('');
   });
+
+  it('drops non-string runtime cellStyle values before assigning inline styles', async () => {
+    const withMalformedStyle: TableColumn<Row>[] = [
+      {
+        key: 'name',
+        label: 'Name',
+        cell: (row) => row.name,
+        // TypeScript callers receive Record<string, string>, but JavaScript consumers can still
+        // pass arbitrary runtime values. The generated native style must never coerce one.
+        cellStyle: () => ({ color: 123 } as unknown as Record<string, string>),
+      },
+    ];
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = withMalformedStyle;
+    el.rows = rows;
+    await el.updateComplete;
+
+    const cell = el.shadowRoot!.querySelector<HTMLElement>('[part="cell"]')!;
+    expect(cell.style.color).to.equal('');
+  });
+
+  it('keeps safe cell styles when the host browser has no CSS validation API', async () => {
+    const originalCss = Object.getOwnPropertyDescriptor(window, 'CSS');
+    try {
+      for (const cssApi of [undefined, {}]) {
+        Object.defineProperty(window, 'CSS', { configurable: true, value: cssApi });
+        const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+        el.columns = [
+          {
+            key: 'name',
+            label: 'Name',
+            cell: (row) => row.name,
+            cellStyle: () => ({ color: 'rgb(1, 2, 3)' }),
+          },
+        ];
+        el.rows = rows;
+        await el.updateComplete;
+
+        const cell = el.shadowRoot!.querySelector<HTMLElement>('[part="cell"]')!;
+        expect(cell.style.color).to.equal('rgb(1, 2, 3)');
+      }
+    } finally {
+      if (originalCss) Object.defineProperty(window, 'CSS', originalCss);
+      else Reflect.deleteProperty(window, 'CSS');
+    }
+  });
 });
 
 describe('headerCell', () => {
