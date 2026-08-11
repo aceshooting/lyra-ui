@@ -32,9 +32,14 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_dropzoneRejec
 
 
 type DragState = 'default' | 'accept' | 'reject';
+type DroppedFolderReadResult =
+  | { status: 'complete'; files: File[] }
+  | { status: 'cancelled' }
+  | { status: 'limit' };
 export type LyraFileInputCapture = '' | 'user' | 'environment';
 
 export const DEFAULT_MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
+const MAX_DROPPED_FOLDER_ENTRIES = 10_000;
 
 const INTERACTIVE_CONTENT_SELECTOR =
   'a[href], area[href], button, input, select, textarea, summary, ' +
@@ -144,6 +149,9 @@ export interface LyraFileInputEventMap {
  * @cssstate blank - Matches while no files are selected.
  * @cssstate dragging - Matches during an active file drag session.
  * @cssprop [--lr-file-input-font-size=var(--lr-form-control-font-size)] - Dropzone text size.
+ * @cssprop [--lr-file-input-gap=var(--lr-space-xs)] - Gap between the dropzone's slotted
+ * children. While `compact`, this is the fallback when `--lr-file-input-compact-gap` is unset.
+ * @cssprop [--lr-file-input-radius=var(--lr-radius)] - Corner radius of `[part="base"]`.
  * @cssprop [--lr-file-input-compact-padding=var(--lr-space-s)] - `[part="base"]` padding while
  * `compact`.
  * @cssprop [--lr-file-input-compact-gap=var(--lr-space-2xs)] - Gap between the dropzone's slotted
@@ -788,37 +796,76 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     }
   };
 
-  /** Reads one legacy File System API entry without retaining directory-reader state between drops. */
-  private readDroppedEntry(entry: FileSystemEntry): Promise<File[]> {
-    if (entry.isFile) {
-      return new Promise<File[]>((resolve) => {
-        (entry as FileSystemFileEntry).file(
-          (file) => resolve([file]),
-          () => resolve([]),
-        );
-      });
-    }
-    if (!entry.isDirectory) return Promise.resolve([]);
-    const reader = (entry as FileSystemDirectoryEntry).createReader();
-    return new Promise<File[]>((resolve) => {
-      const files: File[] = [];
-      const readBatch = (): void => {
-        reader.readEntries(
-          (entries) => {
-            if (entries.length === 0) {
-              resolve(files);
-              return;
-            }
-            void Promise.all(entries.map((child) => this.readDroppedEntry(child))).then((nested) => {
-              files.push(...nested.flat());
-              readBatch();
-            });
-          },
-          () => resolve(files),
-        );
-      };
-      readBatch();
+  private readDroppedFile(
+    entry: FileSystemFileEntry,
+    isCurrent: () => boolean,
+  ): Promise<File | undefined> {
+    if (!isCurrent()) return Promise.resolve(undefined);
+    return new Promise<File | undefined>((resolve) => {
+      entry.file(
+        (file) => resolve(isCurrent() ? file : undefined),
+        () => resolve(undefined),
+      );
     });
+  }
+
+  private readDroppedDirectoryBatch(
+    reader: FileSystemDirectoryReader,
+    isCurrent: () => boolean,
+  ): Promise<FileSystemEntry[] | undefined> {
+    if (!isCurrent()) return Promise.resolve(undefined);
+    return new Promise<FileSystemEntry[] | undefined>((resolve) => {
+      reader.readEntries(
+        (entries) => resolve(isCurrent() ? entries : undefined),
+        () => resolve([]),
+      );
+    });
+  }
+
+  /** Walks legacy File System API folders one operation at a time, with a bounded queue. */
+  private async readDroppedFolders(
+    folders: FileSystemEntry[],
+    isCurrent: () => boolean,
+  ): Promise<DroppedFolderReadResult> {
+    const files: File[] = [];
+    const queue: FileSystemEntry[] = [];
+    let entryCount = 0;
+    const enqueue = (entry: FileSystemEntry): boolean => {
+      if (entryCount >= MAX_DROPPED_FOLDER_ENTRIES) return false;
+      entryCount++;
+      queue.push(entry);
+      return true;
+    };
+
+    for (const folder of folders) {
+      if (!isCurrent()) return { status: 'cancelled' };
+      if (!enqueue(folder)) return { status: 'limit' };
+    }
+
+    for (let index = 0; index < queue.length; index++) {
+      if (!isCurrent()) return { status: 'cancelled' };
+      const entry = queue[index]!;
+      if (entry.isFile) {
+        const file = await this.readDroppedFile(entry as FileSystemFileEntry, isCurrent);
+        if (!isCurrent()) return { status: 'cancelled' };
+        if (file) files.push(file);
+        continue;
+      }
+      if (!entry.isDirectory) continue;
+
+      const reader = (entry as FileSystemDirectoryEntry).createReader();
+      while (true) {
+        if (!isCurrent()) return { status: 'cancelled' };
+        const entries = await this.readDroppedDirectoryBatch(reader, isCurrent);
+        if (!isCurrent()) return { status: 'cancelled' };
+        if (!entries?.length) break;
+        for (const child of entries) {
+          if (!isCurrent()) return { status: 'cancelled' };
+          if (!enqueue(child)) return { status: 'limit' };
+        }
+      }
+    }
+    return { status: 'complete', files };
   }
 
   private onDrop = (e: DragEvent): void => {
@@ -833,9 +880,10 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
       .map((item) => (item as DataTransferItem & { webkitGetAsEntry?: () => FileSystemEntry | null }).webkitGetAsEntry?.())
       .filter((entry): entry is FileSystemEntry => !!entry && entry.isDirectory);
     if (folders.length && this.multiple) {
-      void Promise.all(folders.map((folder) => this.readDroppedEntry(folder))).then((nested) => {
-        if (token !== this.dropToken || !this.isConnected || this.effectiveDisabled) return;
-        const allFiles = [...files, ...nested.flat()];
+      const isCurrent = () => token === this.dropToken && this.isConnected && !this.effectiveDisabled;
+      void this.readDroppedFolders(folders, isCurrent).then((result) => {
+        if (!isCurrent() || result.status !== 'complete') return;
+        const allFiles = [...files, ...result.files];
         if (allFiles.length) this.emitFiles(allFiles);
       });
       return;

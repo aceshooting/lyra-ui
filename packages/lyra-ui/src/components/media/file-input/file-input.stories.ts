@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import { narrowStoryFrames } from '../../../../../../.storybook/narrow-story.js';
 
 const meta: Meta = {
   title: 'FileInput',
@@ -121,4 +122,39 @@ export const Compact: Story = {
       },
     },
   },
+};
+
+export const ThemeHooks: Story = {
+  render: () => html`
+    <lr-file-input
+      label="Supporting documents"
+      style="--lr-file-input-gap: var(--lr-space-m); --lr-file-input-radius: var(--lr-radius-xl);"
+    >
+      <strong>Drop documents here</strong>
+      <span>or click to browse</span>
+    </lr-file-input>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The component-scoped gap and radius hooks retheme the primary dropzone without changing shared form-control tokens.',
+      },
+    },
+  },
+};
+
+export const Narrow320px: Story = {
+  name: 'Narrow (320px, long content)',
+  render: () =>
+    narrowStoryFrames(() => html`
+      <lr-file-input
+        label="SupportingDocumentsWithADeliberatelyLongUnbrokenLabelThatMustRemainInsideTheNarrowAllocation"
+        hint="AttachDocumentsWithADeliberatelyLongUnbrokenHintThatMustWrapInsteadOfWideningThisField"
+        multiple
+      >
+        <strong>Drop documents with deliberately long unbroken content here</strong>
+        <span>orClickToBrowseAnUnbrokenDropzoneInstructionThatMustWrapAtThreeHundredAndTwentyPixels</span>
+      </lr-file-input>
+    `),
 };

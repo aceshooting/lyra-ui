@@ -572,6 +572,35 @@ it('renders byte-identical drag accept/reject colors to the pre-hatch shared tok
   );
 });
 
+it('keeps the gap and radius hooks opt-in, inheritable, and subordinate to the compact gap hook', async () => {
+  const defaultEl = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const themedWrapper = (await fixture(html`
+    <div style="--lr-file-input-gap: 19px; --lr-file-input-radius: 23px">
+      <lr-file-input></lr-file-input>
+    </div>
+  `)) as HTMLElement;
+  const themedEl = themedWrapper.querySelector('lr-file-input') as LyraFileInput;
+  const compactEl = (await fixture(html`
+    <div style="--lr-file-input-gap: 19px">
+      <lr-file-input compact style="--lr-file-input-compact-gap: 7px"></lr-file-input>
+    </div>
+  `)).querySelector('lr-file-input') as LyraFileInput;
+  const compactFallbackEl = (await fixture(html`<lr-file-input compact></lr-file-input>`)) as LyraFileInput;
+
+  const dropzoneGap = (el: LyraFileInput) =>
+    getComputedStyle(el.shadowRoot!.querySelector('.dropzone-content') as HTMLElement).rowGap;
+  const dropzoneRadius = (el: LyraFileInput) =>
+    getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).borderTopLeftRadius;
+
+  // These are the pre-hook defaults: --lr-space-xs and --lr-radius.
+  expect(dropzoneGap(defaultEl)).to.equal('4px');
+  expect(dropzoneRadius(defaultEl)).to.equal('6px');
+  expect(dropzoneGap(themedEl)).to.equal('19px');
+  expect(dropzoneRadius(themedEl)).to.equal('23px');
+  expect(dropzoneGap(compactEl)).to.equal('7px');
+  expect(dropzoneGap(compactFallbackEl)).to.equal('2px');
+});
+
 it('uses the shared --lr-opacity-disabled token instead of a literal 0.5 for the disabled dropzone state', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.include('opacity: var(--lr-opacity-disabled);');
@@ -1072,11 +1101,11 @@ it('ignores a terminal native file selection that arrives after the host becomes
   expect(input.value).to.equal('');
 });
 
-it('contains an unbroken custom label inside a 280px allocation', async () => {
-  const longLabel = 'Upload'.repeat(300);
+it('contains long label, hint, and dropzone content inside a 320px allocation', async () => {
+  const longContent = 'Upload'.repeat(300);
   const wrapper = (await fixture(html`
-    <div style="inline-size: 280px">
-      <lr-file-input>${longLabel}</lr-file-input>
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-file-input .label=${longContent} .hint=${longContent}>${longContent}</lr-file-input>
     </div>
   `)) as HTMLElement;
   expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
@@ -1957,6 +1986,61 @@ it('skips a dropped-folder child entry that is neither a file nor a directory', 
   expect(el.files.map((file) => file.name)).to.deep.equal(['nested.csv']);
 });
 
+it('caps a folder walk before accepting a partial drop or reading another directory batch', async () => {
+  const el = (await fixture(html`<lr-file-input multiple></lr-file-input>`)) as LyraFileInput;
+  const dropzone = el.shadowRoot!.querySelector('[part~="dropzone"]') as HTMLElement;
+  const prior = makeFile('kept.csv', 'text/csv');
+  const direct = makeFile('direct.csv', 'text/csv');
+  const nested = makeFile('nested.csv', 'text/csv');
+  el.files = [prior];
+  await el.updateComplete;
+
+  let readCalls = 0;
+  let emissions = 0;
+  el.addEventListener('lr-files', () => emissions++);
+  const directory = {
+    isDirectory: true,
+    isFile: false,
+    name: 'large-folder',
+    createReader: () => ({
+      readEntries: (success: (entries: unknown[]) => void) => {
+        readCalls++;
+        if (readCalls === 1) {
+          success([
+            {
+              isDirectory: false,
+              isFile: true,
+              name: nested.name,
+              file: (successFile: (file: File) => void) => successFile(nested),
+            },
+            // The root plus these children exceeds the 10,000-entry folder-walk budget.
+            ...Array.from({ length: 10_000 }, (_, index) => ({
+              isDirectory: false,
+              isFile: false,
+              name: `ignored-${index}`,
+            })),
+          ]);
+          return;
+        }
+        success([]);
+      },
+    }),
+  };
+  const transfer = {
+    files: [direct] as unknown as FileList,
+    items: [{ kind: 'file', webkitGetAsEntry: () => directory }],
+  };
+  const event = new DragEvent('drop', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'dataTransfer', { value: transfer });
+
+  dropzone.dispatchEvent(event);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  expect(readCalls).to.equal(1);
+  expect(emissions).to.equal(0);
+  expect(el.files.map((file) => file.name)).to.deep.equal(['kept.csv']);
+});
+
 it('tolerates a drop event with no dataTransfer at all', async () => {
   const el = (await fixture(html`<lr-file-input multiple></lr-file-input>`)) as LyraFileInput;
   const dropzone = el.shadowRoot!.querySelector('[part~="dropzone"]') as HTMLElement;
@@ -1973,20 +2057,20 @@ it('discards a dropped-folder resolution that arrives after the host became disa
   const el = (await fixture(html`<lr-file-input multiple></lr-file-input>`)) as LyraFileInput;
   const dropzone = el.shadowRoot!.querySelector('[part~="dropzone"]') as HTMLElement;
   const nested = makeFile('nested.csv', 'text/csv');
-  let read = false;
+  let readCalls = 0;
   const directory = {
     isDirectory: true,
     isFile: false,
     name: 'folder',
     createReader: () => ({
       readEntries: (success: (entries: unknown[]) => void) => {
+        readCalls++;
         // Resolve asynchronously so there is a window to disable the host mid-read, and signal
         // "no more entries" on the second call so the recursive reader batch actually terminates.
-        if (read) {
+        if (readCalls > 1) {
           setTimeout(() => success([]));
           return;
         }
-        read = true;
         setTimeout(() => success([
           {
             isDirectory: false,
@@ -2010,6 +2094,7 @@ it('discards a dropped-folder resolution that arrives after the host became disa
   el.disabled = true;
   await new Promise((resolve) => setTimeout(resolve, 20));
   expect(fired).to.be.false;
+  expect(readCalls).to.equal(1);
   expect(el.files).to.deep.equal([]);
 });
 

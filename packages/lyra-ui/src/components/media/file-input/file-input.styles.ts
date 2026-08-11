@@ -45,7 +45,7 @@ export const styles = css`
     appearance: none;
     padding: var(--lr-space-l);
     border: var(--lr-border-width-medium) dashed var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-file-input-radius, var(--lr-radius));
     background: var(--lr-color-surface);
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-md-sm);
@@ -60,7 +60,7 @@ export const styles = css`
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-file-input-gap, var(--lr-space-xs));
     padding: var(--lr-space-l);
     color: var(--lr-color-text-quiet);
     text-align: center;
@@ -95,7 +95,7 @@ export const styles = css`
   }
   :host([compact]) .dropzone-content {
     padding: var(--lr-file-input-compact-padding, var(--lr-space-s));
-    gap: var(--lr-file-input-compact-gap, var(--lr-space-2xs));
+    gap: var(--lr-file-input-compact-gap, var(--lr-file-input-gap, var(--lr-space-2xs)));
     font-size: var(--lr-file-input-compact-font-size, var(--lr-font-size-sm));
   }
   /* Inline var() fallbacks (rather than :host-declared properties, which every instance would
