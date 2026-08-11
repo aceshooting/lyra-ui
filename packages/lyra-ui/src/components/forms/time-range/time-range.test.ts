@@ -2178,6 +2178,58 @@ it('exposes the native label and validation surface of its form association', as
   expect(el.validity.valid).to.equal(true);
 });
 
+describe('ElementInternals fallback', () => {
+  /** A consumer test environment such as happy-dom may not implement form association, but the
+   * public range and validity APIs must still be safe to use. */
+  const withoutAttachInternals = async (
+    impl: undefined | (() => never),
+    assertion: (el: LyraTimeRange) => void | Promise<void>,
+  ): Promise<void> => {
+    const proto = HTMLElement.prototype as unknown as { attachInternals?: unknown };
+    const original = proto.attachInternals;
+    if (impl === undefined) delete proto.attachInternals;
+    else proto.attachInternals = impl;
+    try {
+      const el = (await fixture(html`
+        <lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>
+      `)) as LyraTimeRange;
+      await el.updateComplete;
+      await assertion(el);
+    } finally {
+      if (original === undefined) delete proto.attachInternals;
+      else proto.attachInternals = original;
+    }
+  };
+
+  it('keeps public value and validity APIs inert but usable when attachInternals is unavailable', async () => {
+    await withoutAttachInternals(undefined, async (el) => {
+      expect((el.form) === null).to.equal(true);
+      expect(el.willValidate).to.be.false;
+      expect(el.validationMessage).to.equal('');
+      expect(el.checkValidity()).to.be.true;
+      expect(el.reportValidity()).to.be.true;
+
+      expect(() => el.setCustomValidity('Server says no')).to.not.throw();
+      el.start = 30;
+      await el.updateComplete;
+      expect(el.start).to.equal(30);
+    });
+  });
+
+  it('uses the same safe public fallback when native attachInternals throws', async () => {
+    await withoutAttachInternals(
+      () => {
+        throw new DOMException('unsupported');
+      },
+      (el) => {
+        expect(el.willValidate).to.be.false;
+        expect(el.checkValidity()).to.be.true;
+        expect(el.reportValidity()).to.be.true;
+      },
+    );
+  });
+});
+
 // A control barred from constraint validation matches neither :valid nor :invalid natively,
 // however its validity was set -- a real `<input disabled>` carrying setCustomValidity() matches
 // neither. This control's ONLY validity channel is setCustomValidity(), so without the bar a

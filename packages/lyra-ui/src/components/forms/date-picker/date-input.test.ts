@@ -1683,6 +1683,15 @@ it('selectionStart/selectionEnd/selectionDirection setters operate on the intern
 
   el.selectionDirection = 'backward';
   expect(el.selectionDirection).to.equal('backward');
+
+  // Nullable IDL assignments use the same native defaults as a blank text input
+  // instead of leaving a stale selection behind.
+  el.selectionStart = null;
+  el.selectionEnd = null;
+  el.selectionDirection = null;
+  expect(el.input!.selectionStart).to.equal(0);
+  expect(el.input!.selectionEnd).to.equal(0);
+  expect(el.selectionDirection).to.equal('none');
 });
 
 it('setRangeText() with only a replacement string uses the single-argument native overload', async () => {
@@ -2153,6 +2162,31 @@ describe('reviewed date-input parity surface', () => {
     const hidden = await afterHide;
     expect(hidden.cancelable).to.be.false;
     expect(el.open).to.be.false;
+  });
+
+  it('closes an open calendar with Escape and restores focus to the native date field', async () => {
+    const el = (await fixture(html`
+      <lr-date-input style="--show-duration: 1ms; --hide-duration: 1ms"></lr-date-input>
+    `)) as LyraDateInput;
+    const input = el.input!;
+    input.focus();
+
+    await el.show();
+    expect(el.open).to.be.true;
+
+    const afterHide = oneEvent(el, 'lr-after-hide');
+    const escape = new KeyboardEvent('keydown', {
+      key: 'Escape',
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    });
+    el.ownerDocument.dispatchEvent(escape);
+    await afterHide;
+
+    expect(escape.defaultPrevented).to.be.true;
+    expect(el.open).to.be.false;
+    expect(el.shadowRoot!.activeElement === input).to.equal(true);
   });
 
   it('repositions an open popup when placement or distance changes', async () => {
