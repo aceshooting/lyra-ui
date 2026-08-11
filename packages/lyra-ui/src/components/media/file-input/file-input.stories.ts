@@ -128,7 +128,7 @@ export const ThemeHooks: Story = {
   render: () => html`
     <lr-file-input
       label="Supporting documents"
-      style="--lr-file-input-gap: var(--lr-space-m); --lr-file-input-radius: var(--lr-radius-xl);"
+      style="--lr-file-input-gap: var(--lr-space-m); --lr-file-input-radius: var(--lr-radius-pill);"
     >
       <strong>Drop documents here</strong>
       <span>or click to browse</span>
