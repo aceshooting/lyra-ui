@@ -84,6 +84,34 @@ export const Sizes: StoryObj = {
   `,
 };
 
+/** Row-chrome hooks use inline fallbacks, not host declarations, so one menu-level value reaches
+ * every contained item without a `::part(base)` rule. */
+export const ThemedRowChrome: StoryObj = {
+  name: 'Themed row chrome (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Set `--lr-menu-item-gap` and `--lr-menu-item-radius` on an item or any ancestor to retune its visual row without a `::part(base)` rule. The gap remains constant across sizes; the default radius follows the shared size ladder.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      role="menu"
+      aria-label="Themed document actions"
+      style="--lr-menu-item-gap: var(--lr-space-m); --lr-menu-item-radius: var(--lr-radius-pill); inline-size: 18rem;"
+    >
+      <lr-menu-item value="rename">
+        <span slot="icon">✏️</span>
+        Rename
+        <span slot="details">⌘R</span>
+        <span slot="suffix">…</span>
+      </lr-menu-item>
+    </div>
+  `,
+};
+
 export const SubmenuOffset: StoryObj = {
   parameters: {
     docs: {

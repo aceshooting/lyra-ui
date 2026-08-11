@@ -1,6 +1,9 @@
 import { css } from 'lit';
 
 export const styles = css`
+  /* These row-chrome hooks use inline var() fallbacks rather than :host declarations, so an
+     application can set them once on a menu or another ancestor and each item inherits the value.
+     Unset, they resolve to the exact spacing and size-ladder radius this row used before. */
   :host {
     display: block;
     /* place() gives every floating panel a 4px main-axis gap. Shoelace's public
@@ -17,7 +20,7 @@ export const styles = css`
        delegation, so it always hugs the visible row rather than any
        host-level margin/inline layout quirks. */
     outline: none;
-    border-radius: var(--lr-form-control-radius);
+    border-radius: var(--lr-menu-item-radius, var(--lr-form-control-radius));
   }
   :host(:focus-visible) [part='base'] {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -30,14 +33,14 @@ export const styles = css`
     /* Deliberately NOT --lr-form-control-gap: that knob is the 2px rhythm between an input's own
        inline affordances, and at this size it collides the leading icon with the label of a menu
        row. The icon/label/chevron rhythm is constant across tiers here; only the box scales. */
-    gap: var(--lr-space-xs);
+    gap: var(--lr-menu-item-gap, var(--lr-space-xs));
     /* max() rather than the bare ladder value: the ladder's bottom two tiers resolve to 20px/24px,
        and a menu row is a pointer target, so it floors at the WCAG 2.2 SC 2.5.8 minimum. Above
        that floor the row tracks the same heights every other control in a toolbar row uses. */
     min-block-size: max(var(--lr-form-control-height), var(--lr-size-24px));
     padding-block: var(--lr-form-control-padding-block);
     padding-inline: var(--lr-form-control-padding-inline);
-    border-radius: var(--lr-form-control-radius);
+    border-radius: var(--lr-menu-item-radius, var(--lr-form-control-radius));
     cursor: pointer;
     font: inherit;
     font-size: var(--lr-form-control-font-size);

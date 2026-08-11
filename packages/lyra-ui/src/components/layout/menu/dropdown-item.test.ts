@@ -55,6 +55,28 @@ describe('<lr-dropdown-item>', () => {
     expect(selections).to.equal(1);
   });
 
+  it('inherits menu-item row chrome defaults and fallback hooks from an ancestor', async () => {
+    const defaultItem = await fixture<LyraDropdownItem>(html`<lr-dropdown-item>Archive</lr-dropdown-item>`);
+    const defaultBase = defaultItem.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    const defaultChrome = getComputedStyle(defaultBase);
+    expect(defaultChrome.gap).to.equal('4px');
+    expect(defaultChrome.borderRadius).to.equal('6px');
+    expect(getComputedStyle(defaultItem).borderRadius).to.equal('6px');
+
+    const wrapper = (await fixture(html`
+      <div style="--lr-menu-item-gap: 12px; --lr-menu-item-radius: 3px;">
+        <lr-dropdown-item>Archive</lr-dropdown-item>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-dropdown-item') as LyraDropdownItem;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    const chrome = getComputedStyle(base);
+
+    expect(chrome.gap).to.equal('12px');
+    expect(chrome.borderRadius).to.equal('3px');
+    expect(getComputedStyle(el).borderRadius).to.equal('3px');
+  });
+
   it('reflects the pinned Web Awesome type property', async () => {
     const el = await fixture<LyraDropdownItem>(html`<lr-dropdown-item>Archive</lr-dropdown-item>`);
     el.type = 'checkbox';

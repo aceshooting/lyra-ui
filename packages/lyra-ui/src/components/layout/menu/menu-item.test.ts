@@ -67,6 +67,34 @@ it('normalizes variant="danger" with the legacy destructive treatment', async ()
   expect(getComputedStyle(modernBase).color).to.equal(getComputedStyle(legacyBase).color);
 });
 
+describe('row chrome cssprops', () => {
+  const base = (el: LyraMenuItem): HTMLElement =>
+    el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  it('preserves the pre-existing computed gap and corner-radius defaults', async () => {
+    const el = (await fixture(html`<lr-menu-item>Rename</lr-menu-item>`)) as LyraMenuItem;
+    const chrome = getComputedStyle(base(el));
+
+    expect(chrome.gap).to.equal('4px');
+    expect(chrome.borderRadius).to.equal('6px');
+    expect(getComputedStyle(el).borderRadius).to.equal('6px');
+  });
+
+  it('inherits row gap and radius overrides from an ancestor without a ::part(base) rule', async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-menu-item-gap: 12px; --lr-menu-item-radius: 3px;">
+        <lr-menu-item>Rename</lr-menu-item>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-menu-item') as LyraMenuItem;
+    const chrome = getComputedStyle(base(el));
+
+    expect(chrome.gap).to.equal('12px');
+    expect(chrome.borderRadius).to.equal('3px');
+    expect(getComputedStyle(el).borderRadius).to.equal('3px');
+  });
+});
+
 it('renders WA details and Shoelace prefix/suffix compatibility slots through named parts', async () => {
   const el = (await fixture(html`
     <lr-menu-item>

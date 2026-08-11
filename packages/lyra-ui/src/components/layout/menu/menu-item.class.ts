@@ -182,6 +182,14 @@ export interface LyraMenuItemEventMap {
  * @csspart submenu - The submenu panel/wrapper.
  * @cssprop [--submenu-offset=-2px] - Final signed distance between a submenu and its parent row.
  * Negative values overlap the parent menu; positive values add separation. Mirrors under RTL.
+ * @cssprop [--lr-menu-item-gap=var(--lr-space-xs)] - Gap between the visual parts of
+ * `[part="base"]`, including its leading content, label, trailing details, and state glyphs.
+ * Declared as an inline `var()` fallback (never on `:host`), so an item or any ancestor can retune
+ * it without a `::part(base)` rule. It is constant across the shared size ladder.
+ * @cssprop [--lr-menu-item-radius=var(--lr-form-control-radius)] - Corner radius of the visual row
+ * and focusable host. Its fallback follows the active shared size tier. Declared as an inline
+ * `var()` fallback (never on `:host`), so an item or any ancestor can retune it without a
+ * `::part(base)` rule.
  * @method click - Activates the visual row, including checkbox and submenu behavior; no-op while
  * disabled or loading.
  * @method select - Activates a selectable item; no-op while disabled/loading and opens submenu parents.
