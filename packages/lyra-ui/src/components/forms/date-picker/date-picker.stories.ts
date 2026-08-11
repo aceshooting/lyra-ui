@@ -185,6 +185,26 @@ export const CalendarViews: Story = {
   `,
 };
 
+export const SelectionViewAvailability: Story = {
+  name: 'Selection views respect date constraints',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Month, year, and decade choices are enabled only when they contain at least one selectable day under the same bounds, past/future, date-list, weekday, predicate, and pending-range constraints as the day grid. The frozen today makes earlier months visibly unavailable here.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-date-picker
+      view="months"
+      value="2026-07-15"
+      today="2026-07-15"
+      disable-past
+    ></lr-date-picker>
+  `,
+};
+
 export const ScopedStateTheme: Story = {
   name: 'Scoped calendar state theme',
   parameters: { docs: { description: { story: 'Day and selection-view states use independent component hooks while retaining the shared semantic tokens as defaults.' } } },

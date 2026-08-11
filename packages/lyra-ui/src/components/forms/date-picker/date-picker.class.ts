@@ -57,6 +57,9 @@ interface ViewPeriod {
   end: Date;
 }
 
+// A decade is the widest selectable period; ten 366-day years safely bounds the scan.
+const MAX_VIEW_PERIOD_DAYS = 366 * 10;
+
 export type LyraDatePickerPageBy = 'months' | 'single';
 export type LyraDatePickerView = 'days' | 'months' | 'years' | 'decades';
 export type LyraDatePickerFirstDayOfWeek =
@@ -118,6 +121,8 @@ export interface LyraDatePickerEventMap {
  * Month, year, and decade selection views retain one enabled roving Tab stop. Arrow keys follow
  * their visual four-column grid (mirroring horizontally under RTL), Home and End move to the
  * first and last enabled periods, and Enter or Space drills into the focused period.
+ * A period is enabled only when it contains a date selectable under the current bounds,
+ * past/future, date-list, weekday, predicate, and pending-range constraints.
  *
  * @customElement lr-date-picker
  * @event {Event} change - The user committed a value. Bubbling, composed, and non-cancelable.
@@ -270,6 +275,11 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   private disabledDatesCache = new Set<string>();
   private disabledWeekdaysCacheSource?: string;
   private disabledWeekdaysCache = new Set<number>();
+  // A selection view asks about the same periods while it renders, resolves
+  // roving focus, and processes keyboard navigation. Availability can depend
+  // on every date constraint, so retain each answer only for the current
+  // reactive update.
+  private viewPeriodAvailabilityCache = new Map<string, boolean>();
   // Stable per-instance ids for each visible month's title, referenced by
   // that month's grid via aria-labelledby -- `months` only ever renders 1 or
   // 2 months, so two ids always suffice regardless of which is in use.
@@ -350,6 +360,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // willUpdate() layered under this class must still run.
+    this.viewPeriodAvailabilityCache.clear();
     const activeElement =
       (this.renderRoot as { activeElement?: Element | null } | undefined)?.activeElement ?? null;
     const activeViewStart = activeElement?.matches('[part~="view-item"]')
@@ -636,7 +647,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     });
   }
 
-  /** Keeps the selection page on a min/max-reachable period without applying day-level constraints. */
+  /** Keeps an all-disabled selection page on a page with an enabled period. */
   private clampViewDateToEnabledPeriod(view = this.effectiveView): Date | null {
     if (view === 'days') return null;
     const periods = this.viewPeriods(view);
@@ -648,14 +659,21 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
       return null;
     }
 
-    const min = parseISO(this.min);
-    const max = parseISO(this.max);
     const first = periods[0]!;
     const last = periods[periods.length - 1]!;
-    const anchor = min && last.end < min ? min : max && first.start > max ? max : null;
-    if (!anchor) return null;
+    const span = this.viewPeriodMonths(view);
+    const min = parseISO(this.min);
+    const max = parseISO(this.max);
+    const forward = min && last.end < min;
+    const backward = max && first.start > max;
+    const next = forward
+      ? this.firstEnabledViewPeriod(addMonths(last.start, span), 1)
+      : backward
+        ? this.firstEnabledViewPeriod(addMonths(first.start, -span), -1)
+        : this.firstEnabledViewPeriod(addMonths(last.start, span), 1)
+          ?? this.firstEnabledViewPeriod(addMonths(first.start, -span), -1);
+    if (!next) return null;
 
-    const next = this.viewPeriodStart(anchor, view);
     this.viewDate = new Date(next.getFullYear(), next.getMonth(), 1);
     return next;
   }
@@ -1090,11 +1108,39 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     </div>`;
   }
 
-  private viewPeriodDisabled(start: Date, end: Date): boolean {
-    if (this.disabled || this.readonly) return true;
+  /** Returns whether a selection period contains at least one selectable day. */
+  private viewPeriodHasEnabledDate(start: Date, end: Date): boolean {
+    if (this.disabled || this.readonly) return false;
+    const key = `${formatISO(start)}/${formatISO(end)}`;
+    const cached = this.viewPeriodAvailabilityCache.get(key);
+    if (cached !== undefined) return cached;
+
     const min = parseISO(this.min);
     const max = parseISO(this.max);
-    return Boolean((min && end < min) || (max && start > max));
+    const today = this.resolvedToday();
+    const first = min && min > start ? min : start;
+    const last = max && max < end ? max : end;
+    if (first > last) {
+      this.viewPeriodAvailabilityCache.set(key, false);
+      return false;
+    }
+
+    let date = new Date(first.getFullYear(), first.getMonth(), first.getDate());
+    const lastTime = new Date(last.getFullYear(), last.getMonth(), last.getDate()).getTime();
+    for (let days = 0; days < MAX_VIEW_PERIOD_DAYS && date.getTime() <= lastTime; days++) {
+      if (!this.isDisabled(date, min, max, today)) {
+        this.viewPeriodAvailabilityCache.set(key, true);
+        return true;
+      }
+      date = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+    }
+
+    this.viewPeriodAvailabilityCache.set(key, false);
+    return false;
+  }
+
+  private viewPeriodDisabled(start: Date, end: Date): boolean {
+    return !this.viewPeriodHasEnabledDate(start, end);
   }
 
   private renderViewItem(
@@ -1127,6 +1173,10 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
 
   private pickViewItem(date: Date): void {
     if (this.disabled || this.readonly) return;
+    const start = this.viewPeriodStart(date);
+    const span = this.viewPeriodMonths();
+    const end = new Date(start.getFullYear(), start.getMonth() + span, 0);
+    if (this.viewPeriodDisabled(start, end)) return;
     this.viewDate = new Date(date.getFullYear(), date.getMonth(), 1);
     if (this.effectiveView === 'months') {
       this.setView('days', date);

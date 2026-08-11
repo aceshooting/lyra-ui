@@ -1725,6 +1725,108 @@ describe('date-picker coverage gaps', () => {
     expect(items[5].disabled, 'June is on/after the March minimum').to.be.false; // June
   });
 
+  it('disables selection periods that contain no selectable day under past-date constraints', async () => {
+    const el = (await fixture(html`
+      <lr-date-picker
+        view="months"
+        value="2026-07-15"
+        today="2026-07-15"
+        disable-past
+      ></lr-date-picker>
+    `)) as LyraDatePicker;
+    await el.updateComplete;
+
+    const items = viewItems(el);
+    expect(items[5]!.disabled, 'June contains only dates before the configured today').to.equal(true);
+    expect(items[6]!.disabled, 'July still contains selectable dates on and after today').to.equal(false);
+
+    (el as unknown as { pickViewItem(date: Date): void }).pickViewItem(new Date(2026, 5, 1));
+    await el.updateComplete;
+    expect(el.view, 'an unavailable period remains unavailable to programmatic activation').to.equal('months');
+  });
+
+  it('refreshes selection-period availability after live constraints change', async () => {
+    const el = (await fixture(html`
+      <lr-date-picker
+        view="months"
+        value="2026-07-15"
+        today="2026-07-15"
+        disable-future
+      ></lr-date-picker>
+    `)) as LyraDatePicker;
+    await el.updateComplete;
+    expect(viewItems(el)[6]!.disabled, 'July initially contains dates through the configured today').to.equal(false);
+
+    el.today = '2026-06-30';
+    await el.updateComplete;
+    expect(viewItems(el)[6]!.disabled, 'July becomes unavailable after the live today change').to.equal(true);
+  });
+
+  it('clamps an all-unavailable selection page to a page with an enabled period', async () => {
+    const el = (await fixture(html`<lr-date-picker view="months"></lr-date-picker>`)) as LyraDatePicker;
+    await el.updateComplete;
+    (el as unknown as { viewDate: Date }).viewDate = new Date(2026, 0, 1);
+    el.isDateDisabled = (date) => date.getFullYear() === 2026;
+    await el.updateComplete;
+
+    const first = viewItems(el)[0]!;
+    expect(first.getAttribute('data-view-start')).to.equal('2027-01-01');
+    expect(first.disabled).to.equal(false);
+  });
+
+  it('uses disabled date lists and predicates for selection-period availability', async () => {
+    const el = (await fixture(html`
+      <lr-date-picker view="months" value="2026-07-15"></lr-date-picker>
+    `)) as LyraDatePicker;
+    el.disabledDates = Array.from({ length: 31 }, (_, index) => new Date(2026, 6, index + 1));
+    el.isDateDisabled = (date) => date.getMonth() === 7;
+    await el.updateComplete;
+
+    const items = viewItems(el);
+    expect(items[6]!.disabled, 'every July date comes from disabledDates').to.equal(true);
+    expect(items[7]!.disabled, 'the predicate makes every August date unavailable').to.equal(true);
+    expect(items[8]!.disabled, 'September remains selectable').to.equal(false);
+  });
+
+  it('uses a pending range constraint for selection-view focus and keyboard navigation', async () => {
+    const el = (await fixture(html`
+      <lr-date-picker
+        mode="range"
+        view="months"
+        value="2026-07-10"
+        min-range="3"
+        max-range="5"
+      ></lr-date-picker>
+    `)) as LyraDatePicker;
+    await el.updateComplete;
+
+    const items = viewItems(el);
+    expect(items[5]!.disabled, 'June falls outside the pending range limit').to.equal(true);
+    expect(items[6]!.disabled, 'July still contains valid second endpoints').to.equal(false);
+    expect(items[7]!.disabled, 'August falls outside the pending range limit').to.equal(true);
+    expect(activeViewItemIndex(el)).to.equal(6);
+
+    viewItems(el)[6]!.focus();
+    const next = dispatchViewGridKey(el, 'ArrowRight');
+    await el.updateComplete;
+    expect(next.defaultPrevented).to.equal(true);
+    expect(activeViewItemIndex(el), 'keyboard navigation does not enter an unavailable month').to.equal(6);
+    expect(focusedViewItemIndex(el)).to.equal(6);
+  });
+
+  it('marks every selection period unavailable when every weekday is disabled', async () => {
+    const el = (await fixture(html`
+      <lr-date-picker
+        view="months"
+        value="2026-07-15"
+        disabled-days-of-week="sun,mon,tue,wed,thu,fri,sat"
+      ></lr-date-picker>
+    `)) as LyraDatePicker;
+    await el.updateComplete;
+
+    expect(viewItems(el).every((item) => item.disabled)).to.equal(true);
+  });
+
   it('drills into the day grid after picking a month from the month-selection view', async () => {
     const el = (await fixture(html`<lr-date-picker value="2026-06-15"></lr-date-picker>`)) as LyraDatePicker;
     el.view = 'months';
