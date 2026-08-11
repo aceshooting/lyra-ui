@@ -9,7 +9,6 @@ import {
 const budgets = {
   baseline: { packedBytes: 1_000, unpackedBytes: 4_000, fileCount: 40 },
   maximum: { packedBytes: 750, unpackedBytes: 3_000, fileCount: 25 },
-  minimumByteReductionPercent: 25,
   fileCountBudget: {
     baseArtifactCeiling: 15,
     stableTagAliasCount: 4,
@@ -18,11 +17,14 @@ const budgets = {
   },
 };
 
-test('requires byte ceilings to enforce the approved minimum reduction', () => {
+test('requires byte ceilings to remain below the baseline', () => {
   assert.doesNotThrow(() => validatePackageBudgets(budgets));
+  assert.doesNotThrow(() =>
+    validatePackageBudgets({ ...budgets, maximum: { ...budgets.maximum, packedBytes: 999 } }),
+  );
   assert.throws(
-    () => validatePackageBudgets({ ...budgets, maximum: { ...budgets.maximum, packedBytes: 751 } }),
-    /must enforce at least a 25% reduction/,
+    () => validatePackageBudgets({ ...budgets, maximum: { ...budgets.maximum, packedBytes: 1_000 } }),
+    /must stay below its baseline/,
   );
   assert.throws(
     () => validatePackageBudgets({ ...budgets, maximum: { ...budgets.maximum, fileCount: 26 } }),

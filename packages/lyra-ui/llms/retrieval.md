@@ -716,8 +716,10 @@ fired after every toggle including select-all).
 
 **CSS parts:** `base`, `search` (the built-in filter `lr-input`, only when `searchable`),
 `select-all` (only when `showSelectAll`), `summary` ("{selected} of {total} selected"), `tree`
-(`role="tree"`), `item` (`role="treeitem"`), `disclosure` (a folder row's pointer-only
-expand/collapse indicator; the surrounding treeitem owns keyboard expansion),
+(`role="tree"`), `item` (`role="treeitem"`; selection appears only through tri-state
+`aria-checked` — `"true"`, `"false"`, or `"mixed"` — and intentionally has no duplicate
+`aria-selected` state), `disclosure` (a folder row's pointer-only expand/collapse indicator; the
+surrounding treeitem owns keyboard expansion),
 `checkbox` (tri-state glyph), `icon` (the `lr-file-icon` type badge), `label`, `empty` (`noData`
 when `sources` is empty, `noMatches` when a filter empties the tree).
 

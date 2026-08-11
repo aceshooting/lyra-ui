@@ -58,11 +58,11 @@ export const styles = css`
   }
   /* :where() zeroes the [aria-expanded='true'] qualifier's specificity contribution -- otherwise
      this (0,2,0) rule would beat a consumer's own ::part(overflow-indicator) color override
-     whenever the picker is open. color routes through a scoped cssprop (mirroring lr-widget's
-     [aria-pressed='true'] treatment) so a consumer can retint just the expanded state without
-     hijacking the shared --lr-color-text token used everywhere else. */
+     whenever the picker is open. Color and border style route through scoped cssprops (mirroring
+     lr-widget's [aria-pressed='true'] treatment) so a consumer can retint or reshape just the
+     expanded state without hijacking the shared tokens used everywhere else. */
   [part='overflow-indicator']:where([aria-expanded='true']) {
-    border-style: solid;
+    border-style: var(--lr-chip-group-overflow-expanded-border-style, solid);
     color: var(--lr-chip-group-overflow-expanded-color, var(--lr-color-text));
   }
 

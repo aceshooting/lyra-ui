@@ -52,6 +52,10 @@ Only `region` highlights whose `rect` contains finite numeric `x`/`y`/`width`/`h
 nonnegative dimensions are rendered; malformed rectangles are omitted rather than reaching inline
 styles or anchor hit testing.
 
+**RTL behavior:** the raster and annotation geometry use physical image coordinates. In annotation
+mode, ArrowLeft/ArrowRight decrease/increase a draft's `x` coordinate and their Shift variants
+decrease/increase its width in both text directions; the surrounding toolbar remains logical.
+
 **Themeable custom properties:** `--lr-image-viewer-annotate-active-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-image-viewer-annotate-active-border` (default
 `var(--lr-color-brand)`) — the background and border of `[part='annotate-toggle']` while annotation

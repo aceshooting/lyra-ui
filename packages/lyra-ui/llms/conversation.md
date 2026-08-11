@@ -1012,10 +1012,12 @@ emitting `lr-change`.
 
 **Exported types:**
 
-- `LyraModelCatalogEntry { id: string; label: string }` — one catalog row.
+- `LyraModelCatalogEntry { id: string; label: string; icon?: string }` — one catalog row. An
+  optional literal `icon` (for example, an emoji) renders decoratively before `label`; it does not
+  change the option's accessible name.
 - `LyraModelCatalog = string[] | LyraModelCatalogEntry[]` — either every entry is a plain string (used
-  as both id and label) or every entry is a full `{ id, label }` row; the two shapes are not meant to be
-  mixed within one array.
+  as both id and label) or every entry is a full `{ id, label, icon? }` row; the two shapes are not
+  meant to be mixed within one array.
 
 **Properties:**
 
@@ -1156,8 +1158,9 @@ constraint validation — its own `disabled`, or an ancestor `<fieldset disabled
 `<button role="combobox">`, also its positioning anchor), `combobox` (free-text mode's input
 container, also its positioning anchor), `combobox-input` (the free-text `<input>`),
 `provider-badge` (the optional leading `provider` label), `listbox` (the options popover, shared by
-both modes), `option`, `option-label`, `option-badge` (the "not in catalog" badge on a synthetic
-stale-value row), `empty` (the no-matching-models message), `expand-icon` (the dropdown chevron, present in both modes), `hint` (the hint
+both modes), `option`, `option-icon` (an object-shaped catalog row's optional decorative leading
+icon), `option-label`, `option-badge` (the "not in catalog" badge on a synthetic stale-value row),
+`empty` (the no-matching-models message), `expand-icon` (the dropdown chevron, present in both modes), `hint` (the hint
 message), `error` (the error message)
 
 **Themeable custom properties:** `--lr-model-select-trigger-padding` (default
@@ -1199,7 +1202,7 @@ shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-
 <lr-model-select
   provider="openai"
   .catalog=${[
-    { id: 'gpt-4o', label: 'GPT-4o' },
+    { id: 'gpt-4o', label: 'GPT-4o', icon: '✦' },
     { id: 'gpt-4o-mini', label: 'GPT-4o mini' },
   ]}
   value="gpt-4o"
@@ -1213,8 +1216,9 @@ shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-
 
 **Known gotchas:**
 
-- `catalog` must be homogeneous — an array of plain strings, or an array of `{ id, label }` objects, not
-  a mix; `LyraModelCatalog` is a union of two array _types_, not an array of a union item type.
+- `catalog` must be homogeneous — an array of plain strings, or an array of `{ id, label, icon? }`
+  objects, not a mix; `LyraModelCatalog` is a union of two array _types_, not an array of a union
+  item type.
 - The synthetic "not in catalog" row only ever appears when `catalog` is non-empty and `value` isn't one
   of its ids — with no `catalog` at all, there's no catalog list to diff `value` against, so no badge.
 - `value`/form-association here is hand-rolled via `attachInternals()` directly, not the shared
@@ -1982,9 +1986,11 @@ setting it to `0` removes the deadline.
 **Methods:** `start()`, `stop()`, and `cancel()` drive the capture lifecycle imperatively (mirroring
 the pointer/keyboard gestures).
 
-**Slots:** `icon` (replaces the default mic glyph) and `recording-icon` (replaces the default
-recording-state pulse glyph). Both are decorative inside the named trigger: their flattened content
-is inert and hidden from accessibility APIs, so do not place a second interactive control there.
+**Slots:** `microphone-icon` is the canonical replacement for the default mic glyph and takes
+precedence when both it and the established `icon` alias have content. `icon` remains the fallback
+mic-glyph alias. `recording-icon` replaces the default recording-state pulse glyph. All three are
+decorative inside the named trigger: their flattened content is inert and hidden from accessibility
+APIs, so do not place a second interactive control there.
 
 **Events:** `lr-record-start` (`detail: { stream: MediaStream }`), `lr-record-chunk` (`detail: { blob:
 Blob }`, only when `timeslice-ms > 0`), `lr-record-stop` (`detail: { blob: Blob; durationMs: number
@@ -1999,13 +2005,16 @@ Blob }`, only when `timeslice-ms > 0`), `lr-record-stop` (`detail: { blob: Blob;
 **Themeable custom properties:** `--lr-push-to-talk-size` (default `var(--lr-size-3rem)`) — the
 trigger button's preferred inline and block size; the shared `--lr-icon-button-size` remains its
 minimum hit-area floor even when this value is smaller. `--lr-push-to-talk-recording-color` (default
-`var(--lr-color-danger)`) — the border and text color of `[part='trigger']` while `state` is
-`recording`; it recolors only the recording treatment and leaves every other danger-toned surface on
-the page untouched. Like the library's other state hooks it is an inline `var()` fallback at the
-point of use rather than a `:host` declaration, so it can be set on the element or on any ancestor —
-`::part(trigger)[data-state='recording']` is invalid CSS (Shadow Parts forbids an attribute selector
-after `::part()`), so re-pointing the shared `--lr-color-danger` token was previously the only way,
-and it repainted every other danger surface with it.
+`var(--lr-color-danger)`) remains the established aggregate fallback for the recording trigger's
+border and foreground and the pulse-ring border. Retune those independently with
+`--lr-push-to-talk-trigger-recording-border-color`,
+`--lr-push-to-talk-trigger-recording-color`, and
+`--lr-push-to-talk-pulse-recording-border-color`, each defaulting through
+`var(--lr-push-to-talk-recording-color, var(--lr-color-danger))`. All four are inline `var()`
+fallbacks at the point of use rather than `:host` declarations, so each can be set on the element or
+on an ancestor without repainting every other danger-toned surface. `::part(trigger)[data-state='recording']`
+is invalid CSS (Shadow Parts forbids an attribute selector after `::part()`), which is why these
+recording-state hooks exist.
 
 **Additional API surface:**
 
@@ -2945,10 +2954,15 @@ are no-ops before the textarea has rendered.
 (`{ id, name, mimeType, src }`). Child events are stopped and re-emitted from
 `lr-prompt-input`; all composed interactions are suppressed while `disabled`.
 
-**Slots:** `controls`, `leading`, `chips`, `trailing`, `footer`.
+**Slots:** `controls`; `start` (the canonical attachment-control content before the textarea) and
+`leading` (the established alias); `chips`; `end` (the canonical custom send/stop action) and
+`trailing` (the established alias); and `footer`. Either `start` or `leading` replaces the default
+attachment trigger, and they may coexist. Either `end` or `trailing` replaces the built-in composer
+action, and they may coexist.
 
 **CSS parts:** `base`, `controls`, `sources`, `sources-summary`, `source-picker`, `queue`,
-`composer`, `leading`, `chips`, `footer`.
+`composer`, `leading` (the `start`/`leading` attachment controls, or the default attachment trigger
+when both slots are empty), `chips`, `footer`.
 
 **Optional peer deps:** none of its own.
 

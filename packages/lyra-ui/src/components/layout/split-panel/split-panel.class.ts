@@ -34,6 +34,14 @@ export type SplitPanelSnapFunction = SnapFunction;
 export type SplitPanelSnapFunctionOptions = SnapFunctionParams;
 export type SplitPanelSnapFunctionParams = SnapFunctionParams;
 
+/** A proposed user-driven divider position, normalized after constraints and snapping. */
+export interface SplitPanelRepositionDetail {
+  /** Position as a percentage from the selected primary pane's edge. */
+  position: number;
+  /** The same position in pixels from the selected primary pane's edge. */
+  positionInPixels: number;
+}
+
 const snapConverter: ComplexAttributeConverter<string | SnapFunction | undefined> = {
   fromAttribute(value): string {
     return value ?? '';
@@ -44,6 +52,8 @@ const snapConverter: ComplexAttributeConverter<string | SnapFunction | undefined
 };
 
 export interface LyraSplitPanelEventMap {
+  /** Emitted before a pointer or keyboard interaction repositions the divider. */
+  'lr-reposition-request': CustomEvent<SplitPanelRepositionDetail>;
   /** Emitted whenever a pointer or keyboard interaction repositions the divider. */
   'lr-reposition': CustomEvent<undefined>;
 }
@@ -78,7 +88,12 @@ function nearlyEqual(left: number | undefined, right: number | undefined): boole
  * @slot end - Content in the logical end pane.
  * @slot divider - Optional decorative content rendered inside the draggable divider. Assigned
  *   content is inert, so the separator remains the sole resize control.
- * @event lr-reposition - Emitted after a pointer or keyboard interaction moves the divider.
+ * @event lr-reposition-request - A cancelable proposed divider position from a pointer drag or
+ *   keyboard interaction. Call `preventDefault()` to keep `position` unchanged. Not fired when a
+ *   consumer sets `position` or `positionInPixels` directly. `detail: SplitPanelRepositionDetail`.
+ * @event lr-reposition - Non-cancelable post-commit notification after a pointer or keyboard
+ *   interaction moves the divider. Not fired when a consumer sets `position` or
+ *   `positionInPixels` directly.
  * @csspart base - The component's layout wrapper.
  * @csspart split-panel - Compatibility alias on the layout wrapper.
  * @csspart panel - Shared part on both pane wrappers.
@@ -346,12 +361,33 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     return { min, max };
   }
 
+  /** Resolves a user or property-supplied position without mutating public
+   *  state. The interaction request event needs this finalized (snapped and
+   *  constrained) value before any assignment occurs. */
+  private resolvePrimaryPixels(
+    requestedPixels: number,
+    useSnap: boolean,
+    fallbackPixels: number | undefined,
+  ): number {
+    const size = this.availableSize;
+    const proposed = finiteRange(
+      requestedPixels,
+      fallbackPixels ?? (DEFAULT_POSITION / 100) * size,
+      0,
+      size,
+    );
+    const snapped = useSnap ? this.applySnap(proposed, size) : proposed;
+    const { min, max } = this.constraintBounds();
+    return finiteRange(snapped, proposed, min, max);
+  }
+
   private applyPrimaryPixels(
     requestedPixels: number,
     useSnap: boolean,
     oldPosition = this.position,
     oldPixels = this.positionInPixels,
     scheduleUpdate = true,
+    resolvedPrimaryPixels?: number,
   ): boolean {
     const size = this.availableSize;
     if (size <= 0) {
@@ -361,15 +397,8 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
       return false;
     }
 
-    const proposed = finiteRange(
-      requestedPixels,
-      oldPixels ?? (DEFAULT_POSITION / 100) * size,
-      0,
-      size,
-    );
-    const snapped = useSnap ? this.applySnap(proposed, size) : proposed;
-    const { min, max } = this.constraintBounds();
-    const primaryPixels = finiteRange(snapped, proposed, min, max);
+    const primaryPixels =
+      resolvedPrimaryPixels ?? this.resolvePrimaryPixels(requestedPixels, useSnap, oldPixels);
     const primaryPercent = (primaryPixels / size) * 100;
     this._startPosition = this.primary === 'end' ? 100 - primaryPercent : primaryPercent;
     this.pendingPositionInPixels = undefined;
@@ -378,6 +407,40 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     return (
       !nearlyEqual(oldPosition, this.position) || !nearlyEqual(oldPixels, this.positionInPixels)
     );
+  }
+
+  /** Proposes a finalized user-driven position before committing it. Direct
+   *  property assignments deliberately continue through applyPrimaryPixels()
+   *  without either interaction event. */
+  private requestReposition(requestedPixels: number, useSnap: boolean): boolean {
+    if (this.availableSize <= 0) return false;
+    const oldPosition = this.position;
+    const oldPixels = this.positionInPixels;
+    const primaryPixels = this.resolvePrimaryPixels(requestedPixels, useSnap, oldPixels);
+    const primaryPercent = (primaryPixels / this.availableSize) * 100;
+    const position = this.primary === 'end' ? 100 - primaryPercent : primaryPercent;
+    if (nearlyEqual(oldPosition, position) && nearlyEqual(oldPixels, primaryPixels)) return false;
+
+    const request = this.emit(
+      'lr-reposition-request',
+      { position, positionInPixels: primaryPixels },
+      { cancelable: true },
+    );
+    if (request.defaultPrevented) return false;
+    if (
+      !this.applyPrimaryPixels(
+        requestedPixels,
+        useSnap,
+        oldPosition,
+        oldPixels,
+        true,
+        primaryPixels,
+      )
+    ) {
+      return false;
+    }
+    this.emit('lr-reposition');
+    return true;
   }
 
   private measureAndSynchronize(initial: boolean): void {
@@ -625,8 +688,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     if (this.effectiveOrientation === 'horizontal' && this.effectiveDirection === 'rtl')
       delta *= -1;
     if (this.primary === 'end') delta *= -1;
-    const changed = this.applyPrimaryPixels(drag.startPrimaryPixels + delta, true);
-    if (changed) this.emit('lr-reposition');
+    this.requestReposition(drag.startPrimaryPixels + delta, true);
   };
 
   private readonly onPointerEnd = (event: PointerEvent): void => {
@@ -683,7 +745,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
 
     if (next == null) return;
     event.preventDefault();
-    if (this.applyPrimaryPixels(next, false)) this.emit('lr-reposition');
+    this.requestReposition(next, false);
   }
 
   private get separatorLabel(): string {

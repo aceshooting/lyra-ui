@@ -72,7 +72,9 @@ sandbox tokens are allowlisted; if both `allow-scripts` and `allow-same-origin` 
 latter is dropped so framed script cannot escape a same-origin sandbox. `with-theme-sync` never
 widens those permissions: when the document is accessible it copies only Lyra theme-selector
 classes, theme attributes, computed `--lr-theme-*` inputs, and `color-scheme`; cross-origin
-documents remain untouched. Changing a watched host-page theme attribute syncs again.
+documents remain untouched. Turning `with-theme-sync` off restores only the iframe classes,
+attributes, and inline properties Lyra changed, preserving any later iframe-owned edits. Changing
+a watched host-page theme attribute syncs again.
 
 ```js
 import '@aceshooting/lyra-ui/components/media/zoomable-frame/zoomable-frame.js';

@@ -87,6 +87,24 @@ it('shows the latest entry as a one-line ticker in the header while mode="live"'
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('Entry 2');
 });
 
+it('lets a live feed retheme only its own status dot', async () => {
+  const wrapper = await fixture(html`
+    <div style="--lr-theme-color-brand-fill-loud: rgb(4, 5, 6);">
+      <lr-activity-feed
+        mode="live"
+        style="--lr-activity-feed-live-status-color: rgb(1, 2, 3);"
+      ></lr-activity-feed>
+      <lr-activity-feed mode="live"></lr-activity-feed>
+    </div>
+  `);
+  const [overridden, defaulted] = [...wrapper.querySelectorAll('lr-activity-feed')] as LyraActivityFeed[];
+  const overriddenDot = overridden!.shadowRoot!.querySelector('[part="status-dot"]') as HTMLElement;
+  const defaultedDot = defaulted!.shadowRoot!.querySelector('[part="status-dot"]') as HTMLElement;
+
+  expect(getComputedStyle(overriddenDot).backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(defaultedDot).backgroundColor).to.equal('rgb(4, 5, 6)');
+});
+
 it('shows a localized "Completed N steps" summary in the header while mode="post-hoc"', async () => {
   const el = (await fixture(
     html`<lr-activity-feed mode="post-hoc" .entries=${makeEntries(14)}></lr-activity-feed>`,

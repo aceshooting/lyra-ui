@@ -193,6 +193,13 @@ export interface LyraMenuItemEventMap {
  * and focusable host. Its fallback follows the active shared size tier. Declared as an inline
  * `var()` fallback (never on `:host`), so an item or any ancestor can retune it without a
  * `::part(base)` rule.
+ * Danger-state hooks are also inline fallbacks, so a menu can retheme only its destructive rows
+ * without replacing the shared danger palette elsewhere.
+ * @cssprop [--lr-menu-item-danger-color=var(--lr-color-danger)] - Foreground of a `destructive` or
+ * `variant="danger"` row.
+ * @cssprop [--lr-menu-item-danger-hover-bg=var(--lr-color-danger-quiet)] - Background of an enabled
+ * danger row while hovered.
+ * @cssprop [--lr-menu-item-danger-active-bg=color-mix(in oklab, var(--lr-color-danger-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Background of an enabled danger row while pressed.
  * @method click - Activates the visual row, including checkbox and submenu behavior; no-op while
  * disabled or loading.
  * @method select - Activates a selectable item; no-op while disabled/loading and opens submenu parents.

@@ -307,6 +307,7 @@ export type {
   SnapFunctionParams,
   SplitPanelOrientation,
   SplitPanelPrimary,
+  SplitPanelRepositionDetail,
   SplitPanelSnapFunction,
   SplitPanelSnapFunctionOptions,
   SplitPanelSnapFunctionParams,
@@ -1018,7 +1019,6 @@ export * from './components/conversation/prompt-input/prompt-input.class.js';
 export * from './components/conversation/prompt-queue/prompt-queue.class.js';
 export * from './components/conversation/realtime-session/realtime-session.class.js';
 export * from './components/conversation/selection-toolbar/selection-toolbar.class.js';
-export * from './components/agent-tools/mcp-app/mcp-app.class.js';
 export * from './components/agent-tools/prompt-studio/prompt-studio.class.js';
 export * from './components/agent-tools/schema-viewer/schema-viewer.class.js';
 export * from './components/agent-tools/subagent-panel/subagent-panel.class.js';

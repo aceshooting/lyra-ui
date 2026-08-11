@@ -31,6 +31,18 @@ export const LiveExpanded: Story = {
   render: () => html`<lr-activity-feed style="max-width: 32rem;" mode="live" expanded .entries=${entries}></lr-activity-feed>`,
 };
 
+export const RethemedLiveIndicator: Story = {
+  name: 'Live indicator rethemed',
+  render: () => html`
+    <lr-activity-feed
+      style="max-width: 32rem; --lr-activity-feed-live-status-color: var(--lr-color-success);"
+      mode="live"
+      expanded
+      .entries=${entries}
+    ></lr-activity-feed>
+  `,
+};
+
 export const PostHocCollapsed: Story = {
   name: 'Post-hoc, collapsed (finished run)',
   render: () => html`<lr-activity-feed style="max-width: 32rem;" mode="post-hoc" .entries=${entries}></lr-activity-feed>`,

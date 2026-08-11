@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-toast` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -80,6 +80,20 @@ transition duration and uses it for its completion fallback), `--lr-toast-paddin
 (`var(--lr-space-m)`), `--lr-toast-font-size` (`var(--lr-font-size-m)`) — both are auto-swapped per
 `size`, from a compact `2xs` up to a roomier `xl` — `--lr-toast-accent-color` (default
 `var(--lr-color-border)`, auto-swapped per `variant` to that variant's loud fill).
+
+`--lr-toast-item-gap` (default `var(--lr-space-s)`) controls the gap between the item's icon,
+message, and close action; `--lr-toast-item-radius` (default `var(--lr-radius)`) controls the item
+surface and accent-bar start corners. They are deliberately separate from `--lr-toast-gap`, which
+continues to control only the region's stack spacing.
+
+The close button's four inherited state hooks are `--lr-toast-close-button-hover-bg` (default
+`transparent`), `--lr-toast-close-button-hover-color` (default `var(--lr-color-text)`),
+`--lr-toast-close-button-active-bg` (default `color-mix(in oklab, transparent,
+var(--lr-color-mix-partner) var(--lr-color-mix-active))`), and
+`--lr-toast-close-button-active-color` (default `var(--lr-color-text)`). Each is an inline fallback
+at the relevant state, so setting one on the item or an ancestor rethemes only that close-button
+state rather than the item surface, other close states, or the region stack.
+
 The mapped names `--accent-width`, `--show-duration`, `--hide-duration`, and `--padding` alias their
 respective Lyra-prefixed properties. Setting the Lyra-prefixed form explicitly wins over its alias.
 

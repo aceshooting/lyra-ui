@@ -9,6 +9,11 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
+function capSplitResize(event: Event): void {
+  const request = event as CustomEvent<{ sizes: number[] }>;
+  if (request.detail.sizes[0]! > 65) request.preventDefault();
+}
+
 export const Default: Story = {
   render: () => html`
     <lr-split style="height: 8rem; border: 1px solid var(--lr-color-border)">
@@ -285,6 +290,29 @@ export const PercentPanelConstraints: Story = {
         at most 50%
       </div>
       <div style="padding: 0.5rem">Main content — fills the rest</div>
+    </lr-split>
+  `,
+};
+
+export const CancelableResize: Story = {
+  name: 'Cancelable resize',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The `lr-resize-request` event proposes each pointer or keyboard size change before the split commits it. This example vetoes a first-panel size above 65%, so the existing `lr-resize` event only follows accepted proposals.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-split
+      style="height: 10rem; border: 1px solid var(--lr-color-border)"
+      @lr-resize-request=${capSplitResize}
+    >
+      <div style="padding: 0.5rem; background: var(--lr-color-surface-raised)">
+        This pane can grow to 65%.
+      </div>
+      <div style="padding: 0.5rem">Further drag or ArrowRight proposals are vetoed.</div>
     </lr-split>
   `,
 };

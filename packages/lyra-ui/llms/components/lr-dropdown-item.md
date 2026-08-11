@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-menu`, `lr-menu-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -165,8 +165,9 @@ internal shadow-DOM button; `<lr-menu>` is the sole owner of this element's `tab
 - `disabled: boolean = false` (reflected — disables selection and excludes this item from
   `<lr-menu>`'s roving-tabindex navigation entirely; the native `inert` attribute, `hidden`, and
   `aria-hidden="true"` exclude it the same way — see "Which items arrow keys reach" above)
-- `destructive: boolean = false` (reflected — tints the row with `--lr-color-danger`, for a
-  dangerous action like "Delete"; retained as a behavior-identical alias)
+- `destructive: boolean = false` (reflected — gives the row the dangerous treatment for an action
+  like "Delete"; its foreground defaults to `--lr-color-danger`; retained as a behavior-identical
+  alias)
 - `variant: LyraVariant | 'default' = 'default'` (reflected) — `danger` is the mapped dangerous
   treatment; `default` is the WA spelling of Lyra's neutral item treatment
 - `type: 'normal' | 'checkbox' = 'normal'` — `'checkbox'` (mirroring `wa-dropdown-item`'s identical
@@ -249,13 +250,19 @@ between the visual row's leading content, label, details, and state glyphs. `--l
 (default `var(--lr-form-control-radius)`) is its corner radius; its fallback follows the item's
 active size tier. Both are inline fallbacks rather than values declared on `:host`, so setting either
 on an item or any ancestor retunes the row without a `::part(base)` rule; `<lr-dropdown-item>`
-inherits both hooks. `--submenu-offset` (default `-2px`) is the final signed distance between a
-submenu and its parent row: negative values overlap the parent menu and positive values add
-separation. It updates live, mirrors along with the submenu under RTL, and applies to both the
-Shoelace-style nested-menu shape and Lyra's generated panel for direct mapped items. Shared tokens
-also include `--lr-radius`, `--lr-focus-ring-width`, `--lr-focus-ring-color`, `--lr-space-xs`,
-`--lr-space-s`, `--lr-color-brand-quiet`, `--lr-opacity-disabled`, `--lr-color-danger`, and
-`--lr-color-danger-quiet`.
+inherits both hooks. The same shape applies to a dangerous row's local state palette:
+`--lr-menu-item-danger-color` (default `var(--lr-color-danger)`) controls its foreground,
+`--lr-menu-item-danger-hover-bg` (default `var(--lr-color-danger-quiet)`) its hover background, and
+`--lr-menu-item-danger-active-bg` (default
+`color-mix(in oklab, var(--lr-color-danger-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`)
+its pressed background. Set those hooks on a destructive or `variant="danger"` item, or on a menu
+ancestor, to retheme only danger rows without replacing the shared danger palette. `--submenu-offset`
+(default `-2px`) is the final signed distance between a submenu and its parent row: negative values
+overlap the parent menu and positive values add separation. It updates live, mirrors along with the
+submenu under RTL, and applies to both the Shoelace-style nested-menu shape and Lyra's generated
+panel for direct mapped items. Shared tokens also include `--lr-radius`, `--lr-focus-ring-width`,
+`--lr-focus-ring-color`, `--lr-space-xs`, `--lr-space-s`, `--lr-color-brand-quiet`,
+`--lr-opacity-disabled`, `--lr-color-danger`, and `--lr-color-danger-quiet`.
 
 **Optional peer deps:** none.
 
@@ -291,7 +298,8 @@ interactive menu content.
 **CSS parts:** identical to `<lr-menu-item>`'s, including all compatibility aliases above.
 
 **Themeable custom properties:** identical to `<lr-menu-item>`'s, including
-`--lr-menu-item-gap`, `--lr-menu-item-radius`, and `--submenu-offset`.
+`--lr-menu-item-gap`, `--lr-menu-item-radius`, `--lr-menu-item-danger-color`,
+`--lr-menu-item-danger-hover-bg`, `--lr-menu-item-danger-active-bg`, and `--submenu-offset`.
 
 ```html
 <lr-menu>

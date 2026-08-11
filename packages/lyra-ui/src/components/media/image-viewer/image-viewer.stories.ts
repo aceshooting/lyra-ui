@@ -52,6 +52,20 @@ export const AnnotatableMode: Story = {
   render: () => html`<lr-image-viewer src=${SRC} name="Mountain river" annotatable></lr-image-viewer>`,
 };
 
+export const RtlPhysicalAnnotation: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Annotation geometry follows physical image coordinates under RTL: after Enter creates a draft box, ArrowLeft/ArrowRight move along smaller/larger x and Shift+ArrowLeft/ArrowRight resize its width.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-image-viewer dir="rtl" src=${SRC} name="نهر جبلي" annotatable></lr-image-viewer>
+  `,
+};
+
 export const FitWidth: Story = {
   render: () => html`<lr-image-viewer src=${SRC} name="Mountain river" fit="width"></lr-image-viewer>`,
 };

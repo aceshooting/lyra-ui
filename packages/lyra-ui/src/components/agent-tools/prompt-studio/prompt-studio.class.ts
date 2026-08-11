@@ -77,7 +77,8 @@ type PromptStudioMessageMovePart = 'move-message-up' | 'move-message-down';
  * @csspart messages - Ordered prompt-message editor.
  * @csspart message - One prompt message.
  * @csspart message-role - A message role selector.
- * @csspart message-content - A message textarea.
+ * @csspart message-content - A message textarea. It deliberately keeps native vertical resizing;
+ *   configurable `resize` and auto-grow behavior are intentionally omitted.
  * @csspart message-actions - Reorder and removal actions for one message, when reordering is enabled.
  * @csspart move-message-up - A move-message-up action.
  * @csspart move-message-down - A move-message-down action.

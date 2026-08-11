@@ -255,6 +255,24 @@ it('does not render an inline error until the field has been visited (focusout)'
   expect(field(el, 'city').querySelector('[part="error"]')!.textContent).to.equal('This field is required.');
 });
 
+it('retints only an invalid native control border through its component CSS property and restores the resting border', async () => {
+  const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
+  el.style.setProperty('--lr-tool-param-form-invalid-border-color', 'rgb(10, 20, 30)');
+  el.style.setProperty('--lr-color-border', 'rgb(40, 50, 60)');
+  const city = field(el, 'city').querySelector('input') as HTMLInputElement;
+
+  expect(getComputedStyle(city).borderColor).to.equal('rgb(40, 50, 60)');
+
+  field(el, 'city').dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(getComputedStyle(city).borderColor).to.equal('rgb(10, 20, 30)');
+
+  city.value = 'Paris';
+  city.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(getComputedStyle(city).borderColor).to.equal('rgb(40, 50, 60)');
+});
+
 it('announces newly visible validation errors once through the shared assertive light-DOM sink', async () => {
   const schema: ToolParamFormSchema = {
     type: 'object',

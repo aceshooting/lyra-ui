@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -42,9 +42,11 @@ otherwise available direction.
 **CSS parts:** `base` (the `role="group"` wrapper; drops its floating-surface chrome under
 `frame="plain"`), `zoom-in`, `zoom-out`, `fit`, `lock` (omitted when `hideLock`).
 
-**Themeable custom properties:** shared tokens only — `--lr-icon-button-size` (each button's minimum
-hit area, unchanged by `frame`), `--lr-shadow`, `--lr-color-surface`, `--lr-color-border`,
-`--lr-radius`, `--lr-space-2xs`, `--lr-focus-ring-width`/`-color`/`-offset`.
+**Themeable custom properties:** `--lr-flow-controls-lock-active-color` (default
+`var(--lr-color-brand)`, pressed lock-button foreground), plus shared tokens —
+`--lr-icon-button-size` (each button's minimum hit area, unchanged by `frame`), `--lr-shadow`,
+`--lr-color-surface`, `--lr-color-border`, `--lr-radius`, `--lr-space-2xs`,
+`--lr-focus-ring-width`/`-color`/`-offset`.
 
 **Optional peer deps:** none.
 

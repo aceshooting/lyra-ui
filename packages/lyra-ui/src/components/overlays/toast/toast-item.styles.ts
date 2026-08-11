@@ -52,7 +52,7 @@ export const styles = css`
     position: relative;
     display: flex;
     align-items: start;
-    gap: var(--lr-space-s);
+    gap: var(--lr-toast-item-gap, var(--lr-space-s));
     inline-size: 100%;
     padding: var(--lr-toast-padding);
     padding-inline-start: calc(var(--lr-toast-padding) + var(--lr-toast-accent-width));
@@ -63,7 +63,7 @@ export const styles = css`
     background: var(--lr-color-surface-overlay);
     color: var(--lr-color-text);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-toast-item-radius, var(--lr-radius));
     /* Modal layer, but a small unscrimmed float rather than a page-blocking panel -- the lower of
        the two modal steps. */
     box-shadow: var(--lr-shadow-l);
@@ -94,8 +94,8 @@ export const styles = css`
     inset-inline-start: 0;
     inline-size: var(--lr-toast-accent-width);
     background: var(--lr-toast-accent-color);
-    border-start-start-radius: var(--lr-radius);
-    border-end-start-radius: var(--lr-radius);
+    border-start-start-radius: var(--lr-toast-item-radius, var(--lr-radius));
+    border-end-start-radius: var(--lr-toast-item-radius, var(--lr-radius));
   }
   [part='icon'] {
     display: inline-flex;
@@ -208,8 +208,11 @@ export const styles = css`
   [part='close-icon__svg'] {
     display: block;
   }
-  [part='close-button']:hover:not([aria-disabled='true']) {
-    color: var(--lr-color-text);
+  /* Keep each pointer-state value as an inline fallback: inherited hooks then retheme only the
+     close control without changing the toast surface or the region's stack spacing. */
+  [part='close-button']:where(:hover):where(:not([aria-disabled='true'])) {
+    background: var(--lr-toast-close-button-hover-bg, transparent);
+    color: var(--lr-toast-close-button-hover-color, var(--lr-color-text));
   }
   /* Pressed adds the fill the hover deliberately withholds: the resting button is background:none,
      so mixing that transparent base toward --lr-color-mix-partner lands the partner colour at the
@@ -217,9 +220,12 @@ export const styles = css`
      the text colour either way. The ink change is restated because keyboard activation raises
      :active with no :hover, and the disabled guard is carried over so a dismiss-blocked toast
      stays visibly inert under a click. */
-  [part='close-button']:active:not([aria-disabled='true']) {
-    color: var(--lr-color-text);
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  [part='close-button']:where(:active):where(:not([aria-disabled='true'])) {
+    color: var(--lr-toast-close-button-active-color, var(--lr-color-text));
+    background: var(
+      --lr-toast-close-button-active-bg,
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
   }
   [part='close-button'][aria-disabled='true'] {
     opacity: var(--lr-opacity-disabled);

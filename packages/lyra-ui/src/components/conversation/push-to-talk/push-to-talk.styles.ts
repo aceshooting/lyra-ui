@@ -49,8 +49,14 @@ export const styles = css`
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   :host([data-state='recording']) [part='trigger'] {
-    border-color: var(--lr-push-to-talk-recording-color, var(--lr-color-danger));
-    color: var(--lr-push-to-talk-recording-color, var(--lr-color-danger));
+    border-color: var(
+      --lr-push-to-talk-trigger-recording-border-color,
+      var(--lr-push-to-talk-recording-color, var(--lr-color-danger))
+    );
+    color: var(
+      --lr-push-to-talk-trigger-recording-color,
+      var(--lr-push-to-talk-recording-color, var(--lr-color-danger))
+    );
   }
   [part='icon'] {
     display: inline-flex;
@@ -60,10 +66,13 @@ export const styles = css`
     position: absolute;
     inset: calc(-1 * var(--lr-size-4px));
     border-radius: 50%;
-    /* Same cssprop as [data-state='recording'] [part='trigger']'s border/color above, so
-       retinting --lr-push-to-talk-recording-color recolors the whole "recording" treatment
-       (button chrome + pulse ring) together, not just half of it. */
-    border: var(--lr-border-width-medium) solid var(--lr-push-to-talk-recording-color, var(--lr-color-danger));
+    /* The aggregate recording color remains the shared fallback, while the ring can be retinted
+       independently from the trigger's border and foreground. */
+    border: var(--lr-border-width-medium) solid
+      var(
+        --lr-push-to-talk-pulse-recording-border-color,
+        var(--lr-push-to-talk-recording-color, var(--lr-color-danger))
+      );
     pointer-events: none;
     animation: lr-push-to-talk-pulse var(--lr-transition-ambient) infinite;
   }

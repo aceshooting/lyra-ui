@@ -122,6 +122,49 @@ it('the lock button toggles the canvas locked attribute and mirrors aria-pressed
   expect(lockButton.getAttribute('aria-pressed')).to.equal('false');
 });
 
+describe('--lr-flow-controls-lock-active-color', () => {
+  const lockedControls = async (style = ''): Promise<LyraFlowControls> => {
+    const wrapper = (await fixture(html`
+      <div style=${style}>
+        <lr-flow-canvas>
+          <lr-flow-controls slot="bottom-start"></lr-flow-controls>
+        </lr-flow-canvas>
+      </div>
+    `)) as HTMLElement;
+    const canvas = wrapper.querySelector('lr-flow-canvas') as LyraFlowCanvas;
+    const controls = wrapper.querySelector('lr-flow-controls') as LyraFlowControls;
+    canvas.nodes = nodes;
+    canvas.locked = true;
+    await canvas.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await controls.updateComplete;
+    return controls;
+  };
+
+  it('retints only the pressed lock state through an inherited css custom property', async () => {
+    const controls = await lockedControls('--lr-flow-controls-lock-active-color: rgb(10, 20, 30)');
+    const lock = controls.shadowRoot!.querySelector('[part="lock"]') as HTMLButtonElement;
+    const zoomIn = controls.shadowRoot!.querySelector('[part="zoom-in"]') as HTMLButtonElement;
+
+    expect(lock.getAttribute('aria-pressed')).to.equal('true');
+    expect(getComputedStyle(lock).color).to.equal('rgb(10, 20, 30)');
+    expect(getComputedStyle(zoomIn).color).to.not.equal('rgb(10, 20, 30)');
+  });
+
+  it('renders identically when unset or explicitly pointed at the default brand token', async () => {
+    const unset = await lockedControls();
+    const unsetLock = unset.shadowRoot!.querySelector('[part="lock"]') as HTMLButtonElement;
+    const unsetColor = getComputedStyle(unsetLock).color;
+
+    const explicitDefault = await lockedControls('--lr-flow-controls-lock-active-color: var(--lr-color-brand)');
+    const explicitDefaultLock = explicitDefault.shadowRoot!.querySelector('[part="lock"]') as HTMLButtonElement;
+
+    expect(unsetLock.getAttribute('aria-pressed')).to.equal('true');
+    expect(explicitDefaultLock.getAttribute('aria-pressed')).to.equal('true');
+    expect(getComputedStyle(explicitDefaultLock).color).to.equal(unsetColor);
+  });
+});
+
 it('hide-lock omits the lock button entirely', async () => {
   const el = (await fixture(html`<lr-flow-controls hide-lock></lr-flow-controls>`)) as LyraFlowControls;
   expect(el.shadowRoot!.querySelector('[part="lock"]')).to.not.exist;

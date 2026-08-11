@@ -1,8 +1,10 @@
 import { fixture, expect, oneEvent, html, aTimeout, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './toast-item.js';
+import './toast.js';
 import type { LyraToastItem } from './toast-item.js';
 import { styles } from './toast-item.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function announcementTexts(politeness: 'polite' | 'assertive', ownerDocument = document): string[] {
   const sink = ownerDocument.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
@@ -907,6 +909,111 @@ it('honors the mapped item token aliases at the rendered surface', async () => {
 
   el.setAttribute('data-hiding', '');
   expect(getComputedStyle(surface).transitionDuration.split(',')[0]).to.equal('0.031s');
+});
+
+it('keeps the region stack gap separate from inherited item geometry hooks', async () => {
+  const region = await fixture(html`
+    <lr-toast
+      style="--lr-toast-gap: 31px; --lr-toast-item-gap: 23px; --lr-toast-item-radius: 17px"
+    >
+      <lr-toast-item duration="0">Scoped geometry</lr-toast-item>
+    </lr-toast>
+  `);
+  const stack = region.shadowRoot!.querySelector<HTMLElement>('[part="stack"]')!;
+  const item = region.querySelector<LyraToastItem>('lr-toast-item')!;
+  const surface = item.shadowRoot!.querySelector<HTMLElement>('[part="toast-item"]')!;
+  const accent = item.shadowRoot!.querySelector<HTMLElement>('[part="accent"]')!;
+
+  expect(getComputedStyle(stack).gap).to.equal('31px');
+  expect(getComputedStyle(surface).gap).to.equal('23px');
+  expect(getComputedStyle(surface).borderTopLeftRadius).to.equal('17px');
+  expect(getComputedStyle(accent).borderTopLeftRadius).to.equal('17px');
+});
+
+it('keeps shared item geometry fallbacks available at compact and large sizes', async () => {
+  for (const size of ['2xs', 'xl'] as const) {
+    const item = (await fixture(html`
+      <lr-toast-item
+        duration="0"
+        size=${size}
+        style="--lr-space-s: 13px; --lr-radius: 19px"
+      >
+        ${size} geometry
+      </lr-toast-item>
+    `)) as LyraToastItem;
+    const surface = item.shadowRoot!.querySelector<HTMLElement>('[part="toast-item"]')!;
+    const accent = item.shadowRoot!.querySelector<HTMLElement>('[part="accent"]')!;
+
+    expect(getComputedStyle(surface).gap, `${size} keeps the unset shared gap fallback`).to.equal('13px');
+    expect(getComputedStyle(surface).borderTopLeftRadius, `${size} keeps the unset shared radius fallback`).to.equal('19px');
+    expect(getComputedStyle(accent).borderTopLeftRadius, `${size} keeps the accent radius in sync`).to.equal('19px');
+  }
+});
+
+it('inherits close-button hover and active state hooks without changing their defaults', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <lr-toast-item duration="0">Themed close button</lr-toast-item>
+    </div>
+  `);
+  const item = wrapper.querySelector<LyraToastItem>('lr-toast-item')!;
+  const close = item.shadowRoot!.querySelector<HTMLButtonElement>('[part="close-button"]')!;
+  await waitUntil(() => item.hasAttribute('data-visible'));
+
+  const resolveInShadow = (declaration: string, property: string): string => {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    item.shadowRoot!.append(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  };
+  const rect = close.getBoundingClientRect();
+  const centre: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+  expect(rect.width, 'the close button needs rendered geometry for pointer-state coverage').to.be.greaterThan(0);
+
+  // A real mouse release normally invokes the button's dismissal handler. Stop just that test
+  // fixture's click before Lit's listener so the same visible control can cover hover and active
+  // styling without entering its normal hiding state.
+  const preventDismissal = (event: Event): void => event.stopImmediatePropagation();
+  close.addEventListener('click', preventDismissal, { capture: true });
+
+  try {
+    await sendMouse({ type: 'move', position: centre });
+    expect(getComputedStyle(close).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    expect(getComputedStyle(close).color).to.equal(
+      resolveInShadow('color: var(--lr-color-text)', 'color'),
+    );
+
+    await sendMouse({ type: 'down' });
+    expect(getComputedStyle(close).backgroundColor).to.equal(
+      resolveInShadow(
+        'background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+        'background-color',
+      ),
+    );
+    expect(getComputedStyle(close).color).to.equal(
+      resolveInShadow('color: var(--lr-color-text)', 'color'),
+    );
+    await sendMouse({ type: 'up' });
+
+    wrapper.style.setProperty('--lr-toast-close-button-hover-bg', 'rgb(1, 2, 3)');
+    wrapper.style.setProperty('--lr-toast-close-button-hover-color', 'rgb(4, 5, 6)');
+    wrapper.style.setProperty('--lr-toast-close-button-active-bg', 'rgb(7, 8, 9)');
+    wrapper.style.setProperty('--lr-toast-close-button-active-color', 'rgb(10, 11, 12)');
+    expect(getComputedStyle(close).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(close).color).to.equal('rgb(4, 5, 6)');
+
+    await sendMouse({ type: 'down' });
+    expect(getComputedStyle(close).backgroundColor).to.equal('rgb(7, 8, 9)');
+    expect(getComputedStyle(close).color).to.equal('rgb(10, 11, 12)');
+  } finally {
+    await resetMouse();
+    close.removeEventListener('click', preventDismissal, { capture: true });
+  }
 });
 
 it('uses the configured hide transition duration for lifecycle completion', async () => {

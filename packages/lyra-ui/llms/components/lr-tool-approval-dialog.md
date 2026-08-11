@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 22 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 22 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -91,7 +91,9 @@ wrapper aliases, so either name survives the nested shadow boundary; `edit-butto
 `var(--lr-color-overlay)` — the backdrop scrim color, the same shared token `<lr-dialog>` and
 `<lr-tool-select-dialog>` read), `--lr-tool-approval-dialog-mono-font` (default
 `var(--lr-font-mono)`, the library's shared monospace stack — used by both `tool-name` and the
-raw-JSON editor), plus shared tokens
+raw-JSON editor), and `--lr-tool-approval-dialog-invalid-border-color` (default
+`var(--lr-color-danger)` — border color of the invalid raw-JSON editor, independently retunable
+without changing error text or other danger-coloured surfaces), plus shared tokens
 `--lr-space-xs/-s/-m/-l`, `--lr-color-surface`, `--lr-color-border`, `--lr-radius`,
 `--lr-shadow`, `--lr-color-brand`, `--lr-color-on-brand`, `--lr-color-danger`,
 `--lr-color-text`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
@@ -121,6 +123,11 @@ entirely and returns to the read-only view of the *original* `args` — there is
 step independent of Approve itself. Both `editing` and any in-progress draft reset back to the
 read-only view every time the dialog transitions from closed to open, so a reused instance never
 leaks one proposal's half-finished edit into the next.
+
+The raw-JSON editor deliberately fixes native `resize` to `vertical`, so a user can make a long
+draft taller without changing the dialog's constrained inline size. This focused approval flow has
+no generic resize property or auto-grow mode; compose a dedicated editor around the approval UI
+when either behavior is required.
 
 The visible JSON error remains ordinary descriptive text. A transition from a valid draft into
 invalid JSON is additionally appended once to the shared assertive light-DOM announcement sink;

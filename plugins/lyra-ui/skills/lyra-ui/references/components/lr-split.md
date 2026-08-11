@@ -150,8 +150,12 @@ collapsed. `collapse="none"` (the default) is byte-for-byte identical to pre-col
 `dividerLabel?: (index: number, panelCount: number) => string` (attribute: false) customizes the
 localized accessible label generated for each auto-inserted divider.
 
-**Events:** `lr-resize` (`detail: { sizes }`, fired on every drag movement that changes sizes and
-every keyboard step; pointer release persists the settled sizes but emits no additional event),
+**Events:** `lr-resize-request` (cancelable; `detail: { sizes }` is the proposed constrained size
+array from a divider drag or keyboard step. Call `preventDefault()` to leave `sizes` and its
+persisted layout unchanged. It is not emitted when a consumer assigns `sizes` directly),
+`lr-resize` (non-cancelable; the same `detail: { sizes }`, emitted after an accepted drag movement
+or keyboard step commits. Pointer release persists the settled sizes but emits no additional event;
+direct `sizes` assignments stay silent),
 `lr-split-collapse-change` (`detail: { state: 'wide'|'rail'|'floating' }`, fired only
 on a real `collapse`-state transition, never on every resize/render),
 `lr-split-constraints-invalid` (`detail: SplitConstraintIssueDetail`, fired once when the configured

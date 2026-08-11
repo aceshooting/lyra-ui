@@ -37,6 +37,7 @@ export interface WidgetView {
 }
 
 export interface LyraWidgetEventMap {
+  "lr-collapse-request": CustomEvent<{ collapsed: boolean }>;
   "lr-collapse-change": CustomEvent<{ collapsed: boolean }>;
   "lr-fullscreen-change": CustomEvent<{ fullscreen: boolean }>;
   "lr-view-change": CustomEvent<{ viewId: string }>;
@@ -66,7 +67,12 @@ export interface LyraWidgetEventMap {
  *   while `expandable`.
  * @slot view-{id} - Content for the view whose `WidgetView.id` matches `{id}`, rendered when
  *   `views` is non-empty.
- * @event lr-collapse-change - `detail: { collapsed }` (the new `collapsed` state).
+ * @event lr-collapse-request - A cancelable proposed `collapsed` state from the built-in collapse
+ *   toggle. Call `preventDefault()` to keep `collapsed` and persistence unchanged. Not fired when
+ *   a consumer sets `collapsed` directly. `detail: { collapsed }`.
+ * @event lr-collapse-change - Non-cancelable post-commit notification from the built-in collapse
+ *   toggle. Not fired when a consumer sets `collapsed` directly. `detail: { collapsed }` (the new
+ *   `collapsed` state).
  * @event lr-fullscreen-change - `detail: { fullscreen }` (the new `fullscreen` state).
  * @event lr-view-change - Fired when the active view changes via a header toggle click.
  *   `detail: { viewId }` (the new view's `id`).
@@ -443,9 +449,22 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     this.emit("lr-view-change", { viewId: id });
   };
 
+  /** Emits the cancelable interaction proposal before touching the persisted
+   *  property, while retaining lr-collapse-change as the existing post-commit
+   *  notification. */
+  private requestCollapse(next: boolean): void {
+    const request = this.emit(
+      "lr-collapse-request",
+      { collapsed: next },
+      { cancelable: true }
+    );
+    if (request.defaultPrevented) return;
+    this.collapsed = next;
+    this.emit("lr-collapse-change", { collapsed: next });
+  }
+
   private toggleCollapsed = (): void => {
-    this.collapsed = !this.collapsed;
-    this.emit("lr-collapse-change", { collapsed: this.collapsed });
+    this.requestCollapse(!this.collapsed);
   };
 
   private toggleFullscreen = (e: MouseEvent): void => {

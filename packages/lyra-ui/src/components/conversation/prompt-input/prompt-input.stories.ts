@@ -41,6 +41,28 @@ export const Narrow: Story = {
   render: () => html`<div style="max-width: 320px;">${renderPromptInput()}</div>`,
 };
 
+export const AdornmentSlotAliases: Story = {
+  name: 'Start/end adornment slot aliases',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The canonical `start` and `end` slots coexist with the established `leading` and `trailing` aliases. Supplying any attachment-control alias replaces the generated attachment trigger; supplying either action alias replaces the built-in send/stop action.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="max-inline-size: var(--lr-size-32rem);">
+      <lr-prompt-input placeholder="Compose a message">
+        <button slot="start" type="button">Start</button>
+        <button slot="leading" type="button">Leading</button>
+        <button slot="end" type="button">End</button>
+        <button slot="trailing" type="button">Trailing</button>
+      </lr-prompt-input>
+    </div>
+  `,
+};
+
 /** The composed textarea's editing assistance and native selection facade remain available on the prompt host. */
 export const NativeTextareaFacade: Story = {
   render: () => {

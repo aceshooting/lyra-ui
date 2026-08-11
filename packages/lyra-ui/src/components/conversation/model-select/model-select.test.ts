@@ -162,6 +162,31 @@ it('renders id/label object catalog rows by their label', async () => {
   expect(rows(el)[0].dataset.value).to.equal('gpt-4.1');
 });
 
+it('renders optional catalog icons decoratively in both listbox modes', async () => {
+  const catalog = [
+    { id: 'gpt-4.1', label: 'GPT-4.1', icon: '✦' },
+    { id: 'gpt-4.1-mini', label: 'GPT-4.1 mini' },
+  ];
+
+  for (const allowCustom of [false, true]) {
+    const el = (await fixture(html`
+      <lr-model-select ?allow-custom=${allowCustom} .catalog=${catalog}></lr-model-select>
+    `)) as LyraModelSelect;
+    el.open = true;
+    await el.updateComplete;
+
+    const optionRows = rows(el);
+    const icon = optionRows[0]!.querySelector<HTMLElement>('[part="option-icon"]');
+    expect(icon?.textContent).to.equal('✦');
+    expect(icon?.getAttribute('aria-hidden')).to.equal('true');
+    expect(optionRows[1]!.querySelectorAll('[part="option-icon"]').length).to.equal(0);
+    el.shadowRoot!.querySelector('[part="listbox"]')
+      ?.getAnimations()
+      .forEach((animation) => animation.finish());
+    await expect(el).to.be.accessible();
+  }
+});
+
 // -- Closed-dropdown mode -----------------------------------------------
 
 it('opens the closed dropdown by clicking the trigger and selects an option, emitting lr-change', async () => {

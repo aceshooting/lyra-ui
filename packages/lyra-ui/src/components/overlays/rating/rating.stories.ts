@@ -136,6 +136,21 @@ export const CustomTheming: StoryObj = {
     style="--lr-rating-fill: seagreen; --lr-rating-empty-color: gainsboro; --lr-rating-size: 2rem;"
   ></lr-rating>`,
 };
+export const GapAndPressedTheming: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Use --lr-rating-gap for component-scoped spacing; it wins over the compatibility --symbol-spacing hook. Hold a star to inspect --lr-rating-active-color, which changes only the pressed symbol treatment.',
+      },
+    },
+  },
+  render: () => html`<lr-rating
+    value="3"
+    label="Themed satisfaction"
+    style="--lr-rating-gap: var(--lr-space-m); --lr-rating-active-color: var(--lr-color-success);"
+  ></lr-rating>`,
+};
 export const CompatibilityAliases: StoryObj = {
   parameters: {
     docs: {

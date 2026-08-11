@@ -52,6 +52,53 @@ it('lets a consumer retint the expanded overflow-indicator via the scoped --lr-c
   expect(getComputedStyle(indicator).color).to.equal('rgb(1, 2, 3)');
 });
 
+it('lets a consumer retune only the expanded overflow-indicator border style while the resting marker stays dashed', async () => {
+  const el = (await fixture(fiveChips())) as LyraChipGroup;
+  el.maxVisible = 3;
+  el.style.setProperty('--lr-chip-group-overflow-expanded-border-style', 'dotted');
+  await el.updateComplete;
+
+  const collapsed = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
+  expect(collapsed.getAttribute('aria-expanded')).to.equal('false');
+  expect(getComputedStyle(collapsed).borderStyle).to.equal('dashed');
+
+  collapsed.click();
+  await el.updateComplete;
+  const expanded = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
+  expect(expanded.getAttribute('aria-expanded')).to.equal('true');
+  expect(getComputedStyle(expanded).borderStyle).to.equal('dotted');
+});
+
+it('keeps long removable chips contained through collapsed and expanded overflow states in a 320px RTL allocation', async () => {
+  const longLabel = 'مرشحبحثدوليمطولجداًبدونمسافاتللتأكدمنأنالترتيبالمنطقييبقىداخلالمساحة';
+  const wrapper = await fixture<HTMLElement>(html`
+    <div dir="rtl" style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-chip-group max-visible="2">
+        <lr-chip removable>${longLabel}</lr-chip>
+        <lr-chip removable>${longLabel}</lr-chip>
+        <lr-chip removable>${longLabel}</lr-chip>
+        <lr-chip removable>${longLabel}</lr-chip>
+      </lr-chip-group>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-chip-group') as LyraChipGroup;
+  await el.updateComplete;
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const chips = Array.from(el.querySelectorAll<HTMLElement>('lr-chip'));
+  const collapsed = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
+  expect(getComputedStyle(base).direction).to.equal('rtl');
+  expect(base.scrollWidth, 'the collapsed group must stay inside its 320px allocation').to.be.at.most(base.clientWidth);
+  expect(chips.filter((chip) => chip.hidden)).to.have.lengthOf(2);
+
+  collapsed.click();
+  await el.updateComplete;
+  const expanded = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
+  expect(expanded.getAttribute('aria-expanded')).to.equal('true');
+  expect(chips.filter((chip) => chip.hidden)).to.have.lengthOf(0);
+  expect(base.scrollWidth, 'the expanded group must stay inside its 320px allocation').to.be.at.most(base.clientWidth);
+});
+
 it('defaults max-visible to unset, showing every child and no overflow indicator', async () => {
   const el = (await fixture(fiveChips())) as LyraChipGroup;
   expect(el.maxVisible).to.be.undefined;

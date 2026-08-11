@@ -60,10 +60,15 @@ are no-ops before the textarea has rendered.
 (`{ id, name, mimeType, src }`). Child events are stopped and re-emitted from
 `lr-prompt-input`; all composed interactions are suppressed while `disabled`.
 
-**Slots:** `controls`, `leading`, `chips`, `trailing`, `footer`.
+**Slots:** `controls`; `start` (the canonical attachment-control content before the textarea) and
+`leading` (the established alias); `chips`; `end` (the canonical custom send/stop action) and
+`trailing` (the established alias); and `footer`. Either `start` or `leading` replaces the default
+attachment trigger, and they may coexist. Either `end` or `trailing` replaces the built-in composer
+action, and they may coexist.
 
 **CSS parts:** `base`, `controls`, `sources`, `sources-summary`, `source-picker`, `queue`,
-`composer`, `leading`, `chips`, `footer`.
+`composer`, `leading` (the `start`/`leading` attachment controls, or the default attachment trigger
+when both slots are empty), `chips`, `footer`.
 
 **Optional peer deps:** none of its own.
 

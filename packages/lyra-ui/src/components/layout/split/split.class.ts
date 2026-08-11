@@ -43,6 +43,10 @@ interface DragState {
    *  move must apply only the *incremental* delta since the last move, not
    *  the total-since-drag-start delta a snapshot-based clamp would use. */
   appliedDelta: number;
+  /** Whether this pointer accepted at least one resize proposal. A pointerup
+   *  only persists after an accepted proposal, so a listener that vetoes every
+   *  move cannot cause a write of the unchanged layout. */
+  acceptedResize: boolean;
 }
 
 /** A fixed-pixel-range constraint for one panel; index-aligned with `sizes`/
@@ -102,6 +106,7 @@ export interface SplitOrientationChangeDetail {
 }
 
 export interface LyraSplitEventMap {
+  "lr-resize-request": CustomEvent<SplitResizeDetail>;
   "lr-resize": CustomEvent<SplitResizeDetail>;
   "lr-split-collapse-change": CustomEvent<SplitCollapseChangeDetail>;
   "lr-split-constraints-invalid": CustomEvent<SplitConstraintIssueDetail>;
@@ -156,8 +161,12 @@ export interface LyraSplitEventMap {
  * mobile overlay when leaving `'mobile'` while open.
  *
  * @customElement lr-split
+ * @event lr-resize-request - A cancelable proposed `sizes` change from a divider drag or keyboard
+ *   step. Call `preventDefault()` to keep `sizes` and persistence unchanged. Not fired when a
+ *   consumer sets `sizes` directly. `detail: { sizes }` (`SplitResizeDetail`).
  * @event lr-resize - `detail: { sizes }`, fired on every drag movement that changes sizes and every
- *   keyboard step. Pointer release persists the settled sizes but emits no additional event.
+ *   keyboard step after `sizes` is assigned. Non-cancelable; not fired when a consumer sets
+ *   `sizes` directly. Pointer release persists the settled sizes but emits no additional event.
  * @event lr-split-collapse-change - `detail: { state }` (`SplitCollapseChangeDetail`),
  *   fired whenever the responsive `collapseState` actually transitions between
  *   `'wide'`/`'rail'`/`'floating'` — whether from a breakpoint crossing or an
@@ -1214,15 +1223,31 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     return next;
   }
 
+  /** Emits the cancelable user-interaction proposal before committing it. The
+   *  existing `lr-resize` notification remains the non-cancelable post-commit
+   *  signal, so property-driven layouts stay silent while hosts can veto an
+   *  interaction before it changes their persistence-facing state. */
+  private requestResize(next: number[], commit: boolean): boolean {
+    const request = this.emit(
+      "lr-resize-request",
+      { sizes: [...next] },
+      { cancelable: true }
+    );
+    if (request.defaultPrevented) return false;
+    this.sizes = next;
+    this.emit("lr-resize", { sizes: [...this.sizes] });
+    if (commit) this.persist();
+    return true;
+  }
+
   private applyDelta(index: number, delta: number, commit: boolean): void {
-    this.sizes = this.clampPair(
+    const next = this.clampPair(
       this.sizes,
       index,
       delta,
       this.getContainerSize()
     );
-    this.emit("lr-resize", { sizes: [...this.sizes] });
-    if (commit) this.persist();
+    this.requestResize(next, commit);
   }
 
   /** The collapsing pane's light-DOM element itself — the `'floating'`
@@ -1276,6 +1301,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
         this.effectiveOrientation === "vertical" ? e.clientY : e.clientX,
       base: this.baseEl!,
       appliedDelta: 0,
+      acceptedResize: false,
     });
     divider.setPointerCapture(e.pointerId);
     if (this.drags.size === 1) {
@@ -1347,20 +1373,21 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     // next incremental calculation. Summing only this move's own delta
     // (paired vs. the value immediately prior to this clamp) avoids both
     // bugs at once.
-    drag.appliedDelta += pairedA - priorValue;
     // Merge only this drag's pair into the live sizes so a concurrent drag
     // on another divider (different pointerId) isn't clobbered.
     const next = [...this.sizes];
     next[drag.index] = pairedA;
     next[drag.index + 1] = pairedB;
-    this.sizes = next;
-    this.emit("lr-resize", { sizes: [...this.sizes] });
+    if (!this.requestResize(next, false)) return;
+    drag.appliedDelta += pairedA - priorValue;
+    drag.acceptedResize = true;
   };
 
   private onPointerUp = (e: PointerEvent): void => {
-    if (!this.drags.has(e.pointerId)) return;
+    const drag = this.drags.get(e.pointerId);
+    if (!drag) return;
     this.drags.delete(e.pointerId);
-    if (e.type === "pointerup") this.persist();
+    if (e.type === "pointerup" && drag.acceptedResize) this.persist();
     if (this.drags.size === 0) this.removeDragListeners();
   };
 

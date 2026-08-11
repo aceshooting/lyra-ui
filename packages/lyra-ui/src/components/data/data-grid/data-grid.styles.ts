@@ -67,6 +67,17 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
   }
 
+  /* Search decorations belong to WebKit's native chrome. Reset them unconditionally in both
+     entry points so the component owns the control palette on Safari as well as Chromium. */
+  [part='search']::-webkit-search-cancel-button,
+  [part='search']::-webkit-search-decoration,
+  [part='filter-panel'] input[type='search']::-webkit-search-cancel-button,
+  [part='filter-panel'] input[type='search']::-webkit-search-decoration {
+    appearance: none;
+    -webkit-appearance: none;
+    display: none;
+  }
+
   [part='search']:hover {
     border-color: var(--accent-color);
   }
@@ -387,13 +398,55 @@ export const styles = css`
     border-block-start: var(--border-width) solid var(--border-color);
   }
 
+  .page-size-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+
   [part='page-size'] {
     min-block-size: var(--lr-icon-button-size);
+    padding-inline: var(--lr-space-s) var(--lr-space-l);
     border: var(--border-width) solid var(--border-color);
     border-radius: var(--border-radius);
     background: var(--background-color);
     color: var(--text-color);
     font: inherit;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+  }
+
+  [part='page-size'] option {
+    background: var(--background-color);
+    color: var(--text-color);
+  }
+
+  [part='page-size']:hover {
+    border-color: var(--accent-color);
+  }
+
+  [part='page-size']:active {
+    border-color: var(--accent-color);
+    background: var(--row-hover-background);
+  }
+
+  [part='page-size']:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+
+  .page-size-chevron {
+    position: absolute;
+    inset-inline-end: var(--lr-space-xs);
+    display: inline-flex;
+    color: var(--lr-color-text-quiet);
+    line-height: var(--lr-line-height-none);
+    pointer-events: none;
+  }
+
+  .page-size-chevron svg {
+    transform: rotate(90deg);
   }
 
   [part='page-current'] {

@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -111,12 +111,15 @@ percentage under a fractional `precision`, or 100%).
 
 **Themeable custom properties:** `--lr-rating-fill` (default `--lr-color-warning` — filled-symbol
 color), `--lr-rating-empty-color` (default `--lr-color-border` — unfilled-symbol color, also
-retained during hover preview), and `--lr-rating-size` (default `--lr-font-size-xl` — symbol size;
-each `size` step rewrites it). The mapped compatibility hooks are `--symbol-color` (inactive
-symbols), `--symbol-color-active` (filled symbols), `--symbol-size` (symbol size), and
-`--symbol-spacing` (the gap around symbols). The Lyra-prefixed color and size names win if both a
-Lyra property and its compatibility alias are set. `--symbol-size` otherwise feeds the active
-`size` step, while `--symbol-spacing` defaults to `--lr-space-xs`.
+retained during hover preview), `--lr-rating-active-color` (default: the existing active mix of the
+empty-symbol color — pressed-symbol color only), `--lr-rating-size` (default `--lr-font-size-xl` —
+symbol size; each `size` step rewrites it), and `--lr-rating-gap` (default
+`--symbol-spacing`, then `--lr-space-xs` — gap between symbols). The mapped compatibility hooks
+are `--symbol-color` (inactive symbols), `--symbol-color-active` (filled symbols), `--symbol-size`
+(symbol size), and `--symbol-spacing` (the gap around symbols). The Lyra-prefixed color, size, and
+gap names win if both a Lyra property and its compatibility alias are set. `--symbol-size` otherwise
+feeds the active `size` step, while `--symbol-spacing` remains the fallback for
+`--lr-rating-gap` before the shared `--lr-space-xs` default.
 
 Pointer selection resolves the position within the clicked star and snaps upward to `precision`
 (with the physical fraction mirrored under RTL), so half/quarter-star precision applies to pointer
@@ -131,7 +134,7 @@ activation area even for the degenerate `max=0`/`max=1` cases; larger ratings na
   max="5"
   precision="0.5"
   size="l"
-  style="--symbol-color-active: var(--lr-color-success); --symbol-size: var(--lr-font-size-2xl); --symbol-spacing: var(--lr-space-s)"
+  style="--lr-rating-active-color: var(--lr-color-success); --lr-rating-gap: var(--lr-space-s); --symbol-color-active: var(--lr-color-success); --symbol-size: var(--lr-font-size-2xl)"
 ></lr-rating>
 <p id="preview"></p>
 <script type="module">

@@ -10,6 +10,11 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
+function preventWidgetCollapse(event: Event): void {
+  const request = event as CustomEvent<{ collapsed: boolean }>;
+  if (request.detail.collapsed) request.preventDefault();
+}
+
 export const Default: Story = {
   render: () => html`
     <lr-widget
@@ -32,6 +37,31 @@ export const CollapsedInitially: Story = {
   render: () => html`
     <lr-widget label="Alerts" sublabel="3 active" collapsible collapsed style="max-width: 28rem;">
       <div style="padding: 1rem;">This body is hidden until the panel is expanded.</div>
+    </lr-widget>
+  `,
+};
+
+export const CancelableCollapse: Story = {
+  name: 'Cancelable collapse',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The `lr-collapse-request` event proposes a built-in toggle change before the widget changes its persisted `collapsed` property. This example vetoes collapse requests, so the existing `lr-collapse-change` event only fires after an accepted toggle.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-widget
+      label="Pinned details"
+      sublabel="Collapse is vetoed"
+      collapsible
+      style="max-width: 28rem;"
+      @lr-collapse-request=${preventWidgetCollapse}
+    >
+      <div style="padding: 1rem;">
+        Click the chevron: the cancelable request leaves this body open.
+      </div>
     </lr-widget>
   `,
 };

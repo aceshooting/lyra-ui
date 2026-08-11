@@ -51,13 +51,34 @@ export const Start: Story = {
 };
 
 export const NarrowLongContent: Story = {
-  render: (_args, context) => html`<div style="inline-size: 20rem; min-block-size: 34rem;">
-    <lr-drawer .open=${context.viewMode !== 'docs'} placement="end" heading="Filters and advanced options" closable>
-      <p>Long drawer content wraps at a narrow allocation and continues below the viewport.</p>
-      <p>Use the controls below to verify that the footer remains reachable and labels do not clip.</p>
-      <div slot="footer"><button type="button">Reset all filters</button><button type="button">Apply filters</button></div>
+  name: 'Narrow RTL viewport with long content (320px)',
+  parameters: {
+    layout: 'fullscreen',
+    viewport: { defaultViewport: 'mobile1' },
+    docs: {
+      description: {
+        story:
+          'A real 320px Storybook viewport, rather than a narrow wrapper on a desktop canvas. RTL long content and footer actions stay in the edge-bound sheet while the body keeps its own scrolling surface.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <lr-drawer
+      .open=${context.viewMode !== 'docs'}
+      dir="rtl"
+      placement="end"
+      heading="تصفيةالإعداداتالدوليةالطويلةجداً"
+      closable
+    >
+      <p>محتوىدرججانبيمحليطويلجداًبدونأيفرصةللفصلالتلقائي</p>
+      <p>تبقى خيارات التصفية والرسائل الطويلة قابلة للقراءة والتمرير داخل مساحة الدرج الضيقة.</p>
+      <p>تغطي هذه القصة عنوان الدرج والمحتوى وإجراءات التذييل عند أصغر عرض مدعوم للواجهة.</p>
+      <div slot="footer">
+        <button type="button">إعادةتعيينكلعواملالتصفية</button>
+        <button type="button">تطبيقالتغييراتومتابعةالبحث</button>
+      </div>
     </lr-drawer>
-  </div>`,
+  `,
 };
 
 export const Lifecycle: Story = {

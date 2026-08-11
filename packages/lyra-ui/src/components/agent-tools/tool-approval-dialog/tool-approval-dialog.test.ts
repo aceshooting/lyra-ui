@@ -162,6 +162,26 @@ describe('editing', () => {
     expect(textarea(el).getAttribute('aria-invalid')).to.equal('true');
   });
 
+  it('retints only the invalid raw-JSON editor border through its component CSS property and restores the resting border', async () => {
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog open tool-name="web_search" .args=${ARGS}></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    el.style.setProperty('--lr-tool-approval-dialog-invalid-border-color', 'rgb(10, 20, 30)');
+    el.style.setProperty('--lr-color-border', 'rgb(40, 50, 60)');
+    editButton(el).click();
+    await el.updateComplete;
+
+    expect(getComputedStyle(textarea(el)).borderColor).to.equal('rgb(40, 50, 60)');
+
+    setTextareaValue(el, '{ not valid json');
+    await el.updateComplete;
+    expect(getComputedStyle(textarea(el)).borderColor).to.equal('rgb(10, 20, 30)');
+
+    setTextareaValue(el, '{"query":"fixed"}');
+    await el.updateComplete;
+    expect(getComputedStyle(textarea(el)).borderColor).to.equal('rgb(40, 50, 60)');
+  });
+
   it('announces each newly invalid edit once through the shared assertive light-DOM sink', async () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog open tool-name="web_search" .args=${ARGS}></lr-tool-approval-dialog>`,

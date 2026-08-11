@@ -19,6 +19,11 @@ const OPENAI_CATALOG = [
   { id: 'gpt-4.1-mini', label: 'GPT-4.1 mini' },
   { id: 'o3', label: 'o3' },
 ];
+const ICON_CATALOG = [
+  { id: 'gpt-4.1', label: 'GPT-4.1', icon: '✦' },
+  { id: 'gpt-4.1-mini', label: 'GPT-4.1 mini', icon: '◈' },
+  { id: 'o3', label: 'o3', icon: '◆' },
+];
 
 /** A fixed catalog with `allow-custom` unset renders a plain closed dropdown, like `<lr-select>`. */
 export const ClosedDropdown: Story = {
@@ -38,6 +43,18 @@ export const ObjectCatalog: Story = {
       provider="openai"
       placeholder="Pick a model…"
       .catalog=${OPENAI_CATALOG}
+    ></lr-model-select>
+  `,
+};
+
+/** Object rows may include literal decorative icons without changing their accessible label. */
+export const ObjectCatalogIcons: Story = {
+  render: () => html`
+    <lr-model-select
+      provider="openai"
+      placeholder="Pick a model…"
+      .catalog=${ICON_CATALOG}
+      .open=${true}
     ></lr-model-select>
   `,
 };

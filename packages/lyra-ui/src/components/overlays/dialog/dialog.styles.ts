@@ -54,6 +54,7 @@ export const styles = css`
     position: relative;
     display: flex;
     flex-direction: column;
+    min-inline-size: 0;
     /* --lr-dialog-width is an assertive width (unset/auto by default -- the panel shrink-wraps to
        content, unchanged) capped by the same max-inline-size below and by the viewport. */
     inline-size: var(--width, var(--lr-dialog-width, auto));
@@ -82,6 +83,8 @@ export const styles = css`
   [part='header'] {
     display: flex;
     align-items: center;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     gap: var(--lr-space-s);
     padding: var(--header-spacing, var(--spacing, var(--lr-dialog-spacing-block, var(--lr-space-m)) var(--lr-dialog-spacing, var(--lr-space-l))));
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -142,8 +145,11 @@ export const styles = css`
     display: block;
   }
   [part='body'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
     padding: var(--body-spacing, var(--spacing, var(--lr-dialog-spacing, var(--lr-space-l))));
     overflow: auto;
+    overflow-wrap: anywhere;
   }
   /* The body carries tabindex="-1" so an overflowing dialog can be scrolled from the keyboard;
      once it can hold focus it has to say so. Inset offset because the body is flush with the
@@ -154,11 +160,23 @@ export const styles = css`
   }
   [part='footer'] {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: flex-end;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     gap: var(--lr-space-s);
     padding: var(--footer-spacing, var(--spacing, var(--lr-dialog-spacing-block, var(--lr-space-m)) var(--lr-dialog-spacing, var(--lr-space-l))));
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    overflow-wrap: anywhere;
+  }
+  /* Footer content is consumer-owned light DOM, so the wrapper's responsive rules do not select
+     it directly. Keep each assigned action capable of shrinking to the panel and inherit the
+     same emergency-wrap policy for a localized or identifier-like label. */
+  [part='footer'] ::slotted(*) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
   [part='footer'][hidden] {
     display: none;

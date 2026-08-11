@@ -2887,23 +2887,26 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const numbers = this.visiblePageNumbers();
     return html`
       <nav part="pager" aria-label=${this.localize("paginationLabel")}>
-        <select
-          part="page-size"
-          aria-label=${this.localize("paginationLabel")}
-          .value=${String(this.safePageSize)}
-          @change=${this.onPageSizeChange}
-        >
-          ${[
-            ...new Set(
-              this.pageSizeOptions
-                .map((value) => finiteCount(value))
-                .filter((value) => value > 0)
-            ),
-          ].map(
-            (value) =>
-              html`<option value=${value}>${format.format(value)}</option>`
-          )}
-        </select>
+        <span class="page-size-wrapper">
+          <select
+            part="page-size"
+            aria-label=${this.localize("paginationLabel")}
+            .value=${String(this.safePageSize)}
+            @change=${this.onPageSizeChange}
+          >
+            ${[
+              ...new Set(
+                this.pageSizeOptions
+                  .map((value) => finiteCount(value))
+                  .filter((value) => value > 0)
+              ),
+            ].map(
+              (value) =>
+                html`<option value=${value}>${format.format(value)}</option>`
+            )}
+          </select>
+          <span class="page-size-chevron" aria-hidden="true">${chevronIcon()}</span>
+        </span>
         <button
           part="pager-button first-button"
           type="button"

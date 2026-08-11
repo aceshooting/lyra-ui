@@ -169,6 +169,8 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
  *   `[part="header"]` padding while `compact`.
  * @cssprop [--lr-task-list-compact-header-gap=var(--lr-space-2xs)] - Gap between `[part="header"]`'s
  *   toggle/label/summary while `compact`.
+ * @cssprop [--lr-task-list-compact-header-font-size=var(--lr-font-size-sm)] - `[part="header"]`
+ *   font size while `compact`.
  * @cssprop [--lr-task-list-compact-gap=var(--lr-space-2xs)] - Gap between `[part="body"]`'s item
  *   rows while `compact`.
  * @cssprop [--lr-task-list-compact-body-padding=var(--lr-space-2xs) var(--lr-space-s) var(--lr-space-s)] -

@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -126,8 +126,11 @@ shared part name across both the text and number inputs, and deliberately *not* 
 composed components with their own part surfaces rather than raw natives. It is purely an additive
 external theming hook: the internal `.control` class the stylesheet targets is unchanged.
 
-**Themeable custom properties:** no component-specific custom properties; shared tokens only —
-`--lr-space-l/-xs/-s`, `--lr-color-border`, `--lr-radius`, `--lr-color-surface`,
+**Themeable custom properties:** `--lr-tool-param-form-invalid-border-color` (default
+`var(--lr-color-danger)`) — border color of an invalid generated native text or number input.
+This component-scoped indirection retints invalid borders without changing error text, required
+markers, or other danger-coloured surfaces. Shared tokens remain available for the rest of the
+form: `--lr-space-l/-xs/-s`, `--lr-color-border`, `--lr-radius`, `--lr-color-surface`,
 `--lr-color-danger`, `--lr-color-text-quiet`, `--lr-focus-ring-width/-color/-offset`,
 `--lr-opacity-disabled`.
 

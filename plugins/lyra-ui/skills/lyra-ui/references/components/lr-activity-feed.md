@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -49,7 +49,9 @@ sets no literal `icon`), `variant-dot-neutral`/`variant-dot-brand`/`variant-dot-
 part is reachable in both rendering paths, virtualized or not.
 
 **Themeable custom properties:** `--lr-activity-feed-max-height` (default `16rem`) — cap on how
-tall the expanded body grows before it scrolls internally.
+tall the expanded body grows before it scrolls internally; and
+`--lr-activity-feed-live-status-color` (default `var(--lr-color-brand)`) — background color of
+`status-dot` while `mode="live"`, independently retunable without changing other brand surfaces.
 
 **Known gotchas:**
 - The variant dot's color is selected by its *part name*, not by `[data-variant]`: `::part()` cannot

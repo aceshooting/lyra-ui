@@ -49,6 +49,24 @@ export const Narrow320: Story = {
   `,
 };
 
+export const MicrophoneIconAliases: Story = {
+  name: 'Microphone icon slot aliases',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Use the purpose-named `microphone-icon` slot for a replacement mic glyph. The established `icon` slot remains available and is used when `microphone-icon` is empty.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; align-items: center; gap: var(--lr-space-m);">
+      <lr-push-to-talk mode="toggle"><span slot="microphone-icon">🎙</span></lr-push-to-talk>
+      <lr-push-to-talk mode="toggle"><span slot="icon">MIC</span></lr-push-to-talk>
+    </div>
+  `,
+};
+
 /** The visual size hook may request a smaller circle, but the interactive trigger retains the
  * shared icon-button hit floor. Custom icon content remains decorative inside that one control. */
 export const HitFloorWithCustomIcon: Story = {
@@ -65,12 +83,17 @@ export const ThemedRecording: Story = {
     docs: {
       description: {
         story:
-          '`--lr-push-to-talk-recording-color` recolors the recording trigger’s border and glyph on its own. Set it on the element or any ancestor — it is not declared on `:host`, so an ancestor value is never shadowed, and unlike hijacking `--lr-color-danger` it leaves every other danger-toned surface on the page alone. The `data-state` attribute is set here to show the treatment without a live microphone.',
+          'The recording trigger border, trigger glyph, and pulse ring each have an independent CSS custom property. The established `--lr-push-to-talk-recording-color` remains their shared fallback. The `data-state` attribute previews the trigger treatment without a live microphone.',
       },
     },
   },
   render: () => html`
-    <div style="display: flex; gap: 24px; --lr-push-to-talk-recording-color: ${storyColor('brand')};">
+    <div
+      style="display: flex; gap: var(--lr-space-l);
+        --lr-push-to-talk-trigger-recording-border-color: ${storyColor('brand')};
+        --lr-push-to-talk-trigger-recording-color: ${storyColor('success')};
+        --lr-push-to-talk-pulse-recording-border-color: ${storyColor('warning')};"
+    >
       <lr-push-to-talk mode="toggle" data-state="recording"></lr-push-to-talk>
       <lr-push-to-talk mode="toggle"></lr-push-to-talk>
     </div>

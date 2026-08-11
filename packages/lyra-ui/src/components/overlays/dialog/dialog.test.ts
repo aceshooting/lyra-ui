@@ -958,6 +958,39 @@ it("leaves today's shrink-to-fit-content behavior unchanged when --lr-dialog-wid
   expect(getComputedStyle(panel).inlineSize).to.not.equal('600px');
 });
 
+it('contains RTL unbroken body and footer content in a 320px overlay allocation', async () => {
+  const longContent = 'محتوىواجهةحوارمحليطويلجداًبدونأيفرصةللفصلالتلقائي';
+  const paragraphs = Array.from({ length: 20 }, () => html`<p>${longContent}</p>`);
+  const el = (await fixture(html`
+    <lr-dialog
+      open
+      dir="rtl"
+      heading="إعداداتالمشروعالدوليةطويلةجداً"
+      style="inline-size: 320px; block-size: 20rem; inset-inline-end: auto; inset-block-end: auto;"
+    >
+      ${paragraphs}
+      <div slot="footer">
+        <button type="button">${longContent}</button>
+        <button type="button">${longContent}</button>
+      </div>
+    </lr-dialog>
+  `)) as LyraDialog;
+  await el.updateComplete;
+
+  const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+  const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+  const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
+
+  expect(getComputedStyle(panel).direction).to.equal('rtl');
+  expect(panel.clientWidth, 'the panel must fit its 320px host allocation').to.be.at.most(320);
+  expect(panel.scrollWidth, 'the panel must not overflow its 320px allocation').to.be.at.most(panel.clientWidth);
+  expect(body.scrollWidth, 'unbroken body text must wrap inside the dialog body').to.be.at.most(body.clientWidth);
+  expect(footer.scrollWidth, 'long footer actions must remain inside the dialog footer').to.be.at.most(footer.clientWidth);
+  expect(body.scrollHeight, 'long body content must remain independently scrollable').to.be.greaterThan(body.clientHeight);
+  body.scrollTop = 1;
+  expect(body.scrollTop, 'the body scrolling surface must accept a keyboard/mouse scroll position').to.be.greaterThan(0);
+});
+
 describe('unified show/hide lifecycle', () => {
   it('emits lr-show before the dialog opens, then lr-after-show once the enter animation finishes', async () => {
     const el = (await fixture(html`<lr-dialog label="Untitled">body</lr-dialog>`)) as LyraDialog;

@@ -78,3 +78,15 @@ export const NarrowAllocation: Story = {
     </div>
   `,
 };
+
+export const LockActiveColor: Story = {
+  name: 'Pressed lock color',
+  render: () => html`
+    <lr-flow-canvas locked style="width:100%;height:20rem" .nodes=${nodes}>
+      <lr-flow-controls
+        slot="bottom-start"
+        style="--lr-flow-controls-lock-active-color: var(--lr-color-success)"
+      ></lr-flow-controls>
+    </lr-flow-canvas>
+  `,
+};

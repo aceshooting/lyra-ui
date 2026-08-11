@@ -152,13 +152,33 @@ export const ConfirmHelper: Story = {
 };
 
 export const NarrowLongContent: Story = {
-  render: (_args, context) => html`<div style="inline-size: 20rem; min-block-size: 34rem;">
-    <lr-dialog .open=${context.viewMode !== 'docs'} heading="A deliberately long dialog heading that wraps at 320px" closable>
-      <p>Long content remains readable when the allocation is narrow. This paragraph is intentionally verbose so the dialog must scroll rather than overflow its panel.</p>
-      <p>Repeatable details, validation messages, and action labels should remain usable at the smallest supported allocation.</p>
-      <div slot="footer"><button type="button">Cancel changes</button><button type="button">Save and continue</button></div>
+  name: 'Narrow RTL viewport with long content (320px)',
+  parameters: {
+    layout: 'fullscreen',
+    viewport: { defaultViewport: 'mobile1' },
+    docs: {
+      description: {
+        story:
+          'A real 320px Storybook viewport, rather than a narrow wrapper on a desktop canvas. RTL heading, long body text, and long footer actions stay within the panel while the body remains scrollable.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <lr-dialog
+      .open=${context.viewMode !== 'docs'}
+      dir="rtl"
+      heading="إعداداتالمشروعالدوليةطويلةجداً"
+      closable
+    >
+      <p>محتوىواجهةحوارمحليطويلجداًبدونأيفرصةللفصلالتلقائي</p>
+      <p>تبقى التفاصيل الطويلة ورسائل التحقق قابلة للقراءة والتمرير داخل مساحة الحوار الضيقة.</p>
+      <p>تغطي هذه القصة العنوان والمحتوى والإجراءات عند أصغر عرض مدعوم للواجهة.</p>
+      <div slot="footer">
+        <button type="button">إلغاءالتغييراتغيرالمحفوظةالآن</button>
+        <button type="button">حفظومتابعةالإعداداتالدولية</button>
+      </div>
     </lr-dialog>
-  </div>`,
+  `,
 };
 
 export const HeaderSlots: Story = {

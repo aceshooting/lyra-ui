@@ -23,6 +23,7 @@ export const styles = [
     :host([compact]) [part='header'] {
       padding: var(--lr-task-list-compact-header-padding, var(--lr-space-2xs) var(--lr-space-s));
       gap: var(--lr-task-list-compact-header-gap, var(--lr-space-2xs));
+      font-size: var(--lr-task-list-compact-header-font-size, var(--lr-font-size-sm));
     }
     :host([compact]) [part='body'] {
       gap: var(--lr-task-list-compact-gap, var(--lr-space-2xs));

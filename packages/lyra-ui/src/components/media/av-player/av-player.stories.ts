@@ -75,6 +75,20 @@ export const Narrow320: Story = {
   </div>`,
 };
 
+export const RtlPhysicalTimeline: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The surrounding player controls inherit RTL, while the elapsed-time timeline remains a physical left-to-right axis: ArrowLeft rewinds and ArrowRight advances.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-av-player dir="rtl" src=${AUDIO_SRC} mime-type="audio/mp4" name="حلقة تجريبية" .cues=${CUES}></lr-av-player>
+  `,
+};
+
 export const SearchResultReveal: Story = {
   parameters: {
     docs: {

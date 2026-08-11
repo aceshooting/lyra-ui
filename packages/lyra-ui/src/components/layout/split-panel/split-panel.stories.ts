@@ -21,6 +21,11 @@ type Story = StoryObj;
 
 const paneStyle = 'padding: var(--lr-space-l); block-size: 100%; box-sizing: border-box;';
 
+function capReposition(event: Event): void {
+  const request = event as CustomEvent<{ position: number }>;
+  if (request.detail.position > 65) request.preventDefault();
+}
+
 export const Default: Story = {
   render: () => html`
     <lr-split-panel
@@ -34,6 +39,32 @@ export const Default: Story = {
       <section slot="end" style=${paneStyle}>
         <strong>Preview</strong>
         <p>The default position is 50%.</p>
+      </section>
+    </lr-split-panel>
+  `,
+};
+
+export const CancelableReposition: Story = {
+  name: 'Cancelable reposition',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The `lr-reposition-request` event proposes a snapped and constrained pointer or keyboard position before the divider moves. This example vetoes positions above 65%, leaving `lr-reposition` as the existing post-commit notification.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-split-panel
+      aria-label="Resize capped panes"
+      style="block-size: 16rem; border: var(--lr-border-width-thin) solid var(--lr-color-border)"
+      @lr-reposition-request=${capReposition}
+    >
+      <section slot="start" style=${`${paneStyle} background: var(--lr-color-surface-raised);`}>
+        This pane can grow to 65%.
+      </section>
+      <section slot="end" style=${paneStyle}>
+        Further drag or ArrowRight proposals are vetoed.
       </section>
     </lr-split-panel>
   `,

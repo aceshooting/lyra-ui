@@ -103,6 +103,17 @@ it('forwards native editing assistance to every prompt and variable editor', asy
   expect(inputs.every((input) => !input.hasAttribute('autocapitalize') && !input.hasAttribute('autocorrect'))).to.be.true;
 });
 
+it('deliberately limits message editors to native vertical resize without a host resize or auto-grow API', async () => {
+  const el = (await fixture(
+    html`<lr-prompt-studio .messages=${messages}></lr-prompt-studio>`,
+  )) as LyraPromptStudio;
+  const textarea = el.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="message-content"]')!;
+
+  expect(getComputedStyle(textarea).resize).to.equal('vertical');
+  expect(Reflect.has(el, 'resize')).to.be.false;
+  expect(el.hasAttribute('resize')).to.be.false;
+});
+
 it('parses literal spellcheck="false" for every native editor while retaining prose-friendly defaults', async () => {
   const defaults = (await fixture(html`<lr-prompt-studio .messages=${messages} .variables=${[{ name: 'audience', value: 'developers' }]}></lr-prompt-studio>`)) as LyraPromptStudio;
   const defaultTextarea = defaults.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="message-content"]')!;

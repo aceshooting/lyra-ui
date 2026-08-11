@@ -54,3 +54,24 @@ export const MappedPartsAndTokens: StoryObj = {
     </lr-toast-item>
   `,
 };
+
+export const ScopedGeometryAndCloseStates: StoryObj = {
+  name: 'Scoped geometry and close states (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The item gap/radius stay separate from the toast region stack gap. Hover or press the close button to see its four inherited state hooks without retheming the item surface.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="inline-size: var(--lr-size-20rem); --lr-toast-item-gap: var(--lr-space-m); --lr-toast-item-radius: var(--lr-radius-pill); --lr-toast-close-button-hover-bg: var(--lr-color-brand-quiet); --lr-toast-close-button-hover-color: var(--lr-color-brand); --lr-toast-close-button-active-bg: var(--lr-color-warning-quiet); --lr-toast-close-button-active-color: var(--lr-color-warning);"
+    >
+      <lr-toast-item duration="0" variant="success">
+        The item chrome and close interaction states are independently themeable.
+      </lr-toast-item>
+    </div>
+  `,
+};

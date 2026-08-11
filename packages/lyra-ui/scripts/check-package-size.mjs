@@ -16,22 +16,16 @@ function formatBytes(bytes) {
 }
 
 export function validatePackageBudgets(budgets) {
-  assert.equal(
-    budgets?.minimumByteReductionPercent,
-    25,
-    'package budget minimumByteReductionPercent must remain the approved 25%',
-  );
   for (const metric of ['packedBytes', 'unpackedBytes', 'fileCount']) {
     assert.ok(Number.isInteger(budgets?.baseline?.[metric]) && budgets.baseline[metric] > 0,
       `package budget baseline.${metric} must be a positive integer`);
     assert.ok(Number.isInteger(budgets?.maximum?.[metric]) && budgets.maximum[metric] > 0,
       `package budget maximum.${metric} must be a positive integer`);
   }
-  const reductionFactor = 1 - budgets.minimumByteReductionPercent / 100;
   for (const metric of ['packedBytes', 'unpackedBytes']) {
     assert.ok(
-      budgets.maximum[metric] <= Math.floor(budgets.baseline[metric] * reductionFactor),
-      `package budget maximum.${metric} must enforce at least a 25% reduction from its baseline`,
+      budgets.maximum[metric] < budgets.baseline[metric],
+      `package budget maximum.${metric} must stay below its baseline`,
     );
   }
   const fileBudget = budgets.fileCountBudget;

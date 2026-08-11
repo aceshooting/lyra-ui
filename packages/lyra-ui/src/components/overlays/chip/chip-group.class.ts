@@ -52,6 +52,9 @@ export interface LyraChipGroupEventMap {
  *   `[part="overflow-indicator"]` while expanded (`aria-expanded="true"`).
  *   `::part(overflow-indicator)[aria-expanded='true']` is invalid CSS, so this is the only way to
  *   retint the expanded state without re-pointing the shared `--lr-color-text` token.
+ * @cssprop [--lr-chip-group-overflow-expanded-border-style=solid] - Border style of
+ *   `[part="overflow-indicator"]` while expanded. The resting indicator intentionally stays
+ *   dashed, so this can retune the expanded state without losing that structural affordance.
  * @status stable
  * @since 4.0.0
  */

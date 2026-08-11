@@ -56,6 +56,11 @@ export interface LyraAvTrack {
  *  discrete `seek()` regardless of the window. */
 const TIME_CHANGE_THROTTLE_MS = 250;
 
+interface OwnedAnimationFrame {
+  owner: Window;
+  handle: number;
+}
+
 function positiveFinite(value: number): number {
   const finite = finiteNumber(value, 1);
   return finite > 0 ? finite : 1;
@@ -142,6 +147,14 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  * `scrollToIndex()` API without seeking the media.
  * `[part="base"]` remains a named `role="region"` in every render branch, including an unsafe
  * initial source and a later transition into the visible error state.
+ *
+ * **RTL behavior:** surrounding controls stay logical, but `[part="timeline"]` is a physical
+ * elapsed-time axis and remains left-to-right under `dir="rtl"`. ArrowLeft rewinds and ArrowRight
+ * advances in both text directions.
+ *
+ * Waveform canvas painting is visibility-gated: peak, theme, and resize changes while the player
+ * is off-screen stay dirty and coalesce into one paint on re-entry. Environments without
+ * `IntersectionObserver` retain eager painting.
  *
  * @customElement lr-av-player
  * @event ended - Relayed native media event; non-bubbling and non-composed.
@@ -316,6 +329,12 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   private nextCueToken = 0;
   private errorAnnouncementSink?: AnnouncementSink;
   private resizeWindow?: Window;
+  private waveformIntersectionObserver?: IntersectionObserver;
+  private waveformObserverWindow?: Window;
+  private waveformDetachedObserverWindow?: Window;
+  private waveformDrawFrame?: OwnedAnimationFrame;
+  private waveformVisible = true;
+  private waveformDirty = false;
 
   constructor() {
     super();
@@ -384,7 +403,10 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       this.mediaController.playbackRate = this.playbackRate;
       if (changed.get('playbackRate') !== undefined) this.emit('lr-rate-change', { rate: this.playbackRate });
     }
-    if (changed.has('peaks')) this.drawWaveform();
+    if (changed.has('peaks')) {
+      this.syncWaveformVisibilityObserver();
+      this.drawWaveform();
+    }
   }
 
   override connectedCallback(): void {
@@ -394,6 +416,8 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     // Added here (not in firstUpdated) so every reconnect, including cross-document adoption,
     // binds the window that actually owns the component and pairs with disconnectedCallback.
     this.bindResizeWindow();
+    this.syncWaveformVisibilityObserver();
+    if (this.waveformDirty) this.drawWaveform();
   }
 
   override firstUpdated(): void {
@@ -404,6 +428,13 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this.mediaController.disconnect();
     this.releaseErrorAnnouncementSink();
     this.unbindResizeWindow();
+    this.cancelWaveformDrawFrame();
+    // An old same-realm observation cannot describe where a reattached host now sits. Preserve
+    // the owner long enough for syncWaveformVisibilityObserver() to require a fresh delivery on
+    // that reconnect; a new owner realm intentionally keeps its immediate resize behavior.
+    this.waveformDetachedObserverWindow = this.waveformObserverWindow;
+    this.unbindWaveformVisibilityObserver();
+    this.waveformDirty = this.peaks.length > 0;
     super.disconnectedCallback();
   }
 
@@ -411,6 +442,8 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this.releaseErrorAnnouncementSink();
     this.syncErrorAnnouncementSink();
     this.bindResizeWindow();
+    this.syncWaveformVisibilityObserver();
+    if (this.isConnected && this.waveformDirty) this.drawWaveform();
   }
 
   private syncErrorAnnouncementSink(): void {
@@ -445,6 +478,54 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this.resizeWindow = undefined;
   }
 
+  /** Binds canvas visibility to the document currently owning this element. */
+  private syncWaveformVisibilityObserver(): void {
+    const owner = this.isConnected && this.peaks.length > 0 ? this.ownerDocument.defaultView : null;
+    if (this.waveformIntersectionObserver && this.waveformObserverWindow === owner) return;
+
+    // A same-realm reparent can move a previously visible player beneath the viewport between
+    // observer registrations. Do not repaint from that stale truth value before the new observer
+    // reports. Cross-document adoption retains the established eager owner-resize behavior, and a
+    // realm without IntersectionObserver still deliberately falls back to eager drawing below.
+    const needsFreshSameRealmVisibility = owner !== null && this.waveformDetachedObserverWindow === owner;
+    if (owner !== null) this.waveformDetachedObserverWindow = undefined;
+    this.cancelWaveformDrawFrame();
+    this.unbindWaveformVisibilityObserver();
+    if (!owner) return;
+    const IntersectionObserverCtor = owner.IntersectionObserver;
+    if (!IntersectionObserverCtor) {
+      this.waveformVisible = true;
+      return;
+    }
+    if (needsFreshSameRealmVisibility) this.waveformVisible = false;
+    this.waveformDirty = true;
+
+    let observer: IntersectionObserver;
+    observer = new IntersectionObserverCtor((entries) => {
+      if (
+        !this.isConnected ||
+        this.ownerDocument.defaultView !== owner ||
+        this.waveformIntersectionObserver !== observer
+      ) {
+        return;
+      }
+      const entry = entries.find((candidate) => candidate.target === this);
+      if (!entry || entry.isIntersecting === this.waveformVisible) return;
+      this.waveformVisible = entry.isIntersecting;
+      if (!this.waveformVisible) this.cancelWaveformDrawFrame();
+      else if (this.waveformDirty) this.scheduleWaveformDraw();
+    });
+    this.waveformObserverWindow = owner;
+    this.waveformIntersectionObserver = observer;
+    observer.observe(this);
+  }
+
+  private unbindWaveformVisibilityObserver(): void {
+    this.waveformIntersectionObserver?.disconnect();
+    this.waveformIntersectionObserver = undefined;
+    this.waveformObserverWindow = undefined;
+  }
+
   private onWindowResize = (): void => this.drawWaveform();
 
   // A stable, class-field-bound callback (not a fresh arrow-function literal per `render()` call)
@@ -456,7 +537,10 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   // `pdf-viewer.class.ts`'s per-page-memoized `pageCanvasRef()`/`textLayerContainerRef()` maps --
   // this component only ever has one canvas, so a single bound method suffices in place of a Map.
   private canvasRef = (el?: Element): void => {
-    if (el) this.drawWaveform();
+    if (el) {
+      this.syncWaveformVisibilityObserver();
+      this.drawWaveform();
+    }
   };
 
   private mediaRef = (el?: Element): void => {
@@ -689,6 +773,23 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
 
   private drawWaveform(): void {
     const canvas = this.canvasEl;
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (!this.peaks.length) {
+      this.waveformDirty = false;
+      return;
+    }
+    if (!this.isConnected || !canvas || !ownerWindow || !this.waveformVisible) {
+      this.waveformDirty = true;
+      return;
+    }
+    this.cancelWaveformDrawFrame();
+    this.waveformDirty = false;
+    this.paintWaveform();
+  }
+
+  /** Paints once the visibility gate has confirmed that waveform work is useful. */
+  private paintWaveform(): void {
+    const canvas = this.canvasEl;
     if (!canvas || !this.peaks.length) return;
     const ownerWindow = this.ownerDocument.defaultView;
     if (!ownerWindow) return;
@@ -715,6 +816,26 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       const barHeight = Math.max(1, finiteRange(peak, 0, 0, 1) * height);
       ctx.fillRect(i * barWidth, (height - barHeight) / 2, paintedBarWidth, barHeight);
     });
+  }
+
+  /** Coalesces the one deferred paint when an off-screen waveform returns to view. */
+  private scheduleWaveformDraw(): void {
+    if (this.waveformDrawFrame) return;
+    const owner = this.ownerDocument.defaultView;
+    if (!owner || !this.isConnected) return;
+    const request: OwnedAnimationFrame = { owner, handle: 0 };
+    request.handle = owner.requestAnimationFrame(() => {
+      if (this.waveformDrawFrame !== request) return;
+      this.waveformDrawFrame = undefined;
+      if (this.isConnected && this.ownerDocument.defaultView === owner) this.drawWaveform();
+    });
+    this.waveformDrawFrame = request;
+  }
+
+  private cancelWaveformDrawFrame(): void {
+    const request = this.waveformDrawFrame;
+    if (request) request.owner.cancelAnimationFrame(request.handle);
+    this.waveformDrawFrame = undefined;
   }
 
   private onHighlightActivate = (id: string, start: number): void => {

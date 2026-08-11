@@ -8753,9 +8753,11 @@ otherwise available direction.
 **CSS parts:** `base` (the `role="group"` wrapper; drops its floating-surface chrome under
 `frame="plain"`), `zoom-in`, `zoom-out`, `fit`, `lock` (omitted when `hideLock`).
 
-**Themeable custom properties:** shared tokens only — `--lr-icon-button-size` (each button's minimum
-hit area, unchanged by `frame`), `--lr-shadow`, `--lr-color-surface`, `--lr-color-border`,
-`--lr-radius`, `--lr-space-2xs`, `--lr-focus-ring-width`/`-color`/`-offset`.
+**Themeable custom properties:** `--lr-flow-controls-lock-active-color` (default
+`var(--lr-color-brand)`, pressed lock-button foreground), plus shared tokens —
+`--lr-icon-button-size` (each button's minimum hit area, unchanged by `frame`), `--lr-shadow`,
+`--lr-color-surface`, `--lr-color-border`, `--lr-radius`, `--lr-space-2xs`,
+`--lr-focus-ring-width`/`-color`/`-offset`.
 
 **Optional peer deps:** none.
 
@@ -9335,8 +9337,12 @@ collapsed. `collapse="none"` (the default) is byte-for-byte identical to pre-col
 `dividerLabel?: (index: number, panelCount: number) => string` (attribute: false) customizes the
 localized accessible label generated for each auto-inserted divider.
 
-**Events:** `lr-resize` (`detail: { sizes }`, fired on every drag movement that changes sizes and
-every keyboard step; pointer release persists the settled sizes but emits no additional event),
+**Events:** `lr-resize-request` (cancelable; `detail: { sizes }` is the proposed constrained size
+array from a divider drag or keyboard step. Call `preventDefault()` to leave `sizes` and its
+persisted layout unchanged. It is not emitted when a consumer assigns `sizes` directly),
+`lr-resize` (non-cancelable; the same `detail: { sizes }`, emitted after an accepted drag movement
+or keyboard step commits. Pointer release persists the settled sizes but emits no additional event;
+direct `sizes` assignments stay silent),
 `lr-split-collapse-change` (`detail: { state: 'wide'|'rail'|'floating' }`, fired only
 on a real `collapse`-state transition, never on every resize/render),
 `lr-split-constraints-invalid` (`detail: SplitConstraintIssueDetail`, fired once when the configured
@@ -9474,8 +9480,13 @@ multi-divider events are intentionally a different API.
   string snap point takes effect. Non-finite values fall back safely and negative values clamp to
   zero.
 
-**Events:** `lr-reposition` (no detail) — bubbling and composed, emitted whenever pointer or
-keyboard interaction changes the divider position.
+**Events:** `lr-reposition-request` (cancelable; `detail: SplitPanelRepositionDetail`, where
+`{ position, positionInPixels }` is the final snapped and constrained proposed position measured
+from the selected `primary` pane's edge. Call `preventDefault()` to leave both position properties
+unchanged. It is not emitted when a consumer assigns `position` or `positionInPixels` directly),
+`lr-reposition` (non-cancelable, no detail) — bubbling and composed, emitted after an accepted
+pointer or keyboard interaction commits the divider position; direct property assignments stay
+silent.
 
 **Slots:** `start` (logical start pane), `end` (logical end pane), `divider` (optional decorative
 custom-handle content inside the separator; its assigned subtree is inert, so the separator remains
@@ -9568,10 +9579,14 @@ position) survives the transition.
   `lr-table`'s identical `storage-key` pattern). Without a `storageKey` there is no persistence and
   storage is never touched — listen for `lr-collapse-change` and persist the state yourself.
 
-**Events:** `lr-collapse-change` (`detail: { collapsed }`, the new state), `lr-fullscreen-change`
-(`detail: { fullscreen }` — also fired when fullscreen is exited via Escape or a backdrop click, not
-just the toggle button), `lr-view-change` (`detail: { viewId }`, the new active view's `id` — fired
-when it changes via a header view-toggle click, not when a consumer sets `activeView` directly)
+**Events:** `lr-collapse-request` (cancelable; `detail: { collapsed }` is the state proposed by the
+built-in collapse toggle. Call `preventDefault()` to leave `collapsed` and any persisted state
+unchanged. It is not emitted when a consumer assigns `collapsed` directly), `lr-collapse-change`
+(non-cancelable; `detail: { collapsed }` is the accepted built-in-toggle state. It is not emitted
+when a consumer assigns `collapsed` directly), `lr-fullscreen-change` (`detail: { fullscreen }` —
+also fired when fullscreen is exited via Escape or a backdrop click, not just the toggle button),
+`lr-view-change` (`detail: { viewId }`, the new active view's `id` — fired when it changes via a
+header view-toggle click, not when a consumer sets `activeView` directly)
 
 **Slots:** default (the panel body, rendered only while `views` is empty), `icon` (optional leading
 icon in the title row), `label` (rich label content, overrides the `label` attribute), `sublabel`
@@ -11411,8 +11426,9 @@ internal shadow-DOM button; `<lr-menu>` is the sole owner of this element's `tab
 - `disabled: boolean = false` (reflected — disables selection and excludes this item from
   `<lr-menu>`'s roving-tabindex navigation entirely; the native `inert` attribute, `hidden`, and
   `aria-hidden="true"` exclude it the same way — see "Which items arrow keys reach" above)
-- `destructive: boolean = false` (reflected — tints the row with `--lr-color-danger`, for a
-  dangerous action like "Delete"; retained as a behavior-identical alias)
+- `destructive: boolean = false` (reflected — gives the row the dangerous treatment for an action
+  like "Delete"; its foreground defaults to `--lr-color-danger`; retained as a behavior-identical
+  alias)
 - `variant: LyraVariant | 'default' = 'default'` (reflected) — `danger` is the mapped dangerous
   treatment; `default` is the WA spelling of Lyra's neutral item treatment
 - `type: 'normal' | 'checkbox' = 'normal'` — `'checkbox'` (mirroring `wa-dropdown-item`'s identical
@@ -11495,13 +11511,19 @@ between the visual row's leading content, label, details, and state glyphs. `--l
 (default `var(--lr-form-control-radius)`) is its corner radius; its fallback follows the item's
 active size tier. Both are inline fallbacks rather than values declared on `:host`, so setting either
 on an item or any ancestor retunes the row without a `::part(base)` rule; `<lr-dropdown-item>`
-inherits both hooks. `--submenu-offset` (default `-2px`) is the final signed distance between a
-submenu and its parent row: negative values overlap the parent menu and positive values add
-separation. It updates live, mirrors along with the submenu under RTL, and applies to both the
-Shoelace-style nested-menu shape and Lyra's generated panel for direct mapped items. Shared tokens
-also include `--lr-radius`, `--lr-focus-ring-width`, `--lr-focus-ring-color`, `--lr-space-xs`,
-`--lr-space-s`, `--lr-color-brand-quiet`, `--lr-opacity-disabled`, `--lr-color-danger`, and
-`--lr-color-danger-quiet`.
+inherits both hooks. The same shape applies to a dangerous row's local state palette:
+`--lr-menu-item-danger-color` (default `var(--lr-color-danger)`) controls its foreground,
+`--lr-menu-item-danger-hover-bg` (default `var(--lr-color-danger-quiet)`) its hover background, and
+`--lr-menu-item-danger-active-bg` (default
+`color-mix(in oklab, var(--lr-color-danger-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`)
+its pressed background. Set those hooks on a destructive or `variant="danger"` item, or on a menu
+ancestor, to retheme only danger rows without replacing the shared danger palette. `--submenu-offset`
+(default `-2px`) is the final signed distance between a submenu and its parent row: negative values
+overlap the parent menu and positive values add separation. It updates live, mirrors along with the
+submenu under RTL, and applies to both the Shoelace-style nested-menu shape and Lyra's generated
+panel for direct mapped items. Shared tokens also include `--lr-radius`, `--lr-focus-ring-width`,
+`--lr-focus-ring-color`, `--lr-space-xs`, `--lr-space-s`, `--lr-color-brand-quiet`,
+`--lr-opacity-disabled`, `--lr-color-danger`, and `--lr-color-danger-quiet`.
 
 **Optional peer deps:** none.
 
@@ -11537,7 +11559,8 @@ interactive menu content.
 **CSS parts:** identical to `<lr-menu-item>`'s, including all compatibility aliases above.
 
 **Themeable custom properties:** identical to `<lr-menu-item>`'s, including
-`--lr-menu-item-gap`, `--lr-menu-item-radius`, and `--submenu-offset`.
+`--lr-menu-item-gap`, `--lr-menu-item-radius`, `--lr-menu-item-danger-color`,
+`--lr-menu-item-danger-hover-bg`, `--lr-menu-item-danger-active-bg`, and `--submenu-offset`.
 
 ```html
 <lr-menu>
@@ -12709,6 +12732,20 @@ transition duration and uses it for its completion fallback), `--lr-toast-paddin
 (`var(--lr-space-m)`), `--lr-toast-font-size` (`var(--lr-font-size-m)`) — both are auto-swapped per
 `size`, from a compact `2xs` up to a roomier `xl` — `--lr-toast-accent-color` (default
 `var(--lr-color-border)`, auto-swapped per `variant` to that variant's loud fill).
+
+`--lr-toast-item-gap` (default `var(--lr-space-s)`) controls the gap between the item's icon,
+message, and close action; `--lr-toast-item-radius` (default `var(--lr-radius)`) controls the item
+surface and accent-bar start corners. They are deliberately separate from `--lr-toast-gap`, which
+continues to control only the region's stack spacing.
+
+The close button's four inherited state hooks are `--lr-toast-close-button-hover-bg` (default
+`transparent`), `--lr-toast-close-button-hover-color` (default `var(--lr-color-text)`),
+`--lr-toast-close-button-active-bg` (default `color-mix(in oklab, transparent,
+var(--lr-color-mix-partner) var(--lr-color-mix-active))`), and
+`--lr-toast-close-button-active-color` (default `var(--lr-color-text)`). Each is an inline fallback
+at the relevant state, so setting one on the item or an ancestor rethemes only that close-button
+state rather than the item surface, other close states, or the region stack.
+
 The mapped names `--accent-width`, `--show-duration`, `--hide-duration`, and `--padding` alias their
 respective Lyra-prefixed properties. Setting the Lyra-prefixed form explicitly wins over its alias.
 
@@ -13409,11 +13446,14 @@ actively causing an overflow — a locally-styled pill, not an instantiated real
 
 **Themeable custom properties:** `--lr-chip-group-overflow-expanded-color` (default
 `var(--lr-color-text)`) — text color of `[part="overflow-indicator"]` while expanded
-(`aria-expanded="true"`). A state hook: an inline `var()` fallback at the point of use, never a
-`:host` declaration, so it can be set on the element *or on any ancestor*. It exists because
+(`aria-expanded="true"`). `--lr-chip-group-overflow-expanded-border-style` (default `solid`) —
+that same expanded indicator's border style; its resting border deliberately remains dashed, so a
+theme can retune the open affordance without losing the collapsed treatment. Both are state hooks:
+inline `var()` fallbacks at the point of use, never `:host` declarations, so they can be set on the
+element *or on any ancestor*. They exist because
 `::part(overflow-indicator)[aria-expanded='true']` is invalid CSS — Shadow Parts forbids an attribute
-selector after `::part()` — so retinting only the expanded state otherwise meant re-pointing the
-library-wide `--lr-color-text` token. Left unset, rendering is unchanged. Otherwise shared tokens
+selector after `::part()` — so retinting or reshaping only the expanded state otherwise meant
+re-pointing shared tokens. Left unset, rendering is unchanged. Otherwise shared tokens
 (`--lr-space-xs`, `--lr-space-s`,
 `--lr-color-border`, `--lr-color-surface`, `--lr-color-text-quiet`, `--lr-color-text`,
 `--lr-color-brand`, `--lr-focus-ring-width`, `--lr-focus-ring-color`,
@@ -14459,12 +14499,15 @@ percentage under a fractional `precision`, or 100%).
 
 **Themeable custom properties:** `--lr-rating-fill` (default `--lr-color-warning` — filled-symbol
 color), `--lr-rating-empty-color` (default `--lr-color-border` — unfilled-symbol color, also
-retained during hover preview), and `--lr-rating-size` (default `--lr-font-size-xl` — symbol size;
-each `size` step rewrites it). The mapped compatibility hooks are `--symbol-color` (inactive
-symbols), `--symbol-color-active` (filled symbols), `--symbol-size` (symbol size), and
-`--symbol-spacing` (the gap around symbols). The Lyra-prefixed color and size names win if both a
-Lyra property and its compatibility alias are set. `--symbol-size` otherwise feeds the active
-`size` step, while `--symbol-spacing` defaults to `--lr-space-xs`.
+retained during hover preview), `--lr-rating-active-color` (default: the existing active mix of the
+empty-symbol color — pressed-symbol color only), `--lr-rating-size` (default `--lr-font-size-xl` —
+symbol size; each `size` step rewrites it), and `--lr-rating-gap` (default
+`--symbol-spacing`, then `--lr-space-xs` — gap between symbols). The mapped compatibility hooks
+are `--symbol-color` (inactive symbols), `--symbol-color-active` (filled symbols), `--symbol-size`
+(symbol size), and `--symbol-spacing` (the gap around symbols). The Lyra-prefixed color, size, and
+gap names win if both a Lyra property and its compatibility alias are set. `--symbol-size` otherwise
+feeds the active `size` step, while `--symbol-spacing` remains the fallback for
+`--lr-rating-gap` before the shared `--lr-space-xs` default.
 
 Pointer selection resolves the position within the clicked star and snaps upward to `precision`
 (with the physical fraction mirrored under RTL), so half/quarter-star precision applies to pointer
@@ -14479,7 +14522,7 @@ activation area even for the degenerate `max=0`/`max=1` cases; larger ratings na
   max="5"
   precision="0.5"
   size="l"
-  style="--symbol-color-active: var(--lr-color-success); --symbol-size: var(--lr-font-size-2xl); --symbol-spacing: var(--lr-space-s)"
+  style="--lr-rating-active-color: var(--lr-color-success); --lr-rating-gap: var(--lr-space-s); --symbol-color-active: var(--lr-color-success); --symbol-size: var(--lr-font-size-2xl)"
 ></lr-rating>
 <p id="preview"></p>
 <script type="module">
@@ -16819,7 +16862,9 @@ sandbox tokens are allowlisted; if both `allow-scripts` and `allow-same-origin` 
 latter is dropped so framed script cannot escape a same-origin sandbox. `with-theme-sync` never
 widens those permissions: when the document is accessible it copies only Lyra theme-selector
 classes, theme attributes, computed `--lr-theme-*` inputs, and `color-scheme`; cross-origin
-documents remain untouched. Changing a watched host-page theme attribute syncs again.
+documents remain untouched. Turning `with-theme-sync` off restores only the iframe classes,
+attributes, and inline properties Lyra changed, preserving any later iframe-owned edits. Changing
+a watched host-page theme attribute syncs again.
 
 ```js
 import '@aceshooting/lyra-ui/components/media/zoomable-frame/zoomable-frame.js';
@@ -17757,6 +17802,10 @@ Only `region` highlights whose `rect` contains finite numeric `x`/`y`/`width`/`h
 nonnegative dimensions are rendered; malformed rectangles are omitted rather than reaching inline
 styles or anchor hit testing.
 
+**RTL behavior:** the raster and annotation geometry use physical image coordinates. In annotation
+mode, ArrowLeft/ArrowRight decrease/increase a draft's `x` coordinate and their Shift variants
+decrease/increase its width in both text directions; the surrounding toolbar remains logical.
+
 **Themeable custom properties:** `--lr-image-viewer-annotate-active-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-image-viewer-annotate-active-border` (default
 `var(--lr-color-brand)`) — the background and border of `[part='annotate-toggle']` while annotation
@@ -17817,6 +17866,11 @@ Runtime numeric input is normalized before it reaches media, canvas, or `Intl`: 
 and waveform peaks are clamped to their valid ranges; non-finite native duration/current time
 cannot leak into state or events. `rates` keeps only unique finite values in the supported
 `0.0625..16` range, while always including the normalized current `playbackRate`.
+
+**Waveform lifecycle:** with `peaks`, waveform canvas painting is gated by player visibility when
+`IntersectionObserver` is available. Peak, theme, and resize changes while the player is
+off-screen coalesce into one paint on re-entry; environments without that API retain eager
+painting.
 
 **Methods:** `play(): Promise<void>` proxies the native media element and preserves its native
 promise/rejection (before the media mounts it returns an already-resolved promise). `pause()` and
@@ -17891,6 +17945,10 @@ and `--lr-av-player-cue-active-match-color` (default `var(--lr-color-warning)`) 
 the `cue-active-match` row, leaving the other matches' dashed outline on the shared warning token.
 Both are inline `var()` fallbacks at the point of use rather than `:host` declarations, so either
 can be set on the element or on any ancestor.
+
+**RTL behavior:** surrounding controls follow the inherited direction, but the elapsed-media axis
+on `[part='timeline']` stays physical left-to-right. ArrowLeft rewinds and ArrowRight advances in
+both LTR and RTL.
 
 ## `lr-video`
 
@@ -21390,10 +21448,12 @@ emitting `lr-change`.
 
 **Exported types:**
 
-- `LyraModelCatalogEntry { id: string; label: string }` — one catalog row.
+- `LyraModelCatalogEntry { id: string; label: string; icon?: string }` — one catalog row. An
+  optional literal `icon` (for example, an emoji) renders decoratively before `label`; it does not
+  change the option's accessible name.
 - `LyraModelCatalog = string[] | LyraModelCatalogEntry[]` — either every entry is a plain string (used
-  as both id and label) or every entry is a full `{ id, label }` row; the two shapes are not meant to be
-  mixed within one array.
+  as both id and label) or every entry is a full `{ id, label, icon? }` row; the two shapes are not
+  meant to be mixed within one array.
 
 **Properties:**
 
@@ -21534,8 +21594,9 @@ constraint validation — its own `disabled`, or an ancestor `<fieldset disabled
 `<button role="combobox">`, also its positioning anchor), `combobox` (free-text mode's input
 container, also its positioning anchor), `combobox-input` (the free-text `<input>`),
 `provider-badge` (the optional leading `provider` label), `listbox` (the options popover, shared by
-both modes), `option`, `option-label`, `option-badge` (the "not in catalog" badge on a synthetic
-stale-value row), `empty` (the no-matching-models message), `expand-icon` (the dropdown chevron, present in both modes), `hint` (the hint
+both modes), `option`, `option-icon` (an object-shaped catalog row's optional decorative leading
+icon), `option-label`, `option-badge` (the "not in catalog" badge on a synthetic stale-value row),
+`empty` (the no-matching-models message), `expand-icon` (the dropdown chevron, present in both modes), `hint` (the hint
 message), `error` (the error message)
 
 **Themeable custom properties:** `--lr-model-select-trigger-padding` (default
@@ -21577,7 +21638,7 @@ shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-
 <lr-model-select
   provider="openai"
   .catalog=${[
-    { id: 'gpt-4o', label: 'GPT-4o' },
+    { id: 'gpt-4o', label: 'GPT-4o', icon: '✦' },
     { id: 'gpt-4o-mini', label: 'GPT-4o mini' },
   ]}
   value="gpt-4o"
@@ -21591,8 +21652,9 @@ shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-
 
 **Known gotchas:**
 
-- `catalog` must be homogeneous — an array of plain strings, or an array of `{ id, label }` objects, not
-  a mix; `LyraModelCatalog` is a union of two array _types_, not an array of a union item type.
+- `catalog` must be homogeneous — an array of plain strings, or an array of `{ id, label, icon? }`
+  objects, not a mix; `LyraModelCatalog` is a union of two array _types_, not an array of a union
+  item type.
 - The synthetic "not in catalog" row only ever appears when `catalog` is non-empty and `value` isn't one
   of its ids — with no `catalog` at all, there's no catalog list to diff `value` against, so no badge.
 - `value`/form-association here is hand-rolled via `attachInternals()` directly, not the shared
@@ -22360,9 +22422,11 @@ setting it to `0` removes the deadline.
 **Methods:** `start()`, `stop()`, and `cancel()` drive the capture lifecycle imperatively (mirroring
 the pointer/keyboard gestures).
 
-**Slots:** `icon` (replaces the default mic glyph) and `recording-icon` (replaces the default
-recording-state pulse glyph). Both are decorative inside the named trigger: their flattened content
-is inert and hidden from accessibility APIs, so do not place a second interactive control there.
+**Slots:** `microphone-icon` is the canonical replacement for the default mic glyph and takes
+precedence when both it and the established `icon` alias have content. `icon` remains the fallback
+mic-glyph alias. `recording-icon` replaces the default recording-state pulse glyph. All three are
+decorative inside the named trigger: their flattened content is inert and hidden from accessibility
+APIs, so do not place a second interactive control there.
 
 **Events:** `lr-record-start` (`detail: { stream: MediaStream }`), `lr-record-chunk` (`detail: { blob:
 Blob }`, only when `timeslice-ms > 0`), `lr-record-stop` (`detail: { blob: Blob; durationMs: number
@@ -22377,13 +22441,16 @@ Blob }`, only when `timeslice-ms > 0`), `lr-record-stop` (`detail: { blob: Blob;
 **Themeable custom properties:** `--lr-push-to-talk-size` (default `var(--lr-size-3rem)`) — the
 trigger button's preferred inline and block size; the shared `--lr-icon-button-size` remains its
 minimum hit-area floor even when this value is smaller. `--lr-push-to-talk-recording-color` (default
-`var(--lr-color-danger)`) — the border and text color of `[part='trigger']` while `state` is
-`recording`; it recolors only the recording treatment and leaves every other danger-toned surface on
-the page untouched. Like the library's other state hooks it is an inline `var()` fallback at the
-point of use rather than a `:host` declaration, so it can be set on the element or on any ancestor —
-`::part(trigger)[data-state='recording']` is invalid CSS (Shadow Parts forbids an attribute selector
-after `::part()`), so re-pointing the shared `--lr-color-danger` token was previously the only way,
-and it repainted every other danger surface with it.
+`var(--lr-color-danger)`) remains the established aggregate fallback for the recording trigger's
+border and foreground and the pulse-ring border. Retune those independently with
+`--lr-push-to-talk-trigger-recording-border-color`,
+`--lr-push-to-talk-trigger-recording-color`, and
+`--lr-push-to-talk-pulse-recording-border-color`, each defaulting through
+`var(--lr-push-to-talk-recording-color, var(--lr-color-danger))`. All four are inline `var()`
+fallbacks at the point of use rather than `:host` declarations, so each can be set on the element or
+on an ancestor without repainting every other danger-toned surface. `::part(trigger)[data-state='recording']`
+is invalid CSS (Shadow Parts forbids an attribute selector after `::part()`), which is why these
+recording-state hooks exist.
 
 **Additional API surface:**
 
@@ -23323,10 +23390,15 @@ are no-ops before the textarea has rendered.
 (`{ id, name, mimeType, src }`). Child events are stopped and re-emitted from
 `lr-prompt-input`; all composed interactions are suppressed while `disabled`.
 
-**Slots:** `controls`, `leading`, `chips`, `trailing`, `footer`.
+**Slots:** `controls`; `start` (the canonical attachment-control content before the textarea) and
+`leading` (the established alias); `chips`; `end` (the canonical custom send/stop action) and
+`trailing` (the established alias); and `footer`. Either `start` or `leading` replaces the default
+attachment trigger, and they may coexist. Either `end` or `trailing` replaces the built-in composer
+action, and they may coexist.
 
 **CSS parts:** `base`, `controls`, `sources`, `sources-summary`, `source-picker`, `queue`,
-`composer`, `leading`, `chips`, `footer`.
+`composer`, `leading` (the `start`/`leading` attachment controls, or the default attachment trigger
+when both slots are empty), `chips`, `footer`.
 
 **Optional peer deps:** none of its own.
 
@@ -24251,7 +24323,9 @@ wrapper aliases, so either name survives the nested shadow boundary; `edit-butto
 `var(--lr-color-overlay)` — the backdrop scrim color, the same shared token `<lr-dialog>` and
 `<lr-tool-select-dialog>` read), `--lr-tool-approval-dialog-mono-font` (default
 `var(--lr-font-mono)`, the library's shared monospace stack — used by both `tool-name` and the
-raw-JSON editor), plus shared tokens
+raw-JSON editor), and `--lr-tool-approval-dialog-invalid-border-color` (default
+`var(--lr-color-danger)` — border color of the invalid raw-JSON editor, independently retunable
+without changing error text or other danger-coloured surfaces), plus shared tokens
 `--lr-space-xs/-s/-m/-l`, `--lr-color-surface`, `--lr-color-border`, `--lr-radius`,
 `--lr-shadow`, `--lr-color-brand`, `--lr-color-on-brand`, `--lr-color-danger`,
 `--lr-color-text`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
@@ -24281,6 +24355,11 @@ entirely and returns to the read-only view of the *original* `args` — there is
 step independent of Approve itself. Both `editing` and any in-progress draft reset back to the
 read-only view every time the dialog transitions from closed to open, so a reused instance never
 leaks one proposal's half-finished edit into the next.
+
+The raw-JSON editor deliberately fixes native `resize` to `vertical`, so a user can make a long
+draft taller without changing the dialog's constrained inline size. This focused approval flow has
+no generic resize property or auto-grow mode; compose a dedicated editor around the approval UI
+when either behavior is required.
 
 The visible JSON error remains ordinary descriptive text. A transition from a valid draft into
 invalid JSON is additionally appended once to the shared assertive light-DOM announcement sink;
@@ -24438,8 +24517,11 @@ shared part name across both the text and number inputs, and deliberately *not* 
 composed components with their own part surfaces rather than raw natives. It is purely an additive
 external theming hook: the internal `.control` class the stylesheet targets is unchanged.
 
-**Themeable custom properties:** no component-specific custom properties; shared tokens only —
-`--lr-space-l/-xs/-s`, `--lr-color-border`, `--lr-radius`, `--lr-color-surface`,
+**Themeable custom properties:** `--lr-tool-param-form-invalid-border-color` (default
+`var(--lr-color-danger)`) — border color of an invalid generated native text or number input.
+This component-scoped indirection retints invalid borders without changing error text, required
+markers, or other danger-coloured surfaces. Shared tokens remain available for the rest of the
+form: `--lr-space-l/-xs/-s`, `--lr-color-border`, `--lr-radius`, `--lr-color-surface`,
 `--lr-color-danger`, `--lr-color-text-quiet`, `--lr-focus-ring-width/-color/-offset`,
 `--lr-opacity-disabled`.
 
@@ -24768,6 +24850,9 @@ icon spin animation duration/timing; `--lr-task-list-compact-header-padding` (de
 `--lr-task-list-compact-header-gap` (default `var(--lr-space-2xs)`) — gap between `[part="header"]`'s
 label/summary/toggle while `compact`, one step tighter than the header's uncompacted
 `--lr-space-xs`, so `compact` tightens the header's *interior* spacing and not just its padding;
+`--lr-task-list-compact-header-font-size` (default `var(--lr-font-size-sm)`) — `[part="header"]`
+font size while `compact`, completing the compact header's typography alongside its padding and
+gap;
 `--lr-task-list-compact-gap` (default `var(--lr-space-2xs)`) — gap between `[part="body"]`'s item
 rows while `compact`; `--lr-task-list-compact-body-padding` (default `var(--lr-space-2xs)
 var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding while `compact`;
@@ -24987,7 +25072,9 @@ sets no literal `icon`), `variant-dot-neutral`/`variant-dot-brand`/`variant-dot-
 part is reachable in both rendering paths, virtualized or not.
 
 **Themeable custom properties:** `--lr-activity-feed-max-height` (default `16rem`) — cap on how
-tall the expanded body grows before it scrolls internally.
+tall the expanded body grows before it scrolls internally; and
+`--lr-activity-feed-live-status-color` (default `var(--lr-color-brand)`) — background color of
+`status-dot` while `mode="live"`, independently retunable without changing other brand surfaces.
 
 **Known gotchas:**
 - The variant dot's color is selected by its *part name*, not by `[data-variant]`: `::part()` cannot
@@ -25864,6 +25951,10 @@ studio emits a `blur` and then a `focus`.
 `message-content`, `message-actions`, `move-message-up`, `move-message-down`, `remove-message`,
 `add-message`, `variables`, `variable`, `versions`, `version`, `preview`, `save`, `run`.
 
+Each `message-content` textarea deliberately keeps native vertical resizing. Prompt Studio exposes
+neither a configurable `resize` surface nor auto-grow behavior; use a dedicated editor when either
+is required.
+
 Each message's role select and content editor has a localized contextual accessible name containing
 its one-based message index and purpose (plus the current role for content), so repeated controls do
 not collapse to indistinguishable generic names.
@@ -26694,8 +26785,10 @@ fired after every toggle including select-all).
 
 **CSS parts:** `base`, `search` (the built-in filter `lr-input`, only when `searchable`),
 `select-all` (only when `showSelectAll`), `summary` ("{selected} of {total} selected"), `tree`
-(`role="tree"`), `item` (`role="treeitem"`), `disclosure` (a folder row's pointer-only
-expand/collapse indicator; the surrounding treeitem owns keyboard expansion),
+(`role="tree"`), `item` (`role="treeitem"`; selection appears only through tri-state
+`aria-checked` — `"true"`, `"false"`, or `"mixed"` — and intentionally has no duplicate
+`aria-selected` state), `disclosure` (a folder row's pointer-only expand/collapse indicator; the
+surrounding treeitem owns keyboard expansion),
 `checkbox` (tri-state glyph), `icon` (the `lr-file-icon` type badge), `label`, `empty` (`noData`
 when `sources` is empty, `noMatches` when a filter empties the tree).
 

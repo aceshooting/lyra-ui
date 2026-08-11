@@ -395,6 +395,33 @@ describe('annotation', () => {
     expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
   });
 
+  it('keeps annotation ArrowLeft/ArrowRight physical under RTL', async () => {
+    const el = (await fixture(html`<lr-image-viewer dir="rtl" src=${PNG_SRC} annotatable></lr-image-viewer>`)) as LyraImageViewer;
+    const viewport = el.shadowRoot!.querySelector('[part="image-wrapper"]') as HTMLElement;
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await el.updateComplete;
+
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    await el.updateComplete;
+    let box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
+    expect(box.style.left).to.equal('35.5%');
+
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
+    expect(box.style.left).to.equal('37.5%');
+
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', shiftKey: true, bubbles: true }));
+    await el.updateComplete;
+    box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
+    expect(box.style.width).to.equal('23%');
+
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', shiftKey: true, bubbles: true }));
+    await el.updateComplete;
+    box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
+    expect(box.style.width).to.equal('25%');
+  });
+
   it('resizes with Shift+arrow keys and cancels on Escape without emitting', async () => {
     const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC} annotatable></lr-image-viewer>`)) as LyraImageViewer;
     const viewport = el.shadowRoot!.querySelector('[part="image-wrapper"]') as HTMLElement;

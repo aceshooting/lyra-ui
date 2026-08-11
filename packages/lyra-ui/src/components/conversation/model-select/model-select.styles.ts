@@ -231,6 +231,10 @@ export const styles = css`
     color: var(--lr-model-select-option-selected-color, var(--lr-color-brand));
     font-weight: var(--lr-model-select-option-selected-font-weight, var(--lr-font-weight-semibold));
   }
+  [part='option-icon'] {
+    flex: 0 0 auto;
+    line-height: var(--lr-line-height-1-4);
+  }
   [part='option-label'] {
     flex: 1 1 auto;
     min-inline-size: 0;

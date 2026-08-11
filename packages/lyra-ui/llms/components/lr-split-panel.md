@@ -46,8 +46,13 @@ multi-divider events are intentionally a different API.
   string snap point takes effect. Non-finite values fall back safely and negative values clamp to
   zero.
 
-**Events:** `lr-reposition` (no detail) — bubbling and composed, emitted whenever pointer or
-keyboard interaction changes the divider position.
+**Events:** `lr-reposition-request` (cancelable; `detail: SplitPanelRepositionDetail`, where
+`{ position, positionInPixels }` is the final snapped and constrained proposed position measured
+from the selected `primary` pane's edge. Call `preventDefault()` to leave both position properties
+unchanged. It is not emitted when a consumer assigns `position` or `positionInPixels` directly),
+`lr-reposition` (non-cancelable, no detail) — bubbling and composed, emitted after an accepted
+pointer or keyboard interaction commits the divider position; direct property assignments stay
+silent.
 
 **Slots:** `start` (logical start pane), `end` (logical end pane), `divider` (optional decorative
 custom-handle content inside the separator; its assigned subtree is inert, so the separator remains

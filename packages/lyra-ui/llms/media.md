@@ -696,7 +696,9 @@ sandbox tokens are allowlisted; if both `allow-scripts` and `allow-same-origin` 
 latter is dropped so framed script cannot escape a same-origin sandbox. `with-theme-sync` never
 widens those permissions: when the document is accessible it copies only Lyra theme-selector
 classes, theme attributes, computed `--lr-theme-*` inputs, and `color-scheme`; cross-origin
-documents remain untouched. Changing a watched host-page theme attribute syncs again.
+documents remain untouched. Turning `with-theme-sync` off restores only the iframe classes,
+attributes, and inline properties Lyra changed, preserving any later iframe-owned edits. Changing
+a watched host-page theme attribute syncs again.
 
 ```js
 import '@aceshooting/lyra-ui/components/media/zoomable-frame/zoomable-frame.js';
@@ -1634,6 +1636,10 @@ Only `region` highlights whose `rect` contains finite numeric `x`/`y`/`width`/`h
 nonnegative dimensions are rendered; malformed rectangles are omitted rather than reaching inline
 styles or anchor hit testing.
 
+**RTL behavior:** the raster and annotation geometry use physical image coordinates. In annotation
+mode, ArrowLeft/ArrowRight decrease/increase a draft's `x` coordinate and their Shift variants
+decrease/increase its width in both text directions; the surrounding toolbar remains logical.
+
 **Themeable custom properties:** `--lr-image-viewer-annotate-active-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-image-viewer-annotate-active-border` (default
 `var(--lr-color-brand)`) — the background and border of `[part='annotate-toggle']` while annotation
@@ -1694,6 +1700,11 @@ Runtime numeric input is normalized before it reaches media, canvas, or `Intl`: 
 and waveform peaks are clamped to their valid ranges; non-finite native duration/current time
 cannot leak into state or events. `rates` keeps only unique finite values in the supported
 `0.0625..16` range, while always including the normalized current `playbackRate`.
+
+**Waveform lifecycle:** with `peaks`, waveform canvas painting is gated by player visibility when
+`IntersectionObserver` is available. Peak, theme, and resize changes while the player is
+off-screen coalesce into one paint on re-entry; environments without that API retain eager
+painting.
 
 **Methods:** `play(): Promise<void>` proxies the native media element and preserves its native
 promise/rejection (before the media mounts it returns an already-resolved promise). `pause()` and
@@ -1768,6 +1779,10 @@ and `--lr-av-player-cue-active-match-color` (default `var(--lr-color-warning)`) 
 the `cue-active-match` row, leaving the other matches' dashed outline on the shared warning token.
 Both are inline `var()` fallbacks at the point of use rather than `:host` declarations, so either
 can be set on the element or on any ancestor.
+
+**RTL behavior:** surrounding controls follow the inherited direction, but the elapsed-media axis
+on `[part='timeline']` stays physical left-to-right. ArrowLeft rewinds and ArrowRight advances in
+both LTR and RTL.
 
 ## `lr-video`
 

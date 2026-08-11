@@ -434,6 +434,7 @@ export type LyraActivityFeedVueProps = LyraVueCustomElement<
   LyraActivityFeedEventMap,
   | 'lr-follow-change'
   | 'lr-toggle',
+  | '--lr-activity-feed-live-status-color'
   | '--lr-activity-feed-max-height',
   {
     'show-timestamps'?: LyraActivityFeed['showTimestamps'];
@@ -1913,6 +1914,7 @@ export type LyraChipGroupVueProps = LyraVueCustomElement<
   | 'strings',
   LyraChipGroupEventMap,
   | 'lr-overflow-toggle',
+  | '--lr-chip-group-overflow-expanded-border-style'
   | '--lr-chip-group-overflow-expanded-color',
   {
     'max-visible'?: LyraChipGroup['maxVisible'];
@@ -3415,6 +3417,9 @@ export type LyraDropdownItemVueProps = LyraVueCustomElement<
   | 'lr-menu-item-change'
   | 'lr-menu-item-select'
   | 'lr-menu-item-state-change',
+  | '--lr-menu-item-danger-active-bg'
+  | '--lr-menu-item-danger-color'
+  | '--lr-menu-item-danger-hover-bg'
   | '--lr-menu-item-gap'
   | '--lr-menu-item-radius'
   | '--submenu-offset',
@@ -3931,7 +3936,7 @@ export type LyraFlowControlsVueProps = LyraVueCustomElement<
   | 'strings',
   {},
 never,
-never,
+  | '--lr-flow-controls-lock-active-color',
   {
     'hide-lock'?: LyraFlowControls['hideLock'];
   }
@@ -5485,6 +5490,9 @@ export type LyraMenuItemVueProps = LyraVueCustomElement<
   | 'lr-menu-item-change'
   | 'lr-menu-item-select'
   | 'lr-menu-item-state-change',
+  | '--lr-menu-item-danger-active-bg'
+  | '--lr-menu-item-danger-color'
+  | '--lr-menu-item-danger-hover-bg'
   | '--lr-menu-item-gap'
   | '--lr-menu-item-radius'
   | '--submenu-offset',
@@ -6895,8 +6903,11 @@ export type LyraPushToTalkVueProps = LyraVueCustomElement<
   | 'lr-record-start'
   | 'lr-record-stop'
   | 'lr-state-change',
+  | '--lr-push-to-talk-pulse-recording-border-color'
   | '--lr-push-to-talk-recording-color'
-  | '--lr-push-to-talk-size',
+  | '--lr-push-to-talk-size'
+  | '--lr-push-to-talk-trigger-recording-border-color'
+  | '--lr-push-to-talk-trigger-recording-color',
   {
     'device-id'?: LyraPushToTalk['deviceId'];
     'level-events'?: LyraPushToTalk['levelEvents'];
@@ -7280,8 +7291,10 @@ export type LyraRatingVueProps = LyraVueCustomElement<
   | 'lr-focus'
   | 'lr-hover'
   | 'lr-invalid',
+  | '--lr-rating-active-color'
   | '--lr-rating-empty-color'
   | '--lr-rating-fill'
+  | '--lr-rating-gap'
   | '--lr-rating-size'
   | '--symbol-color'
   | '--symbol-color-active'
@@ -8146,6 +8159,7 @@ export type LyraSplitVueProps = LyraVueCustomElement<
   | 'strings',
   LyraSplitEventMap,
   | 'lr-resize'
+  | 'lr-resize-request'
   | 'lr-split-collapse-change'
   | 'lr-split-constraints-invalid'
   | 'lr-split-orientation-change',
@@ -8177,7 +8191,8 @@ export type LyraSplitPanelVueProps = LyraVueCustomElement<
   | 'strings'
   | 'vertical',
   LyraSplitPanelEventMap,
-  | 'lr-reposition',
+  | 'lr-reposition'
+  | 'lr-reposition-request',
   | '--divider-hit-area'
   | '--divider-width'
   | '--lr-split-panel-divider-hit-area'
@@ -8695,6 +8710,7 @@ export type LyraTaskListVueProps = LyraVueCustomElement<
   | 'lr-toggle',
   | '--lr-task-list-compact-body-padding'
   | '--lr-task-list-compact-gap'
+  | '--lr-task-list-compact-header-font-size'
   | '--lr-task-list-compact-header-gap'
   | '--lr-task-list-compact-header-padding'
   | '--lr-task-list-error-color'
@@ -9120,8 +9136,14 @@ export type LyraToastItemVueProps = LyraVueCustomElement<
   | '--hide-duration'
   | '--lr-toast-accent-color'
   | '--lr-toast-accent-width'
+  | '--lr-toast-close-button-active-bg'
+  | '--lr-toast-close-button-active-color'
+  | '--lr-toast-close-button-hover-bg'
+  | '--lr-toast-close-button-hover-color'
   | '--lr-toast-font-size'
   | '--lr-toast-hide-duration'
+  | '--lr-toast-item-gap'
+  | '--lr-toast-item-radius'
   | '--lr-toast-padding'
   | '--lr-toast-show-duration'
   | '--padding'
@@ -9222,6 +9244,7 @@ export type LyraToolApprovalDialogVueProps = LyraVueCustomElement<
   | 'lr-approve'
   | 'lr-close'
   | 'lr-deny',
+  | '--lr-tool-approval-dialog-invalid-border-color'
   | '--lr-tool-approval-dialog-mono-font'
   | '--lr-tool-approval-dialog-overlay-color',
   {
@@ -9276,7 +9299,8 @@ export type LyraToolParamFormVueProps = LyraVueCustomElement<
   | 'lr-validity-change',
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
-  | '--lr-form-control-required-offset',
+  | '--lr-form-control-required-offset'
+  | '--lr-tool-param-form-invalid-border-color',
   {
     'custom-error'?: LyraToolParamForm['customError'];
   }
@@ -9826,6 +9850,7 @@ export type LyraWidgetVueProps = LyraVueCustomElement<
   | 'views',
   LyraWidgetEventMap,
   | 'lr-collapse-change'
+  | 'lr-collapse-request'
   | 'lr-fullscreen-change'
   | 'lr-view-change',
   | '--lr-widget-backdrop-inset'

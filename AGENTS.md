@@ -27,6 +27,12 @@ several Web Awesome **Pro** components plus original extras. Positioning, non-ne
 - **Non-goals:** not a WA fork; no `wa-` prefix or WA trademark/branding; no React wrappers
   (stack is unifying on Lit; custom elements work in React 19 anyway).
 
+## Workspace hygiene
+
+- Create temporary Git worktrees only under `/tmp/` (for example, with `mktemp -d`); never
+  create them as sibling directories of this repository. Keep the primary checkout cleanly
+  identifiable and remove temporary worktrees when their work has been integrated.
+
 ## Monorepo layout
 
 pnpm workspace (`pnpm-workspace.yaml`: `packages/*`), Node ≥ 20, `pnpm@11.20.0`.

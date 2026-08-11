@@ -265,6 +265,123 @@ it("resizes via keyboard on a divider and emits lr-resize", async () => {
   expect(detail!.sizes[0]).to.equal(el.sizes[0]);
 });
 
+it("emits a cancelable resize request before the committed event and keeps direct sizes assignments silent", async () => {
+  const el = (await fixture(
+    html`<lr-split><div>A</div><div>B</div></lr-split>`
+  )) as LyraSplit;
+  await elementUpdated(el);
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  const before = [...el.sizes];
+  let requests = 0;
+  let committed = 0;
+  let request:
+    | { sizes: number[]; cancelable: boolean; sizesAtDispatch: number[] }
+    | undefined;
+  let resize:
+    | { sizes: number[]; cancelable: boolean; sizesAtDispatch: number[] }
+    | undefined;
+
+  el.addEventListener("lr-resize-request", (event) => {
+    const requestEvent = event as CustomEvent<{ sizes: number[] }>;
+    requests += 1;
+    request = {
+      sizes: [...requestEvent.detail.sizes],
+      cancelable: requestEvent.cancelable,
+      sizesAtDispatch: [...el.sizes],
+    };
+  });
+  el.addEventListener("lr-resize", (event) => {
+    const resizeEvent = event as CustomEvent<{ sizes: number[] }>;
+    committed += 1;
+    resize = {
+      sizes: [...resizeEvent.detail.sizes],
+      cancelable: resizeEvent.cancelable,
+      sizesAtDispatch: [...el.sizes],
+    };
+  });
+
+  divider.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
+  );
+  await elementUpdated(el);
+
+  expect(request).to.deep.equal({
+    sizes: [...el.sizes],
+    cancelable: true,
+    sizesAtDispatch: before,
+  });
+  expect(resize).to.deep.equal({
+    sizes: [...el.sizes],
+    cancelable: false,
+    sizesAtDispatch: [...el.sizes],
+  });
+
+  el.sizes = [40, 60];
+  await elementUpdated(el);
+  expect(requests).to.equal(1);
+  expect(committed).to.equal(1);
+});
+
+it("lets listeners veto proposed pointer and keyboard resizes without committing or persisting", async () => {
+  const storageKey = `split-vetoed-resize-${Math.random()}`;
+  const fullKey = `lr-split:${storageKey}:2`;
+  localStorage.removeItem(fullKey);
+  const el = (await fixture(
+    html`<lr-split storage-key=${storageKey}><div>A</div><div>B</div></lr-split>`
+  )) as LyraSplit;
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  mockWidth(base, 200);
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  divider.setPointerCapture = () => {};
+  const before = [...el.sizes];
+  const requests: Array<{ sizes: number[]; cancelable: boolean; sizesAtDispatch: number[] }> = [];
+  let committed = 0;
+  const veto = (event: Event): void => {
+    const request = event as CustomEvent<{ sizes: number[] }>;
+    requests.push({
+      sizes: [...request.detail.sizes],
+      cancelable: request.cancelable,
+      sizesAtDispatch: [...el.sizes],
+    });
+    request.preventDefault();
+  };
+  const countCommitted = (): void => {
+    committed += 1;
+  };
+  el.addEventListener("lr-resize-request", veto);
+  el.addEventListener("lr-resize", countCommitted);
+
+  try {
+    pointerDown(divider, 201, 100);
+    pointerMove(201, 140);
+    const keydown = new KeyboardEvent("keydown", {
+      key: "ArrowRight",
+      bubbles: true,
+      cancelable: true,
+    });
+    divider.dispatchEvent(keydown);
+    await elementUpdated(el);
+
+    expect(keydown.defaultPrevented).to.equal(true);
+    expect(el.sizes).to.deep.equal(before);
+    expect(committed).to.equal(0);
+    expect(localStorage.getItem(fullKey)).to.equal(null);
+    expect(requests).to.deep.equal([
+      { sizes: [70, 30], cancelable: true, sizesAtDispatch: [50, 50] },
+      { sizes: [52, 48], cancelable: true, sizesAtDispatch: [50, 50] },
+    ]);
+
+    window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 201 }));
+    expect(localStorage.getItem(fullKey)).to.equal(null);
+  } finally {
+    window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 201 }));
+    el.removeEventListener("lr-resize-request", veto);
+    el.removeEventListener("lr-resize", countCommitted);
+    localStorage.removeItem(fullKey);
+  }
+});
+
 it('mirrors ArrowRight/ArrowLeft under dir="rtl", since panels reorder visually via flex order', async () => {
   const el = (await fixture(
     html`<lr-split dir="rtl"

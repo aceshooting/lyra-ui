@@ -2295,9 +2295,11 @@ otherwise available direction.
 **CSS parts:** `base` (the `role="group"` wrapper; drops its floating-surface chrome under
 `frame="plain"`), `zoom-in`, `zoom-out`, `fit`, `lock` (omitted when `hideLock`).
 
-**Themeable custom properties:** shared tokens only — `--lr-icon-button-size` (each button's minimum
-hit area, unchanged by `frame`), `--lr-shadow`, `--lr-color-surface`, `--lr-color-border`,
-`--lr-radius`, `--lr-space-2xs`, `--lr-focus-ring-width`/`-color`/`-offset`.
+**Themeable custom properties:** `--lr-flow-controls-lock-active-color` (default
+`var(--lr-color-brand)`, pressed lock-button foreground), plus shared tokens —
+`--lr-icon-button-size` (each button's minimum hit area, unchanged by `frame`), `--lr-shadow`,
+`--lr-color-surface`, `--lr-color-border`, `--lr-radius`, `--lr-space-2xs`,
+`--lr-focus-ring-width`/`-color`/`-offset`.
 
 **Optional peer deps:** none.
 

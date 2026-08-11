@@ -152,6 +152,20 @@ transition duration and uses it for its completion fallback), `--lr-toast-paddin
 (`var(--lr-space-m)`), `--lr-toast-font-size` (`var(--lr-font-size-m)`) — both are auto-swapped per
 `size`, from a compact `2xs` up to a roomier `xl` — `--lr-toast-accent-color` (default
 `var(--lr-color-border)`, auto-swapped per `variant` to that variant's loud fill).
+
+`--lr-toast-item-gap` (default `var(--lr-space-s)`) controls the gap between the item's icon,
+message, and close action; `--lr-toast-item-radius` (default `var(--lr-radius)`) controls the item
+surface and accent-bar start corners. They are deliberately separate from `--lr-toast-gap`, which
+continues to control only the region's stack spacing.
+
+The close button's four inherited state hooks are `--lr-toast-close-button-hover-bg` (default
+`transparent`), `--lr-toast-close-button-hover-color` (default `var(--lr-color-text)`),
+`--lr-toast-close-button-active-bg` (default `color-mix(in oklab, transparent,
+var(--lr-color-mix-partner) var(--lr-color-mix-active))`), and
+`--lr-toast-close-button-active-color` (default `var(--lr-color-text)`). Each is an inline fallback
+at the relevant state, so setting one on the item or an ancestor rethemes only that close-button
+state rather than the item surface, other close states, or the region stack.
+
 The mapped names `--accent-width`, `--show-duration`, `--hide-duration`, and `--padding` alias their
 respective Lyra-prefixed properties. Setting the Lyra-prefixed form explicitly wins over its alias.
 
@@ -852,11 +866,14 @@ actively causing an overflow — a locally-styled pill, not an instantiated real
 
 **Themeable custom properties:** `--lr-chip-group-overflow-expanded-color` (default
 `var(--lr-color-text)`) — text color of `[part="overflow-indicator"]` while expanded
-(`aria-expanded="true"`). A state hook: an inline `var()` fallback at the point of use, never a
-`:host` declaration, so it can be set on the element *or on any ancestor*. It exists because
+(`aria-expanded="true"`). `--lr-chip-group-overflow-expanded-border-style` (default `solid`) —
+that same expanded indicator's border style; its resting border deliberately remains dashed, so a
+theme can retune the open affordance without losing the collapsed treatment. Both are state hooks:
+inline `var()` fallbacks at the point of use, never `:host` declarations, so they can be set on the
+element *or on any ancestor*. They exist because
 `::part(overflow-indicator)[aria-expanded='true']` is invalid CSS — Shadow Parts forbids an attribute
-selector after `::part()` — so retinting only the expanded state otherwise meant re-pointing the
-library-wide `--lr-color-text` token. Left unset, rendering is unchanged. Otherwise shared tokens
+selector after `::part()` — so retinting or reshaping only the expanded state otherwise meant
+re-pointing shared tokens. Left unset, rendering is unchanged. Otherwise shared tokens
 (`--lr-space-xs`, `--lr-space-s`,
 `--lr-color-border`, `--lr-color-surface`, `--lr-color-text-quiet`, `--lr-color-text`,
 `--lr-color-brand`, `--lr-focus-ring-width`, `--lr-focus-ring-color`,
@@ -1902,12 +1919,15 @@ percentage under a fractional `precision`, or 100%).
 
 **Themeable custom properties:** `--lr-rating-fill` (default `--lr-color-warning` — filled-symbol
 color), `--lr-rating-empty-color` (default `--lr-color-border` — unfilled-symbol color, also
-retained during hover preview), and `--lr-rating-size` (default `--lr-font-size-xl` — symbol size;
-each `size` step rewrites it). The mapped compatibility hooks are `--symbol-color` (inactive
-symbols), `--symbol-color-active` (filled symbols), `--symbol-size` (symbol size), and
-`--symbol-spacing` (the gap around symbols). The Lyra-prefixed color and size names win if both a
-Lyra property and its compatibility alias are set. `--symbol-size` otherwise feeds the active
-`size` step, while `--symbol-spacing` defaults to `--lr-space-xs`.
+retained during hover preview), `--lr-rating-active-color` (default: the existing active mix of the
+empty-symbol color — pressed-symbol color only), `--lr-rating-size` (default `--lr-font-size-xl` —
+symbol size; each `size` step rewrites it), and `--lr-rating-gap` (default
+`--symbol-spacing`, then `--lr-space-xs` — gap between symbols). The mapped compatibility hooks
+are `--symbol-color` (inactive symbols), `--symbol-color-active` (filled symbols), `--symbol-size`
+(symbol size), and `--symbol-spacing` (the gap around symbols). The Lyra-prefixed color, size, and
+gap names win if both a Lyra property and its compatibility alias are set. `--symbol-size` otherwise
+feeds the active `size` step, while `--symbol-spacing` remains the fallback for
+`--lr-rating-gap` before the shared `--lr-space-xs` default.
 
 Pointer selection resolves the position within the clicked star and snaps upward to `precision`
 (with the physical fraction mirrored under RTL), so half/quarter-star precision applies to pointer
@@ -1922,7 +1942,7 @@ activation area even for the degenerate `max=0`/`max=1` cases; larger ratings na
   max="5"
   precision="0.5"
   size="l"
-  style="--symbol-color-active: var(--lr-color-success); --symbol-size: var(--lr-font-size-2xl); --symbol-spacing: var(--lr-space-s)"
+  style="--lr-rating-active-color: var(--lr-color-success); --lr-rating-gap: var(--lr-space-s); --symbol-color-active: var(--lr-color-success); --symbol-size: var(--lr-font-size-2xl)"
 ></lr-rating>
 <p id="preview"></p>
 <script type="module">

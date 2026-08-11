@@ -871,6 +871,108 @@ it("toggles collapsed on collapse-button click and emits lr-collapse-change", as
     .to.be.true;
 });
 
+it("emits a cancelable collapse request before the committed event and keeps direct assignments silent", async () => {
+  const el = (await fixture(
+    html`<lr-widget label="x" collapsible>content</lr-widget>`
+  )) as LyraWidget;
+  const button = el.shadowRoot!.querySelector(
+    '[part="collapse-button"]'
+  ) as HTMLButtonElement;
+  let requests = 0;
+  let committed = 0;
+  let request:
+    | { collapsed: boolean; cancelable: boolean; collapsedAtDispatch: boolean }
+    | undefined;
+  let change:
+    | { collapsed: boolean; cancelable: boolean; collapsedAtDispatch: boolean }
+    | undefined;
+  el.addEventListener("lr-collapse-request", (event) => {
+    const requestEvent = event as CustomEvent<{ collapsed: boolean }>;
+    requests += 1;
+    request = {
+      collapsed: requestEvent.detail.collapsed,
+      cancelable: requestEvent.cancelable,
+      collapsedAtDispatch: el.collapsed,
+    };
+  });
+  el.addEventListener("lr-collapse-change", (event) => {
+    const changeEvent = event as CustomEvent<{ collapsed: boolean }>;
+    committed += 1;
+    change = {
+      collapsed: changeEvent.detail.collapsed,
+      cancelable: changeEvent.cancelable,
+      collapsedAtDispatch: el.collapsed,
+    };
+  });
+
+  button.click();
+  await el.updateComplete;
+
+  expect(request).to.deep.equal({
+    collapsed: true,
+    cancelable: true,
+    collapsedAtDispatch: false,
+  });
+  expect(change).to.deep.equal({
+    collapsed: true,
+    cancelable: false,
+    collapsedAtDispatch: true,
+  });
+
+  el.collapsed = false;
+  await el.updateComplete;
+  expect(requests).to.equal(1);
+  expect(committed).to.equal(1);
+});
+
+it("lets listeners veto a collapse request without changing or persisting the state", async () => {
+  const storageKey = `widget-vetoed-collapse-${Math.random()}`;
+  const fullKey = `lr-widget:${storageKey}`;
+  localStorage.removeItem(fullKey);
+  const el = (await fixture(
+    html`<lr-widget label="x" collapsible storage-key=${storageKey}>content</lr-widget>`
+  )) as LyraWidget;
+  const button = el.shadowRoot!.querySelector(
+    '[part="collapse-button"]'
+  ) as HTMLButtonElement;
+  let request:
+    | { collapsed: boolean; cancelable: boolean; collapsedAtDispatch: boolean }
+    | undefined;
+  let committed = 0;
+  const veto = (event: Event): void => {
+    const requestEvent = event as CustomEvent<{ collapsed: boolean }>;
+    request = {
+      collapsed: requestEvent.detail.collapsed,
+      cancelable: requestEvent.cancelable,
+      collapsedAtDispatch: el.collapsed,
+    };
+    requestEvent.preventDefault();
+  };
+  const countCommitted = (): void => {
+    committed += 1;
+  };
+  el.addEventListener("lr-collapse-request", veto);
+  el.addEventListener("lr-collapse-change", countCommitted);
+
+  try {
+    button.click();
+    await el.updateComplete;
+
+    expect(request).to.deep.equal({
+      collapsed: true,
+      cancelable: true,
+      collapsedAtDispatch: false,
+    });
+    expect(el.collapsed).to.equal(false);
+    expect(committed).to.equal(0);
+    expect(localStorage.getItem(fullKey)).to.equal(null);
+  } finally {
+    el.removeEventListener("lr-collapse-request", veto);
+    el.removeEventListener("lr-collapse-change", countCommitted);
+    localStorage.removeItem(fullKey);
+  }
+});
+
 it("reflects the collapse-button aria-expanded and aria-label with the collapsed state", async () => {
   const el = (await fixture(
     html`<lr-widget label="x" collapsible>content</lr-widget>`

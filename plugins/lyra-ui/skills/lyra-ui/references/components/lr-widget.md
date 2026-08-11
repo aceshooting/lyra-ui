@@ -54,10 +54,14 @@ position) survives the transition.
   `lr-table`'s identical `storage-key` pattern). Without a `storageKey` there is no persistence and
   storage is never touched — listen for `lr-collapse-change` and persist the state yourself.
 
-**Events:** `lr-collapse-change` (`detail: { collapsed }`, the new state), `lr-fullscreen-change`
-(`detail: { fullscreen }` — also fired when fullscreen is exited via Escape or a backdrop click, not
-just the toggle button), `lr-view-change` (`detail: { viewId }`, the new active view's `id` — fired
-when it changes via a header view-toggle click, not when a consumer sets `activeView` directly)
+**Events:** `lr-collapse-request` (cancelable; `detail: { collapsed }` is the state proposed by the
+built-in collapse toggle. Call `preventDefault()` to leave `collapsed` and any persisted state
+unchanged. It is not emitted when a consumer assigns `collapsed` directly), `lr-collapse-change`
+(non-cancelable; `detail: { collapsed }` is the accepted built-in-toggle state. It is not emitted
+when a consumer assigns `collapsed` directly), `lr-fullscreen-change` (`detail: { fullscreen }` —
+also fired when fullscreen is exited via Escape or a backdrop click, not just the toggle button),
+`lr-view-change` (`detail: { viewId }`, the new active view's `id` — fired when it changes via a
+header view-toggle click, not when a consumer sets `activeView` directly)
 
 **Slots:** default (the panel body, rendered only while `views` is empty), `icon` (optional leading
 icon in the title row), `label` (rich label content, overrides the `label` attribute), `sublabel`

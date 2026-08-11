@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -27,10 +27,12 @@ emitting `lr-change`.
 
 **Exported types:**
 
-- `LyraModelCatalogEntry { id: string; label: string }` — one catalog row.
+- `LyraModelCatalogEntry { id: string; label: string; icon?: string }` — one catalog row. An
+  optional literal `icon` (for example, an emoji) renders decoratively before `label`; it does not
+  change the option's accessible name.
 - `LyraModelCatalog = string[] | LyraModelCatalogEntry[]` — either every entry is a plain string (used
-  as both id and label) or every entry is a full `{ id, label }` row; the two shapes are not meant to be
-  mixed within one array.
+  as both id and label) or every entry is a full `{ id, label, icon? }` row; the two shapes are not
+  meant to be mixed within one array.
 
 **Properties:**
 
@@ -171,8 +173,9 @@ constraint validation — its own `disabled`, or an ancestor `<fieldset disabled
 `<button role="combobox">`, also its positioning anchor), `combobox` (free-text mode's input
 container, also its positioning anchor), `combobox-input` (the free-text `<input>`),
 `provider-badge` (the optional leading `provider` label), `listbox` (the options popover, shared by
-both modes), `option`, `option-label`, `option-badge` (the "not in catalog" badge on a synthetic
-stale-value row), `empty` (the no-matching-models message), `expand-icon` (the dropdown chevron, present in both modes), `hint` (the hint
+both modes), `option`, `option-icon` (an object-shaped catalog row's optional decorative leading
+icon), `option-label`, `option-badge` (the "not in catalog" badge on a synthetic stale-value row),
+`empty` (the no-matching-models message), `expand-icon` (the dropdown chevron, present in both modes), `hint` (the hint
 message), `error` (the error message)
 
 **Themeable custom properties:** `--lr-model-select-trigger-padding` (default
@@ -214,7 +217,7 @@ shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-
 <lr-model-select
   provider="openai"
   .catalog=${[
-    { id: 'gpt-4o', label: 'GPT-4o' },
+    { id: 'gpt-4o', label: 'GPT-4o', icon: '✦' },
     { id: 'gpt-4o-mini', label: 'GPT-4o mini' },
   ]}
   value="gpt-4o"
@@ -228,8 +231,9 @@ shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-
 
 **Known gotchas:**
 
-- `catalog` must be homogeneous — an array of plain strings, or an array of `{ id, label }` objects, not
-  a mix; `LyraModelCatalog` is a union of two array _types_, not an array of a union item type.
+- `catalog` must be homogeneous — an array of plain strings, or an array of `{ id, label, icon? }`
+  objects, not a mix; `LyraModelCatalog` is a union of two array _types_, not an array of a union
+  item type.
 - The synthetic "not in catalog" row only ever appears when `catalog` is non-empty and `value` isn't one
   of its ids — with no `catalog` at all, there's no catalog list to diff `value` against, so no badge.
 - `value`/form-association here is hand-rolled via `attachInternals()` directly, not the shared

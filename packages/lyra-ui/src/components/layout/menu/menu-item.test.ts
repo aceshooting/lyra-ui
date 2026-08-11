@@ -95,6 +95,89 @@ describe('row chrome cssprops', () => {
   });
 });
 
+describe('danger-state cssprops', () => {
+  const base = (el: LyraMenuItem): HTMLElement =>
+    el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  it('inherits destructive foreground, hover, and pressed-fill hooks through both menu-item names without retinting ordinary rows', async () => {
+    const wrapper = (await fixture(html`
+      <div>
+        <lr-menu-item destructive value="delete">Delete</lr-menu-item>
+        <lr-menu-item variant="danger" value="archive">Archive</lr-menu-item>
+        <lr-dropdown-item variant="danger" value="remove">Remove</lr-dropdown-item>
+        <lr-menu-item value="rename">Rename</lr-menu-item>
+      </div>
+    `)) as HTMLElement;
+    const [destructive, variant, dropdown, ordinary] = Array.from(
+      wrapper.querySelectorAll<LyraMenuItem>('lr-menu-item, lr-dropdown-item'),
+    );
+    const destructiveBase = base(destructive!);
+    const variantBase = base(variant!);
+    const dropdownBase = base(dropdown!);
+    const ordinaryBase = base(ordinary!);
+    const resolveInShadow = (declaration: string, property: string): string => {
+      const probe = document.createElement('span');
+      probe.setAttribute('style', declaration);
+      destructive!.shadowRoot!.append(probe);
+      const value = getComputedStyle(probe).getPropertyValue(property);
+      probe.remove();
+      return value;
+    };
+    const centerOf = (target: HTMLElement): [number, number] => {
+      const rect = target.getBoundingClientRect();
+      expect(rect.width, 'each danger row needs rendered geometry for pointer-state coverage').to.be.greaterThan(0);
+      return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+    };
+    const destructiveCentre = centerOf(destructiveBase);
+
+    expect(getComputedStyle(destructiveBase).color).to.equal(
+      resolveInShadow('color: var(--lr-color-danger)', 'color'),
+    );
+    expect(getComputedStyle(variantBase).color).to.equal(getComputedStyle(destructiveBase).color);
+
+    try {
+      await sendMouse({ type: 'move', position: destructiveCentre });
+      expect(getComputedStyle(destructiveBase).backgroundColor).to.equal(
+        resolveInShadow('background: var(--lr-color-danger-quiet)', 'background-color'),
+      );
+      await sendMouse({ type: 'down' });
+      expect(getComputedStyle(destructiveBase).backgroundColor).to.equal(
+        resolveInShadow(
+          'background: color-mix(in oklab, var(--lr-color-danger-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+          'background-color',
+        ),
+      );
+      await sendMouse({ type: 'up' });
+
+      wrapper.style.setProperty('--lr-menu-item-danger-color', 'rgb(1, 2, 3)');
+      wrapper.style.setProperty('--lr-menu-item-danger-hover-bg', 'rgb(4, 5, 6)');
+      wrapper.style.setProperty('--lr-menu-item-danger-active-bg', 'rgb(7, 8, 9)');
+      expect(getComputedStyle(destructiveBase).color).to.equal('rgb(1, 2, 3)');
+      expect(getComputedStyle(variantBase).color).to.equal('rgb(1, 2, 3)');
+      expect(getComputedStyle(dropdownBase).color).to.equal('rgb(1, 2, 3)');
+      expect(getComputedStyle(ordinaryBase).color).to.not.equal('rgb(1, 2, 3)');
+      expect(getComputedStyle(destructiveBase).backgroundColor).to.equal('rgb(4, 5, 6)');
+
+      await sendMouse({ type: 'down' });
+      expect(getComputedStyle(destructiveBase).backgroundColor).to.equal('rgb(7, 8, 9)');
+      await sendMouse({ type: 'up' });
+
+      await sendMouse({ type: 'move', position: centerOf(dropdownBase) });
+      expect(getComputedStyle(dropdownBase).backgroundColor).to.equal('rgb(4, 5, 6)');
+      await sendMouse({ type: 'down' });
+      expect(getComputedStyle(dropdownBase).backgroundColor).to.equal('rgb(7, 8, 9)');
+      await sendMouse({ type: 'up' });
+
+      await sendMouse({ type: 'move', position: centerOf(ordinaryBase) });
+      expect(getComputedStyle(ordinaryBase).backgroundColor).to.not.equal('rgb(4, 5, 6)');
+      await sendMouse({ type: 'down' });
+      expect(getComputedStyle(ordinaryBase).backgroundColor).to.not.equal('rgb(7, 8, 9)');
+    } finally {
+      await resetMouse();
+    }
+  });
+});
+
 it('renders WA details and Shoelace prefix/suffix compatibility slots through named parts', async () => {
   const el = (await fixture(html`
     <lr-menu-item>

@@ -78,21 +78,24 @@ export const styles = css`
   }
   :host([destructive]) [part='base'],
   :host([variant='danger']) [part='base'] {
-    color: var(--lr-color-danger);
+    color: var(--lr-menu-item-danger-color, var(--lr-color-danger));
   }
   :host([destructive]) [part='base']:hover,
   :host([variant='danger']) [part='base']:hover {
-    background: var(--lr-color-danger-quiet);
+    background: var(--lr-menu-item-danger-hover-bg, var(--lr-color-danger-quiet));
   }
   /* Same step past hover as the ordinary row above, taken on the danger fill this variant hovers
      with. Ordered exactly like the :hover rules it mirrors, so the disabled/destructive precedence
      stays whatever it already was rather than diverging between the two states. */
   :host([destructive]) [part='base']:active,
   :host([variant='danger']) [part='base']:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-danger-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-menu-item-danger-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-color-danger-quiet),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
   }
   [part~='icon'] {

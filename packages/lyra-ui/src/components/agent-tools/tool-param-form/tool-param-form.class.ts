@@ -188,6 +188,8 @@ export interface LyraToolParamFormEventMap {
  * retunable without touching any other danger-coloured surface.
  * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
  * marker.
+ * @cssprop [--lr-tool-param-form-invalid-border-color=var(--lr-color-danger)] - Border color of
+ * an invalid generated native text or number input.
  * @cssstate required - The schema declares at least one required property. Requiredness is
  * per-property here (the value is an object), so this is the whole-control reading: "this form
  * demands something of the user".

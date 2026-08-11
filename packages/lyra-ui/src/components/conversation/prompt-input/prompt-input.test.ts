@@ -83,6 +83,70 @@ it('composes attachments, model, voice, sources, queue, and the chat composer', 
   expect(el.shadowRoot!.querySelectorAll('lr-prompt-queue')).to.have.lengthOf(1);
 });
 
+it('composes start/end aliases alongside legacy leading/trailing slots and restores generated fallbacks live', async () => {
+  const el = (await fixture(html`
+    <lr-prompt-input>
+      <button id="start" slot="start" type="button">Start</button>
+      <button id="leading" slot="leading" type="button">Leading</button>
+      <button id="end" slot="end" type="button">End</button>
+      <button id="trailing" slot="trailing" type="button">Trailing</button>
+    </lr-prompt-input>
+  `)) as LyraPromptInput;
+  const composer = el.shadowRoot!.querySelector('lr-chat-composer') as LyraChatComposer;
+  await composer.updateComplete;
+  const startSlot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="start"]')!;
+  const leadingSlot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="leading"]')!;
+  const endSlot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="end"]')!;
+  const trailingSlot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="trailing"]')!;
+  const composerStartSlot = composer.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="start"]')!;
+  const composerLeadingSlot = composer.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="leading"]')!;
+  const composerEndSlot = composer.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="end"]')!;
+  const composerTrailingSlot = composer.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="trailing"]')!;
+
+  expect(startSlot.assignedElements().map((item) => item.id)).to.deep.equal(['start']);
+  expect(leadingSlot.assignedElements().map((item) => item.id)).to.deep.equal(['leading']);
+  expect(endSlot.assignedElements().map((item) => item.id)).to.deep.equal(['end']);
+  expect(trailingSlot.assignedElements().map((item) => item.id)).to.deep.equal(['trailing']);
+  expect(composerStartSlot.assignedElements().map((item) => item.getAttribute('part'))).to.deep.equal(['leading']);
+  expect(composerLeadingSlot.assignedElements().map((item) => item.getAttribute('part'))).to.deep.equal(['leading']);
+  expect(composerEndSlot.assignedElements().map((item) => item.getAttribute('name'))).to.deep.equal(['end']);
+  expect(composerTrailingSlot.assignedElements().map((item) => item.getAttribute('name'))).to.deep.equal(['trailing']);
+  expect(el.shadowRoot!.querySelectorAll('lr-attachment-trigger').length).to.equal(0);
+  expect(composer.shadowRoot!.querySelectorAll('[part="action-button"]').length).to.equal(0);
+
+  let changed = oneEvent(startSlot, 'slotchange');
+  el.querySelector('#start')!.remove();
+  await changed;
+  await el.updateComplete;
+  await composer.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('lr-attachment-trigger').length).to.equal(0);
+
+  changed = oneEvent(leadingSlot, 'slotchange');
+  el.querySelector('#leading')!.remove();
+  await changed;
+  await el.updateComplete;
+  await composer.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('lr-attachment-trigger').length).to.equal(1);
+
+  changed = oneEvent(endSlot, 'slotchange');
+  const composerEndChanged = oneEvent(composerEndSlot, 'slotchange');
+  el.querySelector('#end')!.remove();
+  await changed;
+  await el.updateComplete;
+  await composerEndChanged;
+  await composer.updateComplete;
+  expect(composer.shadowRoot!.querySelectorAll('[part="action-button"]').length).to.equal(0);
+
+  changed = oneEvent(trailingSlot, 'slotchange');
+  const composerTrailingChanged = oneEvent(composerTrailingSlot, 'slotchange');
+  el.querySelector('#trailing')!.remove();
+  await changed;
+  await el.updateComplete;
+  await composerTrailingChanged;
+  await composer.updateComplete;
+  expect(composer.shadowRoot!.querySelectorAll('[part="action-button"]').length).to.equal(1);
+});
+
 it('detects mention triggers, anchors the popover to the real textarea, and inserts a selection', async () => {
   const el = (await fixture(html`<lr-prompt-input
     .mentionItems=${[

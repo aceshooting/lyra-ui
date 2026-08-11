@@ -58,7 +58,7 @@ export const styles = css`
     background: var(--lr-color-text-quiet);
   }
   :host([mode='live']) [part='status-dot'] {
-    background: var(--lr-color-brand);
+    background: var(--lr-activity-feed-live-status-color, var(--lr-color-brand));
     animation: lr-activity-feed-pulse var(--lr-transition-ambient) infinite;
   }
   [part='label'] {

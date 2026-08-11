@@ -125,6 +125,12 @@ function starSolid(): SVGTemplateResult {
  * hover preview.
  * @cssprop [--lr-rating-size=var(--lr-font-size-xl)] - Symbol size. Each `size` step rewrites it;
  * the `m` default reproduces the treatment this component had before `size` existed.
+ * @cssprop [--lr-rating-gap=var(--symbol-spacing,var(--lr-space-xs))] - Gap between symbols. It
+ * takes precedence over the `--symbol-spacing` compatibility hook while preserving that hook and
+ * the shared spacing token as fallbacks.
+ * @cssprop [--lr-rating-active-color=color-mix(in oklab, var(--lr-rating-empty-color, var(--symbol-color, var(--lr-color-border-strong))), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed-symbol color. Set it independently of
+ *   `--lr-rating-empty-color` to recolor the pressed state without changing resting or hover
+ *   symbols.
  * @cssprop [--symbol-color=var(--lr-rating-empty-color,var(--lr-color-border))] - Compatibility
  * alias for the inactive symbol color. `--lr-rating-empty-color` wins when both are set.
  * @cssprop [--symbol-color-active=var(--lr-rating-fill,var(--lr-color-warning))] - Compatibility

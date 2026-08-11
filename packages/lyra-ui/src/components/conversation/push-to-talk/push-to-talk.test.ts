@@ -244,8 +244,8 @@ it('wraps the trigger hover rule in :where() so a consumer ::part(trigger):hover
   expect(css).to.match(/:where\(\[part='trigger'\]\):hover:where\(:not\(:disabled\)\)/);
 });
 
-describe('--lr-push-to-talk-recording-color', () => {
-  it('retints both the trigger border/color and the pulse ring border together via the same cssprop (regression)', async () => {
+describe('recording-state cssprop escape hatches', () => {
+  it('keeps the aggregate recording-color hook as the fallback for every recording longhand', async () => {
     const restore = stubSuccessfulCapture();
     try {
       const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
@@ -256,16 +256,50 @@ describe('--lr-push-to-talk-recording-color', () => {
       await el.updateComplete;
 
       const btn = trigger(el);
+      const glyph = btn.querySelector('svg') as SVGElement;
       expect(getComputedStyle(btn).borderTopColor).to.equal('rgb(10, 20, 30)');
+      expect(getComputedStyle(btn).color).to.equal('rgb(10, 20, 30)');
+      expect(getComputedStyle(glyph).stroke).to.equal('rgb(10, 20, 30)');
 
       const pulse = el.shadowRoot!.querySelector('[part="pulse"]') as HTMLElement;
       expect(
         el.shadowRoot!.querySelectorAll('[part="pulse"]').length,
         'pulse must actually render while recording'
       ).to.equal(1);
-      // Pre-fix, this read the hardcoded --lr-color-danger regardless of the cssprop override,
-      // visibly disagreeing with the trigger's own recolored border above.
       expect(getComputedStyle(pulse).borderTopColor).to.equal('rgb(10, 20, 30)');
+    } finally {
+      restore();
+    }
+  });
+
+  it('independently retints the recording trigger border, glyph, and pulse border from an ancestor', async () => {
+    const restore = stubSuccessfulCapture();
+    try {
+      const wrapper = (await fixture(html`
+        <div
+          style="
+            --lr-push-to-talk-recording-color: rgb(8, 9, 10);
+            --lr-push-to-talk-trigger-recording-border-color: rgb(1, 2, 3);
+            --lr-push-to-talk-trigger-recording-color: rgb(4, 5, 6);
+            --lr-push-to-talk-pulse-recording-border-color: rgb(7, 8, 9);
+          "
+        >
+          <lr-push-to-talk></lr-push-to-talk>
+        </div>
+      `)) as HTMLElement;
+      const el = wrapper.querySelector('lr-push-to-talk') as LyraPushToTalk;
+      const startPromise = oneEvent(el, 'lr-record-start');
+      void el.start();
+      await startPromise;
+      await el.updateComplete;
+
+      const pulse = el.shadowRoot!.querySelector('[part="pulse"]') as HTMLElement;
+      const glyph = trigger(el).querySelector('svg') as SVGElement;
+      expect(el.shadowRoot!.querySelectorAll('[part="pulse"]').length).to.equal(1);
+      expect(getComputedStyle(trigger(el)).borderTopColor).to.equal('rgb(1, 2, 3)');
+      expect(getComputedStyle(trigger(el)).color).to.equal('rgb(4, 5, 6)');
+      expect(getComputedStyle(glyph).stroke).to.equal('rgb(4, 5, 6)');
+      expect(getComputedStyle(pulse).borderTopColor).to.equal('rgb(7, 8, 9)');
     } finally {
       restore();
     }
@@ -1264,15 +1298,35 @@ it('announces permission and generic recording failures via the internal live re
 
 // -- Slots --------------------------------------------------------------
 
-it('slots override the default icon and recording-icon glyphs', async () => {
+it('renders microphone-icon ahead of the legacy icon slot and falls back live', async () => {
   const el = (await fixture(html`
     <lr-push-to-talk>
-      <span slot="icon">mic</span>
-      <span slot="recording-icon">rec</span>
+      <span id="legacy-icon" slot="icon">legacy</span>
+      <span id="microphone-icon" slot="microphone-icon">microphone</span>
     </lr-push-to-talk>
   `)) as LyraPushToTalk;
-  const iconSlot = el.shadowRoot!.querySelector('[part="icon"] slot') as HTMLSlotElement;
-  expect(iconSlot.assignedElements()[0].textContent).to.equal('mic');
+  const microphoneSlot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="microphone-icon"]')!;
+  const iconSlot = microphoneSlot.querySelector<HTMLSlotElement>('slot[name="icon"]')!;
+  const canonical = el.querySelector<HTMLElement>('#microphone-icon')!;
+  const legacy = el.querySelector<HTMLElement>('#legacy-icon')!;
+
+  expect(microphoneSlot.assignedElements().map((item) => item.id)).to.deep.equal(['microphone-icon']);
+  expect(canonical.getClientRects().length).to.be.greaterThan(0);
+  expect(legacy.getClientRects().length).to.equal(0);
+
+  const changed = oneEvent(microphoneSlot, 'slotchange');
+  canonical.remove();
+  await changed;
+  await el.updateComplete;
+  expect(iconSlot.assignedElements().map((item) => item.id)).to.deep.equal(['legacy-icon']);
+  expect(legacy.getClientRects().length).to.be.greaterThan(0);
+
+  const legacyChanged = oneEvent(iconSlot, 'slotchange');
+  legacy.remove();
+  await legacyChanged;
+  await el.updateComplete;
+  expect(iconSlot.assignedElements().length).to.equal(0);
+  expect(el.shadowRoot!.querySelectorAll('[part="icon"] svg').length).to.equal(1);
 });
 
 it('keeps an undersized public size override above the shared icon-button hit floor', async () => {

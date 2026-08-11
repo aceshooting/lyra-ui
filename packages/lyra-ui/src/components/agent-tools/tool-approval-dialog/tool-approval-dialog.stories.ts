@@ -167,3 +167,42 @@ export const AsyncPendingApproval: Story = {
     </div>
   `,
 };
+
+export const RetintedInvalidEditorBorder: Story = {
+  name: 'Retinted invalid editor border',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-tool-approval-dialog-invalid-border-color` retints only an invalid raw-JSON editor border. After opening this example, choose "Show invalid editor"; returning the draft to valid JSON restores the regular `--lr-color-border`.',
+      },
+    },
+  },
+  render: () => {
+    const showInvalidEditor = async (event: Event): Promise<void> => {
+      const dialog = (event.currentTarget as HTMLElement)
+        .parentElement!
+        .querySelector('lr-tool-approval-dialog') as LyraToolApprovalDialog;
+      dialog.open = true;
+      await dialog.updateComplete;
+      const edit = dialog.shadowRoot!.querySelector<HTMLButtonElement>('[part="edit-button"]');
+      if (!edit) return;
+      edit.click();
+      await dialog.updateComplete;
+      const editor = dialog.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="args-editor"]');
+      if (!editor) return;
+      editor.value = '{ not valid json';
+      editor.dispatchEvent(new Event('input'));
+    };
+    return html`
+      <div>
+        <button @click=${showInvalidEditor}>Show invalid editor</button>
+        <lr-tool-approval-dialog
+          style="--lr-tool-approval-dialog-invalid-border-color: var(--lr-color-warning)"
+          tool-name="web_search"
+          .args=${SEARCH_ARGS}
+        ></lr-tool-approval-dialog>
+      </div>
+    `;
+  },
+};

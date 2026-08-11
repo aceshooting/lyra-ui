@@ -72,7 +72,7 @@ export const styles = css`
     border-color: var(--lr-color-brand);
   }
   input.control[aria-invalid='true'] {
-    border-color: var(--lr-color-danger);
+    border-color: var(--lr-tool-param-form-invalid-border-color, var(--lr-color-danger));
   }
   input.control:disabled {
     opacity: var(--lr-opacity-disabled);

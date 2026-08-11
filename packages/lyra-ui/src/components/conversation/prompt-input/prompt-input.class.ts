@@ -80,9 +80,15 @@ export interface LyraPromptInputEventMap {
  *
  * @customElement lr-prompt-input
  * @slot controls - Replaces the data-driven model, voice, and source controls.
- * @slot leading - Replaces the default attachment trigger.
+ * @slot start - Canonical attachment-control content rendered before the textarea. It and `leading`
+ *   may coexist; either one replaces the default attachment trigger.
+ * @slot leading - Established attachment-control alias. It and `start` may coexist; either one
+ *   replaces the default attachment trigger.
  * @slot chips - Replaces the data-driven attachment chips.
- * @slot trailing - Replaces the composer's send/stop action.
+ * @slot end - Canonical custom send/stop action. It and `trailing` may coexist; either one
+ *   replaces the built-in composer action.
+ * @slot trailing - Established custom-action alias. It and `end` may coexist; either one
+ *   replaces the built-in composer action.
  * @slot footer - Content below the composer.
  * @event lr-input - Prompt text changed. `detail: { value }`.
  * @event lr-submit - Prompt submission was requested. `detail: { value }`.
@@ -106,7 +112,8 @@ export interface LyraPromptInputEventMap {
  * @csspart source-picker - The composed source picker.
  * @csspart queue - The composed prompt queue.
  * @csspart composer - The composed chat composer.
- * @csspart leading - The composer's leading attachment control.
+ * @csspart leading - The composer's `start`/`leading` attachment controls, or its default
+ *   attachment trigger when both slots are empty.
  * @csspart chips - The attachment-chip tray.
  * @csspart footer - The footer slot.
  * @status stable
@@ -169,6 +176,10 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   @state() private activeSuggestion: ActiveSuggestion | null = null;
+  @state() private hasStartSlot = false;
+  @state() private hasLeadingSlot = false;
+  @state() private hasEndSlot = false;
+  @state() private hasTrailingSlot = false;
   @query('lr-chat-composer') private composer?: LyraChatComposer;
   @query('lr-mention-popover') private suggestionPopover?: LyraMentionPopover;
   private suggestionAnchor?: HTMLElement;
@@ -248,6 +259,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    this.seedFirstRenderState(() => this.syncAdornmentSlots());
     let invalidate = changed.has('mentionItems') || changed.has('commandItems') || changed.has('disabled');
     if (changed.has('value')) {
       const internal = this.pendingSuggestionValue === this.value;
@@ -370,6 +382,29 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     });
   }
 
+  private hasSlotted(name: string): boolean {
+    return Array.from(this.children).some((element) => element.getAttribute('slot') === name);
+  }
+
+  private syncAdornmentSlots = (): void => {
+    this.hasStartSlot = this.hasSlotted('start');
+    this.hasLeadingSlot = this.hasSlotted('leading');
+    this.hasEndSlot = this.hasSlotted('end');
+    this.hasTrailingSlot = this.hasSlotted('trailing');
+  };
+
+  private renderDefaultAttachmentTrigger(): TemplateResult {
+    return html`<lr-attachment-trigger
+      .capabilities=${this.attachmentCapabilities}
+      .disabled=${this.disabled}
+      @lr-pick=${this.onPick}
+      @lr-camera-request=${(event: CustomEvent<undefined>) =>
+        this.reemit(event, 'lr-camera-request')}
+      @lr-audio-request=${(event: CustomEvent<undefined>) =>
+        this.reemit(event, 'lr-audio-request')}
+    ></lr-attachment-trigger>`;
+  }
+
   private reemit<K extends keyof LyraPromptInputEventMap>(event: LyraPromptInputEventMap[K], name: K): void {
     event.stopPropagation();
     if (this.disabled) return;
@@ -475,23 +510,24 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
         @lr-stop=${this.onStop}
         @keydown=${this.onKeyDown}
       >
-        <span slot="leading" part="leading">
-          <slot name="leading">
-            <lr-attachment-trigger
-              .capabilities=${this.attachmentCapabilities}
-              .disabled=${this.disabled}
-              @lr-pick=${this.onPick}
-              @lr-camera-request=${(event: CustomEvent<undefined>) =>
-                this.reemit(event, 'lr-camera-request')}
-              @lr-audio-request=${(event: CustomEvent<undefined>) =>
-                this.reemit(event, 'lr-audio-request')}
-            ></lr-attachment-trigger>
-          </slot>
+        <span part="leading" slot=${this.hasStartSlot ? 'start' : nothing}>
+          <slot name="start" @slotchange=${this.syncAdornmentSlots}></slot>
         </span>
+        <span part="leading" slot=${this.hasLeadingSlot ? 'leading' : nothing}>
+          <slot name="leading" @slotchange=${this.syncAdornmentSlots}></slot>
+        </span>
+        ${!this.hasStartSlot && !this.hasLeadingSlot
+          ? html`<span slot="leading" part="leading">${this.renderDefaultAttachmentTrigger()}</span>`
+          : nothing}
         <div slot="chips" part="chips" role="group" aria-label=${this.localize('promptInputAttachments')}>
           <slot name="chips">${this.attachments.map((attachment) => this.renderAttachment(attachment))}</slot>
         </div>
-        <slot name="trailing" slot="trailing"></slot>
+        <slot name="end" slot=${this.hasEndSlot ? 'end' : nothing} @slotchange=${this.syncAdornmentSlots}></slot>
+        <slot
+          name="trailing"
+          slot=${this.hasTrailingSlot ? 'trailing' : nothing}
+          @slotchange=${this.syncAdornmentSlots}
+        ></slot>
       </lr-chat-composer>
       <lr-mention-popover
         .anchor=${this.suggestionAnchor}

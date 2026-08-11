@@ -157,10 +157,21 @@ export const DensityAndChrome: Story = {
     docs: {
       description: {
         story:
-          'Top to bottom: the default card, `compact` (tighter header/body padding and item gap, chrome intact), and `frame="plain"` nested inside a container that already draws its own border — without `plain` the two frames would double up.',
+          'Top to bottom: the default card, `compact` (tighter header/body padding, gap, and typography with chrome intact), and `frame="plain"` nested inside a container that already draws its own border — without `plain` the two frames would double up.',
       },
     },
   },
+};
+
+export const RetunedCompactHeader: Story = {
+  name: 'Compact header typography rethemed',
+  render: () => html`
+    <lr-task-list
+      compact
+      style="max-width: 32rem; --lr-task-list-compact-header-font-size: var(--lr-font-size-xs);"
+      .items=${items}
+    ></lr-task-list>
+  `,
 };
 
 export const Narrow320: Story = {

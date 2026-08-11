@@ -123,6 +123,20 @@ export interface LyraToastItemEventMap {
  *   across the shared six-step ladder.
  * @cssprop [--lr-toast-font-size=var(--lr-font-size-m)] - Font size of the item, auto-swapped per
  *   `size` across the shared six-step ladder.
+ * @cssprop [--lr-toast-item-gap=var(--lr-space-s)] - Gap between the item icon, message, and close
+ *   button. Unlike `--lr-toast-gap`, this does not affect spacing between stacked items.
+ * @cssprop [--lr-toast-item-radius=var(--lr-radius)] - Corner radius of the item surface and its
+ *   accent bar's inline-start corners.
+ * Pointer-state hooks are inline fallbacks, so they inherit from the item or an ancestor without
+ * recoloring the item surface or the stack.
+ * @cssprop [--lr-toast-close-button-hover-bg=transparent] - Background of the enabled close button
+ *   while hovered.
+ * @cssprop [--lr-toast-close-button-hover-color=var(--lr-color-text)] - Foreground of the enabled
+ *   close button while hovered.
+ * @cssprop [--lr-toast-close-button-active-bg=color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Background of the enabled close button
+ *   while pressed.
+ * @cssprop [--lr-toast-close-button-active-color=var(--lr-color-text)] - Foreground of the enabled
+ *   close button while pressed.
  * @cssprop [--lr-toast-show-duration=var(--lr-transition-base, 180ms ease-out)] - Opacity/transform
  *   transition used while showing.
  * @cssprop [--lr-toast-hide-duration=var(--lr-transition-base, 180ms ease-out)] - Opacity/transform

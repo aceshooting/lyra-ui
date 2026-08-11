@@ -794,7 +794,9 @@ wrapper aliases, so either name survives the nested shadow boundary; `edit-butto
 `var(--lr-color-overlay)` — the backdrop scrim color, the same shared token `<lr-dialog>` and
 `<lr-tool-select-dialog>` read), `--lr-tool-approval-dialog-mono-font` (default
 `var(--lr-font-mono)`, the library's shared monospace stack — used by both `tool-name` and the
-raw-JSON editor), plus shared tokens
+raw-JSON editor), and `--lr-tool-approval-dialog-invalid-border-color` (default
+`var(--lr-color-danger)` — border color of the invalid raw-JSON editor, independently retunable
+without changing error text or other danger-coloured surfaces), plus shared tokens
 `--lr-space-xs/-s/-m/-l`, `--lr-color-surface`, `--lr-color-border`, `--lr-radius`,
 `--lr-shadow`, `--lr-color-brand`, `--lr-color-on-brand`, `--lr-color-danger`,
 `--lr-color-text`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
@@ -824,6 +826,11 @@ entirely and returns to the read-only view of the *original* `args` — there is
 step independent of Approve itself. Both `editing` and any in-progress draft reset back to the
 read-only view every time the dialog transitions from closed to open, so a reused instance never
 leaks one proposal's half-finished edit into the next.
+
+The raw-JSON editor deliberately fixes native `resize` to `vertical`, so a user can make a long
+draft taller without changing the dialog's constrained inline size. This focused approval flow has
+no generic resize property or auto-grow mode; compose a dedicated editor around the approval UI
+when either behavior is required.
 
 The visible JSON error remains ordinary descriptive text. A transition from a valid draft into
 invalid JSON is additionally appended once to the shared assertive light-DOM announcement sink;
@@ -981,8 +988,11 @@ shared part name across both the text and number inputs, and deliberately *not* 
 composed components with their own part surfaces rather than raw natives. It is purely an additive
 external theming hook: the internal `.control` class the stylesheet targets is unchanged.
 
-**Themeable custom properties:** no component-specific custom properties; shared tokens only —
-`--lr-space-l/-xs/-s`, `--lr-color-border`, `--lr-radius`, `--lr-color-surface`,
+**Themeable custom properties:** `--lr-tool-param-form-invalid-border-color` (default
+`var(--lr-color-danger)`) — border color of an invalid generated native text or number input.
+This component-scoped indirection retints invalid borders without changing error text, required
+markers, or other danger-coloured surfaces. Shared tokens remain available for the rest of the
+form: `--lr-space-l/-xs/-s`, `--lr-color-border`, `--lr-radius`, `--lr-color-surface`,
 `--lr-color-danger`, `--lr-color-text-quiet`, `--lr-focus-ring-width/-color/-offset`,
 `--lr-opacity-disabled`.
 
@@ -1311,6 +1321,9 @@ icon spin animation duration/timing; `--lr-task-list-compact-header-padding` (de
 `--lr-task-list-compact-header-gap` (default `var(--lr-space-2xs)`) — gap between `[part="header"]`'s
 label/summary/toggle while `compact`, one step tighter than the header's uncompacted
 `--lr-space-xs`, so `compact` tightens the header's *interior* spacing and not just its padding;
+`--lr-task-list-compact-header-font-size` (default `var(--lr-font-size-sm)`) — `[part="header"]`
+font size while `compact`, completing the compact header's typography alongside its padding and
+gap;
 `--lr-task-list-compact-gap` (default `var(--lr-space-2xs)`) — gap between `[part="body"]`'s item
 rows while `compact`; `--lr-task-list-compact-body-padding` (default `var(--lr-space-2xs)
 var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding while `compact`;
@@ -1530,7 +1543,9 @@ sets no literal `icon`), `variant-dot-neutral`/`variant-dot-brand`/`variant-dot-
 part is reachable in both rendering paths, virtualized or not.
 
 **Themeable custom properties:** `--lr-activity-feed-max-height` (default `16rem`) — cap on how
-tall the expanded body grows before it scrolls internally.
+tall the expanded body grows before it scrolls internally; and
+`--lr-activity-feed-live-status-color` (default `var(--lr-color-brand)`) — background color of
+`status-dot` while `mode="live"`, independently retunable without changing other brand surfaces.
 
 **Known gotchas:**
 - The variant dot's color is selected by its *part name*, not by `[data-variant]`: `::part()` cannot
@@ -2406,6 +2421,10 @@ studio emits a `blur` and then a `focus`.
 **CSS parts:** `base`, `toolbar`, `editor`, `messages`, `message`, `message-role`,
 `message-content`, `message-actions`, `move-message-up`, `move-message-down`, `remove-message`,
 `add-message`, `variables`, `variable`, `versions`, `version`, `preview`, `save`, `run`.
+
+Each `message-content` textarea deliberately keeps native vertical resizing. Prompt Studio exposes
+neither a configurable `resize` surface nor auto-grow behavior; use a dedicated editor when either
+is required.
 
 Each message's role select and content editor has a localized contextual accessible name containing
 its one-based message index and purpose (plus the current role for content), so repeated controls do

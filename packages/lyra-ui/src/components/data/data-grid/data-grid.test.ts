@@ -1,4 +1,5 @@
 import { expect, fixture, html, oneEvent } from "@open-wc/testing";
+import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import "./data-grid.js";
 import type { LyraDataGrid } from "./data-grid.js";
 import type { DataGridColumn, DataGridState } from "./data-grid-types.js";
@@ -117,6 +118,100 @@ it("resolves the toolbar search placeholder from the inherited quiet-text token"
   expect(getComputedStyle(search, "::placeholder").color).to.equal(
     "rgb(1, 2, 3)"
   );
+});
+
+it("normalizes search and page-size native chrome against the grid palette", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      paginate
+      with-search
+      label="People"
+      style="--lr-color-surface: rgb(1, 2, 3); --lr-color-text: rgb(4, 5, 6)"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const search =
+    element.shadowRoot!.querySelector<HTMLInputElement>('[part="search"]')!;
+  const pageSize =
+    element.shadowRoot!.querySelector<HTMLSelectElement>('[part="page-size"]')!;
+  const filterButton =
+    element.shadowRoot!.querySelector<HTMLButtonElement>('[part~="filter-button"]')!;
+
+  filterButton.click();
+  await element.updateComplete;
+  const filter = element.shadowRoot!.querySelector<HTMLInputElement>(
+    '[part="filter-panel"] input[type="search"]'
+  )!;
+
+  expect(search !== null).to.equal(true);
+  expect(filter !== null).to.equal(true);
+  expect(pageSize !== null).to.equal(true);
+  if (CSS.supports("selector(input::-webkit-search-cancel-button)")) {
+    const nativeDecoration = document.createElement("style");
+    nativeDecoration.textContent = `
+      [part='search']::-webkit-search-cancel-button,
+      [part='filter-panel'] input[type='search']::-webkit-search-cancel-button {
+        appearance: auto !important;
+        -webkit-appearance: searchfield-cancel-button !important;
+        display: block !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+      }
+    `;
+    element.shadowRoot!.append(nativeDecoration);
+
+    const assertNativeCancelReset = async (input: HTMLInputElement): Promise<void> => {
+      input.focus();
+      const rect = input.getBoundingClientRect();
+      let cancelPosition: [number, number] | undefined;
+      for (let offset = 2; offset <= 48; offset += 2) {
+        input.value = "clear me";
+        input.dispatchEvent(new InputEvent("input", { bubbles: true, composed: true }));
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        const candidate: [number, number] = [
+          Math.round(rect.right - offset),
+          Math.round(rect.top + rect.height / 2),
+        ];
+        await sendMouse({ type: "click", position: candidate });
+        if (input.value === "") {
+          cancelPosition = candidate;
+          break;
+        }
+      }
+      expect(
+        cancelPosition !== undefined,
+        "positive control exposes the native clear action"
+      ).to.equal(true);
+
+      input.value = "keep me";
+      input.dispatchEvent(new InputEvent("input", { bubbles: true, composed: true }));
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      return new Promise<void>((resolve) => {
+        nativeDecoration.remove();
+        requestAnimationFrame(() => resolve());
+      }).then(async () => {
+        await sendMouse({ type: "click", position: cancelPosition! });
+        expect(input.value, "component styling removes the native clear action").to.equal("keep me");
+        element.shadowRoot!.append(nativeDecoration);
+      });
+    };
+
+    try {
+      await assertNativeCancelReset(search);
+      await assertNativeCancelReset(filter);
+    } finally {
+      nativeDecoration.remove();
+      await resetMouse();
+    }
+  }
+  expect(getComputedStyle(pageSize).appearance).to.equal("none");
+  expect(pageSize.closest('.page-size-wrapper') !== null).to.equal(true);
+  expect(pageSize.closest('.page-size-wrapper')!.querySelector('.page-size-chevron svg') !== null).to.equal(true);
+  expect(getComputedStyle(pageSize.options[0]!).backgroundColor).to.equal(
+    "rgb(1, 2, 3)"
+  );
+  expect(getComputedStyle(pageSize.options[0]!).color).to.equal("rgb(4, 5, 6)");
 });
 
 it("relays a column-filter editor focus and blur once through the grid host", async () => {

@@ -86,6 +86,11 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  * Adopts `DocumentAnchorTarget` with `anchorKinds: ['region']` only — no text selection is bound
  * (a raster image has no selectable text), so `lr-text-select` is never emitted by this viewer.
  *
+ * **RTL behavior:** the raster and annotation geometry use physical image coordinates. In
+ * annotation mode, ArrowLeft/ArrowRight decrease/increase a draft's x coordinate and their Shift
+ * variants decrease/increase its width in both text directions; the surrounding toolbar remains
+ * logical.
+ *
  * @customElement lr-image-viewer
  * @slot - None.
  * @event lr-load - Image finished loading. `detail: { naturalWidth, naturalHeight }`.

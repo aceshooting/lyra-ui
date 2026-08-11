@@ -147,6 +147,30 @@ export const ThemedRowChrome: StoryObj = {
   `,
 };
 
+/** Destructive rows retain their semantic state while a menu-local palette changes only their
+ * foreground and pointer fills; ordinary rows keep the shared palette. */
+export const ThemedDangerState: StoryObj = {
+  name: 'Themed danger state (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Set `--lr-menu-item-danger-color`, `--lr-menu-item-danger-hover-bg`, and `--lr-menu-item-danger-active-bg` on an item or menu ancestor to retheme only destructive rows. Hover and press Delete to inspect its local pointer fills.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      role="menu"
+      aria-label="Themed destructive actions"
+      style="--lr-menu-item-danger-color: var(--lr-color-warning); --lr-menu-item-danger-hover-bg: var(--lr-color-warning-quiet); --lr-menu-item-danger-active-bg: var(--lr-color-brand-quiet); inline-size: 18rem;"
+    >
+      <lr-menu-item value="rename">Rename</lr-menu-item>
+      <lr-menu-item destructive value="delete">Delete</lr-menu-item>
+    </div>
+  `,
+};
+
 export const SubmenuOffset: StoryObj = {
   parameters: {
     docs: {

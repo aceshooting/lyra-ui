@@ -120,6 +120,40 @@ it('flips the enter-animation offset under RTL to match the mirrored resting edg
   expect(getComputedStyle(endPanel).getPropertyValue('--lr-drawer-enter-x').trim()).to.equal('calc(-1 * 1rem)');
 });
 
+it('contains RTL unbroken body and footer content in a 320px viewport-bound drawer allocation', async () => {
+  const longContent = 'محتوىدرججانبيمحليطويلجداًبدونأيفرصةللفصلالتلقائي';
+  const paragraphs = Array.from({ length: 20 }, () => html`<p>${longContent}</p>`);
+  const el = (await fixture(html`
+    <lr-drawer
+      open
+      dir="rtl"
+      placement="end"
+      heading="تصفيةالإعداداتالدوليةالطويلةجداً"
+      style="inline-size: 320px; block-size: 20rem; inset-inline-end: auto; inset-block-end: auto;"
+    >
+      ${paragraphs}
+      <div slot="footer">
+        <button type="button">${longContent}</button>
+        <button type="button">${longContent}</button>
+      </div>
+    </lr-drawer>
+  `)) as LyraDrawer;
+  await el.updateComplete;
+
+  const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+  const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+  const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
+
+  expect(getComputedStyle(panel).direction).to.equal('rtl');
+  expect(panel.clientWidth, 'the drawer panel must fit its 320px host allocation').to.be.at.most(320);
+  expect(panel.scrollWidth, 'the drawer panel must not overflow its 320px allocation').to.be.at.most(panel.clientWidth);
+  expect(body.scrollWidth, 'unbroken body text must wrap inside the drawer body').to.be.at.most(body.clientWidth);
+  expect(footer.scrollWidth, 'long footer actions must remain inside the drawer footer').to.be.at.most(footer.clientWidth);
+  expect(body.scrollHeight, 'long body content must remain independently scrollable').to.be.greaterThan(body.clientHeight);
+  body.scrollTop = 1;
+  expect(body.scrollTop, 'the body scrolling surface must accept a keyboard/mouse scroll position').to.be.greaterThan(0);
+});
+
 describe('inherited show/hide lifecycle', () => {
   it('runs the same four-event lifecycle as lr-dialog', async () => {
     const el = (await fixture(html`<lr-drawer heading="Filters"><p>Body</p></lr-drawer>`)) as LyraDrawer;

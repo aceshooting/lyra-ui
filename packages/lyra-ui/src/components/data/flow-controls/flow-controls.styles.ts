@@ -87,6 +87,6 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='lock'][aria-pressed='true'] {
-    color: var(--lr-color-brand);
+    color: var(--lr-flow-controls-lock-active-color, var(--lr-color-brand));
   }
 `;

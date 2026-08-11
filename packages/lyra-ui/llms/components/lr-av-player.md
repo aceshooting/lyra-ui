@@ -44,6 +44,11 @@ and waveform peaks are clamped to their valid ranges; non-finite native duration
 cannot leak into state or events. `rates` keeps only unique finite values in the supported
 `0.0625..16` range, while always including the normalized current `playbackRate`.
 
+**Waveform lifecycle:** with `peaks`, waveform canvas painting is gated by player visibility when
+`IntersectionObserver` is available. Peak, theme, and resize changes while the player is
+off-screen coalesce into one paint on re-entry; environments without that API retain eager
+painting.
+
 **Methods:** `play(): Promise<void>` proxies the native media element and preserves its native
 promise/rejection (before the media mounts it returns an already-resolved promise). `pause()` and
 `toggle()` proxy the native element; an internal toggle that cannot start playback renders the
@@ -117,3 +122,7 @@ and `--lr-av-player-cue-active-match-color` (default `var(--lr-color-warning)`) 
 the `cue-active-match` row, leaving the other matches' dashed outline on the shared warning token.
 Both are inline `var()` fallbacks at the point of use rather than `:host` declarations, so either
 can be set on the element or on any ancestor.
+
+**RTL behavior:** surrounding controls follow the inherited direction, but the elapsed-media axis
+on `[part='timeline']` stays physical left-to-right. ArrowLeft rewinds and ArrowRight advances in
+both LTR and RTL.

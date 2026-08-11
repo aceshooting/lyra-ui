@@ -129,6 +129,8 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  *   valid `timestamp` is set.
  * @cssprop [--lr-activity-feed-max-height=16rem] - Cap on how tall the expanded body grows
  *   before it scrolls internally (non-virtualized mode); also sizes the internal virtual-list.
+ * @cssprop [--lr-activity-feed-live-status-color=var(--lr-color-brand)] - Background color of
+ *   `status-dot` while `mode="live"`.
  * @status stable
  * @since 4.0.0
  */

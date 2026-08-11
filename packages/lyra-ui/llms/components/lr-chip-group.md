@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 2 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 2 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-chip` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -164,11 +164,14 @@ actively causing an overflow — a locally-styled pill, not an instantiated real
 
 **Themeable custom properties:** `--lr-chip-group-overflow-expanded-color` (default
 `var(--lr-color-text)`) — text color of `[part="overflow-indicator"]` while expanded
-(`aria-expanded="true"`). A state hook: an inline `var()` fallback at the point of use, never a
-`:host` declaration, so it can be set on the element *or on any ancestor*. It exists because
+(`aria-expanded="true"`). `--lr-chip-group-overflow-expanded-border-style` (default `solid`) —
+that same expanded indicator's border style; its resting border deliberately remains dashed, so a
+theme can retune the open affordance without losing the collapsed treatment. Both are state hooks:
+inline `var()` fallbacks at the point of use, never `:host` declarations, so they can be set on the
+element *or on any ancestor*. They exist because
 `::part(overflow-indicator)[aria-expanded='true']` is invalid CSS — Shadow Parts forbids an attribute
-selector after `::part()` — so retinting only the expanded state otherwise meant re-pointing the
-library-wide `--lr-color-text` token. Left unset, rendering is unchanged. Otherwise shared tokens
+selector after `::part()` — so retinting or reshaping only the expanded state otherwise meant
+re-pointing shared tokens. Left unset, rendering is unchanged. Otherwise shared tokens
 (`--lr-space-xs`, `--lr-space-s`,
 `--lr-color-border`, `--lr-color-surface`, `--lr-color-text-quiet`, `--lr-color-text`,
 `--lr-color-brand`, `--lr-focus-ring-width`, `--lr-focus-ring-color`,

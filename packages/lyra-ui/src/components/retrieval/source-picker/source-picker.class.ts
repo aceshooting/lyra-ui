@@ -51,7 +51,9 @@ interface SourceRow {
  * @csspart select-all - The header select-all row, only rendered when `showSelectAll`.
  * @csspart summary - The "{selected} of {total} selected" text.
  * @csspart tree - The `role="tree"` container.
- * @csspart item - One `role="treeitem"` row.
+ * @csspart item - One `role="treeitem"` row. Its selection state is exposed only through
+ *   tri-state `aria-checked`; `aria-selected` is intentionally absent because it would duplicate
+ *   that same state.
  * @csspart disclosure - A folder row's pointer-only expand/collapse indicator. Keyboard
  * expansion remains owned by the surrounding treeitem.
  * @csspart checkbox - The tri-state checkbox glyph.
@@ -341,7 +343,6 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
         role="treeitem"
         tabindex=${active ? '0' : '-1'}
         aria-checked=${state}
-        aria-selected=${state !== 'false' ? 'true' : 'false'}
         aria-expanded=${row.hasChildren ? (expanded ? 'true' : 'false') : nothing}
         aria-level=${row.depth + 1}
         style=${styleMap({ paddingInlineStart: `${row.depth * 1.25}rem` })}

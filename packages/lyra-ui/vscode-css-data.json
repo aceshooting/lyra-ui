@@ -863,6 +863,13 @@
       }
     },
     {
+      "name": "--lr-activity-feed-live-status-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-activity-feed>`** (default: `var(--lr-color-brand)`) — Background color of `status-dot` while `mode=\"live\"`."
+      }
+    },
+    {
       "name": "--lr-activity-feed-max-height",
       "description": {
         "kind": "markdown",
@@ -2435,6 +2442,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-chip>`** (default: `var(--lr-space-xs)`) — Gap between the icon, label, and remove button. Each `size` sets it to that step's gap."
+      }
+    },
+    {
+      "name": "--lr-chip-group-overflow-expanded-border-style",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chip-group>`** (default: `solid`) — Border style of `[part=\"overflow-indicator\"]` while expanded. The resting indicator intentionally stays dashed, so this can retune the expanded state without losing that structural affordance."
       }
     },
     {
@@ -4699,6 +4713,13 @@
       }
     },
     {
+      "name": "--lr-flow-controls-lock-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-controls>`** (default: `var(--lr-color-brand)`) — Pressed lock-button foreground."
+      }
+    },
+    {
       "name": "--lr-flow-minimap-block-size",
       "description": {
         "kind": "markdown",
@@ -6295,6 +6316,27 @@
       }
     },
     {
+      "name": "--lr-menu-item-danger-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dropdown-item>`, `<lr-menu-item>`** (default: `color-mix(in oklab, var(--lr-color-danger-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) — Background of an enabled danger row while pressed."
+      }
+    },
+    {
+      "name": "--lr-menu-item-danger-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dropdown-item>`, `<lr-menu-item>`** (default: `var(--lr-color-danger)`) — Foreground of a `destructive` or `variant=\"danger\"` row."
+      }
+    },
+    {
+      "name": "--lr-menu-item-danger-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dropdown-item>`, `<lr-menu-item>`** (default: `var(--lr-color-danger-quiet)`) — Background of an enabled danger row while hovered."
+      }
+    },
+    {
       "name": "--lr-menu-item-gap",
       "description": {
         "kind": "markdown",
@@ -6305,7 +6347,7 @@
       "name": "--lr-menu-item-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dropdown-item>`, `<lr-menu-item>`** (default: `var(--lr-form-control-radius)`) — Corner radius of the visual row and focusable host. Its fallback follows the active shared size tier. Declared as an inline `var()` fallback (never on `:host`), so an item or any ancestor can retune it without a `::part(base)` rule."
+        "value": "**`<lr-dropdown-item>`, `<lr-menu-item>`** (default: `var(--lr-form-control-radius)`) — Corner radius of the visual row and focusable host. Its fallback follows the active shared size tier. Declared as an inline `var()` fallback (never on `:host`), so an item or any ancestor can retune it without a `::part(base)` rule. Danger-state hooks are also inline fallbacks, so a menu can retheme only its destructive rows without replacing the shared danger palette elsewhere."
       }
     },
     {
@@ -7212,10 +7254,17 @@
       }
     },
     {
+      "name": "--lr-push-to-talk-pulse-recording-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-push-to-talk>`** (default: `var(--lr-push-to-talk-recording-color, var(--lr-color-danger))`) — Recording pulse-ring border color."
+      }
+    },
+    {
       "name": "--lr-push-to-talk-recording-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-push-to-talk>`** (default: `var(--lr-color-danger)`) — Border and text color of `[part=\"trigger\"]` while `state` is `recording`. Recolors only the recording treatment, leaving every other danger-toned surface on the page untouched."
+        "value": "**`<lr-push-to-talk>`** (default: `var(--lr-color-danger)`) — Established aggregate fallback for the recording trigger border, trigger foreground, and pulse border. The three more-specific recording properties below win independently when set."
       }
     },
     {
@@ -7223,6 +7272,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-push-to-talk>`** (default: `var(--lr-size-3rem)`) — Preferred inline and block size of the circular `trigger` button; `--lr-icon-button-size` remains its minimum hit-area floor."
+      }
+    },
+    {
+      "name": "--lr-push-to-talk-trigger-recording-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-push-to-talk>`** (default: `var(--lr-push-to-talk-recording-color, var(--lr-color-danger))`) — Trigger border color while recording."
+      }
+    },
+    {
+      "name": "--lr-push-to-talk-trigger-recording-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-push-to-talk>`** (default: `var(--lr-push-to-talk-recording-color, var(--lr-color-danger))`) — Trigger foreground, including the default mic glyph, while recording."
       }
     },
     {
@@ -7821,6 +7884,13 @@
       }
     },
     {
+      "name": "--lr-rating-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-rating>`** (default: `color-mix(in oklab, var(--lr-rating-empty-color, var(--symbol-color, var(--lr-color-border-strong))), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) — Pressed-symbol color. Set it independently of `--lr-rating-empty-color` to recolor the pressed state without changing resting or hover symbols."
+      }
+    },
+    {
       "name": "--lr-rating-empty-color",
       "description": {
         "kind": "markdown",
@@ -7832,6 +7902,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-rating>`** (default: `var(--lr-color-warning)`) — Filled-symbol color."
+      }
+    },
+    {
+      "name": "--lr-rating-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-rating>`** (default: `var(--symbol-spacing,var(--lr-space-xs))`) — Gap between symbols. It takes precedence over the `--symbol-spacing` compatibility hook while preserving that hook and the shared spacing token as fallbacks."
       }
     },
     {
@@ -9967,6 +10044,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-task-list>`** (default: `var(--lr-space-2xs)`) — Gap between `[part=\"body\"]`'s item rows while `compact`."
+      }
+    },
+    {
+      "name": "--lr-task-list-compact-header-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-task-list>`** (default: `var(--lr-font-size-sm)`) — `[part=\"header\"]` font size while `compact`."
       }
     },
     {
@@ -12651,6 +12735,34 @@
       }
     },
     {
+      "name": "--lr-toast-close-button-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-toast-item>`** (default: `color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))`) — Background of the enabled close button while pressed."
+      }
+    },
+    {
+      "name": "--lr-toast-close-button-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-toast-item>`** (default: `var(--lr-color-text)`) — Foreground of the enabled close button while pressed."
+      }
+    },
+    {
+      "name": "--lr-toast-close-button-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-toast-item>`** (default: `transparent`) — Background of the enabled close button while hovered."
+      }
+    },
+    {
+      "name": "--lr-toast-close-button-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-toast-item>`** (default: `var(--lr-color-text)`) — Foreground of the enabled close button while hovered."
+      }
+    },
+    {
       "name": "--lr-toast-font-size",
       "description": {
         "kind": "markdown",
@@ -12669,6 +12781,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-toast>`** (default: `var(--lr-transition-base, 180ms ease-out)`) — Hide transition of a slotted item. Read by `<lr-toast-item>`, so set it on the item.\n\n**`<lr-toast-item>`** (default: `var(--lr-transition-base, 180ms ease-out)`) — Opacity/transform transition used while hiding."
+      }
+    },
+    {
+      "name": "--lr-toast-item-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-toast-item>`** (default: `var(--lr-space-s)`) — Gap between the item icon, message, and close button. Unlike `--lr-toast-gap`, this does not affect spacing between stacked items."
+      }
+    },
+    {
+      "name": "--lr-toast-item-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-toast-item>`** (default: `var(--lr-radius)`) — Corner radius of the item surface and its accent bar's inline-start corners. Pointer-state hooks are inline fallbacks, so they inherit from the item or an ancestor without recoloring the item surface or the stack."
       }
     },
     {
@@ -12826,6 +12952,13 @@
       }
     },
     {
+      "name": "--lr-tool-approval-dialog-invalid-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-approval-dialog>`** (default: `var(--lr-color-danger)`) — Border color of an invalid raw-JSON editor."
+      }
+    },
+    {
       "name": "--lr-tool-approval-dialog-mono-font",
       "description": {
         "kind": "markdown",
@@ -12865,6 +12998,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-tool-call-chip>`** (default: `var(--lr-transition-ambient)`) — Running-icon animation duration and timing."
+      }
+    },
+    {
+      "name": "--lr-tool-param-form-invalid-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-param-form>`** (default: `var(--lr-color-danger)`) — Border color of an invalid generated native text or number input."
       }
     },
     {

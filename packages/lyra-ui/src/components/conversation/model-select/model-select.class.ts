@@ -45,11 +45,13 @@ export type LyraModelSelectSize = LyraSizeStep;
 export interface LyraModelCatalogEntry {
   id: string;
   label: string;
+  /** Optional literal icon hint (for example, an emoji), rendered decoratively before `label`. */
+  icon?: string;
 }
 
 /**
  * The `catalog` shape: either every entry is a plain string (used as both id
- * and label) or every entry is a full `{ id, label }` row — not a mix of both.
+ * and label) or every entry is a full `{ id, label, icon? }` row — not a mix of both.
  */
 export type LyraModelCatalog = string[] | LyraModelCatalogEntry[];
 
@@ -86,6 +88,10 @@ export interface LyraModelSelectEventMap {
  * badge — see `model-select.styles.ts`) computed fresh from `catalog` +
  * `value` on every render, without ever mutating the `catalog` property
  * itself.
+ *
+ * Object-shaped catalog rows can include a literal `icon`, rendered decoratively as the leading
+ * `option-icon` part in either listbox mode. It is presentation only: the row's accessible name
+ * remains its `label`.
  *
  * Ships the standard label/hint/error form-control chrome: properties, matching named slots, and
  * the complete `form-control` frame. Each surface is opt-in; left unset, it renders no chrome.
@@ -126,6 +132,7 @@ export interface LyraModelSelectEventMap {
  * @csspart provider-badge - The optional leading `provider` label.
  * @csspart listbox - The options popover (shared by both modes).
  * @csspart option - An option row.
+ * @csspart option-icon - An option row's optional decorative leading icon.
  * @csspart option-label - An option row's label.
  * @csspart option-badge - The "not in catalog" badge on a synthetic stale-value row.
  * @csspart empty - The empty-listbox message, shown when no rows match.
@@ -944,6 +951,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
         aria-selected=${selected ? 'true' : 'false'}
         ?data-active=${id === activeId}
       >
+        ${entry.icon ? html`<span part="option-icon" aria-hidden="true">${entry.icon}</span>` : nothing}
         <span part="option-label">${entry.label}</span>
         ${entry.synthetic ? html`<span part="option-badge">${this.localize('notInCatalog')}</span>` : ''}
       </div>`;

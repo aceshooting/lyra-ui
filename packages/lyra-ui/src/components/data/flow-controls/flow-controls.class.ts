@@ -80,6 +80,8 @@ export type FlowControlsAppearance = LyraFrame;
  * @csspart zoom-out - Zoom-out button.
  * @csspart fit - Zoom-to-fit button.
  * @csspart lock - Lock/unlock toggle button (omitted when `hideLock`).
+ * @cssprop [--lr-flow-controls-lock-active-color=var(--lr-color-brand)] - Pressed lock-button
+ *   foreground.
  * @status stable
  * @since 4.0.0
  */

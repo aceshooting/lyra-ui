@@ -352,6 +352,128 @@ it('resizes from the keyboard, mirrors horizontal arrows in RTL, and emits lr-re
   expect(rtl.position).to.be.closeTo(50, 0.1);
 });
 
+it('emits a cancelable reposition request before the committed event and keeps direct position assignments silent', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel style="inline-size: 400px; block-size: 100px"></lr-split-panel>
+  `)) as LyraSplitPanel;
+  const before = element.position;
+  let requests = 0;
+  let committed = 0;
+  let request:
+    | {
+        position: number;
+        positionInPixels: number;
+        cancelable: boolean;
+        positionAtDispatch: number;
+      }
+    | undefined;
+  let reposition:
+    | { cancelable: boolean; positionAtDispatch: number }
+    | undefined;
+
+  element.addEventListener('lr-reposition-request', (event) => {
+    const requestEvent = event as CustomEvent<{
+      position: number;
+      positionInPixels: number;
+    }>;
+    requests += 1;
+    request = {
+      ...requestEvent.detail,
+      cancelable: requestEvent.cancelable,
+      positionAtDispatch: element.position,
+    };
+  });
+  element.addEventListener('lr-reposition', (event) => {
+    committed += 1;
+    reposition = {
+      cancelable: event.cancelable,
+      positionAtDispatch: element.position,
+    };
+  });
+
+  keydown(element, 'ArrowRight');
+  await elementUpdated(element);
+
+  expect(requests).to.equal(1);
+  expect(committed).to.equal(1);
+  expect(request!.cancelable).to.equal(true);
+  expect(request!.positionAtDispatch).to.equal(before);
+  expect(request!.position).to.be.closeTo(element.position, 0.001);
+  expect(request!.positionInPixels).to.be.closeTo(element.positionInPixels, 0.001);
+  expect(reposition).to.deep.equal({
+    cancelable: false,
+    positionAtDispatch: element.position,
+  });
+
+  element.position = 35;
+  await elementUpdated(element);
+  expect(requests).to.equal(1);
+  expect(committed).to.equal(1);
+});
+
+it('lets listeners veto proposed pointer and keyboard repositioning without committing', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel style="inline-size: 400px; block-size: 100px"></lr-split-panel>
+  `)) as LyraSplitPanel;
+  const handle = divider(element);
+  handle.setPointerCapture = () => {};
+  const before = {
+    position: element.position,
+    positionInPixels: element.positionInPixels,
+  };
+  const requests: Array<{
+    position: number;
+    positionInPixels: number;
+    cancelable: boolean;
+    positionAtDispatch: number;
+  }> = [];
+  let committed = 0;
+  const veto = (event: Event): void => {
+    const request = event as CustomEvent<{
+      position: number;
+      positionInPixels: number;
+    }>;
+    requests.push({
+      ...request.detail,
+      cancelable: request.cancelable,
+      positionAtDispatch: element.position,
+    });
+    request.preventDefault();
+  };
+  const countCommitted = (): void => {
+    committed += 1;
+  };
+  element.addEventListener('lr-reposition-request', veto);
+  element.addEventListener('lr-reposition', countCommitted);
+
+  try {
+    pointer(handle, 'pointerdown', 202, 200);
+    pointer(window, 'pointermove', 202, 240);
+    const event = new KeyboardEvent('keydown', {
+      key: 'ArrowRight',
+      bubbles: true,
+      cancelable: true,
+    });
+    handle.dispatchEvent(event);
+    await elementUpdated(element);
+
+    expect(event.defaultPrevented).to.equal(true);
+    expect(element.position).to.equal(before.position);
+    expect(element.positionInPixels).to.equal(before.positionInPixels);
+    expect(committed).to.equal(0);
+    expect(requests.length).to.equal(2);
+    expect(requests.every((request) => request.cancelable)).to.equal(true);
+    expect(requests.every((request) => request.positionAtDispatch === before.position)).to.equal(true);
+    expect(requests.every((request) => request.position > before.position)).to.equal(true);
+
+    pointer(window, 'pointerup', 202, 240);
+  } finally {
+    pointer(window, 'pointerup', 202, 240);
+    element.removeEventListener('lr-reposition-request', veto);
+    element.removeEventListener('lr-reposition', countCommitted);
+  }
+});
+
 it('maps pointer movement through the logical inline axis in RTL', async () => {
   const element = (await fixture(html`
     <lr-split-panel dir="rtl" style="inline-size: 400px; block-size: 100px"></lr-split-panel>

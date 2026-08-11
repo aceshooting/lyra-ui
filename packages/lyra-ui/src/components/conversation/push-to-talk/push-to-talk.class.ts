@@ -89,8 +89,11 @@ export interface LyraPushToTalkEventMap {
  * overrides the computed trigger label.
  *
  * @customElement lr-push-to-talk
- * @slot icon - Replaces the default mic glyph. Decorative: assigned content is inert and hidden
- *   from accessibility APIs because it is rendered inside the named trigger button.
+ * @slot microphone-icon - Canonical replacement for the default mic glyph. Takes precedence over
+ *   the established `icon` slot. Decorative: assigned content is inert and hidden from
+ *   accessibility APIs because it is rendered inside the named trigger button.
+ * @slot icon - Established mic-glyph alias, retained as the fallback for `microphone-icon`.
+ *   Decorative and inert inside the trigger button.
  * @slot recording-icon - Replaces the default recording-state pulse glyph. Decorative and inert.
  * @event lr-record-start - Capture began. `detail: { stream: MediaStream }` — the same object the
  *   `stream` getter then returns for the duration of the take.
@@ -107,7 +110,7 @@ export interface LyraPushToTalkEventMap {
  *   rAF-throttled, only while `state === 'recording'`.
  * @event lr-state-change - `detail: { state: PushToTalkState }` — fires on every `state` transition.
  * @csspart trigger - The capture button.
- * @csspart icon - Wrapper around the `icon` slot / default mic glyph.
+ * @csspart icon - Wrapper around the `microphone-icon`/`icon` slots and default mic glyph.
  * @csspart pulse - Wrapper around the `recording-icon` slot / default pulse glyph, rendered only
  *   while recording.
  * @csspart timer - The localized `M:SS` elapsed-time readout, rendered only while recording and
@@ -115,9 +118,12 @@ export interface LyraPushToTalkEventMap {
  * @csspart status - Visible status text for the `requesting`/`denied`/`error`/unsupported states.
  * @cssprop [--lr-push-to-talk-size=var(--lr-size-3rem)] - Preferred inline and block size of the
  *   circular `trigger` button; `--lr-icon-button-size` remains its minimum hit-area floor.
- * @cssprop [--lr-push-to-talk-recording-color=var(--lr-color-danger)] - Border and text color of
- *   `[part="trigger"]` while `state` is `recording`. Recolors only the recording treatment, leaving
- *   every other danger-toned surface on the page untouched.
+ * @cssprop [--lr-push-to-talk-recording-color=var(--lr-color-danger)] - Established aggregate
+ *   fallback for the recording trigger border, trigger foreground, and pulse border. The three
+ *   more-specific recording properties below win independently when set.
+ * @cssprop [--lr-push-to-talk-trigger-recording-border-color=var(--lr-push-to-talk-recording-color, var(--lr-color-danger))] - Trigger border color while recording.
+ * @cssprop [--lr-push-to-talk-trigger-recording-color=var(--lr-push-to-talk-recording-color, var(--lr-color-danger))] - Trigger foreground, including the default mic glyph, while recording.
+ * @cssprop [--lr-push-to-talk-pulse-recording-border-color=var(--lr-push-to-talk-recording-color, var(--lr-color-danger))] - Recording pulse-ring border color.
  * @status stable
  * @since 4.0.0
  */
@@ -633,7 +639,9 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
         @blur=${this.onBlur}
         @click=${this.onClick}
       >
-        <span part="icon" aria-hidden="true" inert><slot name="icon">${micIcon()}</slot></span>
+        <span part="icon" aria-hidden="true" inert
+          ><slot name="microphone-icon"><slot name="icon">${micIcon()}</slot></slot
+        ></span>
         ${recording
           ? html`<span part="pulse" aria-hidden="true" inert><slot name="recording-icon">${pulseGlyph()}</slot></span>`
           : nothing}

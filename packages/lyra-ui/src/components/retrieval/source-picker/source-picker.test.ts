@@ -33,21 +33,24 @@ it('renders a role="tree" with one treeitem per visible entry (top-level collaps
   expect(el.shadowRoot!.querySelector('[part="tree"]')!.getAttribute('aria-multiselectable')).to.equal('true');
 });
 
-it('reflects tri-state aria-checked: false, true, and mixed', async () => {
+it('uses aria-checked as the sole false, true, and mixed treeitem selection state', async () => {
   const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
   el.sources = sources;
   el.selectedIds = ['doc1'];
   await el.updateComplete;
   const folderRow = el.shadowRoot!.querySelector('[role="treeitem"]')!;
   expect(folderRow.getAttribute('aria-checked')).to.equal('mixed');
+  expect(folderRow.getAttribute('aria-selected')).to.equal(null);
 
   el.selectedIds = ['doc1', 'doc2'];
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[role="treeitem"]')!.getAttribute('aria-checked')).to.equal('true');
+  expect(el.shadowRoot!.querySelector('[role="treeitem"]')!.getAttribute('aria-selected')).to.equal(null);
 
   el.selectedIds = [];
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[role="treeitem"]')!.getAttribute('aria-checked')).to.equal('false');
+  expect(el.shadowRoot!.querySelector('[role="treeitem"]')!.getAttribute('aria-selected')).to.equal(null);
 });
 
 it('toggling a folder selects/deselects all of its descendant leaves and emits lr-sources-change', async () => {

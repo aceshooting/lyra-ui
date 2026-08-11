@@ -51,6 +51,30 @@ const REFERRER_POLICIES = new Set<ReferrerPolicy>([
 
 const THEME_ATTRIBUTES = ['data-lr-theme', 'data-theme', 'data-color-scheme'] as const;
 
+interface ThemeClassMutation {
+  original: boolean;
+  applied: boolean;
+}
+
+interface ThemeAttributeMutation {
+  original: string | null;
+  applied: string | null;
+}
+
+interface ThemeStyleMutation {
+  original: string;
+  originalPriority: string;
+  applied: string;
+  appliedPriority: string;
+}
+
+interface ThemeSyncState {
+  target: HTMLElement;
+  classes: Map<string, ThemeClassMutation>;
+  attributes: Map<(typeof THEME_ATTRIBUTES)[number], ThemeAttributeMutation>;
+  properties: Map<string, ThemeStyleMutation>;
+}
+
 function isLyraThemeClass(value: string): boolean {
   return value === 'lr-light' || value === 'lr-dark' ||
     value.startsWith('lr-theme-') || value.startsWith('lr-brand-') || value.startsWith('lr-palette-');
@@ -177,7 +201,8 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   /** Removes the iframe from sequential focus and disables pointer interaction. */
   @property({ type: Boolean, attribute: 'without-interaction', reflect: true }) withoutInteraction = false;
   /** Best-effort sync of Lyra theme classes, attributes, and `--lr-theme-*` values into a
-   * same-origin iframe document. Cross-origin access remains untouched. */
+   * same-origin iframe document. Turning it off restores only the iframe state this component
+   * changed; cross-origin access remains untouched. */
   @property({ type: Boolean, attribute: 'with-theme-sync', reflect: true }) withThemeSync = false;
   /** Accessible name forwarded to the internal iframe's `title`; the localized frame label is the
    * fallback so the actual accessibility owner is never unnamed. */
@@ -190,6 +215,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   private needsReconnectFrame = false;
   private syncedThemeClasses = new Set<string>();
   private syncedThemeProperties = new Set<string>();
+  private themeSyncState?: ThemeSyncState;
   private lyraThemeObserver?: MutationObserver;
 
   constructor() {
@@ -219,8 +245,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     this.needsReconnectFrame = true;
     this.lyraThemeObserver?.disconnect();
     this.lyraThemeObserver = undefined;
-    this.syncedThemeClasses.clear();
-    this.syncedThemeProperties.clear();
+    this.resetThemeSyncState();
     super.disconnectedCallback();
   }
 
@@ -245,7 +270,9 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   }
 
   protected override updated(changed: PropertyValues<this>): void {
-    if (this.withThemeSync && changed.has('withThemeSync')) this.syncTheme();
+    if (!changed.has('withThemeSync')) return;
+    if (this.withThemeSync) this.syncTheme();
+    else this.restoreTheme();
   }
 
   /** Returns the current iframe window while connected. Cross-origin windows are still opaque. */
@@ -362,34 +389,140 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     if (!target || !source) return;
 
     try {
-      for (const className of this.syncedThemeClasses) target.classList.remove(className);
+      const state = this.themeStateFor(target);
       const nextClasses = new Set([...source.classList].filter(isLyraThemeClass));
-      for (const className of nextClasses) target.classList.add(className);
+      for (const className of this.syncedThemeClasses) {
+        if (!nextClasses.has(className)) this.setSyncedThemeClass(state, className, false);
+      }
+      for (const className of nextClasses) this.setSyncedThemeClass(state, className, true);
       this.syncedThemeClasses = nextClasses;
 
       for (const attribute of THEME_ATTRIBUTES) {
         const value = source.getAttribute(attribute);
-        if (value === null) target.removeAttribute(attribute);
-        else target.setAttribute(attribute, value);
+        this.setSyncedThemeAttribute(state, attribute, value);
       }
 
       const view = this.ownerDocument.defaultView;
       const computed = view?.getComputedStyle(this);
       if (!computed) return;
-      for (const property of this.syncedThemeProperties) target.style.removeProperty(property);
       const nextProperties = new Set<string>();
       for (let index = 0; index < computed.length; index++) {
         const property = computed.item(index);
         if (!property.startsWith('--lr-theme-')) continue;
-        target.style.setProperty(property, computed.getPropertyValue(property));
+        this.setSyncedThemeProperty(state, property, computed.getPropertyValue(property));
         nextProperties.add(property);
       }
+      for (const property of this.syncedThemeProperties) {
+        if (!nextProperties.has(property)) this.setSyncedThemeProperty(state, property, null);
+      }
       this.syncedThemeProperties = nextProperties;
-      target.style.colorScheme = computed.colorScheme;
+      this.setSyncedThemeProperty(state, 'color-scheme', computed.colorScheme);
     } catch {
       // Same-Origin Policy is the authority. Theme sync is best-effort and never changes sandbox
       // tokens or navigation policy to gain access to an otherwise opaque document.
     }
+  }
+
+  private themeStateFor(target: HTMLElement): ThemeSyncState {
+    if (this.themeSyncState?.target === target) return this.themeSyncState;
+    this.resetThemeSyncState();
+    const state: ThemeSyncState = {
+      target,
+      classes: new Map(),
+      attributes: new Map(),
+      properties: new Map(),
+    };
+    this.themeSyncState = state;
+    return state;
+  }
+
+  private setSyncedThemeClass(state: ThemeSyncState, className: string, present: boolean): void {
+    let mutation = state.classes.get(className);
+    if (!mutation) {
+      mutation = {
+        original: state.target.classList.contains(className),
+        applied: state.target.classList.contains(className),
+      };
+      state.classes.set(className, mutation);
+    }
+    state.target.classList.toggle(className, present);
+    mutation.applied = state.target.classList.contains(className);
+  }
+
+  private setSyncedThemeAttribute(
+    state: ThemeSyncState,
+    attribute: (typeof THEME_ATTRIBUTES)[number],
+    value: string | null,
+  ): void {
+    let mutation = state.attributes.get(attribute);
+    if (!mutation) {
+      const original = state.target.getAttribute(attribute);
+      mutation = { original, applied: original };
+      state.attributes.set(attribute, mutation);
+    }
+    if (value === null) state.target.removeAttribute(attribute);
+    else state.target.setAttribute(attribute, value);
+    mutation.applied = state.target.getAttribute(attribute);
+  }
+
+  private setSyncedThemeProperty(
+    state: ThemeSyncState,
+    property: string,
+    value: string | null,
+  ): void {
+    let mutation = state.properties.get(property);
+    if (!mutation) {
+      mutation = {
+        original: state.target.style.getPropertyValue(property),
+        originalPriority: state.target.style.getPropertyPriority(property),
+        applied: state.target.style.getPropertyValue(property),
+        appliedPriority: state.target.style.getPropertyPriority(property),
+      };
+      state.properties.set(property, mutation);
+    }
+    if (value === null) state.target.style.removeProperty(property);
+    else state.target.style.setProperty(property, value);
+    mutation.applied = state.target.style.getPropertyValue(property);
+    mutation.appliedPriority = state.target.style.getPropertyPriority(property);
+  }
+
+  private restoreTheme(): void {
+    const state = this.themeSyncState;
+    if (!state) return;
+    try {
+      if (this.contentDocument?.documentElement !== state.target) return;
+      for (const [className, mutation] of state.classes) {
+        if (state.target.classList.contains(className) === mutation.applied) {
+          state.target.classList.toggle(className, mutation.original);
+        }
+      }
+      for (const [attribute, mutation] of state.attributes) {
+        if (state.target.getAttribute(attribute) !== mutation.applied) continue;
+        if (mutation.original === null) state.target.removeAttribute(attribute);
+        else state.target.setAttribute(attribute, mutation.original);
+      }
+      for (const [property, mutation] of state.properties) {
+        if (
+          state.target.style.getPropertyValue(property) !== mutation.applied ||
+          state.target.style.getPropertyPriority(property) !== mutation.appliedPriority
+        ) continue;
+        if (mutation.original) {
+          state.target.style.setProperty(property, mutation.original, mutation.originalPriority);
+        } else {
+          state.target.style.removeProperty(property);
+        }
+      }
+    } catch {
+      // Same-Origin Policy can change between the last successful sync and this opt-out.
+    } finally {
+      this.resetThemeSyncState();
+    }
+  }
+
+  private resetThemeSyncState(): void {
+    this.themeSyncState = undefined;
+    this.syncedThemeClasses.clear();
+    this.syncedThemeProperties.clear();
   }
 
   private renderControls(): TemplateResult | typeof nothing {

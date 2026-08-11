@@ -43,6 +43,285 @@ it('redraws a token-colored waveform after an out-of-band theme invalidation', a
   }
 });
 
+describe('visibility-gated waveform redraws', () => {
+  it('defers hidden waveform paints and coalesces the visibility catch-up', async () => {
+    const originalIntersectionObserver = Object.getOwnPropertyDescriptor(window, 'IntersectionObserver');
+    let callback: IntersectionObserverCallback | undefined;
+    let observed = false;
+    let disconnected = false;
+    class TestIntersectionObserver {
+      constructor(next: IntersectionObserverCallback) {
+        callback = next;
+      }
+      observe(target: Element): void {
+        observed = target.localName === 'lr-av-player';
+      }
+      unobserve(): void {}
+      disconnect(): void {
+        disconnected = true;
+      }
+      takeRecords(): IntersectionObserverEntry[] {
+        return [];
+      }
+      readonly root = null;
+      readonly rootMargin = '0px';
+      readonly thresholds = [0];
+    }
+    Object.defineProperty(window, 'IntersectionObserver', {
+      configurable: true,
+      value: TestIntersectionObserver,
+    });
+
+    let el: LyraAvPlayer | undefined;
+    try {
+      el = (await fixture(html`<lr-av-player .peaks=${[0.25, 0.75]}></lr-av-player>`)) as LyraAvPlayer;
+      await el.updateComplete;
+      expect(callback !== undefined, 'the owner-window visibility observer is installed').to.equal(true);
+      expect(observed, 'the observer watches the player host').to.equal(true);
+
+      callback!([{ target: el, isIntersecting: false } as IntersectionObserverEntry], {} as IntersectionObserver);
+      let paints = 0;
+      const internals = el as unknown as { paintWaveform(): void };
+      const originalPaint = internals.paintWaveform.bind(el);
+      internals.paintWaveform = () => {
+        paints += 1;
+        originalPaint();
+      };
+
+      el.peaks = [0.5, 1];
+      await el.updateComplete;
+      invalidateLyraTheme(el);
+      await aTimeout(0);
+      window.dispatchEvent(new Event('resize'));
+      expect(paints, 'hidden peaks, theme, and resize invalidations perform no canvas work').to.equal(0);
+
+      callback!([{ target: el, isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+      expect(paints, 'hidden invalidations coalesce into the visibility-entry paint').to.equal(1);
+
+      el.remove();
+      expect(disconnected, 'the visibility observer is disconnected with its host').to.equal(true);
+    } finally {
+      el?.remove();
+      if (originalIntersectionObserver) {
+        Object.defineProperty(window, 'IntersectionObserver', originalIntersectionObserver);
+      } else {
+        delete (window as unknown as { IntersectionObserver?: typeof IntersectionObserver })
+          .IntersectionObserver;
+      }
+    }
+  });
+
+  it('waits for a fresh same-realm visibility result after a visible player reconnects', async () => {
+    const originalIntersectionObserver = Object.getOwnPropertyDescriptor(window, 'IntersectionObserver');
+    const callbacks: IntersectionObserverCallback[] = [];
+    class TestIntersectionObserver {
+      constructor(callback: IntersectionObserverCallback) {
+        callbacks.push(callback);
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+      takeRecords(): IntersectionObserverEntry[] {
+        return [];
+      }
+      readonly root = null;
+      readonly rootMargin = '0px';
+      readonly thresholds = [0];
+    }
+    Object.defineProperty(window, 'IntersectionObserver', {
+      configurable: true,
+      value: TestIntersectionObserver,
+    });
+
+    let el: LyraAvPlayer | undefined;
+    try {
+      el = (await fixture(html`<lr-av-player .peaks=${[0.25, 0.75]}></lr-av-player>`)) as LyraAvPlayer;
+      const parent = el.parentElement!;
+      await el.updateComplete;
+      expect(callbacks.length).to.equal(1);
+      callbacks[0]!([{ target: el, isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+
+      let paints = 0;
+      const internals = el as unknown as { paintWaveform(): void };
+      const originalPaint = internals.paintWaveform.bind(el);
+      internals.paintWaveform = () => {
+        paints += 1;
+        originalPaint();
+      };
+
+      el.remove();
+      parent.append(el);
+      await el.updateComplete;
+
+      expect(callbacks.length).to.equal(2);
+      expect(paints, 'a reconnect must not trust visibility from the detached placement').to.equal(0);
+
+      callbacks[1]!([{ target: el, isIntersecting: false } as IntersectionObserverEntry], {} as IntersectionObserver);
+      window.dispatchEvent(new Event('resize'));
+      expect(paints, 'the fresh off-screen observation keeps resize work deferred').to.equal(0);
+
+      callbacks[1]!([{ target: el, isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+      expect(paints, 'the new owner-realm observer catches up once on re-entry').to.equal(1);
+    } finally {
+      el?.remove();
+      if (originalIntersectionObserver) {
+        Object.defineProperty(window, 'IntersectionObserver', originalIntersectionObserver);
+      } else {
+        delete (window as unknown as { IntersectionObserver?: typeof IntersectionObserver })
+          .IntersectionObserver;
+      }
+    }
+  });
+
+  it('rebuilds waveform observation in an adopted owner realm and ignores stale deliveries', async () => {
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const originalMainIntersectionObserver = Object.getOwnPropertyDescriptor(
+      window,
+      'IntersectionObserver',
+    );
+    const originalIntersectionObserver = Object.getOwnPropertyDescriptor(
+      frameWindow,
+      'IntersectionObserver',
+    );
+    let mainCallback: IntersectionObserverCallback | undefined;
+    let ownerCallback: IntersectionObserverCallback | undefined;
+    let mainConstructions = 0;
+    let mainDisconnects = 0;
+    let ownerConstructions = 0;
+    let ownerDisconnects = 0;
+    let observedInOwnerRealm = false;
+    class MainIntersectionObserver {
+      constructor(next: IntersectionObserverCallback) {
+        mainCallback = next;
+        mainConstructions += 1;
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {
+        mainDisconnects += 1;
+      }
+      takeRecords(): IntersectionObserverEntry[] {
+        return [];
+      }
+      readonly root = null;
+      readonly rootMargin = '0px';
+      readonly thresholds = [0];
+    }
+    class OwnerIntersectionObserver {
+      constructor(next: IntersectionObserverCallback) {
+        ownerCallback = next;
+        ownerConstructions += 1;
+      }
+      observe(target: Element): void {
+        observedInOwnerRealm = target.ownerDocument === frameDocument;
+      }
+      unobserve(): void {}
+      disconnect(): void {
+        ownerDisconnects += 1;
+      }
+      takeRecords(): IntersectionObserverEntry[] {
+        return [];
+      }
+      readonly root = null;
+      readonly rootMargin = '0px';
+      readonly thresholds = [0];
+    }
+    Object.defineProperty(window, 'IntersectionObserver', {
+      configurable: true,
+      value: MainIntersectionObserver,
+    });
+    Object.defineProperty(frameWindow, 'IntersectionObserver', {
+      configurable: true,
+      value: OwnerIntersectionObserver,
+    });
+
+    const el = document.createElement('lr-av-player') as LyraAvPlayer;
+    el.peaks = [0.25, 0.75];
+    try {
+      document.body.append(el);
+      await el.updateComplete;
+      expect(mainConstructions).to.equal(1);
+      mainCallback!(
+        [{ target: el, isIntersecting: false } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+
+      expect(mainDisconnects, 'the source-realm observer is disconnected').to.equal(1);
+      expect(ownerConstructions).to.equal(1);
+      expect(observedInOwnerRealm).to.equal(true);
+
+      let paints = 0;
+      const internals = el as unknown as { paintWaveform(): void };
+      const originalPaint = internals.paintWaveform.bind(el);
+      internals.paintWaveform = () => {
+        paints += 1;
+        originalPaint();
+      };
+      mainCallback!(
+        [{ target: el, isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      el.peaks = [0.5, 1];
+      await el.updateComplete;
+      expect(paints, 'a known-hidden player stays deferred after adoption').to.equal(0);
+
+      ownerCallback!(
+        [{ target: el, isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      await new Promise<void>((resolve) => frameWindow.requestAnimationFrame(() => resolve()));
+      expect(paints, 'the adopted owner realm performs the deferred paint').to.equal(1);
+
+      mainCallback!(
+        [{ target: el, isIntersecting: false } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      el.peaks = [0.6, 0.4];
+      await el.updateComplete;
+      expect(paints, 'a queued source-realm callback cannot suppress owner-realm painting').to.equal(2);
+
+      ownerCallback!(
+        [{ target: el, isIntersecting: false } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      el.peaks = [0.75, 0.25];
+      await el.updateComplete;
+      expect(paints, 'the current owner-realm callback still gates hidden painting').to.equal(2);
+      ownerCallback!(
+        [{ target: el, isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      await new Promise<void>((resolve) => frameWindow.requestAnimationFrame(() => resolve()));
+      expect(paints, 'the current owner-realm callback restores the deferred paint').to.equal(3);
+
+      el.remove();
+      expect(ownerDisconnects, 'disconnect tears down the current-realm observer').to.equal(1);
+    } finally {
+      el.remove();
+      if (originalMainIntersectionObserver) {
+        Object.defineProperty(window, 'IntersectionObserver', originalMainIntersectionObserver);
+      } else {
+        delete (window as unknown as { IntersectionObserver?: typeof IntersectionObserver })
+          .IntersectionObserver;
+      }
+      if (originalIntersectionObserver) {
+        Object.defineProperty(frameWindow, 'IntersectionObserver', originalIntersectionObserver);
+      } else {
+        delete (frameWindow as unknown as { IntersectionObserver?: typeof IntersectionObserver })
+          .IntersectionObserver;
+      }
+      iframe.remove();
+    }
+  });
+});
+
 function mediaEl(el: LyraAvPlayer): HTMLMediaElement {
   return el.shadowRoot!.querySelector('audio, video') as HTMLMediaElement;
 }
@@ -701,6 +980,22 @@ describe('timeline keyboard seeking', () => {
     const left = new KeyboardEvent('keydown', { key: 'ArrowLeft', shiftKey: true, cancelable: true, bubbles: true });
     timeline.dispatchEvent(left);
     expect(media.currentTime).to.equal(40);
+  });
+
+  it('keeps elapsed-time ArrowRight advancing and ArrowLeft rewinding under RTL', async () => {
+    const el = (await fixture(html`<lr-av-player dir="rtl" src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: 100, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
+    expect(getComputedStyle(timeline).direction).to.equal('ltr');
+    el.currentTime = 50;
+
+    timeline.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true, bubbles: true }));
+    expect(media.currentTime).to.equal(55);
+    timeline.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', cancelable: true, bubbles: true }));
+    expect(media.currentTime).to.equal(50);
   });
 
   it('Home/End jump to the start/duration', async () => {

@@ -62,6 +62,56 @@ it('applies the mapped symbol color and spacing custom properties to rendered sy
   expect(getComputedStyle(base).columnGap).to.equal('11px');
 });
 
+it('prefers the scoped rating gap, preserves the compatibility spacing fallback, and reaches shared spacing at nondefault sizes', async () => {
+  const compatibility = (await fixture(html`
+    <div style="--symbol-spacing: 11px">
+      <lr-rating size="xl" value="2"></lr-rating>
+    </div>
+  `)).querySelector('lr-rating') as LyraRating;
+  const scoped = (await fixture(html`
+    <div style="--symbol-spacing: 11px; --lr-rating-gap: 17px">
+      <lr-rating size="xl" value="2"></lr-rating>
+    </div>
+  `)).querySelector('lr-rating') as LyraRating;
+  const shared = (await fixture(html`
+    <div style="--lr-theme-space-xs: 7px">
+      <lr-rating size="xl" value="2"></lr-rating>
+    </div>
+  `)).querySelector('lr-rating') as LyraRating;
+
+  expect(getComputedStyle(baseOf(compatibility)).columnGap, 'the scoped hook is unset').to.equal('11px');
+  expect(getComputedStyle(baseOf(scoped)).columnGap, 'the scoped hook wins over --symbol-spacing').to.equal('17px');
+  expect(getComputedStyle(baseOf(shared)).columnGap, 'both component and compatibility hooks are unset').to.equal('7px');
+});
+
+it('applies --lr-rating-active-color only while the editable rating is pressed', async () => {
+  const el = await fixture<LyraRating>(html`
+    <lr-rating
+      value="2"
+      style="--lr-rating-empty-color: rgb(1, 2, 3); --lr-rating-active-color: rgb(4, 5, 6)"
+    ></lr-rating>
+  `);
+  const base = baseOf(el);
+  const star = starsOf(el)[0]!;
+  const bounds = base.getBoundingClientRect();
+  const position: [number, number] = [
+    Math.round(bounds.left + bounds.width / 2),
+    Math.round(bounds.top + bounds.height / 2),
+  ];
+
+  expect(getComputedStyle(star).color, 'resting').to.equal('rgb(1, 2, 3)');
+  try {
+    await sendMouse({ type: 'move', position });
+    expect(getComputedStyle(star).color, 'hover does not use the pressed hook').to.equal('rgb(1, 2, 3)');
+    await sendMouse({ type: 'down' });
+    expect(getComputedStyle(star).color, 'pressed').to.equal('rgb(4, 5, 6)');
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
+  expect(getComputedStyle(star).color, 'released').to.equal('rgb(1, 2, 3)');
+});
+
 it('applies --symbol-size while preserving --lr-rating-size precedence', async () => {
   const mapped = await fixture<LyraRating>(html`
     <lr-rating style="--symbol-size: 37px;"></lr-rating>

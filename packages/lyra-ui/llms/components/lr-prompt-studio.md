@@ -56,6 +56,10 @@ studio emits a `blur` and then a `focus`.
 `message-content`, `message-actions`, `move-message-up`, `move-message-down`, `remove-message`,
 `add-message`, `variables`, `variable`, `versions`, `version`, `preview`, `save`, `run`.
 
+Each `message-content` textarea deliberately keeps native vertical resizing. Prompt Studio exposes
+neither a configurable `resize` surface nor auto-grow behavior; use a dedicated editor when either
+is required.
+
 Each message's role select and content editor has a localized contextual accessible name containing
 its one-based message index and purpose (plus the current role for content), so repeated controls do
 not collapse to indistinguishable generic names.

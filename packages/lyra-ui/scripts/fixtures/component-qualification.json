@@ -452,14 +452,14 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/activity-feed/activity-feed.test.ts",
-              "line": 643,
+              "line": 661,
               "test": "is accessible in the ${label} path",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/activity-feed/activity-feed.test.ts",
-              "line": 690,
+              "line": 708,
               "test": "is accessible expanded, with entries, icons, variants, and timestamps",
               "target": "el",
               "state": "populated"
@@ -485,7 +485,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/activity-feed/activity-feed.test.ts",
-              "line": 512,
+              "line": 530,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -570,7 +570,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/activity-feed/activity-feed.class.ts",
-              "line": 319,
+              "line": 321,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -3182,21 +3182,21 @@
           "evidence": [
             {
               "file": "src/components/media/av-player/av-player.test.ts",
-              "line": 1170,
+              "line": 1465,
               "test": "is accessible with cues and peaks set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/av-player/av-player.test.ts",
-              "line": 1347,
+              "line": 1642,
               "test": "renders an error region instead of a media element when src is unsafe",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/av-player/av-player.test.ts",
-              "line": 1629,
+              "line": 1924,
               "test": "is accessible with every active-state prop themed",
               "target": "el",
               "state": "populated"
@@ -3210,7 +3210,7 @@
           "evidence": [
             {
               "file": "src/components/media/av-player/av-player.test.ts",
-              "line": 245,
+              "line": 524,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -3221,7 +3221,7 @@
           "evidence": [
             {
               "file": "src/components/media/av-player/av-player.test.ts",
-              "line": 584,
+              "line": 863,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -3238,7 +3238,7 @@
           "evidence": [
             {
               "file": "src/components/media/av-player/av-player.test.ts",
-              "line": 871,
+              "line": 1166,
               "kind": "320px allocation test signal"
             }
           ]
@@ -7931,9 +7931,7 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "keyboard",
-          "rtl",
           "reducedMotion",
-          "narrowAllocation",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -7946,14 +7944,14 @@
           "evidence": [
             {
               "file": "src/components/overlays/chip/chip-group.test.ts",
-              "line": 426,
+              "line": 473,
               "test": "is accessible with no overflow",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/chip/chip-group.test.ts",
-              "line": 449,
+              "line": 496,
               "test": "is accessible in an overflowing, collapsed state",
               "target": "el",
               "state": "populated"
@@ -8039,9 +8037,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/overlays/chip/chip-group.test.ts",
+              "line": 75,
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "applicable",
@@ -8051,9 +8054,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/overlays/chip/chip-group.test.ts",
+              "line": 72,
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -8131,9 +8139,7 @@
       },
       "knownLimitations": [
         "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -8163,9 +8169,7 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "keyboard",
-          "rtl",
           "reducedMotion",
-          "narrowAllocation",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -8178,14 +8182,14 @@
           "evidence": [
             {
               "file": "src/components/overlays/chip/chip-group.test.ts",
-              "line": 426,
+              "line": 473,
               "test": "is accessible with no overflow",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/chip/chip-group.test.ts",
-              "line": 449,
+              "line": 496,
               "test": "is accessible in an overflowing, collapsed state",
               "target": "el",
               "state": "populated"
@@ -8201,9 +8205,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/overlays/chip/chip-group.test.ts",
+              "line": 75,
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "applicable",
@@ -8213,9 +8222,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/overlays/chip/chip-group.test.ts",
+              "line": 72,
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -8293,9 +8307,7 @@
       },
       "knownLimitations": [
         "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -11957,42 +11969,42 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.test.ts",
-              "line": 743,
+              "line": 838,
               "test": "renders a named grid, populated cells, and an axe-clean empty state",
               "target": "populated",
               "state": "populated"
             },
             {
               "file": "src/components/data/data-grid/data-grid.test.ts",
-              "line": 868,
+              "line": 963,
               "test": "paginates top-level groups as units and renders aggregates and group selection",
               "target": "element",
               "state": "populated"
             },
             {
               "file": "src/components/data/data-grid/data-grid.test.ts",
-              "line": 1808,
+              "line": 1903,
               "test": "virtualizes 80+ rows, scrolls to an index, and reconciles a dynamic shrink",
               "target": "element",
               "state": "populated"
             },
             {
               "file": "src/components/data/data-grid/data-grid.test.ts",
-              "line": 2496,
+              "line": 2591,
               "test": "uses host naming precedence, locale-aware labels/digits, and responsive rendered styles",
               "target": "narrow",
               "state": "populated"
             },
             {
               "file": "src/components/data/data-grid/data-grid.test.ts",
-              "line": 2572,
+              "line": 2667,
               "test": "aborts pending work and resets transient menus across disconnect and reconnect",
               "target": "element",
               "state": "populated"
             },
             {
               "file": "src/components/data/data-grid/data-grid.test.ts",
-              "line": 2858,
+              "line": 2953,
               "test": "renders grouped rows with aggregates and group-level selection",
               "target": "element",
               "state": "populated"
@@ -12006,7 +12018,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.test.ts",
-              "line": 785,
+              "line": 880,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -12017,7 +12029,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.test.ts",
-              "line": 1411,
+              "line": 1506,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -12028,7 +12040,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.test.ts",
-              "line": 2566,
+              "line": 2661,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -12892,8 +12904,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "rtl",
-          "narrowAllocation",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -12933,14 +12943,14 @@
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 1361,
+              "line": 1394,
               "test": "is accessible with the label and header-actions slots populated",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 1376,
+              "line": 1409,
               "test": "keeps accessible-only naming separate from the visible label",
               "target": "el",
               "state": "open"
@@ -12968,9 +12978,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/overlays/dialog/dialog.test.ts",
+              "line": 967,
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "applicable",
@@ -12978,16 +12993,21 @@
           "evidence": [
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 1240,
+              "line": 1273,
               "kind": "reduced-motion test signal"
             }
           ]
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/overlays/dialog/dialog.test.ts",
+              "line": 961,
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -13075,8 +13095,6 @@
         }
       },
       "knownLimitations": [
-        "No component-local rendered RTL assertion is recorded.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
@@ -14701,7 +14719,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/drawer/drawer.test.ts",
-              "line": 379,
+              "line": 123,
               "kind": "320px allocation test signal"
             }
           ]
@@ -15216,7 +15234,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 409,
+              "line": 492,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -15227,7 +15245,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 768,
+              "line": 851,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -15249,7 +15267,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 1191,
+              "line": 1274,
               "kind": "320px allocation test signal"
             }
           ]
@@ -18486,14 +18504,14 @@
           "evidence": [
             {
               "file": "src/components/data/flow-controls/flow-controls.test.ts",
-              "line": 274,
+              "line": 317,
               "test": "is accessible with a resolved canvas",
               "target": "controls",
               "state": "populated"
             },
             {
               "file": "src/components/data/flow-controls/flow-controls.test.ts",
-              "line": 397,
+              "line": 440,
               "test": "is accessible under frame=\"plain\" with a resolved canvas",
               "target": "controls",
               "state": "populated"
@@ -22260,14 +22278,14 @@
           "evidence": [
             {
               "file": "src/components/media/image-viewer/image-viewer.test.ts",
-              "line": 702,
+              "line": 729,
               "test": "is accessible with highlights and annotation on",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/image-viewer/image-viewer.test.ts",
-              "line": 828,
+              "line": 855,
               "test": "is accessible with every active-state prop themed",
               "target": "el",
               "state": "populated"
@@ -22309,7 +22327,7 @@
           "evidence": [
             {
               "file": "src/components/media/image-viewer/image-viewer.test.ts",
-              "line": 878,
+              "line": 905,
               "kind": "320px allocation test signal"
             }
           ]
@@ -26261,7 +26279,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 409,
+              "line": 492,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -26272,7 +26290,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 768,
+              "line": 851,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -26294,7 +26312,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 1191,
+              "line": 1274,
               "kind": "320px allocation test signal"
             }
           ]
@@ -26441,42 +26459,42 @@
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 112,
+              "line": 195,
               "test": "keeps every display slot decorative while the host retains the sole menuitem action",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 465,
+              "line": 548,
               "test": "is accessible with type=\"checkbox\", both unchecked and checked",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 475,
+              "line": 558,
               "test": "is accessible in the default state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 480,
+              "line": 563,
               "test": "is accessible with an icon, disabled and destructive states",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 557,
+              "line": 640,
               "test": "is accessible at the smallest and largest tiers",
               "target": "smallest",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 557,
+              "line": 640,
               "test": "is accessible at the smallest and largest tiers",
               "target": "largest",
               "state": "populated"
@@ -26532,7 +26550,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 409,
+              "line": 492,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -26543,7 +26561,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 768,
+              "line": 851,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -26565,7 +26583,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 1191,
+              "line": 1274,
               "kind": "320px allocation test signal"
             }
           ]
@@ -26707,7 +26725,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 409,
+              "line": 492,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -26718,7 +26736,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 768,
+              "line": 851,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -26740,7 +26758,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 1191,
+              "line": 1274,
               "kind": "320px allocation test signal"
             }
           ]
@@ -27527,35 +27545,42 @@
           "evidence": [
             {
               "file": "src/components/conversation/model-select/model-select.test.ts",
-              "line": 1412,
+              "line": 165,
+              "test": "renders optional catalog icons decoratively in both listbox modes",
+              "target": "el",
+              "state": "open"
+            },
+            {
+              "file": "src/components/conversation/model-select/model-select.test.ts",
+              "line": 1437,
               "test": "is accessible (closed dropdown, default and open)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/conversation/model-select/model-select.test.ts",
-              "line": 1412,
+              "line": 1437,
               "test": "is accessible (closed dropdown, default and open)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/conversation/model-select/model-select.test.ts",
-              "line": 1431,
+              "line": 1456,
               "test": "is accessible (free-text mode, default and open)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/conversation/model-select/model-select.test.ts",
-              "line": 1431,
+              "line": 1456,
               "test": "is accessible (free-text mode, default and open)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/conversation/model-select/model-select.test.ts",
-              "line": 1403,
+              "line": 1428,
               "test": "is accessible with a visible label set",
               "target": "el",
               "state": "populated"
@@ -27569,7 +27594,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/model-select/model-select.test.ts",
-              "line": 182,
+              "line": 207,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -27592,7 +27617,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/model-select/model-select.test.ts",
-              "line": 387,
+              "line": 412,
               "kind": "320px allocation test signal"
             }
           ]
@@ -32300,7 +32325,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.test.ts",
-              "line": 541,
+              "line": 605,
               "test": "is accessible with its composed controls populated",
               "target": "el",
               "state": "populated"
@@ -32314,7 +32339,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.test.ts",
-              "line": 124,
+              "line": 91,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -32616,7 +32641,7 @@
             },
             {
               "file": "src/components/agent-tools/prompt-studio/prompt-studio.test.ts",
-              "line": 376,
+              "line": 387,
               "test": "keeps message reordering opt-in and disables boundary actions",
               "target": "el",
               "state": "populated"
@@ -32926,21 +32951,21 @@
           "evidence": [
             {
               "file": "src/components/conversation/push-to-talk/push-to-talk.test.ts",
-              "line": 1287,
+              "line": 1341,
               "test": "makes interactive icon-slot content decorative and unfocusable inside the trigger",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/push-to-talk/push-to-talk.test.ts",
-              "line": 1306,
+              "line": 1360,
               "test": "is accessible in toggle mode while recording",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/push-to-talk/push-to-talk.test.ts",
-              "line": 1374,
+              "line": 1428,
               "test": "is accessible with the recording-state prop themed",
               "target": "el",
               "state": "populated"
@@ -32954,7 +32979,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/push-to-talk/push-to-talk.test.ts",
-              "line": 601,
+              "line": 635,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -34674,28 +34699,28 @@
           "evidence": [
             {
               "file": "src/components/overlays/rating/rating.test.ts",
-              "line": 98,
+              "line": 148,
               "test": "exposes a keyboard-accessible rating slider",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/rating/rating.test.ts",
-              "line": 695,
+              "line": 745,
               "test": "renders dynamically supplied getSymbol output as inert presentation while retaining star pointer selection",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/rating/rating.test.ts",
-              "line": 891,
+              "line": 941,
               "test": "is accessible while required, labelled, rated, and rendering a custom symbol",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/rating/rating.test.ts",
-              "line": 891,
+              "line": 941,
               "test": "is accessible while required, labelled, rated, and rendering a custom symbol",
               "target": "el",
               "state": "populated"
@@ -34709,7 +34734,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/rating/rating.test.ts",
-              "line": 103,
+              "line": 153,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -34720,7 +34745,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/rating/rating.test.ts",
-              "line": 199,
+              "line": 249,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -39032,7 +39057,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.test.ts",
-              "line": 199,
+              "line": 202,
               "test": "is accessible with a mixed-selection tree",
               "target": "el",
               "state": "populated"
@@ -39046,7 +39071,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.test.ts",
-              "line": 105,
+              "line": 108,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -39057,7 +39082,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.test.ts",
-              "line": 355,
+              "line": 358,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -39132,7 +39157,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.class.ts",
-              "line": 267,
+              "line": 269,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39703,14 +39728,14 @@
           "evidence": [
             {
               "file": "src/components/layout/split/split.test.ts",
-              "line": 3808,
+              "line": 3925,
               "test": "is accessible with a viewport-basis breakpoint set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/split/split.test.ts",
-              "line": 4199,
+              "line": 4316,
               "test": "is accessible in the rail state under viewport basis",
               "target": "el",
               "state": "populated"
@@ -39735,7 +39760,7 @@
           "evidence": [
             {
               "file": "src/components/layout/split/split.test.ts",
-              "line": 268,
+              "line": 385,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -39752,7 +39777,7 @@
           "evidence": [
             {
               "file": "src/components/layout/split/split.test.ts",
-              "line": 1094,
+              "line": 1211,
               "kind": "320px allocation test signal"
             }
           ]
@@ -39882,14 +39907,14 @@
           "evidence": [
             {
               "file": "src/components/layout/split-panel/split-panel.test.ts",
-              "line": 587,
+              "line": 709,
               "test": "is accessible with populated start, end, and custom divider slots",
               "target": "element",
               "state": "populated"
             },
             {
               "file": "src/components/layout/split-panel/split-panel.test.ts",
-              "line": 601,
+              "line": 723,
               "test": "keeps custom divider content inert while preserving the separator as the sole resize control",
               "target": "element",
               "state": "populated"
@@ -43046,7 +43071,7 @@
             },
             {
               "file": "src/components/agent-tools/task-list/task-list.test.ts",
-              "line": 358,
+              "line": 372,
               "test": "is accessible expanded, with items, children, and detail text",
               "target": "el",
               "state": "populated"
@@ -44791,7 +44816,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.test.ts",
-              "line": 945,
+              "line": 1052,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -44871,7 +44896,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.class.ts",
-              "line": 602,
+              "line": 616,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -44938,7 +44963,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.test.ts",
-              "line": 527,
+              "line": 529,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -44976,7 +45001,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.test.ts",
-              "line": 945,
+              "line": 1052,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -45045,7 +45070,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.class.ts",
-              "line": 602,
+              "line": 616,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -45273,35 +45298,35 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts",
-              "line": 984,
+              "line": 1004,
               "test": "is accessible while a decision is pending (loading + disabled lr-button still expose a valid name/state)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts",
-              "line": 1006,
+              "line": 1026,
               "test": "is accessible while open in the read-only view",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts",
-              "line": 1014,
+              "line": 1034,
               "test": "is accessible while open and editing, including with an invalid-JSON error shown",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts",
-              "line": 1014,
+              "line": 1034,
               "test": "is accessible while open and editing, including with an invalid-JSON error shown",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts",
-              "line": 999,
+              "line": 1019,
               "test": "is accessible while closed",
               "target": "el",
               "state": "populated"
@@ -45315,7 +45340,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts",
-              "line": 375,
+              "line": 395,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -45628,7 +45653,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-param-form/tool-param-form.test.ts",
-              "line": 1112,
+              "line": 1130,
               "test": "is accessible in a populated state with a required, unfilled field revealed",
               "target": "el",
               "state": "populated"
@@ -45660,7 +45685,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-param-form/tool-param-form.test.ts",
-              "line": 1156,
+              "line": 1174,
               "kind": "320px allocation test signal"
             }
           ]
@@ -48822,21 +48847,21 @@
             },
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 1126,
+              "line": 1228,
               "test": "is accessible in both default and fullscreen-expandable states",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 1126,
+              "line": 1228,
               "test": "is accessible in both default and fullscreen-expandable states",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 1854,
+              "line": 1956,
               "test": "is accessible with the active-state props themed",
               "target": "el",
               "state": "populated"
@@ -48850,7 +48875,7 @@
           "evidence": [
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 1033,
+              "line": 1135,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -48861,7 +48886,7 @@
           "evidence": [
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 1276,
+              "line": 1378,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -48872,7 +48897,7 @@
           "evidence": [
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 1570,
+              "line": 1672,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -49532,7 +49557,7 @@
             },
             {
               "file": "src/components/media/zoomable-frame/zoomable-frame.test.ts",
-              "line": 547,
+              "line": 633,
               "test": "is accessible with a populated inline document and visible controls",
               "target": "el",
               "state": "populated"
@@ -49632,7 +49657,7 @@
           "evidence": [
             {
               "file": "src/components/media/zoomable-frame/zoomable-frame.class.ts",
-              "line": 351,
+              "line": 378,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

@@ -705,6 +705,13 @@ export type LyraCollapseChangeEvent =
   | LyraWidgetEventMap['lr-collapse-change'];
 
 /**
+ * `lr-collapse-request` — dispatched by `<lr-widget>`.
+ *
+ * Detail type: `LyraWidgetEventMap['lr-collapse-request']`.
+ */
+export type LyraCollapseRequestEvent = LyraWidgetEventMap['lr-collapse-request'];
+
+/**
  * `lr-collapse-toggle` — dispatched by `<lr-chat-message>`.
  *
  * Detail type: `LyraChatMessageEventMap['lr-collapse-toggle']`.
@@ -2201,6 +2208,13 @@ export type LyraRepositionEvent =
   | LyraSplitPanelEventMap['lr-reposition'];
 
 /**
+ * `lr-reposition-request` — dispatched by `<lr-split-panel>`.
+ *
+ * Detail type: `LyraSplitPanelEventMap['lr-reposition-request']`.
+ */
+export type LyraRepositionRequestEvent = LyraSplitPanelEventMap['lr-reposition-request'];
+
+/**
  * `lr-request-close` — dispatched by `<lr-dialog>`.
  *
  * Detail type: `LyraDialogEventMap['lr-request-close']`.
@@ -2225,6 +2239,13 @@ export type LyraResizeEvent =
   | LyraDockPanelEventMap['lr-resize']
   | LyraResizeObserverEventMap['lr-resize']
   | LyraSplitEventMap['lr-resize'];
+
+/**
+ * `lr-resize-request` — dispatched by `<lr-split>`.
+ *
+ * Detail type: `LyraSplitEventMap['lr-resize-request']`.
+ */
+export type LyraResizeRequestEvent = LyraSplitEventMap['lr-resize-request'];
 
 /**
  * `lr-restore` — dispatched by 2 components: `<lr-artifact-panel>`, `<lr-checkpoint>`.
@@ -3119,6 +3140,7 @@ export interface LyraGlobalEventMap {
   'lr-close': LyraCloseEvent;
   'lr-collapse': LyraCollapseEvent;
   'lr-collapse-change': LyraCollapseChangeEvent;
+  'lr-collapse-request': LyraCollapseRequestEvent;
   'lr-collapse-toggle': LyraCollapseToggleEvent;
   'lr-collision': LyraCollisionEvent;
   'lr-column-move': LyraColumnMoveEvent;
@@ -3283,9 +3305,11 @@ export interface LyraGlobalEventMap {
   'lr-render-error': LyraRenderErrorEvent;
   'lr-reorder': LyraReorderEvent;
   'lr-reposition': LyraRepositionEvent;
+  'lr-reposition-request': LyraRepositionRequestEvent;
   'lr-request-close': LyraRequestCloseEvent;
   'lr-reset': LyraResetEvent;
   'lr-resize': LyraResizeEvent;
+  'lr-resize-request': LyraResizeRequestEvent;
   'lr-restore': LyraRestoreEvent;
   'lr-retrieval-select': LyraRetrievalSelectEvent;
   'lr-retry': LyraRetryEvent;

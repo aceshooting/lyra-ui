@@ -22,7 +22,7 @@ export const styles = css`
      single star, say) is narrower than that floor, and the default justify-content
      (normal => flex-start) would push the stars against the leading edge of an otherwise
      centred control. A no-op once the stars already fill the floor. */
-  [part~='base'] { display: inline-flex; justify-content: center; align-items: center; gap: var(--symbol-spacing, var(--lr-space-xs)); min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); }
+  [part~='base'] { display: inline-flex; justify-content: center; align-items: center; gap: var(--lr-rating-gap, var(--symbol-spacing, var(--lr-space-xs))); min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); }
   /* Pointer cursor only while the rating is actually settable -- a readonly or disabled rating is
      not editable via click/drag, so an unconditional cursor: pointer here would misleadingly cue
      an interaction that setValue() (rating.class.ts) refuses to apply. :disabled rather than
@@ -39,7 +39,7 @@ export const styles = css`
   :host(:not(:disabled):not([readonly])) [part~='base']:hover [part='star'] { color: var(--lr-rating-empty-color, var(--symbol-color, var(--lr-color-border-strong))); }
   /* Pressing commits a value, so the pressed cue is on the star the pointer is over rather than
      the whole row -- the row-wide hover cue says "settable", this says "this one". */
-  :host(:not(:disabled):not([readonly])) [part~='base']:active [part='star'] { color: color-mix(in oklab, var(--lr-rating-empty-color, var(--symbol-color, var(--lr-color-border-strong))), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
+  :host(:not(:disabled):not([readonly])) [part~='base']:active [part='star'] { color: var(--lr-rating-active-color, color-mix(in oklab, var(--lr-rating-empty-color, var(--symbol-color, var(--lr-color-border-strong))), var(--lr-color-mix-partner) var(--lr-color-mix-active))); }
   [part='star'] { position: relative; display: inline-flex; color: var(--lr-rating-empty-color, var(--symbol-color, var(--lr-color-border))); font-size: var(--lr-rating-size); line-height: var(--lr-line-height-none); }
   [part='star'] svg { display: block; }
   /* white-space keeps a consumer getSymbol() glyph at its natural width inside the percentage-wide

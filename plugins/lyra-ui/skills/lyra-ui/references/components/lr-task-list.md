@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -64,6 +64,9 @@ icon spin animation duration/timing; `--lr-task-list-compact-header-padding` (de
 `--lr-task-list-compact-header-gap` (default `var(--lr-space-2xs)`) — gap between `[part="header"]`'s
 label/summary/toggle while `compact`, one step tighter than the header's uncompacted
 `--lr-space-xs`, so `compact` tightens the header's *interior* spacing and not just its padding;
+`--lr-task-list-compact-header-font-size` (default `var(--lr-font-size-sm)`) — `[part="header"]`
+font size while `compact`, completing the compact header's typography alongside its padding and
+gap;
 `--lr-task-list-compact-gap` (default `var(--lr-space-2xs)`) — gap between `[part="body"]`'s item
 rows while `compact`; `--lr-task-list-compact-body-padding` (default `var(--lr-space-2xs)
 var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding while `compact`;

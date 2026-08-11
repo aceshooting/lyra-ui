@@ -135,8 +135,12 @@ collapsed. `collapse="none"` (the default) is byte-for-byte identical to pre-col
 `dividerLabel?: (index: number, panelCount: number) => string` (attribute: false) customizes the
 localized accessible label generated for each auto-inserted divider.
 
-**Events:** `lr-resize` (`detail: { sizes }`, fired on every drag movement that changes sizes and
-every keyboard step; pointer release persists the settled sizes but emits no additional event),
+**Events:** `lr-resize-request` (cancelable; `detail: { sizes }` is the proposed constrained size
+array from a divider drag or keyboard step. Call `preventDefault()` to leave `sizes` and its
+persisted layout unchanged. It is not emitted when a consumer assigns `sizes` directly),
+`lr-resize` (non-cancelable; the same `detail: { sizes }`, emitted after an accepted drag movement
+or keyboard step commits. Pointer release persists the settled sizes but emits no additional event;
+direct `sizes` assignments stay silent),
 `lr-split-collapse-change` (`detail: { state: 'wide'|'rail'|'floating' }`, fired only
 on a real `collapse`-state transition, never on every resize/render),
 `lr-split-constraints-invalid` (`detail: SplitConstraintIssueDetail`, fired once when the configured
@@ -274,8 +278,13 @@ multi-divider events are intentionally a different API.
   string snap point takes effect. Non-finite values fall back safely and negative values clamp to
   zero.
 
-**Events:** `lr-reposition` (no detail) — bubbling and composed, emitted whenever pointer or
-keyboard interaction changes the divider position.
+**Events:** `lr-reposition-request` (cancelable; `detail: SplitPanelRepositionDetail`, where
+`{ position, positionInPixels }` is the final snapped and constrained proposed position measured
+from the selected `primary` pane's edge. Call `preventDefault()` to leave both position properties
+unchanged. It is not emitted when a consumer assigns `position` or `positionInPixels` directly),
+`lr-reposition` (non-cancelable, no detail) — bubbling and composed, emitted after an accepted
+pointer or keyboard interaction commits the divider position; direct property assignments stay
+silent.
 
 **Slots:** `start` (logical start pane), `end` (logical end pane), `divider` (optional decorative
 custom-handle content inside the separator; its assigned subtree is inert, so the separator remains
@@ -368,10 +377,14 @@ position) survives the transition.
   `lr-table`'s identical `storage-key` pattern). Without a `storageKey` there is no persistence and
   storage is never touched — listen for `lr-collapse-change` and persist the state yourself.
 
-**Events:** `lr-collapse-change` (`detail: { collapsed }`, the new state), `lr-fullscreen-change`
-(`detail: { fullscreen }` — also fired when fullscreen is exited via Escape or a backdrop click, not
-just the toggle button), `lr-view-change` (`detail: { viewId }`, the new active view's `id` — fired
-when it changes via a header view-toggle click, not when a consumer sets `activeView` directly)
+**Events:** `lr-collapse-request` (cancelable; `detail: { collapsed }` is the state proposed by the
+built-in collapse toggle. Call `preventDefault()` to leave `collapsed` and any persisted state
+unchanged. It is not emitted when a consumer assigns `collapsed` directly), `lr-collapse-change`
+(non-cancelable; `detail: { collapsed }` is the accepted built-in-toggle state. It is not emitted
+when a consumer assigns `collapsed` directly), `lr-fullscreen-change` (`detail: { fullscreen }` —
+also fired when fullscreen is exited via Escape or a backdrop click, not just the toggle button),
+`lr-view-change` (`detail: { viewId }`, the new active view's `id` — fired when it changes via a
+header view-toggle click, not when a consumer sets `activeView` directly)
 
 **Slots:** default (the panel body, rendered only while `views` is empty), `icon` (optional leading
 icon in the title row), `label` (rich label content, overrides the `label` attribute), `sublabel`
@@ -2213,8 +2226,9 @@ internal shadow-DOM button; `<lr-menu>` is the sole owner of this element's `tab
 - `disabled: boolean = false` (reflected — disables selection and excludes this item from
   `<lr-menu>`'s roving-tabindex navigation entirely; the native `inert` attribute, `hidden`, and
   `aria-hidden="true"` exclude it the same way — see "Which items arrow keys reach" above)
-- `destructive: boolean = false` (reflected — tints the row with `--lr-color-danger`, for a
-  dangerous action like "Delete"; retained as a behavior-identical alias)
+- `destructive: boolean = false` (reflected — gives the row the dangerous treatment for an action
+  like "Delete"; its foreground defaults to `--lr-color-danger`; retained as a behavior-identical
+  alias)
 - `variant: LyraVariant | 'default' = 'default'` (reflected) — `danger` is the mapped dangerous
   treatment; `default` is the WA spelling of Lyra's neutral item treatment
 - `type: 'normal' | 'checkbox' = 'normal'` — `'checkbox'` (mirroring `wa-dropdown-item`'s identical
@@ -2297,13 +2311,19 @@ between the visual row's leading content, label, details, and state glyphs. `--l
 (default `var(--lr-form-control-radius)`) is its corner radius; its fallback follows the item's
 active size tier. Both are inline fallbacks rather than values declared on `:host`, so setting either
 on an item or any ancestor retunes the row without a `::part(base)` rule; `<lr-dropdown-item>`
-inherits both hooks. `--submenu-offset` (default `-2px`) is the final signed distance between a
-submenu and its parent row: negative values overlap the parent menu and positive values add
-separation. It updates live, mirrors along with the submenu under RTL, and applies to both the
-Shoelace-style nested-menu shape and Lyra's generated panel for direct mapped items. Shared tokens
-also include `--lr-radius`, `--lr-focus-ring-width`, `--lr-focus-ring-color`, `--lr-space-xs`,
-`--lr-space-s`, `--lr-color-brand-quiet`, `--lr-opacity-disabled`, `--lr-color-danger`, and
-`--lr-color-danger-quiet`.
+inherits both hooks. The same shape applies to a dangerous row's local state palette:
+`--lr-menu-item-danger-color` (default `var(--lr-color-danger)`) controls its foreground,
+`--lr-menu-item-danger-hover-bg` (default `var(--lr-color-danger-quiet)`) its hover background, and
+`--lr-menu-item-danger-active-bg` (default
+`color-mix(in oklab, var(--lr-color-danger-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`)
+its pressed background. Set those hooks on a destructive or `variant="danger"` item, or on a menu
+ancestor, to retheme only danger rows without replacing the shared danger palette. `--submenu-offset`
+(default `-2px`) is the final signed distance between a submenu and its parent row: negative values
+overlap the parent menu and positive values add separation. It updates live, mirrors along with the
+submenu under RTL, and applies to both the Shoelace-style nested-menu shape and Lyra's generated
+panel for direct mapped items. Shared tokens also include `--lr-radius`, `--lr-focus-ring-width`,
+`--lr-focus-ring-color`, `--lr-space-xs`, `--lr-space-s`, `--lr-color-brand-quiet`,
+`--lr-opacity-disabled`, `--lr-color-danger`, and `--lr-color-danger-quiet`.
 
 **Optional peer deps:** none.
 
@@ -2339,7 +2359,8 @@ interactive menu content.
 **CSS parts:** identical to `<lr-menu-item>`'s, including all compatibility aliases above.
 
 **Themeable custom properties:** identical to `<lr-menu-item>`'s, including
-`--lr-menu-item-gap`, `--lr-menu-item-radius`, and `--submenu-offset`.
+`--lr-menu-item-gap`, `--lr-menu-item-radius`, `--lr-menu-item-danger-color`,
+`--lr-menu-item-danger-hover-bg`, `--lr-menu-item-danger-active-bg`, and `--submenu-offset`.
 
 ```html
 <lr-menu>

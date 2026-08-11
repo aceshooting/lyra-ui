@@ -296,6 +296,20 @@ describe('compact / frame escape hatches', () => {
     expect(getComputedStyle(header).gap).to.equal('7px');
   });
 
+  it('reduces compact header typography through a dedicated retunable cssprop', async () => {
+    const regular = (await fixture(html`<lr-task-list .items=${items}></lr-task-list>`)) as LyraTaskList;
+    const regularHeader = regular.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    const compact = (await fixture(html`<lr-task-list compact .items=${items}></lr-task-list>`)) as LyraTaskList;
+    const compactHeader = compact.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+
+    expect(Number.parseFloat(getComputedStyle(compactHeader).fontSize)).to.be.lessThan(
+      Number.parseFloat(getComputedStyle(regularHeader).fontSize),
+    );
+
+    compact.style.setProperty('--lr-task-list-compact-header-font-size', '11px');
+    expect(getComputedStyle(compactHeader).fontSize).to.equal('11px');
+  });
+
   it('frame="plain" removes [part="base"]\'s border and background', async () => {
     const cardEl = (await fixture(html`<lr-task-list .items=${items}></lr-task-list>`)) as LyraTaskList;
     const cardBase = cardEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement;

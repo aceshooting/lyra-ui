@@ -91,6 +91,35 @@ export const ReportValidity: Story = {
   },
 };
 
+export const RetintedInvalidControl: Story = {
+  name: 'Retinted invalid control',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-tool-param-form-invalid-border-color` retints only invalid generated text and number controls. Select "Show validation" to reveal the required City error; entering a city restores its regular border.',
+      },
+    },
+  },
+  render: () => {
+    const showValidation = (event: Event): void => {
+      const form = (event.currentTarget as HTMLElement)
+        .closest('.demo')!
+        .querySelector('lr-tool-param-form') as LyraToolParamForm;
+      form.reportValidity();
+    };
+    return html`
+      <div class="demo" style="max-width: 24rem; display: flex; flex-direction: column; gap: 1rem">
+        <lr-tool-param-form
+          style="--lr-tool-param-form-invalid-border-color: var(--lr-color-warning)"
+          .schema=${weatherSchema}
+        ></lr-tool-param-form>
+        <button type="button" @click=${showValidation}>Show validation</button>
+      </div>
+    `;
+  },
+};
+
 export const NativeFormAndCustomError: Story = {
   parameters: {
     docs: {

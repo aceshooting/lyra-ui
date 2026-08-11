@@ -101,7 +101,7 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='args-editor'][aria-invalid='true'] {
-    border-color: var(--lr-color-danger);
+    border-color: var(--lr-tool-approval-dialog-invalid-border-color, var(--lr-color-danger));
   }
   [part='error'] {
     margin: 0;

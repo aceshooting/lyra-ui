@@ -2742,6 +2742,12 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-activity-feed-live-status-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
             "name": "--lr-activity-feed-max-height",
             "deprecated": null,
             "hasDefault": true,
@@ -20885,6 +20891,12 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-chip-group-overflow-expanded-border-style",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "solid"
+          },
           {
             "name": "--lr-chip-group-overflow-expanded-color",
             "deprecated": null,
@@ -40429,6 +40441,24 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-menu-item-danger-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-color-danger-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-menu-item-danger-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-menu-item-danger-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger-quiet)"
+          },
+          {
             "name": "--lr-menu-item-gap",
             "deprecated": null,
             "hasDefault": true,
@@ -47181,7 +47211,14 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-flow-controls-lock-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "form": {
@@ -65645,6 +65682,24 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-menu-item-danger-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-color-danger-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-menu-item-danger-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-menu-item-danger-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger-quiet)"
+          },
+          {
             "name": "--lr-menu-item-gap",
             "deprecated": null,
             "hasDefault": true,
@@ -67627,6 +67682,10 @@
           },
           {
             "name": "option-badge",
+            "deprecated": null
+          },
+          {
+            "name": "option-icon",
             "deprecated": null
           },
           {
@@ -82629,11 +82688,19 @@
             "deprecated": null
           },
           {
+            "name": "end",
+            "deprecated": null
+          },
+          {
             "name": "footer",
             "deprecated": null
           },
           {
             "name": "leading",
+            "deprecated": null
+          },
+          {
+            "name": "start",
             "deprecated": null
           },
           {
@@ -83960,6 +84027,10 @@
             "deprecated": null
           },
           {
+            "name": "microphone-icon",
+            "deprecated": null
+          },
+          {
             "name": "recording-icon",
             "deprecated": null
           }
@@ -84032,6 +84103,12 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-push-to-talk-pulse-recording-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-push-to-talk-recording-color, var(--lr-color-danger))"
+          },
+          {
             "name": "--lr-push-to-talk-recording-color",
             "deprecated": null,
             "hasDefault": true,
@@ -84042,6 +84119,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-3rem)"
+          },
+          {
+            "name": "--lr-push-to-talk-trigger-recording-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-push-to-talk-recording-color, var(--lr-color-danger))"
+          },
+          {
+            "name": "--lr-push-to-talk-trigger-recording-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-push-to-talk-recording-color, var(--lr-color-danger))"
           }
         ],
         "cssStates": [],
@@ -89059,6 +89148,12 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-rating-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-rating-empty-color, var(--symbol-color, var(--lr-color-border-strong))), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
             "name": "--lr-rating-empty-color",
             "deprecated": null,
             "hasDefault": true,
@@ -89069,6 +89164,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-warning)"
+          },
+          {
+            "name": "--lr-rating-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--symbol-spacing,var(--lr-space-xs))"
           },
           {
             "name": "--lr-rating-size",
@@ -99742,6 +99843,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-resize-request",
+            "type": "CustomEvent<SplitResizeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-split-collapse-change",
             "type": "CustomEvent<SplitCollapseChangeDetail>",
             "cancelable": "never",
@@ -100045,6 +100152,12 @@
             "name": "lr-reposition",
             "type": "CustomEvent<undefined>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-reposition-request",
+            "type": "CustomEvent<SplitPanelRepositionDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           }
         ],
@@ -106199,6 +106312,12 @@
             "default": "var(--lr-space-2xs)"
           },
           {
+            "name": "--lr-task-list-compact-header-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-sm)"
+          },
+          {
             "name": "--lr-task-list-compact-header-gap",
             "deprecated": null,
             "hasDefault": true,
@@ -111764,6 +111883,30 @@
             "default": "var(--lr-size-4px)"
           },
           {
+            "name": "--lr-toast-close-button-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-toast-close-button-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-toast-close-button-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
+          },
+          {
+            "name": "--lr-toast-close-button-hover-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
             "name": "--lr-toast-font-size",
             "deprecated": null,
             "hasDefault": true,
@@ -111774,6 +111917,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-transition-base, 180ms ease-out)"
+          },
+          {
+            "name": "--lr-toast-item-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-toast-item-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
           },
           {
             "name": "--lr-toast-padding",
@@ -113233,6 +113388,12 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-tool-approval-dialog-invalid-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
             "name": "--lr-tool-approval-dialog-mono-font",
             "deprecated": null,
             "hasDefault": true,
@@ -113900,6 +114061,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "--lr-tool-param-form-invalid-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
           }
         ],
         "cssStates": [
@@ -121257,6 +121424,12 @@
             "name": "lr-collapse-change",
             "type": "CustomEvent<{ collapsed: boolean }>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-collapse-request",
+            "type": "CustomEvent<{ collapsed: boolean }>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {

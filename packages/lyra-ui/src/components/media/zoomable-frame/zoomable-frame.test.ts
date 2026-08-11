@@ -542,6 +542,92 @@ describe('navigation lifecycle and theme sync', () => {
       else root.style.removeProperty(property);
     }
   });
+
+  it('restores iframe-owned theme state and ignores later host changes after theme sync is disabled', async () => {
+    const root = document.documentElement;
+    const restoredProperty = '--lr-theme-zoomable-frame-restored-probe';
+    const externallyChangedProperty = '--lr-theme-zoomable-frame-external-probe';
+    const previousClass = root.getAttribute('class');
+    const previousAttributes = new Map(
+      ['data-lr-theme', 'data-theme', 'data-color-scheme'].map(attribute => [
+        attribute,
+        root.getAttribute(attribute),
+      ] as const),
+    );
+    const previousStyles = new Map(
+      [restoredProperty, externallyChangedProperty, 'color-scheme'].map(property => [
+        property,
+        [root.style.getPropertyValue(property), root.style.getPropertyPriority(property)] as const,
+      ] as const),
+    );
+    try {
+      root.classList.add('lr-dark');
+      root.setAttribute('data-lr-theme', 'host-dark');
+      root.setAttribute('data-theme', 'host-theme');
+      root.setAttribute('data-color-scheme', 'host-scheme');
+      root.style.setProperty(restoredProperty, 'rgb(12, 34, 56)');
+      root.style.setProperty(externallyChangedProperty, 'rgb(65, 43, 21)');
+      root.style.setProperty('color-scheme', 'light');
+
+      const el = await fixture<LyraZoomableFrame>(html`
+        <lr-zoomable-frame .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
+      `);
+      const frame = frameOf(el);
+      const childRoot = frame.contentDocument!.documentElement;
+      childRoot.classList.add('lr-light');
+      childRoot.setAttribute('data-lr-theme', 'embedded-dark');
+      childRoot.setAttribute('data-theme', 'embedded-theme');
+      childRoot.setAttribute('data-color-scheme', 'embedded-scheme');
+      childRoot.style.setProperty(restoredProperty, 'rgb(1, 2, 3)');
+      childRoot.style.setProperty(externallyChangedProperty, 'rgb(3, 2, 1)');
+      childRoot.style.setProperty('color-scheme', 'dark');
+
+      el.withThemeSync = true;
+      await el.updateComplete;
+      frame.dispatchEvent(new Event('load'));
+      await eventually(() =>
+        childRoot.classList.contains('lr-dark') &&
+        childRoot.getAttribute('data-lr-theme') === 'host-dark' &&
+        childRoot.style.getPropertyValue(restoredProperty) === 'rgb(12, 34, 56)' &&
+        childRoot.style.getPropertyValue('color-scheme') === 'light',
+      );
+
+      childRoot.setAttribute('data-theme', 'embedded-after-sync');
+      childRoot.style.setProperty(externallyChangedProperty, 'rgb(7, 8, 9)');
+      el.withThemeSync = false;
+      await el.updateComplete;
+
+      expect(childRoot.classList.contains('lr-dark')).to.be.false;
+      expect(childRoot.classList.contains('lr-light')).to.be.true;
+      expect(childRoot.getAttribute('data-lr-theme')).to.equal('embedded-dark');
+      expect(childRoot.getAttribute('data-theme')).to.equal('embedded-after-sync');
+      expect(childRoot.getAttribute('data-color-scheme')).to.equal('embedded-scheme');
+      expect(childRoot.style.getPropertyValue(restoredProperty)).to.equal('rgb(1, 2, 3)');
+      expect(childRoot.style.getPropertyValue(externallyChangedProperty)).to.equal('rgb(7, 8, 9)');
+      expect(childRoot.style.getPropertyValue('color-scheme')).to.equal('dark');
+
+      root.classList.remove('lr-dark');
+      root.classList.add('lr-light');
+      root.setAttribute('data-lr-theme', 'host-light');
+      root.style.setProperty(restoredProperty, 'rgb(90, 80, 70)');
+      await aTimeout(0);
+
+      expect(childRoot.classList.contains('lr-light')).to.be.true;
+      expect(childRoot.getAttribute('data-lr-theme')).to.equal('embedded-dark');
+      expect(childRoot.style.getPropertyValue(restoredProperty)).to.equal('rgb(1, 2, 3)');
+    } finally {
+      if (previousClass === null) root.removeAttribute('class');
+      else root.setAttribute('class', previousClass);
+      for (const [attribute, value] of previousAttributes) {
+        if (value === null) root.removeAttribute(attribute);
+        else root.setAttribute(attribute, value);
+      }
+      for (const [property, [value, priority]] of previousStyles) {
+        if (value) root.style.setProperty(property, value, priority);
+        else root.style.removeProperty(property);
+      }
+    }
+  });
 });
 
 it('is accessible with a populated inline document and visible controls', async () => {

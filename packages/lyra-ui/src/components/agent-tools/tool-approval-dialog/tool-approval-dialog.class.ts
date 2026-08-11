@@ -78,6 +78,11 @@ export interface LyraToolApprovalDialogEventMap {
  * `autocorrect="off"`, and `autocomplete="off"` because its content is raw
  * JSON, never prose. The corresponding native editing properties remain
  * configurable for integrations that need different browser behavior.
+ * The raw-JSON editor deliberately fixes native `resize` to `vertical`: a
+ * user can make a long draft taller without changing the dialog's constrained
+ * inline size. This focused approval flow exposes neither a generic `resize`
+ * surface nor auto-grow behavior; consumers that need either compose a
+ * dedicated editor around their approval UI.
  * The same button relabels to "Cancel" while editing; clicking it discards
  * the draft entirely and returns to the read-only view of the *original*
  * `args` — there is no separate "save" step independent of Approve itself.
@@ -160,6 +165,7 @@ export interface LyraToolApprovalDialogEventMap {
  * `spinner` part, present only while `pending` is `'approve'`.
  * @cssprop [--lr-tool-approval-dialog-overlay-color=var(--lr-color-overlay)] - Backdrop scrim color.
  * @cssprop [--lr-tool-approval-dialog-mono-font=var(--lr-font-mono)] - Font family for the tool name and the raw-JSON args editor.
+ * @cssprop [--lr-tool-approval-dialog-invalid-border-color=var(--lr-color-danger)] - Border color of an invalid raw-JSON editor.
  * @status stable
  * @since 4.0.0
  */

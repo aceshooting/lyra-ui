@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -44,9 +44,11 @@ setting it to `0` removes the deadline.
 **Methods:** `start()`, `stop()`, and `cancel()` drive the capture lifecycle imperatively (mirroring
 the pointer/keyboard gestures).
 
-**Slots:** `icon` (replaces the default mic glyph) and `recording-icon` (replaces the default
-recording-state pulse glyph). Both are decorative inside the named trigger: their flattened content
-is inert and hidden from accessibility APIs, so do not place a second interactive control there.
+**Slots:** `microphone-icon` is the canonical replacement for the default mic glyph and takes
+precedence when both it and the established `icon` alias have content. `icon` remains the fallback
+mic-glyph alias. `recording-icon` replaces the default recording-state pulse glyph. All three are
+decorative inside the named trigger: their flattened content is inert and hidden from accessibility
+APIs, so do not place a second interactive control there.
 
 **Events:** `lr-record-start` (`detail: { stream: MediaStream }`), `lr-record-chunk` (`detail: { blob:
 Blob }`, only when `timeslice-ms > 0`), `lr-record-stop` (`detail: { blob: Blob; durationMs: number
@@ -61,13 +63,16 @@ Blob }`, only when `timeslice-ms > 0`), `lr-record-stop` (`detail: { blob: Blob;
 **Themeable custom properties:** `--lr-push-to-talk-size` (default `var(--lr-size-3rem)`) — the
 trigger button's preferred inline and block size; the shared `--lr-icon-button-size` remains its
 minimum hit-area floor even when this value is smaller. `--lr-push-to-talk-recording-color` (default
-`var(--lr-color-danger)`) — the border and text color of `[part='trigger']` while `state` is
-`recording`; it recolors only the recording treatment and leaves every other danger-toned surface on
-the page untouched. Like the library's other state hooks it is an inline `var()` fallback at the
-point of use rather than a `:host` declaration, so it can be set on the element or on any ancestor —
-`::part(trigger)[data-state='recording']` is invalid CSS (Shadow Parts forbids an attribute selector
-after `::part()`), so re-pointing the shared `--lr-color-danger` token was previously the only way,
-and it repainted every other danger surface with it.
+`var(--lr-color-danger)`) remains the established aggregate fallback for the recording trigger's
+border and foreground and the pulse-ring border. Retune those independently with
+`--lr-push-to-talk-trigger-recording-border-color`,
+`--lr-push-to-talk-trigger-recording-color`, and
+`--lr-push-to-talk-pulse-recording-border-color`, each defaulting through
+`var(--lr-push-to-talk-recording-color, var(--lr-color-danger))`. All four are inline `var()`
+fallbacks at the point of use rather than `:host` declarations, so each can be set on the element or
+on an ancestor without repainting every other danger-toned surface. `::part(trigger)[data-state='recording']`
+is invalid CSS (Shadow Parts forbids an attribute selector after `::part()`), which is why these
+recording-state hooks exist.
 
 **Additional API surface:**
 
