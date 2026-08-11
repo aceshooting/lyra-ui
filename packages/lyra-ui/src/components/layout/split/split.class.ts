@@ -152,8 +152,8 @@ export interface LyraSplitEventMap {
  * mobile overlay when leaving `'mobile'` while open.
  *
  * @customElement lr-split
- * @event lr-resize - `detail: { sizes }`, fired on every drag step/release
- *   and every keyboard step.
+ * @event lr-resize - `detail: { sizes }`, fired on every drag movement that changes sizes and every
+ *   keyboard step. Pointer release persists the settled sizes but emits no additional event.
  * @event lr-split-collapse-change - `detail: { state }` (`SplitCollapseChangeDetail`),
  *   fired whenever the responsive `collapseState` actually transitions between
  *   `'wide'`/`'rail'`/`'floating'` — whether from a breakpoint crossing or an
@@ -268,7 +268,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   @property({ reflect: true, attribute: "narrow-orientation" })
   narrowOrientation: SplitOrientation = "vertical";
   @property({ attribute: "storage-key" }) storageKey?: string;
-  /** Optional fixed-pixel min/max per panel, index-aligned with `sizes`. A
+  /** Optional px and/or percent min/max per panel, index-aligned with `sizes`. A
    *  `null`/missing entry leaves that panel purely percent-based (the
    *  existing `min`-only behavior). `sizes`, the `lr-resize` payload, and
    *  localStorage persistence stay percent-based regardless — only the

@@ -22,7 +22,8 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '
  *
  * @customElement lr-app-rail-item
  * @slot - The visible navigation label.
- * @slot icon - The leading icon.
+ * @slot icon - The leading decorative icon, always hidden from assistive technology; the default
+ *   slot or host `aria-label` names the internal control.
  * @csspart base - The link or button receiving focus and activation.
  * @csspart icon - The icon wrapper.
  * @csspart label - The label wrapper; visually clipped in icon-only mode.

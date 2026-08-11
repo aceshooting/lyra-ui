@@ -130,8 +130,9 @@ collapsed. `collapse="none"` (the default) is byte-for-byte identical to pre-col
 `dividerLabel?: (index: number, panelCount: number) => string` (attribute: false) customizes the
 localized accessible label generated for each auto-inserted divider.
 
-**Events:** `lr-resize` (`detail: { sizes }`, fired on every drag step/release **and** every
-keyboard step), `lr-split-collapse-change` (`detail: { state: 'wide'|'rail'|'floating' }`, fired only
+**Events:** `lr-resize` (`detail: { sizes }`, fired on every drag movement that changes sizes and
+every keyboard step; pointer release persists the settled sizes but emits no additional event),
+`lr-split-collapse-change` (`detail: { state: 'wide'|'rail'|'floating' }`, fired only
 on a real `collapse`-state transition, never on every resize/render),
 `lr-split-constraints-invalid` (`detail: SplitConstraintIssueDetail`, fired once when the configured
 panel minimums/maximums cannot fit the track; the infeasible set is rejected for interaction and a
@@ -177,13 +178,11 @@ the visually-adjacent panel).
   `ensureSizes()` rebalances existing sizes proportionally when a panel is added or removed after
   mount instead of discarding the whole layout — a conditionally-shown side panel no longer leaves
   `panelCount`/`sizes`/divider count stale.
-- divider `aria-valuemax` is now computed per adjacent pair (`sizes[i] + sizes[i+1] - min`) rather
-  than a blanket `100 - min`, so it's accurate for 3+-panel layouts too, not just exactly two panels
-  — this formula still only accounts for the plain percent `min`, though: with `panelConstraints`
-  set, a panel's real achievable range can be narrower (or expressed in px) than what
-  `aria-valuemin`/`aria-valuemax` report. Each divider also now has its own `aria-label` ("Resize
-  divider between panel N and panel N+1") distinguishing it from any other divider in a
-  multi-divider layout.
+- divider `aria-valuemin`/`aria-valuemax` are computed per adjacent pair from the same resolved
+  `panelConstraints` bounds used by pointer and keyboard resizing, rather than a blanket
+  `100 - min`. They therefore remain accurate for 3+-panel layouts and for px/percent constraints.
+  Each divider also has its own `aria-label` ("Resize divider between panel N and panel N+1")
+  distinguishing it from any other divider in a multi-divider layout.
 - infeasible aggregate constraints (for example, three panels with `min=40`) are reported through
   `lr-split-constraints-invalid`; interaction rejects that set and uses a normalized percent minimum
   with aggregate slack, so the divider remains operable instead of silently freezing.
@@ -657,11 +656,12 @@ between slotted controls on both axes.
 `container-type: inline-size` unconditionally (that is what makes the 20rem `@container` rule above
 fire at all). Inline-size containment means the box's own content can no longer contribute to its
 width, so in any context where the host would otherwise be shrink-to-fit — plain block flow, an
-`inline-flex`/`flex` parent, anywhere with no definite width — the group collapses to its
-`min-inline-size` floor of `var(--lr-icon-button-size)` (2.5rem) instead of growing to fit the
+`inline-flex`/`flex` parent, anywhere with no definite width — the group uses its
+`contain-intrinsic-inline-size` fallback of `var(--lr-size-12rem)` instead of growing to fit the
 slotted buttons. Give `<lr-button-group>` a definite width (`inline-size`, `width: 100%`, `flex: 1`,
-or a grid track) whenever it isn't already in a layout that supplies one. The floor itself is the
-safeguard: without it the same shape rendered at literally `0px`.
+or a grid track) whenever it isn't already in a layout that supplies one. Under tighter allocation,
+`min-inline-size: var(--lr-icon-button-size)` remains the hard 2.5rem lower bound rather than the
+unallocated fallback.
 
 ---
 
@@ -1448,7 +1448,7 @@ invention (no `wa-*`/`sl-*` counterpart).
   assign the property directly for a numeric key), that row is smoothly scrolled into view whenever
   this changes, and rendered with `aria-current="true"`.
 - `loading: boolean = false` (reflected) — sets `aria-busy` on the scroll container and a `cursor:
-  progress` style; does not by itself gate `lr-load-more` (see below).
+  progress` style, and gates `lr-load-more` while a consumer's fetch is in flight.
 - `hasMore: boolean = false` (attribute `has-more`, reflected) — when true, scrolling near the bottom
   fires `lr-load-more` (gated by `loading`).
 
@@ -1828,8 +1828,8 @@ same precedence supplies the tooltip text when that opt-in flyout is visible.
 **Methods:** `click(): void` activates the internal native link or button; it is a no-op while
 `disabled`.
 
-**Slots:** default (the visible label), `icon` (the leading icon, hidden from assistive technology
-when the item has an explicit `aria-label`).
+**Slots:** default (the visible label), `icon` (the leading decorative icon, always hidden from
+assistive technology; the default slot or host `aria-label` names the native control).
 
 **CSS parts:** `base`, `icon`, `label`, `tooltip` (the hover/focus label flyout, only rendered while
 `tooltip` is set, the item is `icon-only`, and it is hovered or focused).
