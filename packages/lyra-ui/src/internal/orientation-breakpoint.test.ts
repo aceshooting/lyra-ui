@@ -31,6 +31,7 @@ function installMatchMediaStub(
   setWidth(width: number): void;
   queryCount(): number;
   listenerCount(): number;
+  firstListener(queryIndex: number): ((event: MediaQueryListEvent) => void) | undefined;
   queries(): string[];
   restore(): void;
 } {
@@ -68,6 +69,9 @@ function installMatchMediaStub(
     },
     listenerCount(): number {
       return lists.reduce((count, entry) => count + entry.listeners.size, 0);
+    },
+    firstListener(queryIndex: number): ((event: MediaQueryListEvent) => void) | undefined {
+      return [...(lists[queryIndex]?.listeners ?? [])][0];
     },
     queries(): string[] {
       return lists.map(({ media }) => media);
@@ -186,6 +190,62 @@ describe('OrientationBreakpointController', () => {
     expect(c.isBelow(0)).to.be.false;
     c.configure('99999px', 'viewport');
     expect(c.isBelow(0), 'a stale MediaQueryList would keep this false').to.be.true;
+  });
+
+  it('notifies once per viewport crossing and ignores a queued stale query callback', async () => {
+    const media = installMatchMediaStub(1_000);
+    const host = await makeHost();
+    let fired = 0;
+    const c = new OrientationBreakpointController(host, () => {
+      fired += 1;
+    });
+    try {
+      c.configure('600px', 'viewport');
+      const staleListener = media.firstListener(0);
+      expect(staleListener).to.be.a('function');
+
+      // A matching event without a state transition must not produce a duplicate change.
+      staleListener!({ matches: false } as MediaQueryListEvent);
+      expect(fired).to.equal(0);
+
+      media.setWidth(500);
+      expect(c.isBelow(0)).to.be.true;
+      expect(fired).to.equal(1);
+
+      // Reconfiguration removes the old listener. A change event that was already queued for that
+      // old MediaQueryList must not overwrite or announce the newly armed query's state.
+      c.configure('700px', 'viewport');
+      staleListener!({ matches: false } as MediaQueryListEvent);
+      expect(c.isBelow(0)).to.be.true;
+      expect(fired).to.equal(1);
+
+      media.setWidth(900);
+      expect(c.isBelow(0)).to.be.false;
+      expect(fired).to.equal(2);
+    } finally {
+      c.hostDisconnected();
+      media.restore();
+    }
+  });
+
+  it('keeps a viewport breakpoint inactive in practice when its owner realm lacks matchMedia', async () => {
+    const host = await makeHost();
+    const owner = host.ownerDocument.defaultView as unknown as { matchMedia?: typeof window.matchMedia };
+    const originalMatchMedia = owner.matchMedia;
+    let fired = 0;
+    const c = new OrientationBreakpointController(host, () => {
+      fired += 1;
+    });
+    try {
+      owner.matchMedia = undefined;
+      c.configure('600px', 'viewport');
+      expect(c.active, 'the authored viewport length remains syntactically valid').to.be.true;
+      expect(c.isBelow(0), 'without a browser query there is no viewport crossing to report').to.be.false;
+      expect(fired).to.equal(0);
+    } finally {
+      c.hostDisconnected();
+      owner.matchMedia = originalMatchMedia;
+    }
   });
 
   it('switches to width comparison when the basis changes to container', async () => {
@@ -333,6 +393,76 @@ describe('OrientationBreakpointController', () => {
 });
 
 describe('CollapseBreakpointController', () => {
+  it('reclassifies once per viewport band crossing and ignores a queued stale callback', async () => {
+    const media = installMatchMediaStub(1_000);
+    const host = await makeHost();
+    let fired = 0;
+    const c = new CollapseBreakpointController(host, () => {
+      fired += 1;
+    });
+    try {
+      c.configure('600px', '300px', 'viewport');
+      const staleListener = media.firstListener(0);
+      expect(staleListener).to.be.a('function');
+      expect(c.classify(Number.POSITIVE_INFINITY)).to.equal('wide');
+
+      media.setWidth(500);
+      expect(c.classify(Number.POSITIVE_INFINITY)).to.equal('rail');
+      expect(fired).to.equal(1);
+
+      media.setWidth(200);
+      expect(c.classify(Number.POSITIVE_INFINITY)).to.equal('floating');
+      expect(fired).to.equal(2);
+
+      // Both query listeners observe this transition, but they must coalesce to one band change.
+      media.setWidth(1_000);
+      expect(c.classify(Number.POSITIVE_INFINITY)).to.equal('wide');
+      expect(fired).to.equal(3);
+
+      c.configure('700px', '200px', 'viewport');
+      staleListener!({ matches: false } as MediaQueryListEvent);
+      expect(c.classify(Number.POSITIVE_INFINITY)).to.equal('wide');
+      expect(fired).to.equal(3);
+    } finally {
+      c.hostDisconnected();
+      media.restore();
+    }
+  });
+
+  it('uses documented fallback query lengths for invalid and non-positive viewport thresholds', async () => {
+    const media = installMatchMediaStub(1_000);
+    const host = await makeHost();
+    const c = new CollapseBreakpointController(host, () => {});
+    try {
+      c.configure('not-a-length', -1, 'viewport');
+      expect(media.queries()).to.deep.equal([
+        '(max-width: 640px)',
+        '(max-width: 0px)',
+      ]);
+      expect(c.classify(Number.POSITIVE_INFINITY)).to.equal('wide');
+    } finally {
+      c.hostDisconnected();
+      media.restore();
+    }
+  });
+
+  it('keeps the wide band when a viewport owner realm lacks matchMedia', async () => {
+    const host = await makeHost();
+    const owner = host.ownerDocument.defaultView as unknown as { matchMedia?: typeof window.matchMedia };
+    const originalMatchMedia = owner.matchMedia;
+    const c = new CollapseBreakpointController(host, () => {});
+    try {
+      owner.matchMedia = undefined;
+      c.configure('600px', '300px', 'viewport');
+      expect(c.classify(0), 'viewport basis must not accidentally fall back to container measurement').to.equal(
+        'wide',
+      );
+    } finally {
+      c.hostDisconnected();
+      owner.matchMedia = originalMatchMedia;
+    }
+  });
+
   it('binds both queries to the host owner window and replaces them after adoption', async () => {
     const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
     const frameDocument = frame.contentDocument;

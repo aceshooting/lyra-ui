@@ -377,6 +377,66 @@ describe('ThemeWatcher', () => {
     }
   });
 
+  it('replaces a stylesheet media-query subscription without retaining the stale listener', async () => {
+    const originalMatchMedia = window.matchMedia;
+    const listeners = new Map<string, Set<(event: MediaQueryListEvent) => void>>();
+    window.matchMedia = ((query: string) => {
+      const callbacks = listeners.get(query) ?? new Set<(event: MediaQueryListEvent) => void>();
+      listeners.set(query, callbacks);
+      return {
+        media: query,
+        matches: false,
+        onchange: null,
+        addEventListener(_type: string, listener: EventListenerOrEventListenerObject) {
+          callbacks.add(listener as (event: MediaQueryListEvent) => void);
+        },
+        removeEventListener(_type: string, listener: EventListenerOrEventListenerObject) {
+          callbacks.delete(listener as (event: MediaQueryListEvent) => void);
+        },
+        addListener() {},
+        removeListener() {},
+        dispatchEvent: () => true,
+      } as MediaQueryList;
+    }) as typeof matchMedia;
+
+    const { host, connect, disconnect } = await makeHost();
+    const style = document.createElement('style');
+    style.media = '(min-width: 640px)';
+    style.textContent = ':root {}';
+    let calls = 0;
+    new ThemeWatcher(host, () => calls++);
+    try {
+      connect();
+      document.head.append(style);
+      await aTimeout(0);
+
+      const initialCallbacks = listeners.get('(min-width: 640px)');
+      expect(initialCallbacks?.size).to.equal(1);
+      calls = 0;
+      initialCallbacks?.forEach((listener) => listener({ matches: true } as MediaQueryListEvent));
+      await aTimeout(0);
+      expect(calls).to.equal(1);
+
+      style.media = '(min-width: 720px)';
+      await aTimeout(0);
+      expect(initialCallbacks?.size, 'the old MediaQueryList must be detached').to.equal(0);
+      const replacementCallbacks = listeners.get('(min-width: 720px)');
+      expect(replacementCallbacks?.size).to.equal(1);
+
+      calls = 0;
+      replacementCallbacks?.forEach((listener) => listener({ matches: true } as MediaQueryListEvent));
+      await aTimeout(0);
+      expect(calls).to.equal(1);
+
+      disconnect();
+      expect(replacementCallbacks?.size, 'the current MediaQueryList is also released').to.equal(0);
+    } finally {
+      style.remove();
+      disconnect();
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
   it('restores CSSOM descriptors after the last watcher disconnects', async () => {
     const descriptors = [
       [CSSStyleSheet.prototype, 'insertRule'],
@@ -417,11 +477,13 @@ describe('ThemeWatcher', () => {
     });
   });
 
-  it('preserves an async CSSStyleSheet method return value and rejection', async () => {
+  it('preserves an async CSSStyleSheet method return value and a deferred rejection', async () => {
     const original = Object.getOwnPropertyDescriptor(CSSStyleSheet.prototype, 'replace')!;
     const expectedError = new Error('replace failed');
-    const expectedPromise = Promise.reject<CSSStyleSheet>(expectedError);
-    void expectedPromise.catch(() => undefined);
+    let rejectReplace!: (reason: unknown) => void;
+    const expectedPromise = new Promise<CSSStyleSheet>((_resolve, reject) => {
+      rejectReplace = reject;
+    });
     Object.defineProperty(CSSStyleSheet.prototype, 'replace', {
       ...original,
       value() {
@@ -435,13 +497,12 @@ describe('ThemeWatcher', () => {
       connect();
       const returned = new CSSStyleSheet().replace(':root {}');
       expect(returned).to.equal(expectedPromise);
-      let rejection: unknown;
-      try {
-        await returned;
-      } catch (error) {
-        rejection = error;
-      }
-      expect(rejection).to.equal(expectedError);
+      const rejection = returned.then(
+        () => undefined,
+        (error) => error,
+      );
+      rejectReplace(expectedError);
+      expect(await rejection).to.equal(expectedError);
       await aTimeout(0);
       expect(calls).to.equal(0);
     } finally {
