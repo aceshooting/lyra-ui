@@ -235,6 +235,32 @@ it('resumes an interrupted hide after reconnect and completes exactly once', asy
   expect(el.isConnected).to.be.false;
 });
 
+it('continues an in-flight hide after an immediate reconnect and completes exactly once', async () => {
+  const el = (await fixture(
+    html`<lr-toast-item duration="0" style="--lr-toast-hide-duration: 2s linear">msg</lr-toast-item>`,
+  )) as LyraToastItem;
+  const parent = el.parentElement!;
+  await oneEvent(el, 'lr-show');
+
+  let afterHideCount = 0;
+  el.addEventListener('lr-after-hide', () => afterHideCount++);
+  const afterHide = oneEvent(el, 'lr-after-hide');
+  const hidden = el.hide();
+  el.remove();
+  parent.append(el);
+
+  // Let the cancelled first wait restart against the reconnected surface before completing it.
+  await Promise.resolve();
+  await Promise.resolve();
+  const surface = el.shadowRoot!.querySelector('[part="toast-item"]')!;
+  surface.dispatchEvent(new Event('transitionend'));
+  await afterHide;
+  await hidden;
+
+  expect(afterHideCount).to.equal(1);
+  expect(el.isConnected).to.be.false;
+});
+
 it('applies distinct visual sizing per the `size` property', async () => {
   const xs = (await fixture(
     html`<lr-toast-item size="xs" duration="0">a</lr-toast-item>`,
@@ -686,6 +712,38 @@ it('tracks contextual close text through a forwarding slot', async () => {
   await reassigned;
   await el.updateComplete;
   expect(button.getAttribute('aria-label')).to.equal('Close: Upload restored');
+});
+
+it('tracks direct text through a forwarding slot', async () => {
+  const wrapper = (await fixture(html`
+    <toast-message-forward-wrapper>Upload complete</toast-message-forward-wrapper>
+  `)) as ToastMessageForwardWrapper;
+  const el = wrapper.shadowRoot!.querySelector('lr-toast-item') as LyraToastItem;
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector<HTMLElement>('[part="close-button"]')!;
+  const message = wrapper.firstChild as Text;
+
+  expect(button.getAttribute('aria-label')).to.equal('Close: Upload complete');
+
+  message.data = 'Upload failed';
+  await Promise.resolve();
+  await el.updateComplete;
+  expect(button.getAttribute('aria-label')).to.equal('Close: Upload failed');
+});
+
+it('derives its initial close label without MutationObserver support', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(window, 'MutationObserver');
+  Object.defineProperty(window, 'MutationObserver', { configurable: true, value: undefined });
+  try {
+    const el = (await fixture(
+      html`<lr-toast-item duration="0">Upload complete</lr-toast-item>`,
+    )) as LyraToastItem;
+    const button = el.shadowRoot!.querySelector<HTMLElement>('[part="close-button"]')!;
+    expect(button.getAttribute('aria-label')).to.equal('Close: Upload complete');
+  } finally {
+    if (descriptor) Object.defineProperty(window, 'MutationObserver', descriptor);
+    else delete (window as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+  }
 });
 
 it('releases and reacquires announcement sinks across adoption without replaying a visible toast', async () => {

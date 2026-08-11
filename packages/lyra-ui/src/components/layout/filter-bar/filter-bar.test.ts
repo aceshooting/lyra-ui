@@ -268,6 +268,41 @@ describe("custom filters", () => {
     expect(el.value.window).to.equal("");
     expect(el.hasActiveFilters).to.be.false;
   });
+
+  it("lets an eventless custom control set a string array and uses the default list chip label", async () => {
+    const filters: FilterBarFilterDefinition[] = [
+      {
+        id: "reviewers",
+        label: "Reviewers",
+        type: "custom",
+        custom: {
+          adapter: { valueFromEvent: () => undefined },
+          render: (context) => html`
+            <button type="button" @click=${() => context.setValue(["Ada", "Lin"])}>Assign reviewers</button>
+          `,
+        },
+      },
+    ];
+    const el = (await fixture(
+      html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
+    )) as LyraFilterBar;
+    const button = control(el, "reviewers").querySelector("button") as HTMLButtonElement;
+
+    const inputPromise = oneEvent(el, "lr-input");
+    button.click();
+    const input = (await inputPromise) as CustomEvent<FilterBarInputDetail>;
+    await el.updateComplete;
+
+    expect(input.detail.filterId).to.equal("reviewers");
+    expect(input.detail.value).to.deep.equal({ reviewers: ["Ada", "Lin"] });
+    expect(el.value).to.deep.equal({ reviewers: ["Ada", "Lin"] });
+    const chip = el.shadowRoot!.querySelector('[part="chip"]') as HTMLElement;
+    const display = new Intl.ListFormat(el.effectiveLocale, {
+      style: "long",
+      type: "conjunction",
+    }).format(["Ada", "Lin"]);
+    expect(chip.textContent!.trim()).to.equal(`Reviewers: ${display}`);
+  });
 });
 
 it("forwards each filter definition's label to its composed control's own label prop", async () => {
@@ -312,6 +347,28 @@ describe("value getter/setter (URL/state serialization contract)", () => {
     expect(
       (control(el, "tags") as HTMLElement & { value: string[] }).value
     ).to.deep.equal(["urgent", "billing"]);
+  });
+
+  it("passes a scalar controlled value through a single-value combobox with no declared options", async () => {
+    const filters: FilterBarFilterDefinition[] = [
+      { id: "assignee", label: "Assignee", type: "combobox" },
+    ];
+    const el = (await fixture(
+      html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
+    )) as LyraFilterBar;
+
+    el.value = { assignee: "unlisted" };
+    await el.updateComplete;
+    const combo = control(el, "assignee") as HTMLElement & {
+      multiple: boolean;
+      value: string;
+    };
+
+    expect(combo.multiple).to.be.false;
+    expect(combo.value).to.equal("unlisted");
+    expect(combo.querySelectorAll("lr-option").length).to.equal(0);
+    const chip = el.shadowRoot!.querySelector('[part="chip"]') as HTMLElement;
+    expect(chip.textContent!.trim()).to.equal("Assignee: unlisted");
   });
 
   it("returns a fresh copy from the value getter so external mutation cannot corrupt internal state", async () => {
@@ -874,9 +931,10 @@ describe("reset()", () => {
   });
 
   it("restores every filter to its own defaultValue (or unset), clears touched state, and emits lr-input then lr-reset", async () => {
+    const defaultTags = ["urgent"];
     const filtersWithDefault: FilterBarFilterDefinition[] = [
       { ...basicFilters[0], defaultValue: "open" },
-      basicFilters[1],
+      { ...basicFilters[1], defaultValue: defaultTags },
     ];
     const el = (await fixture(
       html`<lr-filter-bar .filters=${filtersWithDefault}></lr-filter-bar>`
@@ -891,8 +949,10 @@ describe("reset()", () => {
     el.reset();
     const resetEvent = await resetPromise;
     expect(events).to.deep.equal(["lr-input", "lr-reset"]);
-    expect(resetEvent.detail.value).to.deep.equal({ status: "open" });
-    expect(el.value).to.deep.equal({ status: "open" });
+    expect(resetEvent.detail.value).to.deep.equal({ status: "open", tags: ["urgent"] });
+    expect(el.value).to.deep.equal({ status: "open", tags: ["urgent"] });
+    defaultTags.push("billing");
+    expect(el.value.tags).to.deep.equal(["urgent"]);
   });
 
   it("is a no-op while disabled", async () => {
