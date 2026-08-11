@@ -1043,6 +1043,41 @@ describe('selection & roving focus', () => {
     expect(nodeControl(el, 'b').getAttribute('tabindex')).to.equal('0');
   });
 
+  it('mirrors roving node and edge focus under inherited RTL', async () => {
+    const wrapper = (await fixture(html`
+      <div dir="rtl"><lr-flow-canvas></lr-flow-canvas></div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-flow-canvas') as LyraFlowCanvas;
+    el.nodes = nodes;
+    el.edges = edges;
+    await el.updateComplete;
+    const a = nodeControl(el, 'a');
+    const b = nodeControl(el, 'b');
+    const edge = el.shadowRoot!.querySelector<SVGElement>('[data-edge-id="a-b"] [part="edge"]')!;
+
+    a.focus();
+    await el.updateComplete;
+    const toNode = new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true });
+    a.dispatchEvent(toNode);
+    await el.updateComplete;
+    expect(toNode.defaultPrevented).to.be.true;
+    expect(el.shadowRoot!.activeElement === b).to.be.true;
+    expect(b.getAttribute('tabindex')).to.equal('0');
+
+    const toEdge = new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true });
+    b.dispatchEvent(toEdge);
+    await el.updateComplete;
+    expect(toEdge.defaultPrevented).to.be.true;
+    expect(el.shadowRoot!.activeElement === edge).to.be.true;
+    expect(edge.getAttribute('tabindex')).to.equal('0');
+
+    const backToNode = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true });
+    edge.dispatchEvent(backToNode);
+    await el.updateComplete;
+    expect(backToNode.defaultPrevented).to.be.true;
+    expect(el.shadowRoot!.activeElement === b).to.be.true;
+  });
+
   it('Enter on a node toggles selection and emits lr-node-click', async () => {
     const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = nodes;
@@ -1589,6 +1624,62 @@ describe('connect gesture', () => {
     el.addEventListener('lr-connect', (e) => (detail = (e as CustomEvent).detail));
     controlA.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     expect(detail).to.deep.equal({ source: 'a', target: 'b', sourceHandle: 'out', targetHandle: 'in' });
+  });
+
+  it('mirrors keyboard connection cycling under inherited RTL and safely retires stale targets', async () => {
+    const wrapper = (await fixture(html`
+      <div dir="rtl"><lr-flow-canvas connectable></lr-flow-canvas></div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-flow-canvas') as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: 200, y: 0 } },
+      { id: 'c', position: { x: 400, y: 0 } },
+    ];
+    await el.updateComplete;
+    const controlA = nodeControl(el, 'a');
+    const wrapperB = el.shadowRoot!.querySelector<HTMLElement>('[data-node-id="b"]')!;
+    const wrapperC = el.shadowRoot!.querySelector<HTMLElement>('[data-node-id="c"]')!;
+
+    const start = new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true });
+    controlA.dispatchEvent(start);
+    await el.updateComplete;
+    expect(start.defaultPrevented).to.be.true;
+    expect(wrapperB.hasAttribute('data-connect-target')).to.be.true;
+
+    const forward = new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true });
+    controlA.dispatchEvent(forward);
+    await el.updateComplete;
+    expect(forward.defaultPrevented).to.be.true;
+    expect(wrapperC.hasAttribute('data-connect-target')).to.be.true;
+    expect(wrapperB.hasAttribute('data-connect-target')).to.be.false;
+
+    const backward = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true });
+    controlA.dispatchEvent(backward);
+    await el.updateComplete;
+    expect(backward.defaultPrevented).to.be.true;
+    expect(wrapperB.hasAttribute('data-connect-target')).to.be.true;
+
+    // A controlled edges update can make every target unavailable while the source remains in
+    // keyboard connect mode. The next mirrored arrow and Enter must stay harmless instead of
+    // retaining or emitting a stale target.
+    el.edges = [
+      { id: 'a-b', source: 'a', target: 'b' },
+      { id: 'a-c', source: 'a', target: 'c' },
+    ];
+    await el.updateComplete;
+    const staleCycle = new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true });
+    controlA.dispatchEvent(staleCycle);
+    await el.updateComplete;
+    expect(staleCycle.defaultPrevented).to.be.true;
+    expect(el.shadowRoot!.querySelectorAll('[data-connect-target]').length).to.equal(0);
+
+    let connects = 0;
+    el.addEventListener('lr-connect', () => connects++);
+    const commit = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    controlA.dispatchEvent(commit);
+    expect(commit.defaultPrevented).to.be.true;
+    expect(connects).to.equal(0);
   });
 
   it('announces keyboard connection targets and commits with accessible node labels', async () => {

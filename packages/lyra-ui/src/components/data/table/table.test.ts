@@ -2427,20 +2427,39 @@ it('skips a priority-hidden header cell when navigating with ArrowRight, instead
   expect(idHeader.getAttribute('tabindex')).to.equal('0');
 });
 
-it('rehomes the active column when its priority-hidden header is no longer visible', async () => {
+it('rehomes the active column through the public reveal-columns state when a priority header hides in RTL', async () => {
   const priorityColumns: TableColumn<Row>[] = [
     { key: 'name', label: 'Name', cell: (r) => r.name },
     { key: 'score', label: 'Score', priority: 'low', cell: (r) => r.score },
   ];
-  const el = (await fixture(html`<lr-table style="display:block;width:300px"></lr-table>`)) as LyraTable<Row>;
+  const wrapper = (await fixture(html`
+    <div dir="rtl">
+      <lr-table accessible-label="Scores" show-all-columns style="display:block;width:300px"></lr-table>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
   el.columns = priorityColumns;
   el.rows = rows;
   await el.updateComplete;
-  (el as unknown as { activeColKey: string | null }).activeColKey = 'score';
-  el.rows = [...rows];
-  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="reveal-columns-button"]') !== null);
+  const [nameHeader, scoreHeader] = [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="header-cell"]'),
+  ];
+  expect(getComputedStyle(scoreHeader!).display).to.not.equal('none');
 
-  expect((el as unknown as { activeColKey: string | null }).activeColKey).to.equal('name');
+  nameHeader!.focus();
+  const toScore = new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true });
+  nameHeader!.dispatchEvent(toScore);
+  await el.updateComplete;
+  expect(toScore.defaultPrevented).to.be.true;
+  expect(el.shadowRoot!.activeElement === scoreHeader).to.be.true;
+
+  (el.shadowRoot!.querySelector('[part="reveal-columns-button"]') as HTMLButtonElement).click();
+  await waitUntil(() =>
+    getComputedStyle(scoreHeader!).display === 'none' && nameHeader!.getAttribute('tabindex') === '0'
+  );
+
+  expect(scoreHeader!.getAttribute('tabindex')).to.equal('-1');
 });
 
 it('stops observing removed sticky headers when sticky columns are replaced', async () => {
@@ -5371,6 +5390,38 @@ describe('grid keyboard navigation edges', () => {
     expect(th[0]!.getAttribute('tabindex')).to.equal('0');
   });
 
+  it('moves through middle headers in the visual direction under inherited RTL', async () => {
+    const threeColumns: TableColumn<Row>[] = [
+      { key: 'name', label: 'Name', cell: (row) => row.name },
+      { key: 'score', label: 'Score', cell: (row) => row.score },
+      { key: 'id', label: 'ID', cell: (row) => row.id },
+    ];
+    const wrapper = (await fixture(html`
+      <div dir="rtl">
+        <lr-table accessible-label="Scores" .columns=${threeColumns} .rows=${rows}></lr-table>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
+    await el.updateComplete;
+    const [name, score, id] = headers(el);
+
+    name!.focus();
+    const toMiddle = await key(el, name!, 'ArrowLeft');
+    expect(toMiddle.defaultPrevented).to.be.true;
+    expect(el.shadowRoot!.activeElement === score).to.be.true;
+    expect(score!.getAttribute('tabindex')).to.equal('0');
+
+    const forward = await key(el, score!, 'ArrowLeft');
+    expect(forward.defaultPrevented).to.be.true;
+    expect(el.shadowRoot!.activeElement === id).to.be.true;
+    expect(id!.getAttribute('tabindex')).to.equal('0');
+
+    const backward = await key(el, id!, 'ArrowRight');
+    expect(backward.defaultPrevented).to.be.true;
+    expect(el.shadowRoot!.activeElement === score).to.be.true;
+    expect(name!.getAttribute('tabindex')).to.equal('-1');
+  });
+
   it('ArrowDown from a header enters the body and ArrowUp from the first row returns to it', async () => {
     const el = await grid();
     const th = headers(el);
@@ -5392,6 +5443,62 @@ describe('grid keyboard navigation edges', () => {
     expect(bodyRows(el)[1]!.getAttribute('tabindex'), 'clamps on the last row').to.equal('0');
     await key(el, bodyRows(el)[1]!, 'ArrowUp');
     expect(bodyRows(el)[0]!.getAttribute('tabindex')).to.equal('0');
+  });
+
+  it('keeps an RTL row stop at its page-relative index when a controlled page changes', async () => {
+    const pagedRows: Row[] = [
+      ...rows,
+      { id: 'c', name: 'Gamma', score: 2 },
+      { id: 'd', name: 'Delta', score: 4 },
+    ];
+    const wrapper = (await fixture(html`
+      <div dir="rtl">
+        <lr-table accessible-label="Scores" page-size="2" page="2"></lr-table>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = pagedRows;
+    el.rowKey = (row) => row.id;
+    await el.updateComplete;
+    const [gamma, delta] = bodyRows(el);
+
+    gamma!.focus();
+    const down = await key(el, gamma!, 'ArrowDown');
+    expect(down.defaultPrevented).to.be.true;
+    expect(el.shadowRoot!.activeElement === delta).to.be.true;
+
+    el.page = 1;
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement?.getAttribute('data-row-key')).to.equal('string:b');
+    expect(el.shadowRoot!.activeElement?.getAttribute('tabindex')).to.equal('0');
+  });
+
+  it('clears an RTL roving row stop when a controlled filter removes every match', async () => {
+    const wrapper = (await fixture(html`
+      <div dir="rtl"><lr-table accessible-label="Scores" filterable></lr-table></div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (row) => row.id;
+    await el.updateComplete;
+    const alpha = el.shadowRoot!.querySelector<HTMLElement>('[data-row-key="string:a"]')!;
+    const beta = el.shadowRoot!.querySelector<HTMLElement>('[data-row-key="string:b"]')!;
+
+    alpha.focus();
+    const down = await key(el, alpha, 'ArrowDown');
+    expect(down.defaultPrevented).to.be.true;
+    expect(el.shadowRoot!.activeElement === beta).to.be.true;
+    expect(beta.getAttribute('tabindex')).to.equal('0');
+
+    el.filterText = 'no matching row';
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelectorAll('[data-row-key]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelector('lr-empty')?.localName).to.equal('lr-empty');
+    expect(el.shadowRoot!.querySelectorAll('[data-row-key][tabindex="0"]').length).to.equal(0);
+    expect(el.shadowRoot!.activeElement === null).to.be.true;
   });
 
   it('Home and End jump to the first and last row and header', async () => {
