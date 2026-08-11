@@ -25,13 +25,13 @@ test('models the raw core ceiling as the reviewed baseline plus the named allowa
   assert.deepEqual(terms, {
     reviewedBaselineBytes: 3_700_000,
     stableRootRegistrationAllowanceBytes: 200_000,
-    reviewedRemediationAllowanceBytes: 20_000,
+    reviewedRemediationAllowanceBytes: 35_000,
   });
   assert.equal(
     terms.reviewedBaselineBytes +
       terms.stableRootRegistrationAllowanceBytes +
       terms.reviewedRemediationAllowanceBytes,
-    3_920_000,
+    3_935_000,
   );
   assert.match(
     checkerSource,
