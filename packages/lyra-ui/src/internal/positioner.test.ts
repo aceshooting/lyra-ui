@@ -1,5 +1,5 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import { place, virtualAnchorFromRect, type VirtualAnchor } from './positioner.js';
+import { place, trackRect, virtualAnchorFromRect, type VirtualAnchor } from './positioner.js';
 
 /** Polls `read()` until it satisfies `until`, or throws once `timeoutMs` elapses. */
 async function waitFor<T>(read: () => T, until: (v: T) => boolean, timeoutMs = 2000): Promise<T> {
@@ -63,6 +63,127 @@ it('refreshes available space when the visual viewport changes', async () => {
   );
   expect(p.style.getPropertyValue('--lr-positioner-available-block-size')).to.match(/^\d+(?:\.\d+)?px$/);
   stop();
+});
+
+it('tracks visual viewport rect changes until its cleanup runs', async () => {
+  const target = await fixture<HTMLElement>(html`<div style="inline-size: 80px; block-size: 30px"></div>`);
+  const updates: DOMRect[] = [];
+  const stop = trackRect(target, (rect) => updates.push(rect));
+  const visualViewport = window.visualViewport;
+
+  expect(updates.length, 'trackRect reports the initial rect immediately').to.be.greaterThan(0);
+  const initial = updates[0]!;
+  const expectedInitial = target.getBoundingClientRect();
+  expect([initial.left, initial.top, initial.width, initial.height]).to.deep.equal([
+    expectedInitial.left,
+    expectedInitial.top,
+    expectedInitial.width,
+    expectedInitial.height,
+  ]);
+
+  if (!visualViewport) {
+    stop();
+    return;
+  }
+
+  const beforeResize = updates.length;
+  visualViewport.dispatchEvent(new Event('resize'));
+  expect(updates.length, 'a visual viewport resize publishes the latest rect').to.be.greaterThan(beforeResize);
+
+  stop();
+  const afterStop = updates.length;
+  visualViewport.dispatchEvent(new Event('resize'));
+  expect(updates.length, 'cleanup removes the visual viewport listener').to.equal(afterStop);
+});
+
+it('publishes a hover bridge quad for every placement axis and direction', async () => {
+  const wrap = await fixture(html`
+    <div>
+      <button id="anchor" style="position: fixed; top: 240px; left: 320px; width: 80px; height: 40px;">Anchor</button>
+      <div id="popup" style="width: 60px; height: 30px;">Popup</div>
+      <div id="bridge"></div>
+    </div>
+  `);
+  const anchor = wrap.querySelector('#anchor') as HTMLElement;
+  const popup = wrap.querySelector('#popup') as HTMLElement;
+  const bridge = wrap.querySelector('#bridge') as HTMLElement;
+  const corners = ['top-left', 'top-right', 'bottom-right', 'bottom-left'] as const;
+  const scenarios: Array<{
+    placement: 'bottom' | 'top' | 'right' | 'left';
+    expected(anchorRect: DOMRect, popupRect: DOMRect): number[][];
+  }> = [
+    {
+      placement: 'bottom',
+      expected: (anchorRect, popupRect) => [
+        [anchorRect.left, anchorRect.bottom],
+        [anchorRect.right, anchorRect.bottom],
+        [popupRect.right, popupRect.top],
+        [popupRect.left, popupRect.top],
+      ],
+    },
+    {
+      placement: 'top',
+      expected: (anchorRect, popupRect) => [
+        [popupRect.left, popupRect.bottom],
+        [popupRect.right, popupRect.bottom],
+        [anchorRect.right, anchorRect.top],
+        [anchorRect.left, anchorRect.top],
+      ],
+    },
+    {
+      placement: 'right',
+      expected: (anchorRect, popupRect) => [
+        [anchorRect.right, anchorRect.top],
+        [popupRect.left, popupRect.top],
+        [popupRect.left, popupRect.bottom],
+        [anchorRect.right, anchorRect.bottom],
+      ],
+    },
+    {
+      placement: 'left',
+      expected: (anchorRect, popupRect) => [
+        [popupRect.right, popupRect.top],
+        [anchorRect.left, anchorRect.top],
+        [anchorRect.left, anchorRect.bottom],
+        [popupRect.right, popupRect.bottom],
+      ],
+    },
+  ];
+
+  for (const scenario of scenarios) {
+    for (const corner of corners) {
+      bridge.style.removeProperty(`--lr-positioner-hover-bridge-${corner}-x`);
+      bridge.style.removeProperty(`--lr-positioner-hover-bridge-${corner}-y`);
+    }
+    let resolvedPlacement = '';
+    const stop = place(anchor, popup, {
+      placement: scenario.placement,
+      flip: false,
+      shift: false,
+      hoverBridge: bridge,
+      onPlaced: ({ placement }) => {
+        resolvedPlacement = placement;
+      },
+    });
+
+    await waitFor(
+      () => bridge.style.getPropertyValue('--lr-positioner-hover-bridge-top-left-x'),
+      (value) => value !== '',
+    );
+    await waitFor(
+      () => resolvedPlacement,
+      (placement) => placement === scenario.placement,
+    );
+
+    const quad = corners.map((corner) => [
+      Number.parseFloat(bridge.style.getPropertyValue(`--lr-positioner-hover-bridge-${corner}-x`)),
+      Number.parseFloat(bridge.style.getPropertyValue(`--lr-positioner-hover-bridge-${corner}-y`)),
+    ]);
+    expect(quad, `${scenario.placement} bridge corners`).to.deep.equal(
+      scenario.expected(anchor.getBoundingClientRect(), popup.getBoundingClientRect()),
+    );
+    stop();
+  }
 });
 
 it('keeps tracking the anchor via autoUpdate until stop() is called', async () => {
