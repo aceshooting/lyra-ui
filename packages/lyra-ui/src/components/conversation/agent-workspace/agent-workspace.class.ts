@@ -57,7 +57,7 @@ export interface LyraAgentWorkspaceEventMap {
  * @customElement lr-agent-workspace
  * @slot messages - Replaces the data-driven transcript message list.
  * @slot details - Replaces the built-in run/tool/retrieval/grounding/context details pane.
- * @slot composer - Replaces the built-in `<lr-chat-composer>`.
+ * @slot composer - Replaces the built-in plain-frame `<lr-chat-composer>`; a supplied composer keeps its own frame.
  * @slot header-actions - Header actions such as model selection, settings, or export controls.
  * @event lr-input - Forwarded from the built-in composer. `detail: { value }`.
  * @event lr-submit - Forwarded from the built-in composer. `detail: { value }`.
@@ -163,7 +163,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   @property({ type: Boolean, attribute: 'show-details', reflect: true, converter: trueDefaultBooleanConverter })
   showDetails = true;
 
-  /** Whether the built-in composer is available when no `composer` slot is supplied. */
+  /** Whether the built-in plain-frame composer is available when no `composer` slot is supplied. */
   @property({ type: Boolean, attribute: 'show-composer', reflect: true, converter: trueDefaultBooleanConverter })
   showComposer = true;
 
@@ -361,6 +361,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
             ${this.showComposer
               ? html`<lr-chat-composer
                   part="composer-input"
+                  frame="plain"
                   .value=${this.composerValue}
                   .status=${this.composerStatus}
                   .minRows=${this.safeComposerMinRows}

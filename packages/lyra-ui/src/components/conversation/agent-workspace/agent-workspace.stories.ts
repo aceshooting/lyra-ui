@@ -9,6 +9,11 @@ const messages: ChatMessage[] = [
   { id: 'm-2', role: 'assistant', text: 'I found the relevant release notes and summarized the changes.' },
 ];
 
+const narrowLongContent = 'LocalizedAgentWorkspaceContentWithoutNaturalBreaks'.repeat(4);
+const narrowLongMessages: ChatMessage[] = [
+  { id: 'narrow-long', role: 'assistant', text: narrowLongContent },
+];
+
 const structuredMessages: ChatMessage[] = [
   {
     id: 'm-structured',
@@ -75,6 +80,24 @@ export const NarrowAllocation: Story = {
   render: () => html`
     <div style="inline-size: 360px; height: 640px;">
       <lr-agent-workspace label="Narrow assistant" .messages=${messages} .run=${run}></lr-agent-workspace>
+    </div>
+  `,
+};
+
+/** 320px allocation with long localized chrome, an action, unbroken transcript content, and the built-in composer. */
+export const NarrowLongContent: Story = {
+  name: 'Narrow long content (320px)',
+  render: () => html`
+    <div style="inline-size:320px; max-inline-size:100%; block-size:640px;">
+      <lr-agent-workspace
+        .messages=${narrowLongMessages}
+        .strings=${{
+          agentWorkspaceLabel: narrowLongContent,
+          composerPlaceholder: narrowLongContent,
+        }}
+      >
+        <lr-button slot="header-actions" size="s" variant="neutral">${narrowLongContent}</lr-button>
+      </lr-agent-workspace>
     </div>
   `,
 };

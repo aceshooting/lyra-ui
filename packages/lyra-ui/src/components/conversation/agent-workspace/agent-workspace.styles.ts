@@ -42,7 +42,18 @@ export const styles = css`
     align-items: center;
     flex-wrap: wrap;
     gap: var(--lr-space-xs);
+    min-inline-size: 0;
+    max-inline-size: 100%;
     margin-inline-start: auto;
+  }
+  slot[name='header-actions'] {
+    display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  slot[name='header-actions']::slotted(*) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='body'] {
     display: grid;

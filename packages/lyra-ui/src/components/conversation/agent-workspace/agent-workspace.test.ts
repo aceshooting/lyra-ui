@@ -1,5 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import type { AgentRun, ChatMessage, RetrievalChunk } from '../../../ai/types.js';
+import '../../forms/button/button.js';
 import './agent-workspace.js';
 import type { LyraAgentWorkspace } from './agent-workspace.class.js';
 
@@ -24,6 +25,38 @@ it('renders an empty conversation and the built-in composer', async () => {
   const el = await fixture<LyraAgentWorkspace>(html`<lr-agent-workspace></lr-agent-workspace>`);
   expect(el.shadowRoot!.querySelector('[part="messages-empty"]')).to.exist;
   expect(el.shadowRoot!.querySelector('lr-chat-composer')).to.exist;
+});
+
+it('uses a plain-frame fallback composer without changing a supplied composer', async () => {
+  const fallbackHost = await fixture<LyraAgentWorkspace>(html`<lr-agent-workspace></lr-agent-workspace>`);
+  const fallback = fallbackHost.shadowRoot!.querySelector('lr-chat-composer') as
+    | (HTMLElement & { updateComplete: Promise<unknown> })
+    | null;
+  expect(fallback !== null, 'the built-in composer renders by default').to.equal(true);
+  if (fallback === null) return;
+
+  await fallback.updateComplete;
+  expect(fallback.getAttribute('frame')).to.equal('plain');
+  const fallbackBase = fallback.shadowRoot!.querySelector('[part="base"]') as HTMLElement | null;
+  expect(fallbackBase !== null, 'the built-in composer exposes its base part').to.equal(true);
+  if (fallbackBase === null) return;
+  const fallbackChrome = getComputedStyle(fallbackBase);
+  expect(fallbackChrome.borderTopWidth).to.equal('0px');
+  expect(fallbackChrome.paddingTop).to.equal('0px');
+
+  const slottedHost = await fixture<LyraAgentWorkspace>(html`
+    <lr-agent-workspace>
+      <lr-chat-composer slot="composer" frame="card"></lr-chat-composer>
+    </lr-agent-workspace>
+  `);
+  const supplied = slottedHost.querySelector('lr-chat-composer') as HTMLElement | null;
+  expect(supplied !== null, 'the supplied composer remains in the light DOM').to.equal(true);
+  if (supplied === null) return;
+  expect(supplied.getAttribute('frame')).to.equal('card');
+  const composerSlot = slottedHost.shadowRoot!.querySelector('slot[name="composer"]') as HTMLSlotElement | null;
+  expect(composerSlot !== null, 'the workspace exposes its composer slot').to.equal(true);
+  if (composerSlot === null) return;
+  expect(composerSlot.assignedElements().length).to.equal(1);
 });
 
 it('clears follow/showDetails/showComposer from plain HTML `="false"` attributes, not just property bindings', async () => {
@@ -212,6 +245,40 @@ it('uses both narrow body tracks without leaving dead space above the composer',
   expect(
     (el.shadowRoot!.querySelector('[part="conversation"]') as HTMLElement).getBoundingClientRect().height,
   ).to.be.greaterThan(100);
+});
+
+it('contains long localized workspace content at 320px', async () => {
+  const longText = 'LocalizedWorkspaceContentWithoutNaturalBreaks'.repeat(4);
+  const longMessages: ChatMessage[] = [{ id: 'long-message', role: 'assistant', text: longText }];
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div style="inline-size:320px; block-size:640px">
+      <lr-agent-workspace
+        style="inline-size:100%; block-size:100%"
+        .messages=${longMessages}
+        .strings=${{
+          agentWorkspaceLabel: longText,
+          composerPlaceholder: longText,
+        }}
+      >
+        <lr-button slot="header-actions" size="s" variant="neutral">${longText}</lr-button>
+      </lr-agent-workspace>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-agent-workspace') as LyraAgentWorkspace | null;
+  expect(el !== null, 'the workspace renders inside the 320px allocation').to.equal(true);
+  if (el === null) return;
+
+  await el.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement | null;
+  const heading = el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement | null;
+  expect(base !== null, 'the workspace exposes its base part').to.equal(true);
+  expect(heading !== null, 'the workspace exposes its heading part').to.equal(true);
+  if (base === null || heading === null) return;
+
+  expect(el.getBoundingClientRect().width).to.be.at.most(321);
+  expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
+  expect(heading.scrollWidth).to.be.at.most(heading.clientWidth + 1);
 });
 
 it('is accessible in a populated state', async () => {
