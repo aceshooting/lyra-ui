@@ -617,7 +617,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   private awaitingFitMeasurement(): boolean {
     return (
       this.layout === 'fit' &&
-      typeof this.ownerDocument.defaultView?.ResizeObserver === 'function' &&
+      typeof this.ownerDocument?.defaultView?.ResizeObserver === 'function' &&
       (this.plotWidth <= 0 || this.plotHeight <= 0)
     );
   }

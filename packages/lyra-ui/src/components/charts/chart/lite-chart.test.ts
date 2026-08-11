@@ -1880,7 +1880,7 @@ describe('selectedIndex', () => {
   });
 
   it('reflects data-selected onto every bar at the given category index, across datasets', async () => {
-    const el = (await fixture(html`
+    const el = await mount(html`
       <lr-lite-chart
         type="bar"
         .labels=${['a', 'b']}
@@ -1890,7 +1890,7 @@ describe('selectedIndex', () => {
         ]}
         .selectedIndex=${[1]}
       ></lr-lite-chart>
-    `)) as LyraLiteChart;
+    `);
     el.style.height = '300px';
     await el.updateComplete;
     await aTimeout(0);
@@ -1900,9 +1900,9 @@ describe('selectedIndex', () => {
   });
 
   it('reflects nothing when selectedIndex is empty (the default)', async () => {
-    const el = (await fixture(html`
+    const el = await mount(html`
       <lr-lite-chart type="bar" .labels=${['a']} .datasets=${[{ label: 'x', data: [1] }]}></lr-lite-chart>
-    `)) as LyraLiteChart;
+    `);
     el.style.height = '300px';
     await el.updateComplete;
     await aTimeout(0);
