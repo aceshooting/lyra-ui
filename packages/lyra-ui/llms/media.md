@@ -272,15 +272,17 @@ operations. Its runtime value is the underlying MapLibre map.
   declaration breaks and `url()` paint servers fall back to MapLibre's default marker color.
 - `dataLayers: GeoJsonDataLayer[] = []` (attribute: false) — `GeoJsonDataLayer { sourceId: string;
   geojson: GeoJSON.Feature | GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
-  'danger' | 'neutral' }`. Each entry adds one GeoJSON source plus three layers
-  (`${sourceId}-fill`/`${sourceId}-line`/`${sourceId}-circle`, filtered by geometry type so a mixed
-  `FeatureCollection` renders correctly across all three), colored from the matching `--lr-color-*`
-  token (`tone` defaults to `'accent'` → `--lr-color-brand`). Independent of `choropleth` — no
-  `field`/`stops` color-interpolation, just the geometry rendered in a flat tone; use `choropleth`
-  instead when you need a data-driven color ramp. Reconciled by `sourceId` the same way `choropleth`
-  is: an entry whose `sourceId` persists across a `dataLayers` reassignment gets its GeoJSON updated
-  in place (`setData()`), one that's dropped has its source/layers removed, and a genuinely new
-  `sourceId` gets a new source/layers — nothing leaks on removal, style change, or disconnect.
+  'danger' | 'neutral' }`. Each entry adds one GeoJSON source plus three geometry-filtered layers
+  (fill, line, and circle, so a mixed `FeatureCollection` renders correctly), colored from the
+  matching `--lr-color-*` token (`tone` defaults to `'accent'` → `--lr-color-brand`). The component
+  assigns collision-free private MapLibre ids for those resources: `sourceId` is the stable
+  declarative reconciliation key, **not** an id to retrieve from `map`. This prevents a data layer
+  from overwriting or removing a same-named source supplied by `mapStyle`. Independent of
+  `choropleth` — no `field`/`stops` color-interpolation, just the geometry rendered in a flat tone;
+  use `choropleth` instead when you need a data-driven color ramp. An entry whose `sourceId`
+  persists across a `dataLayers` reassignment gets its GeoJSON updated in place (`setData()`), one
+  that's dropped has its private source/layers removed, and a genuinely new `sourceId` gets new
+  resources — nothing leaks on removal, style change, or disconnect.
 - `label: string = ''` — accessible-name fallback for MapLibre's actual focusable canvas. A plain
   host `aria-label` takes precedence over `label`; with neither set, the canvas uses the localized
   `'map'` message. The non-semantic `[part="base"]` wrapper is not named instead.
@@ -290,6 +292,11 @@ through the peer-neutral `getCanvas()`, `getCenter()`, `getZoom()`, `setCenter()
 `resize()` subset so merely importing Lyra does not require `maplibre-gl` declarations. A consumer
 that installed the optional peer and needs its full imperative API can explicitly narrow the runtime
 value to `maplibregl.Map`.
+
+**Methods:** `LyraMap.preload(): Promise<boolean>` is a static optional-peer warm-up that starts the
+shared `maplibre-gl` import without constructing a map or allocating a WebGL context. It resolves to
+`false` when the peer is unavailable, allowing an application to choose a fallback before connecting
+an element.
 
 **Events:** `lr-map-load` (fired once, after the underlying map's own `'load'`), `lr-map-click`
 (`detail: { lngLat: [lng, lat], feature? }` — feature only populated if a choropleth fill layer
@@ -1587,6 +1594,8 @@ Empty values render an empty state. `generate(): Promise<void>` explicitly re-en
 value. `refreshTheme(): void` redraws cached modules for consumer-owned token changes; ordinary
 ancestor theme and color-scheme changes redraw automatically. Async peer and image results are
 generation-guarded, including across disconnect/reconnect.
+`LyraQrCode.preload(): Promise<boolean>` is a static optional-peer warm-up that starts the shared
+`qrcode` import without encoding a value; it resolves to `false` when the peer is unavailable.
 **CSS parts:** `base` and `qr-code` are aliases on the same outer wrapper; `canvas`, `empty`,
 `loading`, and `error`. **CSS custom properties:**
 `--lr-qr-code-fill` and `--lr-qr-code-background`. Ancestor theme-attribute and color-scheme

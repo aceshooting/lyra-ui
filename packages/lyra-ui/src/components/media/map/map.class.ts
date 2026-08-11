@@ -204,6 +204,11 @@ export interface LyraMapEventMap {
  * instant each one mounts. `map` stays `undefined` (and `lr-map-load`
  * doesn't fire) until construction actually happens.
  *
+ * Call `LyraMap.preload()` before connecting an element to start the optional
+ * peer import early. `dataLayers[].sourceId` is declarative component input;
+ * its backing MapLibre source and layers use collision-free component-owned
+ * ids and must not be accessed through `map`.
+ *
  * @customElement lr-map
  * @event lr-map-load - Fired once the underlying maplibregl.Map loads.
  * @event lr-map-click - `detail: { lngLat, feature? }`.
@@ -252,6 +257,13 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+
+  /** Starts the shared optional-peer import without constructing a map. Returns false when the
+   * peer is unavailable, so applications can decide whether to render their own fallback before
+   * connecting an element. */
+  static preload(): Promise<boolean> {
+    return loadMaplibre().then((module) => module !== null);
+  }
 
   constructor() {
     super();
@@ -314,10 +326,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   // this class of bug entirely, but that would be a larger redesign.
   private _appliedChoroplethSourceId?: string;
   private _appliedFillLayerId?: string;
-  // Tracks currently-applied dataLayers sourceIds for clean removal on reassignment/disconnect --
-  // same rationale as `_appliedChoroplethSourceId` (a declarative light-DOM-children model would
-  // avoid this bookkeeping entirely, but that's a larger redesign than this bridge warrants).
-  private _appliedDataLayerIds = new Set<string>();
+  // Maps the declarative public source id to the component-owned MapLibre id used for it. The
+  // generated ids prevent a base style from being updated or removed merely because it happens to
+  // use the same id as one of this component's data layers.
+  private _appliedDataLayerIds = new Map<string, string>();
+  private _nextDataLayerId = 0;
   // Cached once connectedCallback's loadMaplibre().then() resolves, and always
   // set before `_map` itself is (see that closure) -- so any code path gated
   // on `this._map` being truthy can rely on this being set too, without
@@ -587,8 +600,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this._map.setPaintProperty(this._appliedFillLayerId, 'fill-opacity', fillOpacity);
     }
     const dataLayersBySourceId = new Map(this.dataLayers.map((layer) => [layer.sourceId, layer]));
-    for (const sourceId of this._appliedDataLayerIds) {
-      const dataLayer = dataLayersBySourceId.get(sourceId);
+    for (const [publicSourceId, sourceId] of this._appliedDataLayerIds) {
+      const dataLayer = dataLayersBySourceId.get(publicSourceId);
       if (!dataLayer) continue;
       const color = dataLayerColor(this, dataLayer.tone);
       this._map.setPaintProperty(`${sourceId}-fill`, 'fill-color', color);
@@ -694,11 +707,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private applyDataLayers(): void {
     if (!this._map) return;
     const nextIds = new Set(this.dataLayers.map((l) => l.sourceId));
-    for (const id of this._appliedDataLayerIds) {
-      if (!nextIds.has(id)) this.removeDataLayer(id);
+    for (const publicSourceId of this._appliedDataLayerIds.keys()) {
+      if (!nextIds.has(publicSourceId)) this.removeDataLayer(publicSourceId);
     }
     for (const layer of this.dataLayers) {
-      const { sourceId, geojson, tone } = layer;
+      const { sourceId: publicSourceId, geojson, tone } = layer;
+      const sourceId = this.resolveDataLayerSourceId(publicSourceId);
       const existingSource = this._map.getSource(sourceId) as MapLibreGeoJsonSource | undefined;
       if (existingSource) {
         existingSource.setData(geojson);
@@ -743,18 +757,36 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       } else {
         this._map.setPaintProperty(circleId, 'circle-color', color);
       }
-      this._appliedDataLayerIds.add(sourceId);
+      this._appliedDataLayerIds.set(publicSourceId, sourceId);
     }
   }
 
+  /** Allocates a private source/layer namespace that cannot overwrite base-style resources. */
+  private resolveDataLayerSourceId(publicSourceId: string): string {
+    const applied = this._appliedDataLayerIds.get(publicSourceId);
+    if (applied) return applied;
+    let sourceId: string;
+    do {
+      sourceId = `lr-data-layer-${this._nextDataLayerId++}`;
+    } while (
+      this._map?.getSource(sourceId) ||
+      this._map?.getLayer(`${sourceId}-fill`) ||
+      this._map?.getLayer(`${sourceId}-line`) ||
+      this._map?.getLayer(`${sourceId}-circle`)
+    );
+    return sourceId;
+  }
+
   /** Removes one previously-applied `dataLayers` entry's source/layers, if present. */
-  private removeDataLayer(sourceId: string): void {
+  private removeDataLayer(publicSourceId: string): void {
     if (!this._map) return;
+    const sourceId = this._appliedDataLayerIds.get(publicSourceId);
+    if (!sourceId) return;
     for (const layerId of [`${sourceId}-fill`, `${sourceId}-line`, `${sourceId}-circle`]) {
       if (this._map.getLayer(layerId)) this._map.removeLayer(layerId);
     }
     if (this._map.getSource(sourceId)) this._map.removeSource(sourceId);
-    this._appliedDataLayerIds.delete(sourceId);
+    this._appliedDataLayerIds.delete(publicSourceId);
   }
 
   // Deliberately synchronous (no `await loadMaplibre()`): `_maplibreModule` is

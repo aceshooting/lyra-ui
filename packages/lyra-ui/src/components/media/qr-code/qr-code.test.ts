@@ -1,7 +1,7 @@
 import { aTimeout, fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { LitElement, type PropertyValues } from 'lit';
 import './qr-code.js';
-import type { LyraQrCode, LyraQrCodeErrorCorrection } from './qr-code.js';
+import { LyraQrCode, type LyraQrCodeErrorCorrection } from './qr-code.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 function assertiveAnnouncements(): string[] {
@@ -44,6 +44,11 @@ async function waitForPart(el: LyraQrCode, part: string): Promise<void> {
 }
 
 describe('lr-qr-code', () => {
+  it('preloads the optional QR peer without generating a code', async () => {
+    const loaded = await LyraQrCode.preload();
+    expect(typeof loaded).to.equal('boolean');
+  });
+
   it('defaults value/label/size/radius/errorCorrection to their documented values', async () => {
     const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
     expect(el.value).to.equal('');
