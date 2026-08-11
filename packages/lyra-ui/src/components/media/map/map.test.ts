@@ -1,7 +1,8 @@
-import { aTimeout, fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { aTimeout, fixture, fixtureCleanup, expect, html, waitUntil } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import './map.js';
 import { LyraMap } from './map.js';
+import { loadMaplibre } from './map-loader.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -38,6 +39,10 @@ const RASTER_STYLE = {
   layers: [{ id: 'demo', type: 'raster', source: 'demo' }],
 };
 
+// MapLibre owns WebGL contexts and workers outside the fixture's DOM subtree. Clearing fixtures
+// after every test exercises the component's disconnect cleanup before the next map is mounted.
+afterEach(() => fixtureCleanup());
+
 /** Connects a map without allowing its optional peer to construct a real WebGL map. */
 async function connectedMapWithoutMaplibre(style = ''): Promise<{ wrapper: HTMLElement; el: LyraMap }> {
   const wrapper = (await fixture(html`<div style=${style}></div>`)) as HTMLElement;
@@ -54,6 +59,10 @@ function dataLayerResourceId(el: LyraMap, publicSourceId: string): string {
   )._appliedDataLayerIds.get(publicSourceId) ?? '';
 }
 
+function choroplethResourceId(el: LyraMap): string {
+  return (el as unknown as { _appliedChoroplethSourceId?: string })._appliedChoroplethSourceId ?? '';
+}
+
 it('preloads the optional map peer without constructing a map', async () => {
   const loaded = await LyraMap.preload();
   expect(typeof loaded).to.equal('boolean');
@@ -61,38 +70,49 @@ it('preloads the optional map peer without constructing a map', async () => {
 
 it('shows a loading skeleton and aria-busy while maplibre-gl loads, then swaps to the container', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(
-    html`<lr-map .strings=${{ loading: 'Chargement de la carte…' }}></lr-map>`,
-  )) as LyraMap;
-  const base = el.shadowRoot!.querySelector('[part="base"]')!;
-  const skeleton = el.shadowRoot!.querySelector('lr-skeleton')!;
-  expect(skeleton !== null).to.be.true;
-  const updatedSkeleton = skeleton as HTMLElement & {
-    announce: boolean;
-    updateComplete: Promise<unknown>;
-  };
-  await updatedSkeleton.updateComplete;
-  expect(el.getAttribute('aria-busy')).to.equal('true');
-  expect(base.getAttribute('aria-busy')).to.equal('true');
-  expect(updatedSkeleton.announce).to.be.false;
-  expect(
-    el.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]').length,
-  ).to.equal(0);
-  expect(
-    updatedSkeleton.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]')
-      .length,
-  ).to.equal(0);
-  expect(el.shadowRoot!.querySelector('.sr-only')?.textContent?.trim()).to.equal(
-    'Chargement de la carte…',
-  );
-  expect(el.shadowRoot!.querySelectorAll('[part="container"]').length).to.equal(0);
+  let resolveLibrary!: (value: Awaited<ReturnType<typeof loadMaplibre>>) => void;
+  const el = document.createElement('lr-map') as LyraMap;
+  (el as unknown as { loadLibrary: () => Promise<Awaited<ReturnType<typeof loadMaplibre>>> }).loadLibrary =
+    () => new Promise((resolve) => {
+      resolveLibrary = resolve;
+    });
+  el.strings = { loading: 'Chargement de la carte…' };
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    const skeleton = el.shadowRoot!.querySelector('lr-skeleton')!;
+    expect(skeleton !== null).to.be.true;
+    const updatedSkeleton = skeleton as HTMLElement & {
+      announce: boolean;
+      updateComplete: Promise<unknown>;
+    };
+    await updatedSkeleton.updateComplete;
+    expect(el.getAttribute('aria-busy')).to.equal('true');
+    expect(base.getAttribute('aria-busy')).to.equal('true');
+    expect(updatedSkeleton.announce).to.be.false;
+    expect(
+      el.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]').length,
+    ).to.equal(0);
+    expect(
+      updatedSkeleton.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]')
+        .length,
+    ).to.equal(0);
+    expect(el.shadowRoot!.querySelector('.sr-only')?.textContent?.trim()).to.equal(
+      'Chargement de la carte…',
+    );
+    expect(el.shadowRoot!.querySelectorAll('[part="container"]').length).to.equal(0);
 
-  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+    resolveLibrary(await loadMaplibre());
+    await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
 
-  expect(el.getAttribute('aria-busy')).to.equal('false');
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-busy')).to.equal('false');
-  expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(0);
-  expect(el.shadowRoot!.querySelector('[part="container"]')).to.exist;
+    expect(el.getAttribute('aria-busy')).to.equal('false');
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-busy')).to.equal('false');
+    expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(0);
+    expect(el.shadowRoot!.querySelector('[part="container"]') != null).to.be.true;
+  } finally {
+    el.remove();
+  }
 });
 
 it('constructs a maplibregl.Map and exposes it via the map getter', async function () {
@@ -101,7 +121,7 @@ it('constructs a maplibregl.Map and exposes it via the map getter', async functi
   el.mapStyle = RASTER_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
-  expect(el.map).to.exist;
+  expect(el.map != null).to.be.true;
 });
 
 it('does not construct the underlying maplibregl.Map (and its WebGL context) until the element is observed intersecting the viewport', async function () {
@@ -153,12 +173,12 @@ it('does not construct the underlying maplibregl.Map (and its WebGL context) unt
     // `await this.updateComplete` (which runs tryConstructMap() right after)
     // has had its chance to run and bail on `!this.visible`.
     await el.updateComplete;
-    expect(el.map).to.be.undefined;
+    expect(el.map == null).to.be.true;
 
     // Now simulate the element scrolling into view.
     callbacks[0]([{ isIntersecting: true } as unknown as IntersectionObserverEntry], new OriginalIO(() => {}));
     await waitUntil(() => el.map != null, 'map never constructed after becoming visible', { timeout: 2000 });
-    expect(el.map).to.exist;
+    expect(el.map != null).to.be.true;
   } finally {
     (window as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver = OriginalIO;
   }
@@ -304,7 +324,7 @@ it('renders a visible, accessible error state instead of a blank container when 
     expect(errorEl.textContent!.trim().length).to.be.greaterThan(0);
     expect(assertiveAnnouncements()).to.deep.equal([errorEl.textContent!.trim()]);
     expect(el.getAttribute('aria-busy')).to.equal('false');
-    expect(el.map).to.be.undefined;
+    expect(el.map == null).to.be.true;
     expect(el.shadowRoot!.querySelectorAll('[part="container"]').length).to.equal(0);
     expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(0);
   } finally {
@@ -336,7 +356,7 @@ it('renders the same accessible error state instead of crashing when WebGL2 is u
       'error state never rendered',
       { timeout: 2000 },
     );
-    expect(el.map).to.be.undefined;
+    expect(el.map == null).to.be.true;
     expect(el.shadowRoot!.querySelectorAll('[part="container"]').length).to.equal(0);
     // The regression: disconnecting must not throw even though a WebGL2-unavailable environment
     // was detected and construction was skipped entirely.
@@ -560,18 +580,18 @@ it('does not render the legend panel when legend is empty (the default)', async 
   // A Lit template's own whitespace/comment nodes mean `[part="legend"]:empty` in CSS
   // never matches (it always has child nodes), so the panel must be omitted from the
   // render output entirely rather than hidden via an `:empty` selector.
-  expect(el.shadowRoot!.querySelector('[part="legend"]')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('[part="legend"]') == null).to.be.true;
 });
 
 it('renders the legend panel once entries are set, and removes it again once cleared', async () => {
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
   el.legend = [{ color: '#f00', label: 'High' }];
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="legend"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part="legend"]') != null).to.be.true;
 
   el.legend = [];
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="legend"]')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('[part="legend"]') == null).to.be.true;
 });
 
 describe('aria-label forwarding', () => {
@@ -667,7 +687,7 @@ it('adds a choropleth source + fill layer, and re-applies the color expression o
     timeout: 2000,
   });
 
-  expect(el.map!.getSource('demo-choropleth')).to.exist;
+  expect(el.map!.getSource('demo-choropleth') != null).to.be.true;
   expect(el.map!.getPaintProperty('demo-choropleth-fill', 'fill-color')).to.deep.equal([
     'interpolate',
     ['linear'],
@@ -710,12 +730,22 @@ it('updates fill opacity when existing choropleth and data layers are reused', a
   try {
     const paintCalls: Array<{ layerId: string; name: string; value: unknown }> = [];
     const fakeSource = { setData(): void {} };
+    const sources = new Map<string, typeof fakeSource>([
+      ['regions', fakeSource],
+      ['lr-data-layer-0', fakeSource],
+    ]);
+    const layers = new Set([
+      'regions-fill',
+      'lr-data-layer-0-fill',
+      'lr-data-layer-0-line',
+      'lr-data-layer-0-circle',
+    ]);
     const fakeMap = {
-      getSource(): typeof fakeSource {
-        return fakeSource;
+      getSource(sourceId: string): typeof fakeSource | undefined {
+        return sources.get(sourceId);
       },
-      getLayer(): object {
-        return {};
+      getLayer(layerId: string): object | undefined {
+        return layers.has(layerId) ? {} : undefined;
       },
       setPaintProperty(layerId: string, name: string, value: unknown): void {
         paintCalls.push({ layerId, name, value });
@@ -724,10 +754,12 @@ it('updates fill opacity when existing choropleth and data layers are reused', a
     };
     const privateMap = el as unknown as {
       _map?: unknown;
+      _appliedDataLayerIds: Map<string, string>;
       applyChoropleth(): void;
       applyDataLayers(): void;
     };
     privateMap._map = fakeMap;
+    privateMap._appliedDataLayerIds = new Map([['zones', 'lr-data-layer-0']]);
     el.choropleth = choropleth('regions', [[0, '#000000'], [10, '#ffffff']]);
     el.dataLayers = [{
       sourceId: 'zones',
@@ -742,7 +774,8 @@ it('updates fill opacity when existing choropleth and data layers are reused', a
       paintCalls.find((call) => call.layerId === 'regions-fill' && call.name === 'fill-opacity')?.value,
     ).to.equal(0.42);
     expect(
-      paintCalls.find((call) => call.layerId === 'zones-fill' && call.name === 'fill-opacity')?.value,
+      paintCalls.find((call) => call.layerId === 'lr-data-layer-0-fill' && call.name === 'fill-opacity')
+        ?.value,
     ).to.equal(0.42);
   } finally {
     wrapper.remove();
@@ -836,7 +869,7 @@ it('does not mark an empty-stops choropleth as applied, so a later non-empty upd
 
   // An empty `stops` array can't build a valid `interpolate` expression, so no
   // fill layer should be considered applied for it.
-  expect(el.map!.getLayer('empty-stops-fill')).to.not.exist;
+  expect(el.map!.getLayer('empty-stops-fill') == null).to.be.true;
 
   el.choropleth = choropleth('empty-stops', [
     [0, '#000000'],
@@ -849,7 +882,7 @@ it('does not mark an empty-stops choropleth as applied, so a later non-empty upd
     { timeout: 2000 },
   );
 
-  expect(el.map!.getSource('empty-stops')).to.exist;
+  expect(el.map!.getSource('empty-stops') != null).to.be.true;
   expect(el.map!.getPaintProperty('empty-stops-fill', 'fill-color')).to.deep.equal([
     'interpolate',
     ['linear'],
@@ -952,7 +985,7 @@ it('does not query the choropleth fill layer on click before it has been added t
   ]);
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
-  expect(el.map!.getLayer('early-choropleth-fill')).to.not.exist;
+  expect(el.map!.getLayer('early-choropleth-fill') == null).to.be.true;
 
   let queried = false;
   const original = el.map!.queryRenderedFeatures.bind(el.map);
@@ -989,14 +1022,14 @@ it('removes the choropleth layer and source when choropleth is cleared', async f
     timeout: 2000,
   });
 
-  expect(el.map!.getLayer('regions-fill')).to.exist;
-  expect(el.map!.getSource('regions')).to.exist;
+  expect(el.map!.getLayer('regions-fill') != null).to.be.true;
+  expect(el.map!.getSource('regions') != null).to.be.true;
 
   el.choropleth = undefined;
   await el.updateComplete;
 
-  expect(el.map!.getLayer('regions-fill')).to.not.exist;
-  expect(el.map!.getSource('regions')).to.not.exist;
+  expect(el.map!.getLayer('regions-fill') == null).to.be.true;
+  expect(el.map!.getSource('regions') == null).to.be.true;
 });
 
 it('removes the old choropleth layer/source when sourceId changes', async function () {
@@ -1022,10 +1055,10 @@ it('removes the old choropleth layer/source when sourceId changes', async functi
   ]);
   await el.updateComplete;
 
-  expect(el.map!.getLayer('regions-a-fill')).to.not.exist;
-  expect(el.map!.getSource('regions-a')).to.not.exist;
-  expect(el.map!.getLayer('regions-b-fill')).to.exist;
-  expect(el.map!.getSource('regions-b')).to.exist;
+  expect(el.map!.getLayer('regions-a-fill') == null).to.be.true;
+  expect(el.map!.getSource('regions-a') == null).to.be.true;
+  expect(el.map!.getLayer('regions-b-fill') != null).to.be.true;
+  expect(el.map!.getSource('regions-b') != null).to.be.true;
 });
 
 it('calls setStyle when mapStyle changes after the map has mounted', async function () {
@@ -1147,7 +1180,7 @@ it('re-applies the choropleth once the new style finishes loading after a mapSty
   await waitUntil(() => el.map!.getLayer('style-reload-fill') != null, 'choropleth never re-applied', {
     timeout: 2000,
   });
-  expect(el.map!.getSource('style-reload')).to.exist;
+  expect(el.map!.getSource('style-reload') != null).to.be.true;
 });
 
 describe('dataLayers', () => {
@@ -1184,14 +1217,14 @@ describe('dataLayers', () => {
 
     const dataSourceId = dataLayerResourceId(el, 'demo');
     expect(dataSourceId === 'demo').to.be.false;
-    expect(el.map!.getSource('demo')).to.exist;
-    expect(el.map!.getSource(dataSourceId)).to.exist;
+    expect(el.map!.getSource('demo') != null).to.be.true;
+    expect(el.map!.getSource(dataSourceId) != null).to.be.true;
 
     el.dataLayers = [];
     await el.updateComplete;
 
-    expect(el.map!.getSource('demo')).to.exist;
-    expect(el.map!.getSource(dataSourceId)).to.not.exist;
+    expect(el.map!.getSource('demo') != null).to.be.true;
+    expect(el.map!.getSource(dataSourceId) == null).to.be.true;
   });
 
   it('adds a source and fill/line/circle layers per entry once the style loads', async function () {
@@ -1209,9 +1242,9 @@ describe('dataLayers', () => {
     });
 
     const sourceId = dataLayerResourceId(el, 'zones');
-    expect(el.map!.getSource(sourceId)).to.exist;
-    expect(el.map!.getLayer(`${sourceId}-fill`)).to.exist;
-    expect(el.map!.getLayer(`${sourceId}-line`)).to.exist;
+    expect(el.map!.getSource(sourceId) != null).to.be.true;
+    expect(el.map!.getLayer(`${sourceId}-fill`) != null).to.be.true;
+    expect(el.map!.getLayer(`${sourceId}-line`) != null).to.be.true;
   });
 
   it('removing an entry (dataLayers reassigned without it) removes its source/layers, leaking nothing', async function () {
@@ -1232,10 +1265,10 @@ describe('dataLayers', () => {
     el.dataLayers = [];
     await el.updateComplete;
 
-    expect(el.map!.getSource(sourceId)).to.not.exist;
-    expect(el.map!.getLayer(`${sourceId}-fill`)).to.not.exist;
-    expect(el.map!.getLayer(`${sourceId}-line`)).to.not.exist;
-    expect(el.map!.getLayer(`${sourceId}-circle`)).to.not.exist;
+    expect(el.map!.getSource(sourceId) == null).to.be.true;
+    expect(el.map!.getLayer(`${sourceId}-fill`) == null).to.be.true;
+    expect(el.map!.getLayer(`${sourceId}-line`) == null).to.be.true;
+    expect(el.map!.getLayer(`${sourceId}-circle`) == null).to.be.true;
   });
 
   it('updates existing source data in place when the same sourceId is reassigned with new geojson', async function () {
@@ -1263,7 +1296,7 @@ describe('dataLayers', () => {
     await el.updateComplete;
 
     expect(called).to.equal(1);
-    expect(el.map!.getSource(sourceId)).to.equal(source);
+    expect(el.map!.getSource(sourceId) === source).to.be.true;
   });
 
   it('re-applies dataLayers after a mapStyle change (style.load handshake)', async function () {
@@ -1296,7 +1329,7 @@ describe('dataLayers', () => {
     }, 'dataLayers never re-applied', {
       timeout: 2000,
     });
-    expect(el.map!.getSource(dataLayerResourceId(el, 'zones'))).to.exist;
+    expect(el.map!.getSource(dataLayerResourceId(el, 'zones')) != null).to.be.true;
   });
 });
 
@@ -1439,14 +1472,21 @@ it('keeps choropleth and data-layer sources distinct when their public sourceId 
   await waitUntilMapLoaded(el);
   await waitUntil(
     () => {
+      const choroplethSourceId = choroplethResourceId(el);
       const dataSourceId = dataLayerResourceId(el, 'shared');
-      return Boolean(el.map!.getLayer('shared-fill') && el.map!.getLayer(`${dataSourceId}-line`));
+      return Boolean(
+        choroplethSourceId &&
+        dataSourceId &&
+        choroplethSourceId !== dataSourceId &&
+        el.map!.getLayer(`${choroplethSourceId}-fill`) &&
+        el.map!.getLayer(`${dataSourceId}-line`),
+      );
     },
     'colliding layers never became distinct',
     { timeout: 2000 },
   );
-  expect(el.map!.getSource('shared')).to.exist;
-  expect(el.map!.getSource(dataLayerResourceId(el, 'shared'))).to.exist;
+  expect(el.map!.getSource(choroplethResourceId(el)) != null).to.be.true;
+  expect(el.map!.getSource(dataLayerResourceId(el, 'shared')) != null).to.be.true;
 });
 
 it('keeps the choropleth source distinct from every colliding public data source id', async function () {
@@ -1464,15 +1504,24 @@ it('keeps the choropleth source distinct from every colliding public data source
     () => {
       const first = dataLayerResourceId(el, 'shared');
       const second = dataLayerResourceId(el, 'lr-choropleth-shared');
-      return Boolean(first && second && first !== second && el.map!.getSource('shared'));
+      const choroplethSourceId = choroplethResourceId(el);
+      return Boolean(
+        first &&
+        second &&
+        choroplethSourceId &&
+        first !== second &&
+        choroplethSourceId !== first &&
+        choroplethSourceId !== second &&
+        el.map!.getSource(choroplethSourceId),
+      );
     },
     'component-owned data source ids did not become distinct',
     { timeout: 2000 },
   );
 
-  expect(el.map!.getSource('shared')).to.exist;
-  expect(el.map!.getSource(dataLayerResourceId(el, 'shared'))).to.exist;
-  expect(el.map!.getSource(dataLayerResourceId(el, 'lr-choropleth-shared'))).to.exist;
+  expect(el.map!.getSource(choroplethResourceId(el)) != null).to.be.true;
+  expect(el.map!.getSource(dataLayerResourceId(el, 'shared')) != null).to.be.true;
+  expect(el.map!.getSource(dataLayerResourceId(el, 'lr-choropleth-shared')) != null).to.be.true;
 });
 
 it('can replace a choropleth with a same-id data layer in one reactive update', async function () {
@@ -1494,11 +1543,11 @@ it('can replace a choropleth with a same-id data layer in one reactive update', 
   await el.updateComplete;
 
   const dataSourceId = dataLayerResourceId(el, 'shared');
-  expect(el.map!.getSource('shared')).to.not.exist;
-  expect(el.map!.getSource(dataSourceId)).to.exist;
-  expect(el.map!.getLayer(`${dataSourceId}-fill`)).to.exist;
-  expect(el.map!.getLayer(`${dataSourceId}-line`)).to.exist;
-  expect(el.map!.getLayer(`${dataSourceId}-circle`)).to.exist;
+  expect(el.map!.getSource('shared') == null).to.be.true;
+  expect(el.map!.getSource(dataSourceId) != null).to.be.true;
+  expect(el.map!.getLayer(`${dataSourceId}-fill`) != null).to.be.true;
+  expect(el.map!.getLayer(`${dataSourceId}-line`) != null).to.be.true;
+  expect(el.map!.getLayer(`${dataSourceId}-circle`) != null).to.be.true;
 });
 
 it('preserves colliding choropleth and data-layer namespaces across clear and style reload', async function () {
@@ -1519,17 +1568,25 @@ it('preserves colliding choropleth and data-layer namespaces across clear and st
   } as typeof RASTER_STYLE;
   await el.updateComplete;
   await waitUntil(
-    () => Boolean(el.map!.getSource('shared') && el.map!.getSource(dataLayerResourceId(el, 'shared'))),
+    () => {
+      const choroplethSourceId = choroplethResourceId(el);
+      return Boolean(
+        choroplethSourceId &&
+        el.map!.getSource(choroplethSourceId) &&
+        el.map!.getSource(dataLayerResourceId(el, 'shared')),
+      );
+    },
     'colliding sources were not restored after style reload',
     { timeout: 2000 },
   );
 
+  const choroplethSourceId = choroplethResourceId(el);
   el.choropleth = undefined;
   await el.updateComplete;
   const dataSourceId = dataLayerResourceId(el, 'shared');
-  expect(el.map!.getSource('shared')).to.not.exist;
-  expect(el.map!.getSource(dataSourceId)).to.exist;
-  expect(el.map!.getLayer(`${dataSourceId}-line`)).to.exist;
+  expect(el.map!.getSource(choroplethSourceId) == null).to.be.true;
+  expect(el.map!.getSource(dataSourceId) != null).to.be.true;
+  expect(el.map!.getLayer(`${dataSourceId}-line`) != null).to.be.true;
 });
 
 it('removes markers no longer present and reuses markers that persist', async function () {
@@ -1771,7 +1828,7 @@ it('synchronizes popup-capable marker disclosure semantics and localized popup o
   const popup = el.shadowRoot!.querySelector('.maplibregl-popup') as HTMLElement;
   expect(popup.id).to.equal(popupId);
   expect(popup.getAttribute('role')).to.equal('dialog');
-  expect(popup.closest('[lang="fr-FR"]')).to.exist;
+  expect(popup.closest('[lang="fr-FR"]') != null).to.be.true;
   expect(marker.getAttribute('aria-expanded')).to.equal('true');
   const popupClose = popup.querySelector('.maplibregl-popup-close-button') as HTMLButtonElement;
   expect(popupClose.getAttribute('part')).to.equal('popup-close-button');

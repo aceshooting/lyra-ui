@@ -24985,7 +24985,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 640,
+              "line": 660,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -25005,7 +25005,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 1857,
+              "line": 1914,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -25022,7 +25022,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 1848,
+              "line": 1905,
               "kind": "320px allocation test signal"
             }
           ]
@@ -25090,7 +25090,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 79,
+              "line": 95,
               "kind": "optional-peer failure-path test signal"
             }
           ],
