@@ -265,6 +265,74 @@ describe('autoloader', () => {
     }
   });
 
+  it('leaves known tags in a detached document without a registry untouched', async () => {
+    const tag = 'lr-pagination';
+    let loads = 0;
+    override(tag, async () => {
+      loads += 1;
+      return constructorForTag();
+    });
+    const detachedDocument = document.implementation.createHTMLDocument('autoloader-without-registry');
+    const element = detachedDocument.createElement(tag);
+    detachedDocument.body.append(element);
+
+    expect(detachedDocument.defaultView).to.equal(null);
+    expect(await discover(detachedDocument)).to.deep.equal([]);
+    expect(loads).to.equal(0);
+    expect(element.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+  });
+
+  it('clears a predefined element marker when stopped before its first update settles', async () => {
+    const tag = 'lr-color-picker';
+    const host = await fixture<HTMLElement>(html`<section></section>`);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const registry = createScopedRegistry();
+    let resolveUpdate!: () => void;
+    const updateComplete = new Promise<void>((resolve) => {
+      resolveUpdate = resolve;
+    });
+    const element = document.createElement(tag) as HTMLElement & { readonly updateComplete: Promise<void> };
+    Object.defineProperty(element, 'updateComplete', { configurable: true, value: updateComplete });
+    Object.defineProperty(shadow, 'customElementRegistry', { configurable: true, value: registry });
+    registry.define(tag, constructorForTag());
+    shadow.append(element);
+
+    try {
+      const started = start(host);
+      expect(element.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(true);
+
+      stop();
+      expect(element.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+      resolveUpdate();
+      await started;
+      expect(element.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+    } finally {
+      resolveUpdate();
+      delete (shadow as unknown as Record<string, unknown>)['customElementRegistry'];
+      host.remove();
+    }
+  });
+
+  it('emits autoload events from a detached explicitly registered document', async () => {
+    const tag = 'lr-menu';
+    override(tag, async () => constructorForTag());
+    const detachedDocument = document.implementation.createHTMLDocument('autoloader-events');
+    const registry = createScopedRegistry();
+    Object.defineProperty(detachedDocument, 'customElements', { configurable: true, value: registry });
+    detachedDocument.body.append(detachedDocument.createElement(tag));
+    const loadedEvent = oneEvent(detachedDocument, 'lr-autoload-loaded');
+
+    try {
+      expect(await discover(detachedDocument, { events: true })).to.deep.equal([tag]);
+      const event = (await loadedEvent) as CustomEvent<{ tag: string }>;
+      expect(event instanceof CustomEvent).to.equal(true);
+      expect(event.detail.tag).to.equal(tag);
+      expect(typeof registry.get(tag)).to.equal('function');
+    } finally {
+      delete (detachedDocument as unknown as Record<string, unknown>)['customElements'];
+    }
+  });
+
   it('invalidates a pending generation on stop and lets a restart define the tag', async () => {
     const tag = 'lr-relative-time';
     let resolve!: (constructor: CustomElementConstructor) => void;
@@ -437,6 +505,25 @@ describe('autoloader', () => {
     expect(calls).to.equal(1);
     expect(customElements.get(tag)).to.be.a('function');
   });
+
+  it('ignores text and comment mutations before loading a later element insertion', async () => {
+    const tag = 'lr-pagination';
+    let loads = 0;
+    override(tag, async () => {
+      loads += 1;
+      return constructorForTag();
+    });
+    const root = await fixture<HTMLElement>(html`<div></div>`);
+    await start(root);
+
+    root.append(document.createTextNode('Loading…'), document.createComment('autoloader boundary'));
+    await aTimeout(0);
+    expect(loads).to.equal(0);
+
+    root.append(document.createElement(tag));
+    await customElements.whenDefined(tag);
+    expect(loads).to.equal(1);
+  });
 });
 
 it('defaults discovery to the ambient document when no root is given', async () => {
@@ -448,5 +535,51 @@ it('defaults discovery to the ambient document when no root is given', async () 
     expect(await discover()).to.deep.equal([]);
   } finally {
     host.remove();
+  }
+});
+
+it('makes default discovery safe in a document-less worker', async () => {
+  const moduleUrl = new URL('./autoloader.ts', import.meta.url).href;
+  const source = `
+    const hasDocument = typeof document !== 'undefined';
+    import(${JSON.stringify(moduleUrl)}).then(async ({ discover, start }) => {
+      try {
+        postMessage({ hasDocument, discovered: await discover(), started: await start() });
+      } catch (error) {
+        postMessage({
+          hasDocument,
+          errorName: error instanceof Error ? error.name : typeof error,
+        });
+      }
+    }).catch((error) => {
+      postMessage({
+        hasDocument,
+        importError: error instanceof Error ? error.message : String(error),
+      });
+    });
+  `;
+  const workerUrl = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
+  const worker = new Worker(workerUrl);
+  try {
+    const result = await new Promise<{
+      hasDocument: boolean;
+      discovered?: string[];
+      started?: string[];
+      errorName?: string;
+      importError?: string;
+    }>((resolve, reject) => {
+      worker.addEventListener('message', (event) => resolve(event.data), { once: true });
+      worker.addEventListener('error', () => reject(new Error('The document-less autoloader probe failed to run')), {
+        once: true,
+      });
+    });
+    expect(result.hasDocument).to.equal(false);
+    expect(result.importError).to.equal(undefined);
+    expect(result.errorName).to.equal(undefined);
+    expect(result.discovered).to.deep.equal([]);
+    expect(result.started).to.deep.equal([]);
+  } finally {
+    worker.terminate();
+    URL.revokeObjectURL(workerUrl);
   }
 });

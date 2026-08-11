@@ -1,6 +1,7 @@
 import { expect } from '@open-wc/testing';
 import {
   activateOverlay,
+  collectAutofocusElements,
   collectFocusableElements,
   deepActiveElement,
   suspendLyraModalsFor,
@@ -310,6 +311,45 @@ it('keeps external-modal suspension document-scoped', () => {
   expect(otherHandle.isTopmost()).to.be.true;
   otherHandle.deactivate({ restoreFocus: false });
   mainHandle.deactivate({ restoreFocus: false });
+});
+
+it('keeps an external modal path in a shadow root interactive while inerting its sibling', () => {
+  const host = document.createElement('div');
+  const shadow = host.attachShadow({ mode: 'open' });
+  const background = document.createElement('aside');
+  const external = document.createElement('section');
+  shadow.append(background, external);
+  document.body.append(host);
+  const release = suspendLyraModalsFor(external);
+
+  try {
+    expect(external.inert).to.equal(false);
+    expect(background.inert).to.equal(true);
+  } finally {
+    release();
+    expect(background.inert).to.equal(false);
+    host.remove();
+  }
+});
+
+it('does not suspend Lyra overlays for a disconnected external modal root', () => {
+  const overlay = createOverlay(document, 'disconnected-external-modal');
+  let dismissals = 0;
+  const handle = activateOverlay({
+    host: overlay.host,
+    panel: () => overlay.panel,
+    onEscape: () => dismissals++,
+  });
+  const release = suspendLyraModalsFor(document.createElement('section'));
+
+  try {
+    expect(handle.isTopmost()).to.equal(true);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(dismissals).to.equal(1);
+  } finally {
+    release();
+    handle.deactivate({ restoreFocus: false });
+  }
 });
 
 it('updates a return target without changing stack order or moving focus', () => {
@@ -986,6 +1026,46 @@ it('accepts a ShadowRoot directly when collecting focus targets', () => {
   host.remove();
 });
 
+it('accepts a ShadowRoot directly when collecting autofocus targets', () => {
+  const host = document.createElement('div');
+  const shadow = host.attachShadow({ mode: 'open' });
+  const input = document.createElement('input');
+  input.id = 'shadow-autofocus-target';
+  input.setAttribute('autofocus', '');
+  shadow.append(input);
+  document.body.append(host);
+
+  try {
+    expect(collectAutofocusElements(shadow).map((element) => element.id)).to.deep.equal(['shadow-autofocus-target']);
+  } finally {
+    host.remove();
+  }
+});
+
+it('hands autofocus from a non-focusable host to its focusable shadow descendant', () => {
+  const overlay = createOverlay(document, 'shadow-autofocus-overlay');
+  const autofocusHost = document.createElement('section');
+  autofocusHost.setAttribute('autofocus', '');
+  const shadow = autofocusHost.attachShadow({ mode: 'open' });
+  const input = document.createElement('input');
+  input.id = 'shadow-autofocus-descendant';
+  shadow.append(input);
+  overlay.panel.prepend(autofocusHost);
+  const handle = activateOverlay({
+    host: overlay.host,
+    panel: () => overlay.panel,
+    modal: false,
+    onEscape: () => undefined,
+  });
+
+  try {
+    expect(handle.focusAutofocus()).to.equal(true);
+    expect(deepActiveElement(document)?.id).to.equal('shadow-autofocus-descendant');
+  } finally {
+    handle.deactivate({ restoreFocus: false });
+  }
+});
+
 it('restores a pre-existing overlay stack style after deactivation', () => {
   const overlay = createOverlay(document, 'styled-dialog');
   overlay.host.style.setProperty('--lr-overlay-stack-index', 'custom', 'important');
@@ -1138,6 +1218,30 @@ it('treats an overflowing scroll region as a tab stop even when its tabindex is 
     const focusable = collectFocusableElements(root);
     expect(focusable.length).to.equal(1);
     expect(focusable[0]?.id).to.equal(region.id);
+  } finally {
+    root.remove();
+  }
+});
+
+it('treats a horizontally overflowing auto region as a tab stop', () => {
+  const root = document.createElement('div');
+  const region = document.createElement('div');
+  region.id = 'horizontal-scroll-region';
+  region.tabIndex = -1;
+  region.style.overflowX = 'auto';
+  region.style.overflowY = 'hidden';
+  region.style.inlineSize = '80px';
+  region.style.blockSize = '40px';
+  const filler = document.createElement('div');
+  filler.style.inlineSize = '400px';
+  filler.style.blockSize = '1px';
+  region.append(filler);
+  root.append(region);
+  document.body.append(root);
+
+  try {
+    expect(region.scrollWidth, 'fixture must overflow horizontally').to.be.greaterThan(region.clientWidth);
+    expect(collectFocusableElements(root).map((element) => element.id)).to.deep.equal(['horizontal-scroll-region']);
   } finally {
     root.remove();
   }
