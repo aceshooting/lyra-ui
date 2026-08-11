@@ -388,7 +388,7 @@ it('keeps a long provider badge inside a 320px allocation in both modes and text
   for (const direction of ['ltr', 'rtl'] as const) {
     for (const allowCustom of [false, true]) {
       const allocation = (await fixture(html`
-        <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%">
+        <div dir=${direction} style="display: grid; inline-size: 320px; max-inline-size: 100%">
           <lr-model-select
             provider=${LONG_PROVIDER}
             ?allow-custom=${allowCustom}

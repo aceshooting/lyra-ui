@@ -6,6 +6,7 @@ export const styles = css`
     position: relative;
     display: inline-block;
     inline-size: 100%;
+    min-inline-size: 0;
     max-inline-size: var(--lr-size-24rem);
     /* The size ladder itself lives in internal/sizes.styles.ts, which this component composes ahead
        of this sheet. Only the indirection is here: the public --lr-model-select-* surface stays
