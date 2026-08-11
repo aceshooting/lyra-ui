@@ -96,6 +96,7 @@ export function computeAppRailMode(
 export interface LyraAppRailEventMap {
   'lr-mode-change': CustomEvent<AppRailModeChangeDetail>;
   'lr-toggle': CustomEvent<AppRailToggleDetail>;
+  'lr-rail-resize-request': CustomEvent<AppRailResizeDetail>;
   'lr-rail-resize': CustomEvent<AppRailResizeDetail>;
 }
 /**
@@ -147,8 +148,12 @@ export interface LyraAppRailEventMap {
  *   interactive trigger can be vetoed, but the forced mode-change close always applies
  *   (vetoing it would leave `open` stuck `true` in a mode where it's
  *   meaningless) -- call `preventDefault()` to keep the overlay as it is.
+ * @event lr-rail-resize-request - A cancelable request to change the `resizable` rail's width via
+ *   drag or keyboard stepping. Call `preventDefault()` to keep `railWidthPx` unchanged. Not fired
+ *   when a consumer sets `railWidthPx` directly. `detail: AppRailResizeDetail`.
  * @event lr-rail-resize - The `resizable` rail's width changed via drag or keyboard stepping.
- *   Not fired when a consumer sets `railWidthPx` directly. `detail: AppRailResizeDetail`.
+ *   Non-cancelable and emitted after `railWidthPx` is assigned. Not fired when a consumer sets
+ *   `railWidthPx` directly. `detail: AppRailResizeDetail`.
  * @csspart base - The rail root while inline (`'full'`/`'icon-only'` modes).
  * @csspart header - The wrapper around the `header` slot.
  * @csspart nav - The wrapper around the default (nav items) slot.
@@ -270,7 +275,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   /** Opts a continuously draggable width in for the `'full'` state — exposes a `[part="resizer"]`
    *  handle (pointer-drag and `ArrowLeft`/`ArrowRight` keyboard stepping, RTL-aware) clamped to
    *  `[minRailWidthPx, maxRailWidthPx]`. Set `storageKey` to persist the fields selected by
-   *  `persist`; otherwise listen for `lr-rail-resize` and persist `widthPx` yourself. `false` (the
+   *  `persist`; otherwise listen for `lr-rail-resize` and persist its committed `widthPx` yourself.
+   *  Call `preventDefault()` on `lr-rail-resize-request` to keep the current width. `false` (the
    *  default) renders no resizer and leaves the fixed-width `--lr-app-rail-width` CSS token exactly
    *  as before this property existed. */
   @property({ type: Boolean, reflect: true }) resizable = false;
@@ -769,8 +775,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     let delta = e.clientX - this.resizeStartX;
     if (isRtl(this)) delta = -delta;
     const next = Math.min(this.safeMaxRailWidthPx, Math.max(this.safeMinRailWidthPx, this.resizeStartWidth + delta));
-    this.railWidthPx = next;
-    this.emit('lr-rail-resize', { widthPx: next });
+    this.requestRailResize(next);
   };
 
   private onResizerPointerUp = (e: PointerEvent): void => {
@@ -789,6 +794,15 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     ownerWindow?.removeEventListener('lostpointercapture', this.onResizerPointerUp);
   }
 
+  /** Emits the cancelable proposal before committing, so a vetoed gesture never mutates width or
+   *  triggers the existing post-commit resize notification. */
+  private requestRailResize(next: number): void {
+    const event = this.emit('lr-rail-resize-request', { widthPx: next }, { cancelable: true });
+    if (event.defaultPrevented) return;
+    this.railWidthPx = next;
+    this.emit('lr-rail-resize', { widthPx: next });
+  }
+
   private onResizerKeyDown = (e: KeyboardEvent): void => {
     const rtl = isRtl(this);
     const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
@@ -797,13 +811,11 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     if (e.key === forwardKey) {
       e.preventDefault();
       const next = Math.min(this.safeMaxRailWidthPx, this.effectiveRailWidthPx + step);
-      this.railWidthPx = next;
-      this.emit('lr-rail-resize', { widthPx: next });
+      this.requestRailResize(next);
     } else if (e.key === backwardKey) {
       e.preventDefault();
       const next = Math.max(this.safeMinRailWidthPx, this.effectiveRailWidthPx - step);
-      this.railWidthPx = next;
-      this.emit('lr-rail-resize', { widthPx: next });
+      this.requestRailResize(next);
     }
   };
 

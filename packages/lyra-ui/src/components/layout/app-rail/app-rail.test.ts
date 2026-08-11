@@ -972,18 +972,35 @@ describe('resizable', () => {
     expect(el.shadowRoot!.querySelector('[part="resizer"]')).to.not.exist;
   });
 
-  it('ArrowRight/ArrowLeft on the resizer steps railWidthPx and emits lr-rail-resize, clamped to bounds', async () => {
+  it('emits a cancelable resize request before the existing non-cancelable committed resize event', async () => {
     const el = (await fixture(
       html`<lr-app-rail resizable rail-width-px="240" min-rail-width-px="190" max-rail-width-px="440"></lr-app-rail>`,
     )) as LyraAppRail;
     await el.updateComplete;
     const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
-    let detail: { widthPx: number } | undefined;
-    el.addEventListener('lr-rail-resize', (e) => (detail = (e as CustomEvent).detail));
+    let request: { widthPx: number; cancelable: boolean; widthAtDispatch: number } | undefined;
+    let committed: { widthPx: number; cancelable: boolean; widthAtDispatch: number } | undefined;
+    el.addEventListener('lr-rail-resize-request', (event) => {
+      const resize = event as CustomEvent<{ widthPx: number }>;
+      request = {
+        widthPx: resize.detail.widthPx,
+        cancelable: resize.cancelable,
+        widthAtDispatch: el.railWidthPx ?? -1,
+      };
+    });
+    el.addEventListener('lr-rail-resize', (event) => {
+      const resize = event as CustomEvent<{ widthPx: number }>;
+      committed = {
+        widthPx: resize.detail.widthPx,
+        cancelable: resize.cancelable,
+        widthAtDispatch: el.railWidthPx ?? -1,
+      };
+    });
 
     resizer.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     expect(el.railWidthPx).to.equal(248);
-    expect(detail).to.deep.equal({ widthPx: 248 });
+    expect(request).to.deep.equal({ widthPx: 248, cancelable: true, widthAtDispatch: 240 });
+    expect(committed).to.deep.equal({ widthPx: 248, cancelable: false, widthAtDispatch: 248 });
 
     el.railWidthPx = 438;
     resizer.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
@@ -992,6 +1009,82 @@ describe('resizable', () => {
     el.railWidthPx = 192;
     resizer.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
     expect(el.railWidthPx).to.equal(190); // clamped to minRailWidthPx
+  });
+
+  it('lets listeners veto proposed pointer and keyboard widths without committing or persisting them', async () => {
+    const storageKey = 'app-rail-vetoed-resize-request';
+    const storageFullKey = `lr-app-rail:${storageKey}`;
+    localStorage.removeItem(storageFullKey);
+    const el = (await fixture(
+      html`<lr-app-rail
+        resizable
+        rail-width-px="240"
+        min-rail-width-px="190"
+        max-rail-width-px="440"
+        storage-key=${storageKey}
+      ></lr-app-rail>`,
+    )) as LyraAppRail;
+    const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
+    const proposals: Array<{ widthPx: number; cancelable: boolean; widthAtDispatch: number }> = [];
+    let committedEvents = 0;
+    const veto = (event: Event): void => {
+      const resize = event as CustomEvent<{ widthPx: number }>;
+      proposals.push({
+        widthPx: resize.detail.widthPx,
+        cancelable: resize.cancelable,
+        widthAtDispatch: el.railWidthPx ?? -1,
+      });
+      resize.preventDefault();
+    };
+    const countCommitted = (): void => {
+      committedEvents += 1;
+    };
+    el.addEventListener('lr-rail-resize-request', veto);
+    el.addEventListener('lr-rail-resize', countCommitted);
+    // Synthetic PointerEvents do not establish native pointer capture in every engine.
+    resizer.setPointerCapture = () => {};
+
+    try {
+      resizer.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 86, clientX: 0, bubbles: true }));
+      window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 86, clientX: 40 }));
+      await el.updateComplete;
+      expect(el.railWidthPx).to.equal(240);
+      expect(el.dragging).to.be.true;
+
+      const keydown = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true });
+      resizer.dispatchEvent(keydown);
+      expect(keydown.defaultPrevented).to.be.true;
+      expect(el.railWidthPx).to.equal(240);
+      expect(committedEvents).to.equal(0);
+      expect(localStorage.getItem(storageFullKey)).to.equal(null);
+      expect(proposals).to.deep.equal([
+        { widthPx: 280, cancelable: true, widthAtDispatch: 240 },
+        { widthPx: 248, cancelable: true, widthAtDispatch: 240 },
+      ]);
+    } finally {
+      window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 86 }));
+      el.removeEventListener('lr-rail-resize-request', veto);
+      el.removeEventListener('lr-rail-resize', countCommitted);
+      localStorage.removeItem(storageFullKey);
+    }
+  });
+
+  it('preserves a listener-owned replacement width from the post-commit resize event', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail resizable rail-width-px="240" min-rail-width-px="190" max-rail-width-px="440"></lr-app-rail>`,
+    )) as LyraAppRail;
+    const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
+    const replace = (): void => {
+      el.railWidthPx = 320;
+    };
+    el.addEventListener('lr-rail-resize', replace);
+
+    try {
+      resizer.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      expect(el.railWidthPx).to.equal(320);
+    } finally {
+      el.removeEventListener('lr-rail-resize', replace);
+    }
   });
 
   it('sets [part=base]\'s inline-size from railWidthPx only while resizable and in \'full\' mode', async () => {

@@ -42,6 +42,10 @@ function openExternalRail(event: Event): void {
   rail.open = true;
 }
 
+function capRailResizeRequest(event: Event): void {
+  if ((event as CustomEvent<{ widthPx: number }>).detail.widthPx > 320) event.preventDefault();
+}
+
 export const Default: Story = {
   render: () =>
     page(html`
@@ -229,6 +233,32 @@ export const LayoutOnlyPersistence: Story = {
         storage-key="storybook-layout-only"
         persist="width preferred-mode"
         preferred-mode="full"
+        style="block-size:100%;"
+      >
+        <span slot="header" style="padding:0.5rem; font-weight:600;">Acme</span>
+        ${navItems}
+      </lr-app-rail>
+    `),
+};
+
+export const CancelableResize: Story = {
+  name: 'Cancelable resize',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The `lr-rail-resize-request` event proposes each drag or keyboard width before the rail commits it. This example vetoes widths above 320px, so dragging past that limit leaves the current width in place.',
+      },
+    },
+  },
+  render: () =>
+    page(html`
+      <lr-app-rail
+        label="Primary"
+        mode="full"
+        resizable
+        rail-width-px="280"
+        @lr-rail-resize-request=${capRailResizeRequest}
         style="block-size:100%;"
       >
         <span slot="header" style="padding:0.5rem; font-weight:600;">Acme</span>
