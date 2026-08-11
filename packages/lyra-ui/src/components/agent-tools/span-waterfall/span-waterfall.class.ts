@@ -8,7 +8,7 @@ import type { LyraLiveRegion } from '../../utility/live-region/live-region.class
 import '../../utility/live-region/live-region.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './span-waterfall.styles.js';
-import type { LyraSpan } from '../trace-tree/span.js';
+import { normalizeLyraSpanKind, normalizeLyraSpanStatus, type LyraSpan } from '../trace-tree/span.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanStartedAtOffset, LYRA_DEFAULT_spanWaterfall, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings.generated.js';
@@ -136,7 +136,8 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  /** Identical contract to `<lr-trace-tree>.spans`; rows sort by `startMs` (ties keep array order). */
+  /** Identical contract to `<lr-trace-tree>.spans`; rows sort by `startMs` (ties keep array order).
+   *  Foreign runtime `kind`/`status` values normalize to `'other'`/`'pending'` before rendering. */
   @property({ attribute: false }) spans: LyraSpan[] = [];
   @property({ attribute: 'active-span-id' }) activeSpanId: string | null = null;
   /** Visible time window in trace-relative ms (same non-negative, trace-relative vocabulary as
@@ -162,7 +163,13 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
       .map((span) => {
         const startMs = Math.max(0, span.startMs);
         const endMs = span.endMs == null ? undefined : Math.max(startMs, span.endMs);
-        return { ...span, startMs, endMs };
+        return {
+          ...span,
+          kind: normalizeLyraSpanKind(span.kind),
+          status: normalizeLyraSpanStatus(span.status),
+          startMs,
+          endMs,
+        };
       })
       .map((s, i) => ({ s, i }))
       .sort((a, b) => a.s.startMs - b.s.startMs || a.i - b.i)

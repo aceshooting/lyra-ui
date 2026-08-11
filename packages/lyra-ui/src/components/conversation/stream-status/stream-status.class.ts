@@ -112,10 +112,12 @@ export interface LyraStreamStatusEventMap {
  * @csspart message - Wrapper around the default slot; only rendered while `phase="stalled"`.
  * @csspart actions - Wrapper around the `actions` slot.
  * @cssprop [--lr-stream-status-dot-color=var(--lr-color-text-quiet)] - `indicator` dot color.
- *   Swapped by the reflected `phase`: `var(--lr-color-brand)` for `connecting`/`streaming`,
- *   `var(--lr-color-warning)` for `stalled`.
- * @cssprop [--lr-stream-status-dot-opacity=0.35] - `indicator` dot opacity. Swapped by the
- *   reflected `phase`: `0.6` for `connecting`, `1` for `streaming` and `stalled`.
+ *   Its unset default is swapped by the reflected `phase`: `var(--lr-color-brand)` for
+ *   `connecting`/`streaming`, `var(--lr-color-warning)` for `stalled`. Set it on the element or
+ *   any ancestor; an element value wins.
+ * @cssprop [--lr-stream-status-dot-opacity=0.35] - `indicator` dot opacity. Its unset default is
+ *   swapped by the reflected `phase`: `0.6` for `connecting`, `1` for `streaming` and `stalled`.
+ *   Set it on the element or any ancestor; an element value wins.
  * @status stable
  * @since 4.0.0
  */

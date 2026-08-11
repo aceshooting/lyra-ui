@@ -10,7 +10,7 @@ import type { LyraLiveRegion } from '../../utility/live-region/live-region.class
 import '../../utility/live-region/live-region.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './trace-tree.styles.js';
-import type { LyraSpan } from './span.js';
+import { normalizeLyraSpanKind, normalizeLyraSpanStatus, type LyraSpan } from './span.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_cost, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut, LYRA_DEFAULT_traceTree, LYRA_DEFAULT_traceTreeMetricLabel, LYRA_DEFAULT_traceTreeSpanStatus } from '../../../internal/default-strings.generated.js';
@@ -182,7 +182,8 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   /**
    * Flat span array. Hierarchy is derived from `parentId`; siblings order by `startMs`.
    * The first 500 unique spans with finite timestamps are rendered; malformed parent cycles
-   * are broken into roots so hostile trace data cannot recurse indefinitely.
+   * are broken into roots so hostile trace data cannot recurse indefinitely. Foreign runtime
+   * `kind`/`status` values normalize to `'other'`/`'pending'` before rendering.
    */
   @property({ attribute: false }) spans: LyraSpan[] = [];
   /** Controlled selection — the matching row carries `aria-current`/`data-active` and scrolls into view. */
@@ -213,7 +214,13 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
       if (candidate.endMs != null && !Number.isFinite(candidate.endMs)) continue;
       const startMs = finiteRange(candidate.startMs, 0, 0);
       const endMs = candidate.endMs == null ? undefined : finiteRange(candidate.endMs, startMs, startMs);
-      const span = { ...candidate, startMs, endMs };
+      const span = {
+        ...candidate,
+        kind: normalizeLyraSpanKind(candidate.kind),
+        status: normalizeLyraSpanStatus(candidate.status),
+        startMs,
+        endMs,
+      };
       spans.push(span);
       byId.set(span.id, span);
     }

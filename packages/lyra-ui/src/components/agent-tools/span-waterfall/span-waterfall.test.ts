@@ -350,6 +350,40 @@ it('drops invalid span timestamps before they can poison otherwise valid geometr
   expect(el.shadowRoot!.innerHTML).to.not.include('Infinity');
 });
 
+it('normalizes foreign runtime enum values before rendering and focusing a span', async () => {
+  const el = (await fixture(html`
+    <lr-span-waterfall
+      .spans=${[
+        {
+          id: 'foreign',
+          name: 'Foreign enum',
+          kind: 99,
+          status: 42,
+          startMs: 0,
+          endMs: 10,
+        } as unknown as LyraSpan,
+      ]}
+    ></lr-span-waterfall>
+  `)) as LyraSpanWaterfall;
+  const bar = el.shadowRoot!.querySelector('[data-id="foreign"]') as HTMLButtonElement;
+  const status = el.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement;
+
+  expect(bar.getAttribute('data-tone')).to.equal('neutral');
+  expect(bar.getAttribute('data-status')).to.equal('pending');
+  expect(bar.getAttribute('aria-label')).to.include('Other');
+  expect(status.getAttribute('data-status')).to.equal('pending');
+  expect(status.textContent).to.equal('Pending');
+
+  const live = el.shadowRoot!.querySelector('lr-live-region')!;
+  live.throttleMs = 0;
+  await live.updateComplete;
+  (el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true }),
+  );
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  expect(live.shadowRoot!.textContent).to.include('Pending');
+});
+
 it('keeps a tabbable row when activeSpanId is dangling', async () => {
   const el = (await fixture(html`
     <lr-span-waterfall

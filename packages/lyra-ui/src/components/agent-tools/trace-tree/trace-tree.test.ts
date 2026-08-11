@@ -317,6 +317,30 @@ describe('lr-trace-tree', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="row"]')).to.have.lengthOf(2);
   });
 
+  it('normalizes foreign runtime enum values before rendering or announcing a span update', async () => {
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
+    const live = el.shadowRoot!.querySelector('lr-live-region')!;
+    live.throttleMs = 0;
+    await live.updateComplete;
+
+    // TypeScript's closed LyraSpan unions protect typed callers, but provider SDK enums and plain
+    // JSON can still assign a foreign numeric value directly at runtime.
+    el.spans = SPANS.map((span) =>
+      span.id === 'llm'
+        ? ({ ...span, kind: 99, status: 42 } as unknown as LyraSpan)
+        : span,
+    );
+    await el.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 60));
+
+    const row = el.shadowRoot!.querySelector('[data-id="llm"]') as HTMLElement;
+    expect(row.querySelector('[part="icon"] svg') !== null).to.equal(true);
+    expect(row.querySelector('[part="status-text"]')!.getAttribute('data-status')).to.equal('pending');
+    expect(row.querySelector('[part="status-text"]')!.textContent).to.equal('Pending');
+    expect(row.getAttribute('aria-label')).to.include('Other');
+    expect(live.shadowRoot!.querySelector('[part="region"]')!.textContent).to.include('Pending');
+  });
+
   it('reveals and scrolls a controlled active row when data arrives under a collapsed ancestor', async () => {
     const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
     (el.shadowRoot!.querySelector('[data-id="root"] [part="toggle"]') as HTMLButtonElement).click();

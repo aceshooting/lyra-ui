@@ -6,28 +6,28 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     vertical-align: middle;
-    /* Swapped per-phase by the :host([phase]) rules below, rather than
-       repeating color/opacity per rule -- same one-custom-property-per-tone
-       shape as lr-tool-call-chip's --lr-tool-call-chip-accent. */
-    --lr-stream-status-dot-color: var(--lr-color-text-quiet);
-    --lr-stream-status-dot-opacity: 0.35;
+    /* Keep the public hooks undeclared here: a consumer may set either one
+       on an ancestor. The private values below retain per-phase defaults when
+       the public hook is unset, following lr-timeline-item's marker pattern. */
+    --_lr-stream-status-dot-color-default: var(--lr-color-text-quiet);
+    --_lr-stream-status-dot-opacity-default: 0.35;
   }
 
   /* 'connecting' gets a dimmer, static brand dot -- present but deliberately
      quieter than 'streaming' so the two are never confused at a glance. */
   :host([phase='connecting']) {
-    --lr-stream-status-dot-color: var(--lr-color-brand);
-    --lr-stream-status-dot-opacity: 0.6;
+    --_lr-stream-status-dot-color-default: var(--lr-color-brand);
+    --_lr-stream-status-dot-opacity-default: 0.6;
   }
   :host([phase='streaming']) {
-    --lr-stream-status-dot-color: var(--lr-color-brand);
-    --lr-stream-status-dot-opacity: 1;
+    --_lr-stream-status-dot-color-default: var(--lr-color-brand);
+    --_lr-stream-status-dot-opacity-default: 1;
   }
   /* Warning, not danger -- see the class doc's "Visual" section for why a
      stall defaults to the recoverable/actionable tone. */
   :host([phase='stalled']) {
-    --lr-stream-status-dot-color: var(--lr-color-warning);
-    --lr-stream-status-dot-opacity: 1;
+    --_lr-stream-status-dot-color-default: var(--lr-color-warning);
+    --_lr-stream-status-dot-opacity-default: 1;
   }
 
   [part='base'] {
@@ -57,8 +57,8 @@ export const styles = css`
     inline-size: var(--lr-size-0-5rem);
     block-size: var(--lr-size-0-5rem);
     border-radius: 50%;
-    background: var(--lr-stream-status-dot-color);
-    opacity: var(--lr-stream-status-dot-opacity);
+    background: var(--lr-stream-status-dot-color, var(--_lr-stream-status-dot-color-default));
+    opacity: var(--lr-stream-status-dot-opacity, var(--_lr-stream-status-dot-opacity-default));
     transition:
       background-color var(--lr-transition-base),
       opacity var(--lr-transition-base);

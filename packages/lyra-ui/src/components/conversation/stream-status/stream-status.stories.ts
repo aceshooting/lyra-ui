@@ -51,6 +51,48 @@ export const Phases: Story = {
   `,
 };
 
+export const ThemedPhaseDots: Story = {
+  name: 'Themed phase dots (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-stream-status-dot-color` and `--lr-stream-status-dot-opacity` can be set on an ancestor for a scoped status treatment; direct values on an element take precedence. The unset per-phase defaults remain brand for connecting/streaming and warning for stalled.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="display:flex; flex-wrap:wrap; gap:1.5rem; --lr-stream-status-dot-color:var(--lr-color-success); --lr-stream-status-dot-opacity:0.75;"
+    >
+      <lr-stream-status phase="connecting"></lr-stream-status>
+      <lr-stream-status phase="streaming"></lr-stream-status>
+      <lr-stream-status phase="stalled">
+        <button slot="actions" style=${buttonStyle}>Retry</button>
+      </lr-stream-status>
+      <lr-stream-status
+        phase="stalled"
+        style="--lr-stream-status-dot-color:var(--lr-color-danger); --lr-stream-status-dot-opacity:1;"
+      >
+        <button slot="actions" style=${buttonStyle}>Direct override</button>
+      </lr-stream-status>
+    </div>
+  `,
+};
+
+export const Narrow320: Story = {
+  name: 'Narrow (320px), long stalled message and actions',
+  render: () => html`
+    <div style="inline-size:320px; max-inline-size:100%; box-sizing:border-box; border:1px dashed var(--lr-color-border); padding:8px;">
+      <lr-stream-status phase="stalled" style="inline-size:100%;">
+        ConnectionRecoveryExplanationWithoutNaturalBreaksConnectionRecoveryExplanationWithoutNaturalBreaks
+        <button slot="actions" style=${buttonStyle}>Cancel</button>
+        <button slot="actions" style=${buttonStyle}>Retry</button>
+      </lr-stream-status>
+    </div>
+  `,
+};
+
 export const LiveDemo: Story = {
   name: 'Live demo (connect → stream → stall → recover)',
   render: () => {

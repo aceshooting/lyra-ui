@@ -510,6 +510,84 @@ it('is accessible while stalled with slotted message and actions', async () => {
   await expect(el).to.be.accessible();
 });
 
+describe('phase-dot cssprop escape hatches', () => {
+  const indicator = (el: LyraStreamStatus): HTMLElement =>
+    el.shadowRoot!.querySelector('[part="indicator"]') as HTMLElement;
+
+  const resolvedInShadow = (el: LyraStreamStatus, declaration: string, property: string): string => {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  };
+
+  it('inherits dot color and opacity from an ancestor in a phase with its own defaults', async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-stream-status-dot-color: rgb(0, 51, 102); --lr-stream-status-dot-opacity: 0.42;">
+        <lr-stream-status phase="stalled"></lr-stream-status>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-stream-status') as LyraStreamStatus;
+    const dot = indicator(el);
+
+    expect(getComputedStyle(dot).backgroundColor).to.equal('rgb(0, 51, 102)');
+    expect(getComputedStyle(dot).opacity).to.equal('0.42');
+    await expect(el).to.be.accessible();
+  });
+
+  it('lets an element-level dot override win over an ancestor', async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-stream-status-dot-color: rgb(0, 51, 102); --lr-stream-status-dot-opacity: 0.42;">
+        <lr-stream-status
+          phase="stalled"
+          style="--lr-stream-status-dot-color: rgb(102, 0, 51); --lr-stream-status-dot-opacity: 0.73;"
+        ></lr-stream-status>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-stream-status') as LyraStreamStatus;
+    const dot = indicator(el);
+
+    expect(getComputedStyle(dot).backgroundColor).to.equal('rgb(102, 0, 51)');
+    expect(getComputedStyle(dot).opacity).to.equal('0.73');
+  });
+
+  it('keeps the stalled phase defaults when the public hooks are unset', async () => {
+    const el = (await fixture(html`<lr-stream-status phase="stalled"></lr-stream-status>`)) as LyraStreamStatus;
+    const dot = indicator(el);
+
+    expect(getComputedStyle(dot).backgroundColor).to.equal(
+      resolvedInShadow(el, 'color: var(--lr-color-warning)', 'color'),
+    );
+    expect(getComputedStyle(dot).opacity).to.equal('1');
+  });
+});
+
+it('contains a long stalled message and two actions in a 320px allocation', async () => {
+  const longMessage = 'ConnectionRecoveryExplanationWithoutNaturalBreaks'.repeat(4);
+  const container = document.createElement('div');
+  container.style.inlineSize = '320px';
+  const el = (await fixture(
+    html`<lr-stream-status phase="stalled" style="inline-size:100%">
+      ${longMessage}
+      <button slot="actions">Cancel</button>
+      <button slot="actions">Retry</button>
+    </lr-stream-status>`,
+    { parentNode: container },
+  )) as LyraStreamStatus;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const message = el.shadowRoot!.querySelector('[part="message"]') as HTMLElement;
+  const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+  const retry = el.querySelector<HTMLButtonElement>('button[slot="actions"]:last-child')!;
+
+  expect(el.getBoundingClientRect().width).to.be.at.most(321);
+  expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
+  expect(message.scrollWidth).to.be.at.most(message.clientWidth + 1);
+  expect(actions.scrollWidth).to.be.at.most(actions.clientWidth + 1);
+  expect(retry.getBoundingClientRect().right).to.be.at.most(container.getBoundingClientRect().right + 1);
+});
+
 it('uses the ambient transition token for its streaming-phase pulse animation', async () => {
   const el = (await fixture(html`<lr-stream-status phase="streaming"></lr-stream-status>`)) as LyraStreamStatus;
   const indicator = el.shadowRoot!.querySelector('[part="indicator"]') as HTMLElement;
