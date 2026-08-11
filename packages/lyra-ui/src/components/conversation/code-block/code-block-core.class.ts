@@ -228,7 +228,9 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
    *  a `language` absent from this map always renders the plain-text fallback. Empty (the
    *  default) never highlights at all. Replacing the map starts a new loading generation; an
    *  older map that settles later cannot clear the current map's loading state or replace its
-   *  highlighted output. */
+   *  highlighted output. For a TypeScript annotation, use `import type { ShikiLanguageInput } from
+   *  '@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js'`; this granular
+   *  type-only import emits no registration side effect. */
   @property({ attribute: false }) languages: Record<
     string,
     ShikiLanguageInput

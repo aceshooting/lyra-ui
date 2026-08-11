@@ -9,6 +9,16 @@ import type {
   ShikiLanguageInput as CoreLanguageInput,
 } from '../src/components/conversation/markdown/markdown-core.js';
 import type {
+  ShikiLanguageInput as FullCodeBlockLanguageInput,
+} from '../src/components/conversation/code-block/code-block.js';
+import type {
+  ShikiLanguageInput as CoreCodeBlockLanguageInput,
+} from '../src/components/conversation/code-block/code-block-core.js';
+import type {
+  ShikiLanguageInput as ConversationLanguageInput,
+} from '../src/components/conversation/index.js';
+import type { ShikiLanguageInput as RootLanguageInput } from '../src/lyra.js';
+import type {
   MessageFeedbackRating,
   MessageFeedbackValue,
 } from '../src/components/conversation/message-feedback/message-feedback.js';
@@ -31,5 +41,16 @@ const conversationPublicTypes: [
   LyraModelSelectSize,
 ] | undefined = undefined;
 
+const codeBlockLanguageInput: FullCodeBlockLanguageInput = {
+  name: 'json',
+  scopeName: 'source.json',
+};
+const codeBlockPublicTypes: [
+  CoreCodeBlockLanguageInput,
+  ConversationLanguageInput,
+  RootLanguageInput,
+] = [codeBlockLanguageInput, codeBlockLanguageInput, codeBlockLanguageInput];
+
 void conversationPublicTypes;
+void codeBlockPublicTypes;
 void granularSuggestion;
