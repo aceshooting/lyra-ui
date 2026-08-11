@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 20 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -79,6 +79,14 @@ Field-level `error` content is ordinary visible validation text, not a shadow li
 controls compose the current message into the semantic control's accessible name; category/comment
 controls use their own same-shadow label/error plumbing. `reportValidity()` therefore reveals and
 focuses the error once without an additional `role="alert"` announcement.
+
+**The required marker.** Required score and unsupported fields own their visible label, so the
+shared marker is rendered there. Required category and comment fields retain the marker from their
+own `lr-select`/`lr-checkbox-group` or `lr-textarea` label instead; the rubric never adds a second
+glyph. `--lr-form-control-required-content` (a quoted CSS `content` string; `''` suppresses it),
+`--lr-form-control-required-color` (default `var(--lr-color-danger)`), and
+`--lr-form-control-required-offset` (default `0`) retune the same marker across every required
+field.
 
 **Themeable custom properties:** Submit rest uses `--lr-rubric-form-submit-bg`,
 `--lr-rubric-form-submit-border-color`, and `--lr-rubric-form-submit-color`; its hover and pressed

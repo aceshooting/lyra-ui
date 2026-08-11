@@ -46,7 +46,9 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
 - `collapsible: boolean = false` (reflected) — shows the collapse/expand chevron button.
 - `collapsed: boolean = false` (reflected) — only has a visible effect while `collapsible` is also
   true.
-- `copyable: boolean = true` (reflected) — shows the copy-to-clipboard button.
+- `copyable: boolean = true` (reflected) — shows the copy-to-clipboard button. Literal HTML
+  `copyable="false"` or a `.copyable=${false}` property binding disables it; a
+  `?copyable=${false}` boolean-attribute binding cannot override the true default.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
   code scrolls internally past this height instead of growing the page.
 - `lineNumbers: boolean = false` (attribute `line-numbers`, reflected) — displays one-based line

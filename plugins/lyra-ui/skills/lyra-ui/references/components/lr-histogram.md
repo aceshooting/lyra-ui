@@ -69,7 +69,8 @@ mirrored `--border-color-1`,
 `--border-radius`, `--border-width`, `--grid-border-width`, `--grid-color`,
 `--line-border-width`, and `--point-radius` hooks listed on the core chart.
 
-**Optional peer deps:** the same `chart.js` (+ `chartjs-plugin-zoom` when `zoom` is set) peers.
+**Optional peer deps:** the same `chart.js` peer, plus `chartjs-plugin-zoom` when `zoom` is set and
+`chartjs-plugin-datalabels` when `data-labels` or `stack-totals` is set.
 
 All of the above behave exactly as documented in `llms/components/lr-chart.md` — read that file for
 their semantics, defaults, and gotchas.

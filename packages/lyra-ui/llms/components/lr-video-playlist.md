@@ -8,7 +8,7 @@
 - **Status** `experimental` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecated part** `base` since `8.0.0`; use part `::part(video-playlist)`; removal not before `10.0.0` — The video-playlist part identifies the root component explicitly; base remains on the same root node for migration compatibility.
 - **Optional peers** `dompurify` — see `llms/peers.md`
-- **Themeable via** 7 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -45,6 +45,10 @@ are not playlist items.
 
 **CSS parts:** `base` and `video-playlist` (aliases on the same root node), `playlist`,
 `playlist-duration`, `playlist-item`, `playlist-thumbnail`, and `playlist-title`.
+
+**Themeable custom properties:** `--lr-video-playlist-item-current-border-color` (default
+`var(--lr-color-brand)`) and `--lr-video-playlist-item-current-background` (default
+`var(--lr-color-brand-fill-quiet)`) style the active playlist row.
 
 Only the active child is visible and loaded. Before another child is activated, the outgoing native
 player is synchronously paused, stripped of its private source/track clones, and reloaded into an

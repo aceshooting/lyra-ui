@@ -684,6 +684,7 @@ export type LyraAppRailVueProps = LyraVueCustomElement<
   LyraAppRailEventMap,
   | 'lr-mode-change'
   | 'lr-rail-resize'
+  | 'lr-rail-resize-request'
   | 'lr-toggle',
   | '--lr-app-rail-icon-width'
   | '--lr-app-rail-mobile-width'
@@ -3396,6 +3397,8 @@ export type LyraDropdownItemVueProps = LyraVueCustomElement<
   | 'lr-menu-item-change'
   | 'lr-menu-item-select'
   | 'lr-menu-item-state-change',
+  | '--lr-menu-item-gap'
+  | '--lr-menu-item-radius'
   | '--submenu-offset',
   {
     'submenu-open'?: LyraDropdownItem['submenuOpen'];
@@ -4620,7 +4623,10 @@ export type LyraImageViewerVueProps = LyraVueCustomElement<
   | 'lr-zoom-change',
   | '--lr-image-viewer-annotate-active-bg'
   | '--lr-image-viewer-annotate-active-border'
+  | '--lr-image-viewer-highlight-active-border-width'
   | '--lr-image-viewer-highlight-active-color'
+  | '--lr-image-viewer-highlight-active-outline-offset'
+  | '--lr-image-viewer-highlight-active-outline-width'
   | '--lr-image-viewer-highlight-bg'
   | '--lr-image-viewer-highlight-border'
   | '--lr-image-viewer-highlight-danger-bg'
@@ -5219,7 +5225,11 @@ export type LyraMapVueProps = LyraVueCustomElement<
   LyraMapEventMap,
   | 'lr-map-click'
   | 'lr-map-load',
-never,
+  | '--lr-map-choropleth-fill-opacity'
+  | '--lr-map-popup-close-button-active-bg'
+  | '--lr-map-popup-close-button-active-color'
+  | '--lr-map-popup-close-button-hover-bg'
+  | '--lr-map-popup-close-button-hover-color',
   {}
 >;
 
@@ -5351,6 +5361,8 @@ export type LyraMediaCardVueProps = LyraVueCustomElement<
   | 'strings',
   LyraMediaCardEventMap,
   | 'lr-open',
+  | '--lr-media-card-active-bg'
+  | '--lr-media-card-active-border-color'
   | '--lr-media-card-max-height',
   {
     'aria-label'?: LyraMediaCard['accessibleLabel'];
@@ -5436,6 +5448,8 @@ export type LyraMenuItemVueProps = LyraVueCustomElement<
   | 'lr-menu-item-change'
   | 'lr-menu-item-select'
   | 'lr-menu-item-state-change',
+  | '--lr-menu-item-gap'
+  | '--lr-menu-item-radius'
   | '--submenu-offset',
   {}
 >;
@@ -6380,7 +6394,9 @@ export type LyraPlaybackVueProps = LyraVueCustomElement<
   | 'lr-pause'
   | 'lr-play'
   | 'lr-step',
-  | '--lr-playback-icon-size',
+  | '--lr-playback-icon-size'
+  | '--lr-playback-play-button-active-bg'
+  | '--lr-playback-play-button-active-border-color',
   {
     'interval-ms'?: LyraPlayback['intervalMs'];
   }
@@ -7442,6 +7458,9 @@ export type LyraRubricFormVueProps = LyraVueCustomElement<
   | 'lr-skip'
   | 'lr-submit'
   | 'lr-validity-change',
+  | '--lr-form-control-required-color'
+  | '--lr-form-control-required-content'
+  | '--lr-form-control-required-offset'
   | '--lr-rubric-form-skip-active-bg'
   | '--lr-rubric-form-skip-bg'
   | '--lr-rubric-form-skip-border-color'
@@ -8377,6 +8396,7 @@ export type LyraTabGroupVueProps = LyraVueCustomElement<
   | '--lr-tab-group-hover-color'
   | '--lr-tab-group-indicator-color'
   | '--lr-tab-group-selected-color'
+  | '--lr-tab-group-vertical-nav-max-inline-size'
   | '--track-color'
   | '--track-width',
   {
@@ -9532,6 +9552,8 @@ export type LyraVideoVueProps = LyraVueCustomElement<
   | 'volumechange',
   | '--controls-background'
   | '--controls-color'
+  | '--lr-video-poster-play-button-hover-background'
+  | '--lr-video-poster-play-button-hover-border-color'
   | '--poster-play-button-background',
   {
     'autoplay-muted'?: LyraVideo['autoplayMuted'];
@@ -9550,7 +9572,8 @@ export type LyraVideoPlaylistVueProps = LyraVueCustomElement<
   | 'strings',
   LyraVideoPlaylistEventMap,
   | 'lr-video-change',
-never,
+  | '--lr-video-playlist-item-current-background'
+  | '--lr-video-playlist-item-current-border-color',
   {
     'auto-advance'?: LyraVideoPlaylist['autoAdvance'];
     'icon-library'?: LyraVideoPlaylist['iconLibrary'];
@@ -9783,6 +9806,7 @@ export type LyraZoomableFrameVueProps = LyraVueCustomElement<
   LyraZoomableFrameEventMap,
   | 'error'
   | 'load',
+  | '--lr-zoomable-frame-control-hover-background'
   | '--lr-zoomable-frame-zoom',
   {
     'aria-label'?: LyraZoomableFrame['accessibleLabel'];

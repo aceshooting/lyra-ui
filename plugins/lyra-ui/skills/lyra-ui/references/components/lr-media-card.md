@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -75,7 +75,14 @@ below).
 **Themeable custom properties:** `--lr-media-card-max-height` (default `var(--lr-size-20rem)` — caps `[part="media"]`'s
 block-size so one oversized image/video can't blow out a chat bubble; same naming/contract as
 `<lr-document-preview>`'s identical `--lr-document-preview-max-height`; override per-instance via
-the `max-height` attribute instead of this property directly). Plus shared tokens
+the `max-height` attribute instead of this property directly).
+`--lr-media-card-active-border-color` (default
+`color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))`)
+and `--lr-media-card-active-bg` (default
+`color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))`)
+independently retint only a pressed image/file action. Both are inline `var()` fallbacks in the
+pressed state, so values on a chat or attachment-list ancestor inherit into every card rather than
+being shadowed by host defaults. Plus shared tokens
 `--lr-space-xs`/`-s`, `--lr-color-border`, `--lr-color-surface`, `--lr-color-text`/`-text-quiet`,
 `--lr-color-brand` (hover border), `--lr-radius`, `--lr-icon-button-size` (video's `open-button`
 sizing), `--lr-focus-ring-*`, `--lr-transition-fast`.

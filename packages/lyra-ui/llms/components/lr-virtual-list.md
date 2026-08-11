@@ -27,6 +27,13 @@ invention (no `wa-*`/`sl-*` counterpart).
   a property/lit-html binding (`.items=`), not an HTML attribute.
 - `renderItem: (item: unknown, index: number) => unknown = () => nothing` (attribute: false) — renders
   one row's content, typically returning a `lit-html` `TemplateResult`. JS-only.
+
+**Narrow rows:** ordinary `renderItem` content can shrink and wraps even at a 320px allocation,
+including an otherwise-unbroken value; in `row-height="auto"` mode the measured row height follows
+those extra lines. This is direction-neutral: LTR and RTL use the same inline-size containment. To
+intentionally preserve an unbroken row, set `white-space: nowrap` on the caller-rendered content; the
+list's `base` scroll container exposes horizontal scrolling for that explicit opt-out.
+
 - `keyFunction?: (item: unknown, index: number) => string | number` (attribute: false) — derives a
   row's stable reconciliation key. JS-only. Falls back to the item's index in `items` when omitted,
   which is only a safe identity while `items` never reorders/inserts/removes — provide this whenever
@@ -85,7 +92,7 @@ invention (no `wa-*`/`sl-*` counterpart).
   assign the property directly for a numeric key), that row is smoothly scrolled into view whenever
   this changes, and rendered with `aria-current="true"`.
 - `loading: boolean = false` (reflected) — sets `aria-busy` on the scroll container and a `cursor:
-  progress` style; does not by itself gate `lr-load-more` (see below).
+  progress` style, and gates `lr-load-more` while a consumer's fetch is in flight.
 - `hasMore: boolean = false` (attribute `has-more`, reflected) — when true, scrolling near the bottom
   fires `lr-load-more` (gated by `loading`).
 
@@ -213,6 +220,9 @@ history sidebar); it is not the right approach for a hundred-thousand-row list w
 - `[part="base"]` carries `tabindex="0"` unconditionally, since `renderItem`'s caller-supplied content
   isn't guaranteed to contain a focusable element and an otherwise-unreachable-by-keyboard scroll
   region would result.
+- Ordinary row content wraps by default, including long unbroken values. Set `white-space: nowrap`
+  only for content that intentionally needs an unbroken horizontal scrollport; it overrides that
+  default without clipping the row.
 - `aria-setsize`/`aria-posinset` are computed from a row's real index in the full `items` array, not its
   position among the currently-rendered DOM window, so assistive tech still announces e.g. "item 12 of
   340" correctly even though only a handful of rows exist in the DOM at a time.

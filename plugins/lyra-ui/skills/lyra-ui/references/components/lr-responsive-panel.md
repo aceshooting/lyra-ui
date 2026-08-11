@@ -41,16 +41,19 @@ sidebar that's a permanent docked pane on a wide screen but a modal on a phone.
   `matchMedia` as `(max-width: <this>)` to decide, in `mode="auto"`, whether the effective
   presentation is `'overlay'` (below/at this width) or `'inline'` (above it).
 
-**Methods:** `close(reason: ResponsivePanelCloseReason = 'api'): void` — closes the panel (sets
-`open = false`), emits `lr-close` with `reason`, and — only in the overlay presentation — returns
-focus to whichever element triggered the open. No-op if already closed. Built-in overlay triggers
-call this with `'escape'`/`'backdrop'`; a consumer's own close affordance (a footer button, a docked
-panel's own toggle) should call it directly with its own reason string.
+**Methods:** `close(reason: ResponsivePanelCloseReason = 'api'): void` — requests a close by
+emitting `lr-close` with `reason` before changing `open`. A listener can call `preventDefault()` to
+keep the panel open; otherwise it sets `open = false` and — only in the overlay presentation —
+returns focus to whichever element triggered the open. No-op if already closed. Built-in overlay
+triggers call this with `'escape'`/`'backdrop'`; a consumer's own close affordance (a footer button,
+a docked panel's own toggle) should call it directly with its own reason string.
 
 **Events:** `lr-close` (`detail: ResponsivePanelCloseReason` = `'escape'|'backdrop'|'api'|string`;
-fired by the overlay presentation's built-in dismiss triggers — Escape, backdrop click — and by any
-`close()` call, in either presentation; a plain `open = false` property write does **not** fire it,
-only going through `close()` counts as a dismissal), `lr-mode-change`
+cancelable pre-close veto, fired by the overlay presentation's built-in dismiss triggers — Escape,
+backdrop click — and by any `close()` call, in either presentation; calling `preventDefault()` keeps
+the panel open and leaves active overlay chrome/focus trapping intact. A plain `open = false`
+property write does **not** fire it, only going through `close()` counts as a dismissal),
+`lr-mode-change`
 (`detail: ResponsivePanelModeChangeDetail` = `{ mode: ResponsivePanelEffectiveMode }`; fired whenever
 the *effective* mode — not the `mode` prop's possibly-`'auto'` literal value — changes between
 `'inline'` and `'overlay'`; never fired on the initial render, only for a live change thereafter).
@@ -85,8 +88,8 @@ default) updates the effective presentation without unmounting or re-creating th
 Inline and overlay presentations share the same shadow DOM, so slotted content and scroll position
 survive the transition. Focus already inside the panel is preserved. If focus is outside when an
 open inline panel becomes an overlay, focus moves to the first composed focus target (falling back
-to the panel), so it cannot remain behind `aria-modal="true"`. Closing restores the element captured
-when the panel originally opened, even when that original open happened inline. The overlay
+to the panel), so it cannot remain behind `aria-modal="true"`. An allowed close restores the element
+captured when the panel originally opened, even when that original open happened inline. The overlay
 presentation participates in the shared modal stack rather than nesting a `<lr-dialog>`.
 
 The package root also exports the pure `resolveEffectiveMode(mode: ResponsivePanelMode,
@@ -100,10 +103,10 @@ exposed standalone so a consumer can compute or unit-test the same resolution wi
 window.
 
 **Known gotchas:**
-- assigning `open` directly still does not emit `lr-close`; use `close()` when the dismissal
-  event/reason is required. While overlay chrome is active, however, the `true` → `false` state
-  transition restores opener focus regardless of whether it came from `close()`, a property write,
-  or attribute removal.
+- assigning `open` directly still does not emit `lr-close` and therefore cannot be vetoed; use
+  `close()` when the dismissal event/reason or a close guard is required. While overlay chrome is
+  active, however, the `true` → `false` state transition restores opener focus regardless of
+  whether it came from an allowed `close()` call, a property write, or attribute removal.
 - crossing inline → overlay while already open preserves focus that is already inside and moves
   outside focus into the panel; do not expect focus to remain on page content behind the modal.
 - `variant="bottom-sheet"` has no visible effect at all while the effective presentation is

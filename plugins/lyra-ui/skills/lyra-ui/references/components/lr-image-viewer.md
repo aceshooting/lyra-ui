@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -59,7 +59,13 @@ mode is on. The toggle carries its own glyph in `--lr-color-text`, so keep a 4.5
 when overriding the background. `--lr-image-viewer-highlight-active-color` (default
 `var(--lr-color-brand)`) — the outline of the `[part='highlight']` matching `activeHighlightId`,
 independent of the per-tone border colors, so the active box stays distinguishable whatever tone it
-carries. Highlight tone styling is exposed through `--lr-image-viewer-highlight-border`,
+carries. `--lr-image-viewer-highlight-active-border-width` (default
+`var(--lr-border-width-thick)`) controls the active highlight border width;
+`--lr-image-viewer-highlight-active-outline-width` (default `var(--lr-focus-ring-width)`) and
+`--lr-image-viewer-highlight-active-outline-offset` (default `var(--lr-focus-ring-offset)`) control
+its outline geometry. Like the existing active color hook, each is an inline `var()` fallback and
+can be set on the viewer or any ancestor. Highlight tone styling is exposed through
+`--lr-image-viewer-highlight-border`,
 `--lr-image-viewer-highlight-bg`, and the tone-specific
 `--lr-image-viewer-highlight-success-border`, `--lr-image-viewer-highlight-success-bg`,
 `--lr-image-viewer-highlight-warning-border`, `--lr-image-viewer-highlight-warning-bg`,

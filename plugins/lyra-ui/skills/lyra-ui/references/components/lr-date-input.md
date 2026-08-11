@@ -67,7 +67,9 @@ are ignored.
 same: Arrow keys move through their four-column visual grid (with horizontal movement mirrored in
 RTL), Home/End move to the first/last enabled period in the current page, and Enter/Space drills
 into the focused period. Moving beyond a selection-grid edge opens the adjacent period page;
-disabled periods never receive the roving focus.
+disabled periods never receive the roving focus. A period is enabled only when it contains at least
+one date selectable under the active bounds, past/future limits, disabled dates/weekdays, predicate,
+and pending-range limits; activating an unavailable period is a no-op.
 
 **Events:** all are non-cancelable. `input` is a bubbling/composed native `InputEvent` (including
 the first endpoint of a range); `change` is a bubbling/composed native `Event` for committed

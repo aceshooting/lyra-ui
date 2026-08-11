@@ -2571,7 +2571,9 @@ are ignored.
 same: Arrow keys move through their four-column visual grid (with horizontal movement mirrored in
 RTL), Home/End move to the first/last enabled period in the current page, and Enter/Space drills
 into the focused period. Moving beyond a selection-grid edge opens the adjacent period page;
-disabled periods never receive the roving focus.
+disabled periods never receive the roving focus. A period is enabled only when it contains at least
+one date selectable under the active bounds, past/future limits, disabled dates/weekdays, predicate,
+and pending-range limits; activating an unavailable period is a no-op.
 
 **Events:** all are non-cancelable. `input` is a bubbling/composed native `InputEvent` (including
 the first endpoint of a range); `change` is a bubbling/composed native `Event` for committed
@@ -4304,9 +4306,9 @@ onto `[min, max]`). Form-associated (`static formAssociated = true`, via `Elemen
 ancestor `<fieldset disabled>` disables both handles and every preset button through an internal
 `effectiveDisabled` getter, the same way it would a native `<input>`, without ever mutating the
 consumer-facing `disabled` property/attribute itself.
-The `base` part is an accessible `role="group"`: a host `aria-label` or native external `<label for>`
-names the two-handle aggregate, while `startLabel` and `endLabel` continue to name the individual
-sliders.
+The `base` part is an accessible `role="group"`: a non-empty host `aria-label` names the two-handle
+aggregate. A native external `<label for>` remains available through `labels`, but it does not cross
+into the shadow-root group. `startLabel` and `endLabel` continue to name the individual sliders.
 
 **Properties:**
 
@@ -4393,7 +4395,7 @@ autofill or back/forward restore.
 `presets`, `preset-button`
 
 **Themeable custom properties:** mostly shared tokens — `--lr-color-border`, `--lr-color-brand`,
-`--lr-color-surface`, `--lr-shadow` (track/handles), `--lr-opacity-disabled` (`:host(:disabled)`
+`--lr-color-surface`, `--lr-shadow-s` (handles), `--lr-opacity-disabled` (`:host(:disabled)`
 dimming, including ancestor-fieldset disablement), plus (for `presets`) `--lr-color-text`,
 `--lr-color-on-brand` (the active preset
 button's text), `--lr-radius`, `--lr-space-xs/-s`, `--lr-transition-fast`,
@@ -6298,6 +6300,14 @@ Field-level `error` content is ordinary visible validation text, not a shadow li
 controls compose the current message into the semantic control's accessible name; category/comment
 controls use their own same-shadow label/error plumbing. `reportValidity()` therefore reveals and
 focuses the error once without an additional `role="alert"` announcement.
+
+**The required marker.** Required score and unsupported fields own their visible label, so the
+shared marker is rendered there. Required category and comment fields retain the marker from their
+own `lr-select`/`lr-checkbox-group` or `lr-textarea` label instead; the rubric never adds a second
+glyph. `--lr-form-control-required-content` (a quoted CSS `content` string; `''` suppresses it),
+`--lr-form-control-required-color` (default `var(--lr-color-danger)`), and
+`--lr-form-control-required-offset` (default `0`) retune the same marker across every required
+field.
 
 **Themeable custom properties:** Submit rest uses `--lr-rubric-form-submit-bg`,
 `--lr-rubric-form-submit-border-color`, and `--lr-rubric-form-submit-color`; its hover and pressed
@@ -9193,6 +9203,11 @@ the nested `lr-select` triggers in both LTR and RTL; they do not widen the host 
 Resizable panels for dashboard layouts. Direct **light-DOM children are the panels**; a divider is
 auto-inserted between each adjacent pair.
 
+With a definite block size, each direct panel owns a native `overflow: auto` scroll surface and has
+`min-block-size: 0`, so long content stays inside the split rather than escaping into following
+content. Set `overflow` directly on an individual panel when its content needs a different scrolling
+surface.
+
 **Properties:**
 - `sizes: number[] = []` (attribute: false — percentages per panel, auto-computed equally if
   omitted/mismatched)
@@ -9320,8 +9335,9 @@ collapsed. `collapse="none"` (the default) is byte-for-byte identical to pre-col
 `dividerLabel?: (index: number, panelCount: number) => string` (attribute: false) customizes the
 localized accessible label generated for each auto-inserted divider.
 
-**Events:** `lr-resize` (`detail: { sizes }`, fired on every drag step/release **and** every
-keyboard step), `lr-split-collapse-change` (`detail: { state: 'wide'|'rail'|'floating' }`, fired only
+**Events:** `lr-resize` (`detail: { sizes }`, fired on every drag movement that changes sizes and
+every keyboard step; pointer release persists the settled sizes but emits no additional event),
+`lr-split-collapse-change` (`detail: { state: 'wide'|'rail'|'floating' }`, fired only
 on a real `collapse`-state transition, never on every resize/render),
 `lr-split-constraints-invalid` (`detail: SplitConstraintIssueDetail`, fired once when the configured
 panel minimums/maximums cannot fit the track; the infeasible set is rejected for interaction and a
@@ -9367,13 +9383,11 @@ the visually-adjacent panel).
   `ensureSizes()` rebalances existing sizes proportionally when a panel is added or removed after
   mount instead of discarding the whole layout — a conditionally-shown side panel no longer leaves
   `panelCount`/`sizes`/divider count stale.
-- divider `aria-valuemax` is now computed per adjacent pair (`sizes[i] + sizes[i+1] - min`) rather
-  than a blanket `100 - min`, so it's accurate for 3+-panel layouts too, not just exactly two panels
-  — this formula still only accounts for the plain percent `min`, though: with `panelConstraints`
-  set, a panel's real achievable range can be narrower (or expressed in px) than what
-  `aria-valuemin`/`aria-valuemax` report. Each divider also now has its own `aria-label` ("Resize
-  divider between panel N and panel N+1") distinguishing it from any other divider in a
-  multi-divider layout.
+- divider `aria-valuemin`/`aria-valuemax` are computed per adjacent pair from the same resolved
+  `panelConstraints` bounds used by pointer and keyboard resizing, rather than a blanket
+  `100 - min`. They therefore remain accurate for 3+-panel layouts and for px/percent constraints.
+  Each divider also has its own `aria-label` ("Resize divider between panel N and panel N+1")
+  distinguishing it from any other divider in a multi-divider layout.
 - infeasible aggregate constraints (for example, three panels with `min=40`) are reported through
   `lr-split-constraints-invalid`; interaction rejects that set and uses a normalized percent minimum
   with aggregate slack, so the divider remains operable instead of silently freezing.
@@ -9847,11 +9861,12 @@ between slotted controls on both axes.
 `container-type: inline-size` unconditionally (that is what makes the 20rem `@container` rule above
 fire at all). Inline-size containment means the box's own content can no longer contribute to its
 width, so in any context where the host would otherwise be shrink-to-fit — plain block flow, an
-`inline-flex`/`flex` parent, anywhere with no definite width — the group collapses to its
-`min-inline-size` floor of `var(--lr-icon-button-size)` (2.5rem) instead of growing to fit the
+`inline-flex`/`flex` parent, anywhere with no definite width — the group uses its
+`contain-intrinsic-inline-size` fallback of `var(--lr-size-12rem)` instead of growing to fit the
 slotted buttons. Give `<lr-button-group>` a definite width (`inline-size`, `width: 100%`, `flex: 1`,
-or a grid track) whenever it isn't already in a layout that supplies one. The floor itself is the
-safeguard: without it the same shape rendered at literally `0px`.
+or a grid track) whenever it isn't already in a layout that supplies one. Under tighter allocation,
+`min-inline-size: var(--lr-icon-button-size)` remains the hard 2.5rem lower bound rather than the
+unallocated fallback.
 
 ---
 
@@ -10062,7 +10077,11 @@ an attribute selector after `::part()`), which previously left overriding the li
 repainting everything else that reads them. Unset, each falls back to the token its rule used
 before, so rendering is unchanged. The upstream hooks `--indicator-color` (selected indicator),
 `--track-color` (resting strip rule), and `--track-width` (resting strip-rule thickness) are read
-first, with the Lyra/token values as fallbacks. Otherwise shared tokens —
+first, with the Lyra/token values as fallbacks. `--lr-tab-group-vertical-nav-max-inline-size`
+(default `var(--lr-size-12rem)`) caps a `start`/`end` nav's logical inline size while still allowing
+it to shrink in a constrained allocation. Its inline fallback means it can be set on the group or
+an ancestor; long single-line tab labels ellipsize within the cap rather than expanding the group or
+starving the panel. Otherwise shared tokens —
 `--lr-space-xs/-s/-m`, `--lr-color-border/-text-quiet/-text/-brand`, `--lr-transition-fast`,
 `--lr-radius`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
@@ -10578,6 +10597,13 @@ invention (no `wa-*`/`sl-*` counterpart).
   a property/lit-html binding (`.items=`), not an HTML attribute.
 - `renderItem: (item: unknown, index: number) => unknown = () => nothing` (attribute: false) — renders
   one row's content, typically returning a `lit-html` `TemplateResult`. JS-only.
+
+**Narrow rows:** ordinary `renderItem` content can shrink and wraps even at a 320px allocation,
+including an otherwise-unbroken value; in `row-height="auto"` mode the measured row height follows
+those extra lines. This is direction-neutral: LTR and RTL use the same inline-size containment. To
+intentionally preserve an unbroken row, set `white-space: nowrap` on the caller-rendered content; the
+list's `base` scroll container exposes horizontal scrolling for that explicit opt-out.
+
 - `keyFunction?: (item: unknown, index: number) => string | number` (attribute: false) — derives a
   row's stable reconciliation key. JS-only. Falls back to the item's index in `items` when omitted,
   which is only a safe identity while `items` never reorders/inserts/removes — provide this whenever
@@ -10636,7 +10662,7 @@ invention (no `wa-*`/`sl-*` counterpart).
   assign the property directly for a numeric key), that row is smoothly scrolled into view whenever
   this changes, and rendered with `aria-current="true"`.
 - `loading: boolean = false` (reflected) — sets `aria-busy` on the scroll container and a `cursor:
-  progress` style; does not by itself gate `lr-load-more` (see below).
+  progress` style, and gates `lr-load-more` while a consumer's fetch is in flight.
 - `hasMore: boolean = false` (attribute `has-more`, reflected) — when true, scrolling near the bottom
   fires `lr-load-more` (gated by `loading`).
 
@@ -10764,6 +10790,9 @@ history sidebar); it is not the right approach for a hundred-thousand-row list w
 - `[part="base"]` carries `tabindex="0"` unconditionally, since `renderItem`'s caller-supplied content
   isn't guaranteed to contain a focusable element and an otherwise-unreachable-by-keyboard scroll
   region would result.
+- Ordinary row content wraps by default, including long unbroken values. Set `white-space: nowrap`
+  only for content that intentionally needs an unbroken horizontal scrollport; it overrides that
+  default without clipping the row.
 - `aria-setsize`/`aria-posinset` are computed from a row's real index in the full `items` array, not its
   position among the currently-rendered DOM window, so assistive tech still announces e.g. "item 12 of
   340" correctly even though only a handful of rows exist in the DOM at a time.
@@ -10814,7 +10843,8 @@ next mount (mirrors `lr-split`'s `storage-key`; effective `mode` is breakpoint-d
 persisted). The backward-compatible allowlist is `open width`; use
 `persist="width preferred-mode"` for durable layout preference without restoring the transient
 mobile overlay. Without a `storageKey` there is no persistence — listen for `lr-rail-resize` and
-persist `widthPx` yourself.
+persist its committed `widthPx` yourself. Listen for the preceding cancelable
+`lr-rail-resize-request` event when a host needs to veto a proposed width.
 `preferredMode` separately lets a host manually prefer `'full'`/`'icon-only'` for the non-mobile
 breakpoint axis (e.g. a user's own collapse toggle) while `mobile-breakpoint` continues to be tracked
 automatically regardless — it's only consulted while `mode` isn't force-pinned via the `mode`
@@ -10890,8 +10920,12 @@ breakpoint/forced mode change leaving `'mobile'` while open — not fired when a
 directly. Cancelable for every trigger except the forced mode-change close, which always applies —
 vetoing that one would leave `open` stuck `true` in a mode where it's meaningless; call
 `preventDefault()` to keep the overlay as it is for the other triggers),
-`lr-rail-resize` (`detail: AppRailResizeDetail` = `{ widthPx: number }`; the `resizable` rail's
-width changed via drag or keyboard stepping — not fired when a consumer sets `railWidthPx` directly).
+`lr-rail-resize-request` (`detail: AppRailResizeDetail` = `{ widthPx: number }`; a cancelable
+proposed width from drag or keyboard stepping, emitted before the component assigns
+`railWidthPx` — call `preventDefault()` to keep the current width. It is not fired when a consumer
+sets `railWidthPx` directly), and `lr-rail-resize` (`detail: AppRailResizeDetail` =
+`{ widthPx: number }`; non-cancelable committed width, emitted after the component assigns
+`railWidthPx`, for the same accepted gesture paths only).
 
 **Slots:** default (nav items — generic slotted content, e.g. `<a>`/`<button>` elements the consumer
 builds with its own icon+label structure; clicking anywhere in this slot closes the mobile overlay if
@@ -10930,7 +10964,12 @@ fallback at its exact state rule and preserves the previous brand or active-mix 
 </lr-app-rail>
 <script type="module">
   const rail = document.querySelector('lr-app-rail');
-  rail.addEventListener('lr-rail-resize', (e) => localStorage.setItem('railWidthPx', String(e.detail.widthPx)));
+  rail.addEventListener('lr-rail-resize-request', (e) => {
+    if (e.detail.widthPx > 360) e.preventDefault();
+  });
+  rail.addEventListener('lr-rail-resize', (e) =>
+    localStorage.setItem('railWidthPx', String(e.detail.widthPx)),
+  );
 </script>
 ```
 ```ts
@@ -11016,8 +11055,8 @@ same precedence supplies the tooltip text when that opt-in flyout is visible.
 **Methods:** `click(): void` activates the internal native link or button; it is a no-op while
 `disabled`.
 
-**Slots:** default (the visible label), `icon` (the leading icon, hidden from assistive technology
-when the item has an explicit `aria-label`).
+**Slots:** default (the visible label), `icon` (the leading decorative icon, always hidden from
+assistive technology; the default slot or host `aria-label` names the native control).
 
 **CSS parts:** `base`, `icon`, `label`, `tooltip` (the hover/focus label flyout, only rendered while
 `tooltip` is set, the item is `icon-only`, and it is hovered or focused).
@@ -11069,16 +11108,19 @@ sidebar that's a permanent docked pane on a wide screen but a modal on a phone.
   `matchMedia` as `(max-width: <this>)` to decide, in `mode="auto"`, whether the effective
   presentation is `'overlay'` (below/at this width) or `'inline'` (above it).
 
-**Methods:** `close(reason: ResponsivePanelCloseReason = 'api'): void` — closes the panel (sets
-`open = false`), emits `lr-close` with `reason`, and — only in the overlay presentation — returns
-focus to whichever element triggered the open. No-op if already closed. Built-in overlay triggers
-call this with `'escape'`/`'backdrop'`; a consumer's own close affordance (a footer button, a docked
-panel's own toggle) should call it directly with its own reason string.
+**Methods:** `close(reason: ResponsivePanelCloseReason = 'api'): void` — requests a close by
+emitting `lr-close` with `reason` before changing `open`. A listener can call `preventDefault()` to
+keep the panel open; otherwise it sets `open = false` and — only in the overlay presentation —
+returns focus to whichever element triggered the open. No-op if already closed. Built-in overlay
+triggers call this with `'escape'`/`'backdrop'`; a consumer's own close affordance (a footer button,
+a docked panel's own toggle) should call it directly with its own reason string.
 
 **Events:** `lr-close` (`detail: ResponsivePanelCloseReason` = `'escape'|'backdrop'|'api'|string`;
-fired by the overlay presentation's built-in dismiss triggers — Escape, backdrop click — and by any
-`close()` call, in either presentation; a plain `open = false` property write does **not** fire it,
-only going through `close()` counts as a dismissal), `lr-mode-change`
+cancelable pre-close veto, fired by the overlay presentation's built-in dismiss triggers — Escape,
+backdrop click — and by any `close()` call, in either presentation; calling `preventDefault()` keeps
+the panel open and leaves active overlay chrome/focus trapping intact. A plain `open = false`
+property write does **not** fire it, only going through `close()` counts as a dismissal),
+`lr-mode-change`
 (`detail: ResponsivePanelModeChangeDetail` = `{ mode: ResponsivePanelEffectiveMode }`; fired whenever
 the *effective* mode — not the `mode` prop's possibly-`'auto'` literal value — changes between
 `'inline'` and `'overlay'`; never fired on the initial render, only for a live change thereafter).
@@ -11113,8 +11155,8 @@ default) updates the effective presentation without unmounting or re-creating th
 Inline and overlay presentations share the same shadow DOM, so slotted content and scroll position
 survive the transition. Focus already inside the panel is preserved. If focus is outside when an
 open inline panel becomes an overlay, focus moves to the first composed focus target (falling back
-to the panel), so it cannot remain behind `aria-modal="true"`. Closing restores the element captured
-when the panel originally opened, even when that original open happened inline. The overlay
+to the panel), so it cannot remain behind `aria-modal="true"`. An allowed close restores the element
+captured when the panel originally opened, even when that original open happened inline. The overlay
 presentation participates in the shared modal stack rather than nesting a `<lr-dialog>`.
 
 The package root also exports the pure `resolveEffectiveMode(mode: ResponsivePanelMode,
@@ -11128,10 +11170,10 @@ exposed standalone so a consumer can compute or unit-test the same resolution wi
 window.
 
 **Known gotchas:**
-- assigning `open` directly still does not emit `lr-close`; use `close()` when the dismissal
-  event/reason is required. While overlay chrome is active, however, the `true` → `false` state
-  transition restores opener focus regardless of whether it came from `close()`, a property write,
-  or attribute removal.
+- assigning `open` directly still does not emit `lr-close` and therefore cannot be vetoed; use
+  `close()` when the dismissal event/reason or a close guard is required. While overlay chrome is
+  active, however, the `true` → `false` state transition restores opener focus regardless of
+  whether it came from an allowed `close()` call, a property write, or attribute removal.
 - crossing inline → overlay while already open preserves focus that is already inside and moves
   outside focus into the panel; do not expect focus to remain on page content behind the modal.
 - `variant="bottom-sheet"` has no visible effect at all while the effective presentation is
@@ -11403,9 +11445,14 @@ interactive menu content.
 Shoelace-compatible `checked-icon` wrapper; `spinner spinner__base`; `submenu-icon`; and `submenu`.
 The role remains on the host, not `base`; the submenu chevron mirrors under RTL through its wrapper.
 
-**Themeable custom properties:** `--submenu-offset` (default `-2px`) is the final signed distance
-between a submenu and its parent row: negative values overlap the parent menu and positive values
-add separation. It updates live, mirrors along with the submenu under RTL, and applies to both the
+**Themeable custom properties:** `--lr-menu-item-gap` (default `var(--lr-space-xs)`) is the gap
+between the visual row's leading content, label, details, and state glyphs. `--lr-menu-item-radius`
+(default `var(--lr-form-control-radius)`) is its corner radius; its fallback follows the item's
+active size tier. Both are inline fallbacks rather than values declared on `:host`, so setting either
+on an item or any ancestor retunes the row without a `::part(base)` rule; `<lr-dropdown-item>`
+inherits both hooks. `--submenu-offset` (default `-2px`) is the final signed distance between a
+submenu and its parent row: negative values overlap the parent menu and positive values add
+separation. It updates live, mirrors along with the submenu under RTL, and applies to both the
 Shoelace-style nested-menu shape and Lyra's generated panel for direct mapped items. Shared tokens
 also include `--lr-radius`, `--lr-focus-ring-width`, `--lr-focus-ring-color`, `--lr-space-xs`,
 `--lr-space-s`, `--lr-color-brand-quiet`, `--lr-opacity-disabled`, `--lr-color-danger`, and
@@ -11444,7 +11491,8 @@ interactive menu content.
 
 **CSS parts:** identical to `<lr-menu-item>`'s, including all compatibility aliases above.
 
-**Themeable custom properties:** identical to `<lr-menu-item>`'s, including `--submenu-offset`.
+**Themeable custom properties:** identical to `<lr-menu-item>`'s, including
+`--lr-menu-item-gap`, `--lr-menu-item-radius`, and `--submenu-offset`.
 
 ```html
 <lr-menu>
@@ -16208,7 +16256,12 @@ tick and manual step); internal `focus`/`blur` are bridged as bubbling, composed
 
 **Themeable custom properties:** `--lr-playback-icon-size` (default
 `calc(var(--lr-icon-button-size) * 0.35)` — the play/pause glyph's size; applied as the button's
-`font-size`, and the inline SVG renders at `1em`); plus shared tokens `--lr-space-s`,
+`font-size`, and the inline SVG renders at `1em`).
+`--lr-playback-play-button-active-bg` (default
+`color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) —
+the pressed play/pause background; and `--lr-playback-play-button-active-border-color` (default
+`var(--lr-color-brand)`) — its pressed border. Both are inline `var()` fallbacks, so a value set on
+the element or an ancestor inherits without being shadowed by a host default. Plus shared tokens `--lr-space-s`,
 `--lr-color-border`, `--lr-color-surface`, `--lr-color-text`, `--lr-color-brand`,
 `--lr-icon-button-size` (the play button's box), `--lr-opacity-disabled` (play button/slider
 dimming at `length <= 1`), `--lr-focus-ring-*`.
@@ -16309,13 +16362,25 @@ exists and was hit)
 
 **Slots:** none.
 
-**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `error` (ordinary localized visible
-text rendered in place of `container` if the optional `maplibre-gl` peer dependency fails to load,
-e.g. not installed). The post-mount failure is appended to the document's pre-mounted
-`[data-lr-live-region="assertive"]` sink rather than making shadow chrome live.
+**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `popup-close-button`, `error`.
+`popup-close-button` is the MapLibre-generated close control on an open marker popup. `error` is
+ordinary localized visible text rendered in place of `container` if the optional `maplibre-gl` peer
+dependency fails to load, e.g. not installed. The post-mount failure is appended to the document's
+pre-mounted `[data-lr-live-region="assertive"]` sink rather than making shadow chrome live.
 
-**Themeable custom properties:** shared tokens only — `--lr-space-xs/-s`, `--lr-color-surface`,
-`--lr-color-border`, `--lr-shadow`, `--lr-radius`.
+**Themeable custom properties:**
+- `--lr-map-choropleth-fill-opacity` (default `0.75`) — fill opacity for the declarative
+  `choropleth` layer and polygon fills in every `dataLayers` entry. It intentionally inherits from
+  an ancestor, so one scoped declaration rethemes every nested map without setting each host.
+- `--lr-map-popup-close-button-hover-bg` (default `var(--lr-color-brand-quiet)`) and
+  `--lr-map-popup-close-button-hover-color` (default `var(--lr-color-brand)`) — hover background
+  and foreground of `popup-close-button`.
+- `--lr-map-popup-close-button-active-bg` (default `color-mix(in oklab,
+  var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) and
+  `--lr-map-popup-close-button-active-color` (default `var(--lr-color-brand)`) — pressed
+  background and foreground of `popup-close-button`.
+- Shared tokens — `--lr-space-xs/-s`, `--lr-color-surface`, `--lr-color-border`, `--lr-shadow`,
+  `--lr-radius`.
 
 **Optional peer deps:** `maplibre-gl` `>=5 <7` (lazy-loaded). `<lr-map>` styles MapLibre's
 generated canvas, marker, popup, and control DOM inside its shadow root; a page-level MapLibre
@@ -16362,8 +16427,12 @@ https://maplibre.org/maplibre-gl-js/docs/#esm.
   way to place pins.
 - A marker uses `label` as its accessible name, falling back to the localized map label. Popup
   ownership is exposed through `aria-controls`/`aria-expanded`; an open popup is a named
-  `role="dialog"` and its close button is localized. The map canvas, markers, popups, and MapLibre's
-  own control strings all follow the component's effective locale.
+  `role="dialog"` and its localized close button exposes `part="popup-close-button"`. The map
+  canvas, markers, popups, and MapLibre's own control strings all follow the component's effective
+  locale.
+- Ancestor theme-attribute and custom-property changes repaint the already-applied choropleth and
+  data-layer colors/opacities in place. This does not recreate MapLibre sources/layers, replace the
+  style, or reset the current viewport.
 - a marker whose `color` changes for a persisting `id` is torn down and reconstructed (maplibre-gl's
   `Marker` has no `setColor()`) rather than mutated in place — this also closes any popup the user
   currently has open on that marker (a fresh, closed `Popup` is built for the new instance); an
@@ -16674,7 +16743,13 @@ so a late event from an earlier document is ignored; detached frames do not noti
 **CSS parts:** `iframe`, `controls`, `zoom-in-button`, and `zoom-out-button`.
 
 **CSS custom properties:** read-only `--lr-zoomable-frame-zoom`, resolved from the `zoom`
-property and applied to the internal iframe scale.
+property and applied to the internal iframe scale; and `--lr-zoomable-frame-control-hover-background`
+(default `var(--lr-color-brand-quiet)`), which colors a zoom control on hover and supplies the base
+for its active color.
+
+**RTL behavior:** the scaled iframe is a physical canvas and remains pinned to physical top-left in
+both directions. Its zoom controls remain logical interface chrome, so RTL places the toolbar at
+inline-end (the physical left edge).
 
 **Security and theme sync:** the iframe always keeps a `sandbox` attribute. The secure Lyra default
 allows same-origin access but not scripts, forms, popups, downloads, or top navigation. Supplied
@@ -16981,7 +17056,14 @@ below).
 **Themeable custom properties:** `--lr-media-card-max-height` (default `var(--lr-size-20rem)` — caps `[part="media"]`'s
 block-size so one oversized image/video can't blow out a chat bubble; same naming/contract as
 `<lr-document-preview>`'s identical `--lr-document-preview-max-height`; override per-instance via
-the `max-height` attribute instead of this property directly). Plus shared tokens
+the `max-height` attribute instead of this property directly).
+`--lr-media-card-active-border-color` (default
+`color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))`)
+and `--lr-media-card-active-bg` (default
+`color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))`)
+independently retint only a pressed image/file action. Both are inline `var()` fallbacks in the
+pressed state, so values on a chat or attachment-list ancestor inherit into every card rather than
+being shadowed by host defaults. Plus shared tokens
 `--lr-space-xs`/`-s`, `--lr-color-border`, `--lr-color-surface`, `--lr-color-text`/`-text-quiet`,
 `--lr-color-brand` (hover border), `--lr-radius`, `--lr-icon-button-size` (video's `open-button`
 sizing), `--lr-focus-ring-*`, `--lr-transition-fast`.
@@ -17620,7 +17702,13 @@ mode is on. The toggle carries its own glyph in `--lr-color-text`, so keep a 4.5
 when overriding the background. `--lr-image-viewer-highlight-active-color` (default
 `var(--lr-color-brand)`) — the outline of the `[part='highlight']` matching `activeHighlightId`,
 independent of the per-tone border colors, so the active box stays distinguishable whatever tone it
-carries. Highlight tone styling is exposed through `--lr-image-viewer-highlight-border`,
+carries. `--lr-image-viewer-highlight-active-border-width` (default
+`var(--lr-border-width-thick)`) controls the active highlight border width;
+`--lr-image-viewer-highlight-active-outline-width` (default `var(--lr-focus-ring-width)`) and
+`--lr-image-viewer-highlight-active-outline-offset` (default `var(--lr-focus-ring-offset)`) control
+its outline geometry. Like the existing active color hook, each is an inline `var()` fallback and
+can be set on the viewer or any ancestor. Highlight tone styling is exposed through
+`--lr-image-viewer-highlight-border`,
 `--lr-image-viewer-highlight-bg`, and the tone-specific
 `--lr-image-viewer-highlight-success-border`, `--lr-image-viewer-highlight-success-bg`,
 `--lr-image-viewer-highlight-warning-border`, `--lr-image-viewer-highlight-warning-bg`,
@@ -17802,7 +17890,17 @@ composition slots and may intentionally contain interactive controls.
 **Themeable custom properties:** `--controls-background` (default
 `var(--lr-color-overlay-strong)`), `--controls-color` (default `var(--lr-color-text)`), and
 `--poster-play-button-background` (default `var(--lr-color-surface-overlay)`). These exact names are
-kept for mechanical Web Awesome migration.
+kept for mechanical Web Awesome migration. Lyra also supplies
+`--lr-video-poster-play-button-hover-background` (default is the existing hover color mix) and
+`--lr-video-poster-play-button-hover-border-color` (default `var(--lr-color-brand)`).
+
+Caption and playback-rate selectors remain native `<select>` controls with decorative, pointer-inert
+chevrons; their option foreground and background inherit `--controls-color` and
+`--controls-background`.
+
+**RTL behavior:** surrounding controls follow the inherited direction, while the elapsed-media axis
+stays physical left-to-right. Native ArrowRight advances and ArrowLeft rewinds the timeline in both
+LTR and RTL.
 
 **Thumbnail security and lifecycle:** `thumbnails` is validated before `fetch()`, read through a
 256 KiB byte ceiling, and parsed up to 2,000 cues. Cue image URLs are resolved relative to the VTT
@@ -17851,6 +17949,10 @@ are not playlist items.
 
 **CSS parts:** `base` and `video-playlist` (aliases on the same root node), `playlist`,
 `playlist-duration`, `playlist-item`, `playlist-thumbnail`, and `playlist-title`.
+
+**Themeable custom properties:** `--lr-video-playlist-item-current-border-color` (default
+`var(--lr-color-brand)`) and `--lr-video-playlist-item-current-background` (default
+`var(--lr-color-brand-fill-quiet)`) style the active playlist row.
 
 Only the active child is visible and loaded. Before another child is activated, the outgoing native
 player is synchronously paused, stripped of its private source/track clones, and reloaded into an
@@ -18156,11 +18258,11 @@ resolved to concrete colors/CSS-pixel numbers on every draw; `rem` uses the live
 - `--line-border-width` → `--lr-border-width-medium`; `--point-radius` → `--lr-space-2xs`
 
 **Optional peer deps:** `chart.js` (mandatory peer, lazy-imported on every `connectedCallback()`
-regardless of `zoom`), `chartjs-plugin-zoom` (lazy-imported *additionally* only when `zoom` is — or
+regardless of options), `chartjs-plugin-zoom` (lazy-imported *additionally* only when `zoom` is — or
 later becomes — `true`; never fetched for a chart that keeps `zoom` unset/false, since the plugin
-has a hard dependency on `hammerjs`). Both loads are memoized once per page via `chart-loader.ts`
-(`loadChartJs()` / `loadChartJsWithZoom()`), registering only the tree-shaken controller/element/scale
-subset actually used.
+has a hard dependency on `hammerjs`), and `chartjs-plugin-datalabels` only when `data-labels` or
+`stack-totals` is enabled. Each load is memoized once per page via `chart-loader.ts`, registering
+only the tree-shaken controller/element/scale subset actually used.
 
 ```html
 <lr-chart type="line" x-label="Day" y-label="kWh" legend></lr-chart>
@@ -18541,7 +18643,8 @@ mirrored `--border-color-1`,
 `--border-radius`, `--border-width`, `--grid-border-width`, `--grid-color`,
 `--line-border-width`, and `--point-radius` hooks listed on the core chart.
 
-**Optional peer deps:** the same `chart.js` (+ `chartjs-plugin-zoom` when `zoom` is set) peers.
+**Optional peer deps:** the same `chart.js` peer, plus `chartjs-plugin-zoom` when `zoom` is set and
+`chartjs-plugin-datalabels` when `data-labels` or `stack-totals` is set.
 
 All of the above behave exactly as documented in `llms/components/lr-chart.md` — read that file for
 their semantics, defaults, and gotchas.
@@ -21590,9 +21693,10 @@ and it's what every instance renders at zero extra bytes until shiki resolves.
 - `collapsible: boolean = false` (reflected) — shows the collapse/expand chevron button
 - `collapsed: boolean = false` (reflected) — only has a visible effect while `collapsible` is also
   true
-- `copyable: boolean = true` (reflected) — shows the copy-to-clipboard button (assign `false` via a
-  PROPERTY binding, e.g. `.copyable=${false}` — a `?copyable=${false}` boolean-attribute binding
-  cannot override a true default)
+- `copyable: boolean = true` (reflected) — shows the copy-to-clipboard button. Literal HTML
+  `copyable="false"` disables it; use a property binding such as `.copyable=${false}` when binding a
+  value. A `?copyable=${false}` boolean-attribute binding only removes the attribute and cannot
+  override the true default.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
   code scrolls internally past this height instead of growing the page
 - `lineNumbers: boolean = false` (attribute `line-numbers`, reflected) — displays one-based line
@@ -21709,8 +21813,8 @@ one deliberate exception to every other color being a `--lr-*` token.
 
 **Known gotchas:**
 
-- `copyable` defaults to `true` and reflects — see the property note above about overriding it with a
-  property binding, not a boolean-attribute binding.
+- `copyable` defaults to `true` and reflects — literal `copyable="false"` and a `.copyable=${false}`
+  property binding both disable it; a `?copyable=${false}` boolean-attribute binding does not.
 - an in-flight per-language grammar load is guarded by an internal token so a `code`/`language` change
   that arrives before a previous load resolves never applies a stale result — only the load matching
   the _current_ `language` is ever rendered.
@@ -21755,7 +21859,9 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
 - `collapsible: boolean = false` (reflected) — shows the collapse/expand chevron button.
 - `collapsed: boolean = false` (reflected) — only has a visible effect while `collapsible` is also
   true.
-- `copyable: boolean = true` (reflected) — shows the copy-to-clipboard button.
+- `copyable: boolean = true` (reflected) — shows the copy-to-clipboard button. Literal HTML
+  `copyable="false"` or a `.copyable=${false}` property binding disables it; a
+  `?copyable=${false}` boolean-attribute binding cannot override the true default.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
   code scrolls internally past this height instead of growing the page.
 - `lineNumbers: boolean = false` (attribute `line-numbers`, reflected) — displays one-based line
@@ -24214,14 +24320,15 @@ A small bordered card shell. Purely visual, with no state of its own beyond slot
 - `compact: boolean = false` (reflected) — tighter header/body padding for dense contexts (a card
   rendered as a row in a transcript or result list), same convention as `<lr-agent-run>`'s own
   `compact`. Purely a density knob: the border and background stay, so use `frame="plain"`
-  instead to drop the chrome entirely.
+  instead to drop the chrome entirely. When both are set, plain leaves compact padding and gaps
+  intact.
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`), the same property `<lr-agent-run>`/`<lr-card>` carry. `'card'`
   (the default) keeps the bordered, filled box. `'plain'` removes the border, background, and corner
   radius, so a card nested inside a host frame that already draws a border (e.g.
-  `<lr-tool-result-view>`'s own chrome) doesn't double it. `plain` wins over `compact` when both are
-  set (nothing left to tighten). The exported alias `ResultCardAppearance` is retained as a name for
-  the same union.
+  `<lr-tool-result-view>`'s own chrome) doesn't double it. Plain controls only the chrome; compact
+  padding and gaps still apply when both are set. The exported alias `ResultCardAppearance` is
+  retained as a name for the same union.
 
 **Events:** none.
 

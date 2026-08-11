@@ -35,10 +35,11 @@ between slotted controls on both axes.
 `container-type: inline-size` unconditionally (that is what makes the 20rem `@container` rule above
 fire at all). Inline-size containment means the box's own content can no longer contribute to its
 width, so in any context where the host would otherwise be shrink-to-fit — plain block flow, an
-`inline-flex`/`flex` parent, anywhere with no definite width — the group collapses to its
-`min-inline-size` floor of `var(--lr-icon-button-size)` (2.5rem) instead of growing to fit the
+`inline-flex`/`flex` parent, anywhere with no definite width — the group uses its
+`contain-intrinsic-inline-size` fallback of `var(--lr-size-12rem)` instead of growing to fit the
 slotted buttons. Give `<lr-button-group>` a definite width (`inline-size`, `width: 100%`, `flex: 1`,
-or a grid track) whenever it isn't already in a layout that supplies one. The floor itself is the
-safeguard: without it the same shape rendered at literally `0px`.
+or a grid track) whenever it isn't already in a layout that supplies one. Under tighter allocation,
+`min-inline-size: var(--lr-icon-button-size)` remains the hard 2.5rem lower bound rather than the
+unallocated fallback.
 
 ---

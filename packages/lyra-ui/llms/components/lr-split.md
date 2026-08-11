@@ -18,6 +18,11 @@
 Resizable panels for dashboard layouts. Direct **light-DOM children are the panels**; a divider is
 auto-inserted between each adjacent pair.
 
+With a definite block size, each direct panel owns a native `overflow: auto` scroll surface and has
+`min-block-size: 0`, so long content stays inside the split rather than escaping into following
+content. Set `overflow` directly on an individual panel when its content needs a different scrolling
+surface.
+
 **Properties:**
 - `sizes: number[] = []` (attribute: false — percentages per panel, auto-computed equally if
   omitted/mismatched)
@@ -145,8 +150,9 @@ collapsed. `collapse="none"` (the default) is byte-for-byte identical to pre-col
 `dividerLabel?: (index: number, panelCount: number) => string` (attribute: false) customizes the
 localized accessible label generated for each auto-inserted divider.
 
-**Events:** `lr-resize` (`detail: { sizes }`, fired on every drag step/release **and** every
-keyboard step), `lr-split-collapse-change` (`detail: { state: 'wide'|'rail'|'floating' }`, fired only
+**Events:** `lr-resize` (`detail: { sizes }`, fired on every drag movement that changes sizes and
+every keyboard step; pointer release persists the settled sizes but emits no additional event),
+`lr-split-collapse-change` (`detail: { state: 'wide'|'rail'|'floating' }`, fired only
 on a real `collapse`-state transition, never on every resize/render),
 `lr-split-constraints-invalid` (`detail: SplitConstraintIssueDetail`, fired once when the configured
 panel minimums/maximums cannot fit the track; the infeasible set is rejected for interaction and a
@@ -192,13 +198,11 @@ the visually-adjacent panel).
   `ensureSizes()` rebalances existing sizes proportionally when a panel is added or removed after
   mount instead of discarding the whole layout — a conditionally-shown side panel no longer leaves
   `panelCount`/`sizes`/divider count stale.
-- divider `aria-valuemax` is now computed per adjacent pair (`sizes[i] + sizes[i+1] - min`) rather
-  than a blanket `100 - min`, so it's accurate for 3+-panel layouts too, not just exactly two panels
-  — this formula still only accounts for the plain percent `min`, though: with `panelConstraints`
-  set, a panel's real achievable range can be narrower (or expressed in px) than what
-  `aria-valuemin`/`aria-valuemax` report. Each divider also now has its own `aria-label` ("Resize
-  divider between panel N and panel N+1") distinguishing it from any other divider in a
-  multi-divider layout.
+- divider `aria-valuemin`/`aria-valuemax` are computed per adjacent pair from the same resolved
+  `panelConstraints` bounds used by pointer and keyboard resizing, rather than a blanket
+  `100 - min`. They therefore remain accurate for 3+-panel layouts and for px/percent constraints.
+  Each divider also has its own `aria-label` ("Resize divider between panel N and panel N+1")
+  distinguishing it from any other divider in a multi-divider layout.
 - infeasible aggregate constraints (for example, three panels with `min=40`) are reported through
   `lr-split-constraints-invalid`; interaction rejects that set and uses a normalized percent minimum
   with aggregate slack, so the divider remains operable instead of silently freezing.

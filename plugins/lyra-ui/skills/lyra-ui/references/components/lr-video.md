@@ -8,7 +8,7 @@
 - **Status** `experimental` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `dompurify` — see `llms/peers.md`
-- **Themeable via** 16 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -74,7 +74,17 @@ composition slots and may intentionally contain interactive controls.
 **Themeable custom properties:** `--controls-background` (default
 `var(--lr-color-overlay-strong)`), `--controls-color` (default `var(--lr-color-text)`), and
 `--poster-play-button-background` (default `var(--lr-color-surface-overlay)`). These exact names are
-kept for mechanical Web Awesome migration.
+kept for mechanical Web Awesome migration. Lyra also supplies
+`--lr-video-poster-play-button-hover-background` (default is the existing hover color mix) and
+`--lr-video-poster-play-button-hover-border-color` (default `var(--lr-color-brand)`).
+
+Caption and playback-rate selectors remain native `<select>` controls with decorative, pointer-inert
+chevrons; their option foreground and background inherit `--controls-color` and
+`--controls-background`.
+
+**RTL behavior:** surrounding controls follow the inherited direction, while the elapsed-media axis
+stays physical left-to-right. Native ArrowRight advances and ArrowLeft rewinds the timeline in both
+LTR and RTL.
 
 **Thumbnail security and lifecycle:** `thumbnails` is validated before `fetch()`, read through a
 256 KiB byte ceiling, and parsed up to 2,000 cues. Cue image URLs are resolved relative to the VTT

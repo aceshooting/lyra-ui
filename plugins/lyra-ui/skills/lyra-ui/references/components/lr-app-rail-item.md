@@ -36,7 +36,8 @@ next mount (mirrors `lr-split`'s `storage-key`; effective `mode` is breakpoint-d
 persisted). The backward-compatible allowlist is `open width`; use
 `persist="width preferred-mode"` for durable layout preference without restoring the transient
 mobile overlay. Without a `storageKey` there is no persistence — listen for `lr-rail-resize` and
-persist `widthPx` yourself.
+persist its committed `widthPx` yourself. Listen for the preceding cancelable
+`lr-rail-resize-request` event when a host needs to veto a proposed width.
 `preferredMode` separately lets a host manually prefer `'full'`/`'icon-only'` for the non-mobile
 breakpoint axis (e.g. a user's own collapse toggle) while `mobile-breakpoint` continues to be tracked
 automatically regardless — it's only consulted while `mode` isn't force-pinned via the `mode`
@@ -112,8 +113,12 @@ breakpoint/forced mode change leaving `'mobile'` while open — not fired when a
 directly. Cancelable for every trigger except the forced mode-change close, which always applies —
 vetoing that one would leave `open` stuck `true` in a mode where it's meaningless; call
 `preventDefault()` to keep the overlay as it is for the other triggers),
-`lr-rail-resize` (`detail: AppRailResizeDetail` = `{ widthPx: number }`; the `resizable` rail's
-width changed via drag or keyboard stepping — not fired when a consumer sets `railWidthPx` directly).
+`lr-rail-resize-request` (`detail: AppRailResizeDetail` = `{ widthPx: number }`; a cancelable
+proposed width from drag or keyboard stepping, emitted before the component assigns
+`railWidthPx` — call `preventDefault()` to keep the current width. It is not fired when a consumer
+sets `railWidthPx` directly), and `lr-rail-resize` (`detail: AppRailResizeDetail` =
+`{ widthPx: number }`; non-cancelable committed width, emitted after the component assigns
+`railWidthPx`, for the same accepted gesture paths only).
 
 **Slots:** default (nav items — generic slotted content, e.g. `<a>`/`<button>` elements the consumer
 builds with its own icon+label structure; clicking anywhere in this slot closes the mobile overlay if
@@ -152,7 +157,12 @@ fallback at its exact state rule and preserves the previous brand or active-mix 
 </lr-app-rail>
 <script type="module">
   const rail = document.querySelector('lr-app-rail');
-  rail.addEventListener('lr-rail-resize', (e) => localStorage.setItem('railWidthPx', String(e.detail.widthPx)));
+  rail.addEventListener('lr-rail-resize-request', (e) => {
+    if (e.detail.widthPx > 360) e.preventDefault();
+  });
+  rail.addEventListener('lr-rail-resize', (e) =>
+    localStorage.setItem('railWidthPx', String(e.detail.widthPx)),
+  );
 </script>
 ```
 ```ts
@@ -238,8 +248,8 @@ same precedence supplies the tooltip text when that opt-in flyout is visible.
 **Methods:** `click(): void` activates the internal native link or button; it is a no-op while
 `disabled`.
 
-**Slots:** default (the visible label), `icon` (the leading icon, hidden from assistive technology
-when the item has an explicit `aria-label`).
+**Slots:** default (the visible label), `icon` (the leading decorative icon, always hidden from
+assistive technology; the default slot or host `aria-label` names the native control).
 
 **CSS parts:** `base`, `icon`, `label`, `tooltip` (the hover/focus label flyout, only rendered while
 `tooltip` is set, the item is `icon-only`, and it is hovered or focused).

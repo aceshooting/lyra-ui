@@ -5003,21 +5003,21 @@
       "name": "--lr-form-control-required-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-checkbox-group>`, `<lr-combobox>`, `<lr-emoji-picker>`, `<lr-file-input>`, `<lr-model-select>`, `<lr-radio-group>`, `<lr-select>`, `<lr-slider>`, `<lr-token-input>`, `<lr-voice-picker>`** (default: `var(--lr-color-danger)`) — Required-marker color, themeable independently of error text and invalid borders.\n\n**`<lr-code-editor>`, `<lr-color-picker>`, `<lr-date-input>`, `<lr-input>`, `<lr-known-date>`, `<lr-locale-picker>`, `<lr-native-time-input>`, `<lr-number-input>`, `<lr-otp-input>`, `<lr-phone-input>`, `<lr-textarea>`, `<lr-time-input>`, `<lr-tool-param-form>`** (default: `var(--lr-color-danger)`) — Color of that marker, retunable without touching any other danger-coloured surface."
+        "value": "**`<lr-checkbox-group>`, `<lr-combobox>`, `<lr-emoji-picker>`, `<lr-file-input>`, `<lr-model-select>`, `<lr-radio-group>`, `<lr-select>`, `<lr-slider>`, `<lr-token-input>`, `<lr-voice-picker>`** (default: `var(--lr-color-danger)`) — Required-marker color, themeable independently of error text and invalid borders.\n\n**`<lr-code-editor>`, `<lr-color-picker>`, `<lr-date-input>`, `<lr-input>`, `<lr-known-date>`, `<lr-locale-picker>`, `<lr-native-time-input>`, `<lr-number-input>`, `<lr-otp-input>`, `<lr-phone-input>`, `<lr-textarea>`, `<lr-time-input>`, `<lr-tool-param-form>`** (default: `var(--lr-color-danger)`) — Color of that marker, retunable without touching any other danger-coloured surface.\n\n**`<lr-rubric-form>`** (default: `var(--lr-color-danger)`) — Color of that marker, independently retunable from field errors."
       }
     },
     {
       "name": "--lr-form-control-required-content",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-checkbox-group>`, `<lr-combobox>`, `<lr-emoji-picker>`, `<lr-file-input>`, `<lr-model-select>`, `<lr-radio-group>`, `<lr-select>`, `<lr-slider>`, `<lr-token-input>`, `<lr-voice-picker>`** (default: `' *'`) — The required marker appended to `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it.\n\n**`<lr-code-editor>`, `<lr-color-picker>`, `<lr-date-input>`, `<lr-input>`, `<lr-locale-picker>`, `<lr-native-time-input>`, `<lr-number-input>`, `<lr-otp-input>`, `<lr-phone-input>`, `<lr-textarea>`, `<lr-time-input>`** (default: `' *'`) — The required-field marker rendered after the label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it. Caller-supplied content, so it is never localized here.\n\n**`<lr-known-date>`** (default: `' *'`) — The required-field marker, rendered after the fieldset `legend` here rather than after the inner label span, so it follows the whole label rather than sitting inside it. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it. Caller-supplied content, so it is never localized here.\n\n**`<lr-tool-param-form>`** (default: `' *'`) — The required-field marker rendered after the `label` part of every field whose key is listed in the schema's `required` array — per field here, not per host, because this control's value is a whole object. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it. Caller-supplied content, so it is never localized here."
+        "value": "**`<lr-checkbox-group>`, `<lr-combobox>`, `<lr-emoji-picker>`, `<lr-file-input>`, `<lr-model-select>`, `<lr-radio-group>`, `<lr-select>`, `<lr-slider>`, `<lr-token-input>`, `<lr-voice-picker>`** (default: `' *'`) — The required marker appended to `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it.\n\n**`<lr-code-editor>`, `<lr-color-picker>`, `<lr-date-input>`, `<lr-input>`, `<lr-locale-picker>`, `<lr-native-time-input>`, `<lr-number-input>`, `<lr-otp-input>`, `<lr-phone-input>`, `<lr-textarea>`, `<lr-time-input>`** (default: `' *'`) — The required-field marker rendered after the label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it. Caller-supplied content, so it is never localized here.\n\n**`<lr-known-date>`** (default: `' *'`) — The required-field marker, rendered after the fieldset `legend` here rather than after the inner label span, so it follows the whole label rather than sitting inside it. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it. Caller-supplied content, so it is never localized here.\n\n**`<lr-rubric-form>`** (default: `' *'`) — Required-field marker after rubric-owned score and unsupported-field labels. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it.\n\n**`<lr-tool-param-form>`** (default: `' *'`) — The required-field marker rendered after the `label` part of every field whose key is listed in the schema's `required` array — per field here, not per host, because this control's value is a whole object. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it. Caller-supplied content, so it is never localized here."
       }
     },
     {
       "name": "--lr-form-control-required-offset",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-checkbox-group>`, `<lr-combobox>`, `<lr-emoji-picker>`, `<lr-file-input>`, `<lr-model-select>`, `<lr-radio-group>`, `<lr-select>`, `<lr-slider>`, `<lr-token-input>`, `<lr-voice-picker>`** (default: `0`) — Inline space between the label text and the required marker.\n\n**`<lr-code-editor>`, `<lr-color-picker>`, `<lr-date-input>`, `<lr-input>`, `<lr-known-date>`, `<lr-locale-picker>`, `<lr-native-time-input>`, `<lr-number-input>`, `<lr-otp-input>`, `<lr-phone-input>`, `<lr-textarea>`, `<lr-time-input>`, `<lr-tool-param-form>`** (default: `0`) — Inline space between the label text and the marker."
+        "value": "**`<lr-checkbox-group>`, `<lr-combobox>`, `<lr-emoji-picker>`, `<lr-file-input>`, `<lr-model-select>`, `<lr-radio-group>`, `<lr-select>`, `<lr-slider>`, `<lr-token-input>`, `<lr-voice-picker>`** (default: `0`) — Inline space between the label text and the required marker.\n\n**`<lr-code-editor>`, `<lr-color-picker>`, `<lr-date-input>`, `<lr-input>`, `<lr-known-date>`, `<lr-locale-picker>`, `<lr-native-time-input>`, `<lr-number-input>`, `<lr-otp-input>`, `<lr-phone-input>`, `<lr-textarea>`, `<lr-time-input>`, `<lr-tool-param-form>`** (default: `0`) — Inline space between the label text and the marker.\n\n**`<lr-rubric-form>`** (default: `0`) — Inline space between the label text and marker."
       }
     },
     {
@@ -5546,10 +5546,31 @@
       }
     },
     {
+      "name": "--lr-image-viewer-highlight-active-border-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-image-viewer>`** (default: `var(--lr-border-width-thick)`) — Border width of the `[part=\"highlight\"]` matching `activeHighlightId`."
+      }
+    },
+    {
       "name": "--lr-image-viewer-highlight-active-color",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-image-viewer>`** (default: `var(--lr-color-brand)`) — Outline color of the `[part=\"highlight\"]` matching `activeHighlightId`, independent of the per-tone border colors."
+      }
+    },
+    {
+      "name": "--lr-image-viewer-highlight-active-outline-offset",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-image-viewer>`** (default: `var(--lr-focus-ring-offset)`) — Outline offset of the `[part=\"highlight\"]` matching `activeHighlightId`."
+      }
+    },
+    {
+      "name": "--lr-image-viewer-highlight-active-outline-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-image-viewer>`** (default: `var(--lr-focus-ring-width)`) — Outline width of the `[part=\"highlight\"]` matching `activeHighlightId`."
       }
     },
     {
@@ -6099,6 +6120,41 @@
       }
     },
     {
+      "name": "--lr-map-choropleth-fill-opacity",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-map>`** (default: `0.75`) — Fill opacity for choropleth and polygon `dataLayers` fills. Read from the resolved cascade whenever those layers are applied or painted after a theme change."
+      }
+    },
+    {
+      "name": "--lr-map-popup-close-button-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-map>`** (default: `color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) — Pressed background of `popup-close-button`."
+      }
+    },
+    {
+      "name": "--lr-map-popup-close-button-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-map>`** (default: `var(--lr-color-brand)`) — Pressed foreground of `popup-close-button`. ⚠️ The default `mapStyle` (when unset) uses OpenStreetMap's demo tile server, which is not suitable for production traffic — see the `DEFAULT_STYLE` doc comment above. Always pass an explicit `mapStyle` in production."
+      }
+    },
+    {
+      "name": "--lr-map-popup-close-button-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-map>`** (default: `var(--lr-color-brand-quiet)`) — Hover background of `popup-close-button`."
+      }
+    },
+    {
+      "name": "--lr-map-popup-close-button-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-map>`** (default: `var(--lr-color-brand)`) — Hover foreground of `popup-close-button`."
+      }
+    },
+    {
       "name": "--lr-markdown-font-mono",
       "description": {
         "kind": "markdown",
@@ -6162,10 +6218,24 @@
       }
     },
     {
+      "name": "--lr-media-card-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-media-card>`** (default: `color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) — Pressed background color for image/file card actions. **Chrome escape hatch.** `frame=\"plain\"` drops `[part=\"base\"]`'s border, background, padding, and corner radius — for a dense list/feed of cards (this component's own documented primary use case) where the surrounding container already provides its own separation, so cards don't double up on chrome. `frame` is the library-wide name for this container treatment."
+      }
+    },
+    {
+      "name": "--lr-media-card-active-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-media-card>`** (default: `color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) — Pressed border color for image/file card actions."
+      }
+    },
+    {
       "name": "--lr-media-card-max-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-media-card>`** (default: `var(--lr-size-20rem)`) — Cap on the block size of the `<img>`/`<video>` in `[part=\"media\"]`. **Chrome escape hatch.** `frame=\"plain\"` drops `[part=\"base\"]`'s border, background, padding, and corner radius — for a dense list/feed of cards (this component's own documented primary use case) where the surrounding container already provides its own separation, so cards don't double up on chrome. `frame` is the library-wide name for this container treatment."
+        "value": "**`<lr-media-card>`** (default: `var(--lr-size-20rem)`) — Cap on the block size of the `<img>`/`<video>` in `[part=\"media\"]`."
       }
     },
     {
@@ -6194,6 +6264,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-mention-popover>`** (default: `var(--lr-color-brand-quiet)`) — Background of the hovered or `[data-active]` (keyboard-highlighted) suggestion row."
+      }
+    },
+    {
+      "name": "--lr-menu-item-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dropdown-item>`, `<lr-menu-item>`** (default: `var(--lr-space-xs)`) — Gap between the visual parts of `[part=\"base\"]`, including its leading content, label, trailing details, and state glyphs. Declared as an inline `var()` fallback (never on `:host`), so an item or any ancestor can retune it without a `::part(base)` rule. It is constant across the shared size ladder."
+      }
+    },
+    {
+      "name": "--lr-menu-item-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dropdown-item>`, `<lr-menu-item>`** (default: `var(--lr-form-control-radius)`) — Corner radius of the visual row and focusable host. Its fallback follows the active shared size tier. Declared as an inline `var()` fallback (never on `:host`), so an item or any ancestor can retune it without a `::part(base)` rule."
       }
     },
     {
@@ -6782,6 +6866,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-playback>`** (default: `calc(var(--lr-icon-button-size) * 0.35)`) — Font size of the play/pause glyph, derived from the shared icon-button hit-target size."
+      }
+    },
+    {
+      "name": "--lr-playback-play-button-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-playback>`** — Pressed play/pause button background. Defaults to the existing surface active mix; read as an inline fallback so an ancestor value inherits."
+      }
+    },
+    {
+      "name": "--lr-playback-play-button-active-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-playback>`** (default: `var(--lr-color-brand)`) — Pressed play/pause button border color; read as an inline fallback so an ancestor value inherits."
       }
     },
     {
@@ -9456,6 +9554,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-tab-group>`** (default: `var(--lr-color-brand)`) — Text color of the selected tab. Scoped to `[aria-selected='true']` only, so it never repaints a hovered unselected tab (which is what hijacking `--lr-color-brand` library-wide used to do)."
+      }
+    },
+    {
+      "name": "--lr-tab-group-vertical-nav-max-inline-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tab-group>`** (default: `var(--lr-size-12rem)`) — Maximum logical inline size of a vertical `start`/`end` nav. Long labels ellipsize inside that bound so the panel remains usable at narrow allocations."
       }
     },
     {
@@ -12959,6 +13064,34 @@
       }
     },
     {
+      "name": "--lr-video-playlist-item-current-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-video-playlist>`** (default: `var(--lr-color-brand-fill-quiet)`) — Current playlist-item background."
+      }
+    },
+    {
+      "name": "--lr-video-playlist-item-current-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-video-playlist>`** (default: `var(--lr-color-brand)`) — Current playlist-item border color."
+      }
+    },
+    {
+      "name": "--lr-video-poster-play-button-hover-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-video>`** (default: `color-mix(...)`) — Poster play-button hover background."
+      }
+    },
+    {
+      "name": "--lr-video-poster-play-button-hover-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-video>`** (default: `var(--lr-color-brand)`) — Poster play-button hover border color."
+      }
+    },
+    {
       "name": "--lr-virtual-list-height",
       "description": {
         "kind": "markdown",
@@ -13166,6 +13299,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-xml-viewer>`** (default: `none`) — Maximum block size of the scrollable body before it scrolls internally. Also settable via the `max-height` property."
+      }
+    },
+    {
+      "name": "--lr-zoomable-frame-control-hover-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-zoomable-frame>`** (default: `var(--lr-color-brand-quiet)`) — Zoom control hover background; its active background derives from the same value."
       }
     },
     {

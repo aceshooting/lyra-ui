@@ -10532,7 +10532,7 @@
     "current": {
       "version": "8.2.3",
       "sourceCommit": null,
-      "manifestSha256": "c006ab482110e332de9330d90ed2e9ab8a13ce1eded2cfbadf4b56d6e6fc86f1",
+      "manifestSha256": "80adc81508aa8fc6fa7e36d1ba17cb2a7f929e2cac8db4809ff925006da81cbc",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",

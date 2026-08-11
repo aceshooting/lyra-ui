@@ -38,9 +38,10 @@ and it's what every instance renders at zero extra bytes until shiki resolves.
 - `collapsible: boolean = false` (reflected) — shows the collapse/expand chevron button
 - `collapsed: boolean = false` (reflected) — only has a visible effect while `collapsible` is also
   true
-- `copyable: boolean = true` (reflected) — shows the copy-to-clipboard button (assign `false` via a
-  PROPERTY binding, e.g. `.copyable=${false}` — a `?copyable=${false}` boolean-attribute binding
-  cannot override a true default)
+- `copyable: boolean = true` (reflected) — shows the copy-to-clipboard button. Literal HTML
+  `copyable="false"` disables it; use a property binding such as `.copyable=${false}` when binding a
+  value. A `?copyable=${false}` boolean-attribute binding only removes the attribute and cannot
+  override the true default.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
   code scrolls internally past this height instead of growing the page
 - `lineNumbers: boolean = false` (attribute `line-numbers`, reflected) — displays one-based line
@@ -157,8 +158,8 @@ one deliberate exception to every other color being a `--lr-*` token.
 
 **Known gotchas:**
 
-- `copyable` defaults to `true` and reflects — see the property note above about overriding it with a
-  property binding, not a boolean-attribute binding.
+- `copyable` defaults to `true` and reflects — literal `copyable="false"` and a `.copyable=${false}`
+  property binding both disable it; a `?copyable=${false}` boolean-attribute binding does not.
 - an in-flight per-language grammar load is guarded by an internal token so a `code`/`language` change
   that arrives before a previous load resolves never applies a stale result — only the load matching
   the _current_ `language` is ever rendered.

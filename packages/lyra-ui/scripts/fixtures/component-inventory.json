@@ -5778,6 +5778,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-rail-resize-request",
+            "type": "CustomEvent<AppRailResizeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-toggle",
             "type": "CustomEvent<AppRailToggleDetail>",
             "cancelable": "conditional",
@@ -40263,6 +40269,18 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-menu-item-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-menu-item-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-radius)"
+          },
+          {
             "name": "--submenu-offset",
             "deprecated": null,
             "hasDefault": true,
@@ -54910,10 +54928,28 @@
             "default": "var(--lr-color-brand)"
           },
           {
+            "name": "--lr-image-viewer-highlight-active-border-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thick)"
+          },
+          {
             "name": "--lr-image-viewer-highlight-active-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-image-viewer-highlight-active-outline-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-focus-ring-offset)"
+          },
+          {
+            "name": "--lr-image-viewer-highlight-active-outline-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-focus-ring-width)"
           },
           {
             "name": "--lr-image-viewer-highlight-bg",
@@ -62417,9 +62453,44 @@
           {
             "name": "legend-swatch",
             "deprecated": null
+          },
+          {
+            "name": "popup-close-button",
+            "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-map-choropleth-fill-opacity",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0.75
+          },
+          {
+            "name": "--lr-map-popup-close-button-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-map-popup-close-button-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-map-popup-close-button-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-map-popup-close-button-hover-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "form": {
@@ -63986,6 +64057,18 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-media-card-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-media-card-active-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
             "name": "--lr-media-card-max-height",
             "deprecated": null,
             "hasDefault": true,
@@ -65206,6 +65289,18 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-menu-item-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-menu-item-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-radius)"
+          },
           {
             "name": "--submenu-offset",
             "deprecated": null,
@@ -78175,6 +78270,17 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "calc(var(--lr-icon-button-size) * 0.35)"
+          },
+          {
+            "name": "--lr-playback-play-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-playback-play-button-active-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
           }
         ],
         "cssStates": [],
@@ -89459,7 +89565,7 @@
           {
             "name": "lr-close",
             "type": "CustomEvent<ResponsivePanelCloseReason>",
-            "cancelable": "never",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -91557,6 +91663,24 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
           {
             "name": "--lr-rubric-form-skip-active-bg",
             "deprecated": null,
@@ -102969,6 +103093,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-tab-group-vertical-nav-max-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-12rem)"
           },
           {
             "name": "--track-color",
@@ -117642,6 +117772,18 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-video-poster-play-button-hover-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(...)"
+          },
+          {
+            "name": "--lr-video-poster-play-button-hover-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
             "name": "--poster-play-button-background",
             "deprecated": null,
             "hasDefault": true,
@@ -118007,7 +118149,20 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-video-playlist-item-current-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-fill-quiet)"
+          },
+          {
+            "name": "--lr-video-playlist-item-current-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          }
+        ],
         "cssStates": [],
         "methods": [
           {
@@ -121078,6 +121233,12 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-zoomable-frame-control-hover-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
           {
             "name": "--lr-zoomable-frame-zoom",
             "deprecated": null,

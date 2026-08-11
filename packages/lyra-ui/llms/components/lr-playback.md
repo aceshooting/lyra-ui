@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 3 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 3 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -39,7 +39,12 @@ tick and manual step); internal `focus`/`blur` are bridged as bubbling, composed
 
 **Themeable custom properties:** `--lr-playback-icon-size` (default
 `calc(var(--lr-icon-button-size) * 0.35)` — the play/pause glyph's size; applied as the button's
-`font-size`, and the inline SVG renders at `1em`); plus shared tokens `--lr-space-s`,
+`font-size`, and the inline SVG renders at `1em`).
+`--lr-playback-play-button-active-bg` (default
+`color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) —
+the pressed play/pause background; and `--lr-playback-play-button-active-border-color` (default
+`var(--lr-color-brand)`) — its pressed border. Both are inline `var()` fallbacks, so a value set on
+the element or an ancestor inherits without being shadowed by a host default. Plus shared tokens `--lr-space-s`,
 `--lr-color-border`, `--lr-color-surface`, `--lr-color-text`, `--lr-color-brand`,
 `--lr-icon-button-size` (the play button's box), `--lr-opacity-disabled` (play button/slider
 dimming at `length <= 1`), `--lr-focus-ring-*`.

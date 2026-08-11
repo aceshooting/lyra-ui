@@ -2005,6 +2005,13 @@ export type LyraQueueChangeEvent =
 export type LyraRailResizeEvent = LyraAppRailEventMap['lr-rail-resize'];
 
 /**
+ * `lr-rail-resize-request` — dispatched by `<lr-app-rail>`.
+ *
+ * Detail type: `LyraAppRailEventMap['lr-rail-resize-request']`.
+ */
+export type LyraRailResizeRequestEvent = LyraAppRailEventMap['lr-rail-resize-request'];
+
+/**
  * `lr-rate-change` — dispatched by `<lr-av-player>`.
  *
  * Detail type: `LyraAvPlayerEventMap['lr-rate-change']`.
@@ -3225,6 +3232,7 @@ export interface LyraGlobalEventMap {
   'lr-query-save': LyraQuerySaveEvent;
   'lr-queue-change': LyraQueueChangeEvent;
   'lr-rail-resize': LyraRailResizeEvent;
+  'lr-rail-resize-request': LyraRailResizeRequestEvent;
   'lr-rate-change': LyraRateChangeEvent;
   'lr-record-cancel': LyraRecordCancelEvent;
   'lr-record-chunk': LyraRecordChunkEvent;

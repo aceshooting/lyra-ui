@@ -280,11 +280,11 @@ resolved to concrete colors/CSS-pixel numbers on every draw; `rem` uses the live
 - `--line-border-width` → `--lr-border-width-medium`; `--point-radius` → `--lr-space-2xs`
 
 **Optional peer deps:** `chart.js` (mandatory peer, lazy-imported on every `connectedCallback()`
-regardless of `zoom`), `chartjs-plugin-zoom` (lazy-imported *additionally* only when `zoom` is — or
+regardless of options), `chartjs-plugin-zoom` (lazy-imported *additionally* only when `zoom` is — or
 later becomes — `true`; never fetched for a chart that keeps `zoom` unset/false, since the plugin
-has a hard dependency on `hammerjs`). Both loads are memoized once per page via `chart-loader.ts`
-(`loadChartJs()` / `loadChartJsWithZoom()`), registering only the tree-shaken controller/element/scale
-subset actually used.
+has a hard dependency on `hammerjs`), and `chartjs-plugin-datalabels` only when `data-labels` or
+`stack-totals` is enabled. Each load is memoized once per page via `chart-loader.ts`, registering
+only the tree-shaken controller/element/scale subset actually used.
 
 ```html
 <lr-chart type="line" x-label="Day" y-label="kWh" legend></lr-chart>
