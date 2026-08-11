@@ -382,6 +382,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   @state() private plotWidth = 0;
   @state() private plotHeight = 0;
+  /** Browser-only fit measurement begins after the first hydrated render so the server fallback
+   * stays structurally identical during hydration. */
+  @state() private fitMeasurementAvailable = false;
   /** One roving tab stop across all bar/point marks. */
   @state() private activeMarkIndex = 0;
 
@@ -484,6 +487,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   adoptedCallback(): void {
     this.resetResizeObserver();
+    this.refreshFitMeasurementAvailability();
   }
 
   private resetResizeObserver(): void {
@@ -512,6 +516,12 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    // A browser-only mount can wait for ResizeObserver before drawing coordinate-based geometry.
+    // A hydrated mount must first reproduce the SSR fallback, then switch to measured geometry on
+    // its following update or Lit rejects the server-rendered iterable during hydration.
+    this.seedFirstRenderState(() => {
+      this.refreshFitMeasurementAvailability();
+    });
     const marksChanged = ['type', 'labels', 'datasets', 'skipZero'].some((name) => changed.has(name));
     if (!marksChanged) return;
     const active = activeElementIn(this.shadowRoot) ?? null;
@@ -617,9 +627,13 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   private awaitingFitMeasurement(): boolean {
     return (
       this.layout === 'fit' &&
-      typeof this.ownerDocument?.defaultView?.ResizeObserver === 'function' &&
+      this.fitMeasurementAvailable &&
       (this.plotWidth <= 0 || this.plotHeight <= 0)
     );
+  }
+
+  private refreshFitMeasurementAvailability(): void {
+    this.fitMeasurementAvailable = typeof this.ownerDocument?.defaultView?.ResizeObserver === 'function';
   }
 
   private markIndexMap(): Map<string, number> {

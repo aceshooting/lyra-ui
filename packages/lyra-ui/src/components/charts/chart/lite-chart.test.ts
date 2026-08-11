@@ -745,6 +745,52 @@ it('withholds fit-mode geometry until its first ResizeObserver measurement', asy
   }
 });
 
+it('reproduces the SSR fallback before enabling fit measurement during hydration', async () => {
+  const callbacks: ResizeObserverCallback[] = [];
+  const OriginalRO = window.ResizeObserver;
+  class FakeResizeObserver implements ResizeObserver {
+    constructor(callback: ResizeObserverCallback) {
+      callbacks.push(callback);
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+    FakeResizeObserver as unknown as typeof ResizeObserver;
+
+  try {
+    const host = (await fixture(html`<div></div>`)) as HTMLDivElement;
+    const el = document.createElement('lr-lite-chart') as LyraLiteChart;
+    el.labels = ['a', 'b'];
+    el.datasets = [{ label: 's', data: [1, 2] }];
+    // An already-open shadow root is the parser-visible signal that LyraElement uses for a
+    // declarative-shadow-DOM hydration mount.
+    el.attachShadow({ mode: 'open' });
+    host.append(el);
+    await el.updateComplete;
+
+    expect(callbacks.length).to.equal(1);
+    expect(el.shadowRoot!.querySelector('svg')?.getAttribute('viewBox')).to.equal('0 0 400 200');
+    expect(el.shadowRoot!.querySelectorAll('[part="bar"]')).to.have.length(2);
+    expect(el.shadowRoot!.querySelectorAll('[part="grid-line"]')).to.have.length.greaterThan(0);
+
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="bar"]').length === 0);
+    expect(el.shadowRoot!.querySelectorAll('[part="grid-line"]')).to.have.length(0);
+
+    callbacks[0](
+      [{ contentBoxSize: [{ inlineSize: 320, blockSize: 280 }] } as unknown as ResizeObserverEntry],
+      {} as ResizeObserver,
+    );
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('svg')?.getAttribute('viewBox')).to.equal('0 0 320 280');
+    expect(el.shadowRoot!.querySelectorAll('[part="bar"]')).to.have.length(2);
+  } finally {
+    (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = OriginalRO;
+  }
+});
+
 it('re-arms the ResizeObserver on reconnect after a disconnect, so a resize still triggers a re-render', async () => {
   // A real browser's ResizeObserver notification timing across a
   // synchronous disconnect+reconnect is inherently racy in headless test
