@@ -154,6 +154,28 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(graph.dimmedLinkIds).to.deep.equal(['marie->pierre', 'marie->polonium']);
   });
 
+  it('excludes an unlabeled nonmatch while searching by another node\'s label', async () => {
+    // The matching node has an id that does not contain the query, so the label path is used;
+    // the unrelated unlabeled node must take the same path and safely contribute no match.
+    const testNodes: GraphNode[] = [
+      { id: 'alpha', label: 'Needle' },
+      { id: 'beta' },
+    ];
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer .nodes=${testNodes}></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    const searchInput = el.shadowRoot!.querySelector('[part="search"]') as LyraInput;
+    const native = searchInput.shadowRoot!.querySelector('input') as HTMLInputElement;
+    native.value = 'needle';
+    native.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+
+    const resultLabels = Array.from(el.shadowRoot!.querySelectorAll('[part="search-result"] button')).map(
+      (button) => button.textContent?.trim(),
+    );
+    expect(resultLabels).to.deep.equal(['Needle']);
+  });
+
   it('announces the very first search (empty query -> first non-empty query) to the live-region sink', async () => {
     // Regression guard for a suspected mounting-order/throttle gap: `syncAnnouncementSink()` runs
     // in `connectedCallback()` (before first render) and `willUpdate()`'s announce-on-searchQuery-
@@ -954,6 +976,54 @@ describe('lr-knowledge-graph-explorer', () => {
     const neighborList = el.shadowRoot!.querySelector('[part="detail-card"] lr-neighbor-list') as LyraNeighborList;
     expect(neighborList.rows.length).to.equal(2);
     expect(neighborList.rows.map((r) => r.relation).sort()).to.deep.equal(['friend_of', 'married_to']);
+  });
+
+  it('passes empty relations through for unlabeled incoming and outgoing neighbors', async () => {
+    const testNodes: GraphNode[] = [
+      { id: 'origin', label: 'Origin' },
+      { id: 'outgoing', label: 'Outgoing' },
+      { id: 'incoming', label: 'Incoming' },
+    ];
+    const testLinks: GraphLink[] = [
+      { source: 'origin', target: 'outgoing' },
+      { source: 'incoming', target: 'origin' },
+    ];
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer .nodes=${testNodes} .links=${testLinks}></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    el.selectedNodeId = 'origin';
+    await el.updateComplete;
+
+    const neighborList = el.shadowRoot!.querySelector(
+      '[part="detail-card"] lr-neighbor-list',
+    ) as LyraNeighborList;
+    expect(
+      neighborList.rows.map((row) => ({ id: row.node.id, relation: row.relation, direction: row.direction })),
+    ).to.deep.equal([
+      { id: 'outgoing', relation: '', direction: 'out' },
+      { id: 'incoming', relation: '', direction: 'in' },
+    ]);
+  });
+
+  it('ignores an lr-node-click from the composed graph when its id is no longer in the data', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    const selections: Array<string | null> = [];
+    el.addEventListener('lr-selection-change', (event) => {
+      selections.push(event.detail.selectedNodeId);
+    });
+
+    graphEl(el).dispatchEvent(
+      new CustomEvent('lr-node-click', { detail: { id: 'removed-node', x: 12, y: 34 } }),
+    );
+    await el.updateComplete;
+
+    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
+    expect(el.selectedNodeId).to.equal(null);
+    expect(popover.open).to.be.false;
+    expect(selections).to.deep.equal([]);
   });
 
   it('entityFor falls back to the node id as the label when the node has no label', async () => {

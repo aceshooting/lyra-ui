@@ -2422,6 +2422,39 @@ describe('canvas renderer — interaction and a11y', () => {
     }
   });
 
+  it('continues a canvas node click when pointer capture rejects a synthetic pointer id', async () => {
+    // A seeded one-node graph settles at the center synchronously, so this can exercise the
+    // browser-facing fallback without reading graph internals for a hit-test coordinate.
+    const el = (await fixture(
+      html`<lr-graph renderer="canvas" seed="7" width="200" height="200" style="width:200px;height:200px"></lr-graph>`,
+    )) as LyraGraph;
+    el.nodes = [{ id: 'only', label: 'Only node' }];
+    await el.updateComplete;
+    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, { timeout: NODE_COUNT_TIMEOUT });
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    const originalSetPointerCapture = Object.getOwnPropertyDescriptor(canvas, 'setPointerCapture');
+    Object.defineProperty(canvas, 'setPointerCapture', {
+      configurable: true,
+      value: (_pointerId: number) => {
+        throw new DOMException('Synthetic pointer id is not active', 'InvalidStateError');
+      },
+    });
+    let detail: { id: string; x: number; y: number } | undefined;
+    el.addEventListener('lr-node-click', (event) => (detail = (event as CustomEvent).detail));
+    try {
+      const clientX = rect.left + rect.width / 2;
+      const clientY = rect.top + rect.height / 2;
+      canvas.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX, clientY, pointerId: 70 }));
+      canvas.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX, clientY, pointerId: 70 }));
+
+      expect(detail?.id).to.equal('only');
+    } finally {
+      if (originalSetPointerCapture) Object.defineProperty(canvas, 'setPointerCapture', originalSetPointerCapture);
+      else delete (canvas as unknown as { setPointerCapture?: unknown }).setPointerCapture;
+    }
+  });
+
   it('clicking empty canvas space with no hit clears the selection when selectionMode is set', async () => {
     const el = (await fixture(
       html`<lr-graph renderer="canvas" selection-mode="single" width="400" height="300" style="width:400px;height:300px"></lr-graph>`,
