@@ -1,9 +1,10 @@
-import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { aTimeout, fixture, expect, html, waitUntil } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import './map.js';
 import type { LyraMap } from './map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 // maplibre-gl requires a real WebGL2 context; headless Firefox/WebKit in CI don't reliably
 // provide one (unlike Chromium's software rasterizer), so any test that needs a map to actually
@@ -36,6 +37,16 @@ const RASTER_STYLE = {
   },
   layers: [{ id: 'demo', type: 'raster', source: 'demo' }],
 };
+
+/** Connects a map without allowing its optional peer to construct a real WebGL map. */
+async function connectedMapWithoutMaplibre(style = ''): Promise<{ wrapper: HTMLElement; el: LyraMap }> {
+  const wrapper = (await fixture(html`<div style=${style}></div>`)) as HTMLElement;
+  const el = document.createElement('lr-map') as LyraMap;
+  (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => new Promise(() => {});
+  wrapper.append(el);
+  await el.updateComplete;
+  return { wrapper, el };
+}
 
 it('shows a loading skeleton and aria-busy while maplibre-gl loads, then swaps to the container', async function () {
   if (!hasWebGL2) this.skip();
@@ -649,6 +660,124 @@ it('adds a choropleth source + fill layer, and re-applies the color expression o
   ]);
 });
 
+it('updates fill opacity when existing choropleth and data layers are reused', async () => {
+  const { wrapper, el } = await connectedMapWithoutMaplibre('--lr-map-choropleth-fill-opacity: 0.42');
+  try {
+    const paintCalls: Array<{ layerId: string; name: string; value: unknown }> = [];
+    const fakeSource = { setData(): void {} };
+    const fakeMap = {
+      getSource(): typeof fakeSource {
+        return fakeSource;
+      },
+      getLayer(): object {
+        return {};
+      },
+      setPaintProperty(layerId: string, name: string, value: unknown): void {
+        paintCalls.push({ layerId, name, value });
+      },
+      remove(): void {},
+    };
+    const privateMap = el as unknown as {
+      _map?: unknown;
+      applyChoropleth(): void;
+      applyDataLayers(): void;
+    };
+    privateMap._map = fakeMap;
+    el.choropleth = choropleth('regions', [[0, '#000000'], [10, '#ffffff']]);
+    el.dataLayers = [{
+      sourceId: 'zones',
+      geojson: { type: 'FeatureCollection', features: [] },
+    }];
+    await el.updateComplete;
+
+    privateMap.applyChoropleth();
+    privateMap.applyDataLayers();
+
+    expect(
+      paintCalls.find((call) => call.layerId === 'regions-fill' && call.name === 'fill-opacity')?.value,
+    ).to.equal(0.42);
+    expect(
+      paintCalls.find((call) => call.layerId === 'zones-fill' && call.name === 'fill-opacity')?.value,
+    ).to.equal(0.42);
+  } finally {
+    wrapper.remove();
+  }
+});
+
+it('repaints applied layers once after an ancestor theme mutation without touching map structure or data', async () => {
+  const { wrapper, el } = await connectedMapWithoutMaplibre();
+  try {
+    // Let connection/render mutations drain before arming the fake map; the assertion below then
+    // belongs solely to the one synchronous ancestor-theme change batch.
+    await aTimeout(0);
+    const paintCalls: Array<{ layerId: string; name: string; value: unknown }> = [];
+    const nonPaintCalls: string[] = [];
+    const fakeMap = {
+      getSource(): undefined {
+        nonPaintCalls.push('getSource');
+        return undefined;
+      },
+      addSource(): void {
+        nonPaintCalls.push('addSource');
+      },
+      removeSource(): void {
+        nonPaintCalls.push('removeSource');
+      },
+      getLayer(): undefined {
+        nonPaintCalls.push('getLayer');
+        return undefined;
+      },
+      addLayer(): void {
+        nonPaintCalls.push('addLayer');
+      },
+      removeLayer(): void {
+        nonPaintCalls.push('removeLayer');
+      },
+      setStyle(): void {
+        nonPaintCalls.push('setStyle');
+      },
+      setPaintProperty(layerId: string, name: string, value: unknown): void {
+        paintCalls.push({ layerId, name, value });
+      },
+      remove(): void {},
+    };
+    const privateMap = el as unknown as {
+      _map?: unknown;
+      _styleLoaded: boolean;
+      _appliedFillLayerId?: string;
+      _appliedDataLayerIds: Set<string>;
+    };
+    el.dataLayers = [{
+      sourceId: 'zones',
+      tone: 'success',
+      geojson: { type: 'FeatureCollection', features: [] },
+    }];
+    await el.updateComplete;
+    privateMap._map = fakeMap;
+    privateMap._styleLoaded = true;
+    privateMap._appliedFillLayerId = 'regions-fill';
+    privateMap._appliedDataLayerIds = new Set(['zones']);
+
+    wrapper.setAttribute('data-theme', 'dark');
+    wrapper.style.setProperty('--lr-map-choropleth-fill-opacity', '0.42');
+    wrapper.style.setProperty('--lr-theme-color-success-fill-loud', 'rgb(4, 5, 6)');
+    await aTimeout(0);
+
+    const successColor = getComputedStyle(el).getPropertyValue('--lr-color-success').trim();
+    expect(getComputedStyle(el).getPropertyValue('--lr-map-choropleth-fill-opacity').trim()).to.equal('0.42');
+    expect(paintCalls).to.deep.equal([
+      { layerId: 'regions-fill', name: 'fill-opacity', value: 0.42 },
+      { layerId: 'zones-fill', name: 'fill-color', value: successColor },
+      { layerId: 'zones-fill', name: 'fill-opacity', value: 0.42 },
+      { layerId: 'zones-line', name: 'line-color', value: successColor },
+      { layerId: 'zones-circle', name: 'circle-color', value: successColor },
+    ]);
+    expect(nonPaintCalls).to.deep.equal([]);
+  } finally {
+    wrapper.remove();
+  }
+});
+
 it('does not mark an empty-stops choropleth as applied, so a later non-empty update for the same sourceId still creates the fill layer', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
@@ -1145,6 +1274,71 @@ it('provides shadow-local layout for MapLibre canvas, markers, and popups withou
   expect(getComputedStyle(popupClose).position).to.equal('absolute');
 });
 
+it('lets inherited CSS properties theme popup-close-button hover and active states without changing their defaults', async () => {
+  const { wrapper, el } = await connectedMapWithoutMaplibre();
+  const popup = document.createElement('div');
+  const close = document.createElement('button');
+  popup.className = 'maplibregl-popup-content';
+  popup.style.inlineSize = '10rem';
+  popup.style.blockSize = '8rem';
+  close.className = 'maplibregl-popup-close-button';
+  close.type = 'button';
+  close.textContent = 'Close';
+  popup.append(close);
+  el.shadowRoot!.append(popup);
+
+  const resolvedInShadow = (declaration: string, property: string): string => {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.append(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  };
+
+  const rect = close.getBoundingClientRect();
+  const centre: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+  expect(rect.width, 'the close button has real geometry to point at').to.be.greaterThan(0);
+  try {
+    await sendMouse({ type: 'move', position: centre });
+    expect(getComputedStyle(close).backgroundColor).to.equal(
+      resolvedInShadow('background: var(--lr-color-brand-quiet)', 'background-color'),
+    );
+    expect(getComputedStyle(close).color).to.equal(
+      resolvedInShadow('color: var(--lr-color-brand)', 'color'),
+    );
+    await sendMouse({ type: 'down' });
+    expect(getComputedStyle(close).backgroundColor).to.equal(
+      resolvedInShadow(
+        'background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+        'background-color',
+      ),
+    );
+    expect(getComputedStyle(close).color).to.equal(
+      resolvedInShadow('color: var(--lr-color-brand)', 'color'),
+    );
+    await sendMouse({ type: 'up' });
+
+    wrapper.style.setProperty('--lr-map-popup-close-button-hover-bg', 'rgb(1, 2, 3)');
+    wrapper.style.setProperty('--lr-map-popup-close-button-hover-color', 'rgb(4, 5, 6)');
+    wrapper.style.setProperty('--lr-map-popup-close-button-active-bg', 'rgb(7, 8, 9)');
+    wrapper.style.setProperty('--lr-map-popup-close-button-active-color', 'rgb(10, 11, 12)');
+    expect(getComputedStyle(close).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(close).color).to.equal('rgb(4, 5, 6)');
+
+    await sendMouse({ type: 'down' });
+    expect(getComputedStyle(close).backgroundColor).to.equal('rgb(7, 8, 9)');
+    expect(getComputedStyle(close).color).to.equal('rgb(10, 11, 12)');
+    await sendMouse({ type: 'up' });
+  } finally {
+    await resetMouse();
+    wrapper.remove();
+  }
+});
+
 it('keeps choropleth and data-layer sources distinct when their public sourceId collides', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
@@ -1421,8 +1615,12 @@ it('synchronizes popup-capable marker disclosure semantics and localized popup o
   expect(popup.getAttribute('role')).to.equal('dialog');
   expect(popup.closest('[lang="fr-FR"]')).to.exist;
   expect(marker.getAttribute('aria-expanded')).to.equal('true');
+  const popupClose = popup.querySelector('.maplibregl-popup-close-button') as HTMLButtonElement;
+  expect(popupClose.getAttribute('part')).to.equal('popup-close-button');
+  expect(getComputedStyle(popupClose).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(popupClose).minBlockSize).to.equal('40px');
   expect(
-    (popup.querySelector('.maplibregl-popup-close-button') as HTMLButtonElement).getAttribute('aria-label'),
+    popupClose.getAttribute('aria-label'),
   ).to.equal('Fermer');
 
   marker.click();
@@ -1471,16 +1669,28 @@ it('keeps explicit marker ids separate from synthesized idless-coordinate identi
   expect(labels.length).to.equal(2);
 });
 
-it('contains an unbroken legend label inside a 280px allocation', async () => {
-  const wrapper = (await fixture(html`
-    <div style="inline-size: 280px">
-      <lr-map
-        style="block-size: 200px"
-        .legend=${[{ color: '#f00', label: 'Legend'.repeat(250) }]}
-      ></lr-map>
+it('contains long legend labels in paired 320px LTR and RTL allocations', async () => {
+  const pair = (await fixture(html`
+    <div style="display: grid; gap: var(--lr-space-l)">
+      <div dir="ltr" style="inline-size: 320px; max-inline-size: 100%">
+        <lr-map
+          style="block-size: var(--lr-size-12rem)"
+          .legend=${[{ color: '#f00', label: 'LongestUnbrokenLegendLabel'.repeat(80) }]}
+        ></lr-map>
+      </div>
+      <div dir="rtl" lang="ar" style="inline-size: 320px; max-inline-size: 100%">
+        <lr-map
+          style="block-size: var(--lr-size-12rem)"
+          .legend=${[{ color: '#00f', label: 'أطولتسميةوسيلةإيضاحمتصلة'.repeat(80) }]}
+        ></lr-map>
+      </div>
     </div>
   `)) as HTMLElement;
-  expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+  const wrappers = [...pair.querySelectorAll<HTMLElement>('div[dir]')];
+  expect(wrappers.length).to.equal(2);
+  for (const wrapper of wrappers) {
+    expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+  }
 });
 
 it('does not throw or leave a dangling marker when the element disconnects while applyMarkers is running', async function () {

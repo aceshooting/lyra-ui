@@ -6,11 +6,6 @@ export const styles = css`
     position: relative;
     inline-size: 100%;
     block-size: var(--lr-size-24rem);
-    /* Choropleth fill-layer opacity -- a data-driven literal (not a color or
-       geometry constant), so it's exposed as a retheme-able custom property
-       instead of being hardcoded into the maplibre-gl paint expression built
-       in map.class.ts. */
-    --lr-map-choropleth-fill-opacity: 0.75;
   }
   [part='base'] {
     position: relative;
@@ -180,15 +175,15 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
   }
-  .maplibregl-popup-close-button:hover {
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
+  .maplibregl-popup-close-button:where(:hover) {
+    background: var(--lr-map-popup-close-button-hover-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-map-popup-close-button-hover-color, var(--lr-color-brand));
   }
-  .maplibregl-popup-close-button:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-    color: var(--lr-color-brand);
+  .maplibregl-popup-close-button:where(:active) {
+    background: var(--lr-map-popup-close-button-active-bg, color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    color: var(--lr-map-popup-close-button-active-color, var(--lr-color-brand));
   }
-  .maplibregl-popup-close-button:focus-visible {
+  .maplibregl-popup-close-button:where(:focus-visible) {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }

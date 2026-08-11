@@ -8,6 +8,7 @@ import { finiteRange } from '../../../internal/numbers.js';
 import { notifyMapCanvasReady } from '../../../internal/map-canvas-ready.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import {
   loadMaplibre,
   type MapLibreGeoJsonSource,
@@ -131,10 +132,10 @@ const DEFAULT_STYLE: LyraMapStyleSpecification = {
   layers: [{ id: 'lr-osm', type: 'raster', source: 'lr-osm' }],
 };
 
-// Defensive JS-side fallback for choroplethFillOpacity() below, mirroring
-// --lr-map-choropleth-fill-opacity's own default (see map.styles.ts) --
-// only reached if getComputedStyle somehow can't resolve the custom
-// property at all (e.g. host detached from the document).
+// Defensive JS-side fallback for choroplethFillOpacity() below. The custom
+// property deliberately remains undeclared on :host so a value from any
+// ancestor can inherit; this default preserves the established paint value
+// when it is unset or the host is detached from a document.
 const FALLBACK_FILL_OPACITY = 0.75;
 
 /** Lit's server DOM intentionally gives custom elements no browser-owned document. */
@@ -212,9 +213,20 @@ export interface LyraMapEventMap {
  *   region and receives the host-first accessible name and effective locale.
  * @csspart legend - The map legend.
  * @csspart legend-swatch - A legend color swatch.
+ * @csspart popup-close-button - The MapLibre-generated button that closes an open marker popup.
  * @csspart error - Visible message shown instead of `container` if the optional `maplibre-gl`
  *   peer dependency fails to load (e.g. not installed); the transition is announced through the
  *   shared light-DOM assertive region.
+ * @cssprop [--lr-map-choropleth-fill-opacity=0.75] - Fill opacity for choropleth and polygon
+ *   `dataLayers` fills. Read from the resolved cascade whenever those layers are applied or painted
+ *   after a theme change.
+ * @cssprop [--lr-map-popup-close-button-hover-bg=var(--lr-color-brand-quiet)] - Hover background
+ *   of `popup-close-button`.
+ * @cssprop [--lr-map-popup-close-button-hover-color=var(--lr-color-brand)] - Hover foreground of
+ *   `popup-close-button`.
+ * @cssprop [--lr-map-popup-close-button-active-bg=color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed background of `popup-close-button`.
+ * @cssprop [--lr-map-popup-close-button-active-color=var(--lr-color-brand)] - Pressed foreground
+ *   of `popup-close-button`.
  *
  * ⚠️ The default `mapStyle` (when unset) uses OpenStreetMap's demo tile
  * server, which is not suitable for production traffic — see the
@@ -240,6 +252,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+
+  constructor() {
+    super();
+    new ThemeWatcher(this, () => this.refreshThemePaint());
+  }
 
   @property({ type: Array }) center: [number, number] = [0, 0];
   @property({ type: Number }) zoom = 2;
@@ -562,6 +579,25 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.syncMapSemantics();
   }
 
+  /** Repaints token-derived MapLibre values without touching sources, layers, or map geometry. */
+  private refreshThemePaint(): void {
+    if (!this._map || !this._styleLoaded) return;
+    const fillOpacity = choroplethFillOpacity(this);
+    if (this._appliedFillLayerId) {
+      this._map.setPaintProperty(this._appliedFillLayerId, 'fill-opacity', fillOpacity);
+    }
+    const dataLayersBySourceId = new Map(this.dataLayers.map((layer) => [layer.sourceId, layer]));
+    for (const sourceId of this._appliedDataLayerIds) {
+      const dataLayer = dataLayersBySourceId.get(sourceId);
+      if (!dataLayer) continue;
+      const color = dataLayerColor(this, dataLayer.tone);
+      this._map.setPaintProperty(`${sourceId}-fill`, 'fill-color', color);
+      this._map.setPaintProperty(`${sourceId}-fill`, 'fill-opacity', fillOpacity);
+      this._map.setPaintProperty(`${sourceId}-line`, 'line-color', color);
+      this._map.setPaintProperty(`${sourceId}-circle`, 'circle-color', color);
+    }
+  }
+
   private applyChoropleth(): void {
     if (!this._map) return;
     if (!this.choropleth) {
@@ -611,6 +647,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
     if (this._map.getLayer(fillLayerId)) {
       this._map.setPaintProperty(fillLayerId, 'fill-color', colorExpr as never);
+      this._map.setPaintProperty(fillLayerId, 'fill-opacity', choroplethFillOpacity(this));
     } else {
       this._map.addLayer({
         id: fillLayerId,
@@ -682,6 +719,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         });
       } else {
         this._map.setPaintProperty(fillId, 'fill-color', color);
+        this._map.setPaintProperty(fillId, 'fill-opacity', choroplethFillOpacity(this));
       }
       if (!this._map.getLayer(lineId)) {
         this._map.addLayer({
@@ -891,9 +929,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       'aria-label',
       this._markerLabels.get(key) || this.effectiveMapLabel,
     );
-    popupElement
-      .querySelector('.maplibregl-popup-close-button')
-      ?.setAttribute('aria-label', this.localize('close'));
+    const closeButton = popupElement.querySelector('.maplibregl-popup-close-button');
+    closeButton?.setAttribute('part', 'popup-close-button');
+    closeButton?.setAttribute('aria-label', this.localize('close'));
   }
 
   private syncMapSemantics(): void {

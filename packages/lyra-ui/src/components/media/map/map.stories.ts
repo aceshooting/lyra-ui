@@ -45,6 +45,11 @@ const OFFLINE_RASTER_STYLE = {
   layers: [{ id: 'demo', type: 'raster', source: 'demo' }],
 };
 
+const longLtrLegend = 'LongestUnbrokenLegendLabelForNarrowMapLayouts'.repeat(10);
+const longRtlLegend = 'أطولتسميةوسيلةإيضاحمتصلةلخريطةضيقة'.repeat(10);
+const longLtrPopup = 'LongMarkerPopupContentWithoutSpaces'.repeat(10);
+const longRtlPopup = 'محتوىنافذةعلامةطويلمتصل'.repeat(12);
+
 const meta: Meta = {
   title: 'Map',
   component: 'lr-map',
@@ -206,6 +211,60 @@ export const DataLayers: Story = {
   },
 };
 
+export const ThemedFillOpacity: Story = {
+  name: 'Themed choropleth and data-layer fill opacity (cssprop)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-map-choropleth-fill-opacity` is inherited from the wrapper and repaints both the choropleth and polygon data-layer fills without recreating their MapLibre sources or layers.',
+      },
+    },
+  },
+  render: () => {
+    const choropleth: ChoroplethLayer = {
+      sourceId: 'theme-regions',
+      field: 'value',
+      stops: [[0, storyColor('brand')], [100, storyColor('danger')]],
+      geojson: {
+        type: 'FeatureCollection',
+        features: [{
+          type: 'Feature',
+          properties: { value: 70 },
+          geometry: {
+            type: 'Polygon',
+            coordinates: [[[2.26, 48.89], [2.34, 48.89], [2.34, 48.84], [2.26, 48.84], [2.26, 48.89]]],
+          },
+        }],
+      },
+    };
+    const dataLayers: GeoJsonDataLayer[] = [{
+      sourceId: 'theme-zone',
+      tone: 'success',
+      geojson: {
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'Polygon',
+          coordinates: [[[2.35, 48.89], [2.43, 48.89], [2.43, 48.84], [2.35, 48.84], [2.35, 48.89]]],
+        },
+      },
+    }];
+    return html`
+      <div style="--lr-map-choropleth-fill-opacity: 0.42">
+        <lr-map
+          style="block-size: var(--lr-size-20rem)"
+          center="[2.3522, 48.8566]"
+          zoom="11"
+          .choropleth=${choropleth}
+          .dataLayers=${dataLayers}
+          .mapStyle=${OFFLINE_RASTER_STYLE}
+        ></lr-map>
+      </div>
+    `;
+  },
+};
+
 /**
  * `markers` renders a pin per entry, each with an optional colored tint and
  * an openable popup built from `label` (plain text) or `unsafeHtml` (raw
@@ -232,4 +291,40 @@ export const Markers: Story = {
       ></lr-map>
     `;
   },
+};
+
+export const Narrow320LtrRtl: Story = {
+  name: 'Narrow 320px long map content (LTR and RTL)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Exact 320px LTR and Arabic RTL allocations keep long legend labels, marker popup content, MapLibre controls, and attribution contained over the offline raster style.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-l)">
+      <div dir="ltr" style="inline-size: 320px; max-inline-size: 100%">
+        <lr-map
+          style="block-size: var(--lr-size-20rem)"
+          center="[2.3522, 48.8566]"
+          zoom="10"
+          .legend=${[{ color: storyColor('brand'), label: longLtrLegend }]}
+          .markers=${[{ id: 'long-ltr', lngLat: [2.3522, 48.8566], label: longLtrPopup }]}
+          .mapStyle=${OFFLINE_RASTER_STYLE}
+        ></lr-map>
+      </div>
+      <div dir="rtl" lang="ar" style="inline-size: 320px; max-inline-size: 100%">
+        <lr-map
+          style="block-size: var(--lr-size-20rem)"
+          center="[2.3522, 48.8566]"
+          zoom="10"
+          .legend=${[{ color: storyColor('danger'), label: longRtlLegend }]}
+          .markers=${[{ id: 'long-rtl', lngLat: [2.3522, 48.8566], label: longRtlPopup }]}
+          .mapStyle=${OFFLINE_RASTER_STYLE}
+        ></lr-map>
+      </div>
+    </div>
+  `,
 };

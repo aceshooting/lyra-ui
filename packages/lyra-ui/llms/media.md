@@ -297,13 +297,25 @@ exists and was hit)
 
 **Slots:** none.
 
-**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `error` (ordinary localized visible
-text rendered in place of `container` if the optional `maplibre-gl` peer dependency fails to load,
-e.g. not installed). The post-mount failure is appended to the document's pre-mounted
-`[data-lr-live-region="assertive"]` sink rather than making shadow chrome live.
+**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `popup-close-button`, `error`.
+`popup-close-button` is the MapLibre-generated close control on an open marker popup. `error` is
+ordinary localized visible text rendered in place of `container` if the optional `maplibre-gl` peer
+dependency fails to load, e.g. not installed. The post-mount failure is appended to the document's
+pre-mounted `[data-lr-live-region="assertive"]` sink rather than making shadow chrome live.
 
-**Themeable custom properties:** shared tokens only — `--lr-space-xs/-s`, `--lr-color-surface`,
-`--lr-color-border`, `--lr-shadow`, `--lr-radius`.
+**Themeable custom properties:**
+- `--lr-map-choropleth-fill-opacity` (default `0.75`) — fill opacity for the declarative
+  `choropleth` layer and polygon fills in every `dataLayers` entry. It intentionally inherits from
+  an ancestor, so one scoped declaration rethemes every nested map without setting each host.
+- `--lr-map-popup-close-button-hover-bg` (default `var(--lr-color-brand-quiet)`) and
+  `--lr-map-popup-close-button-hover-color` (default `var(--lr-color-brand)`) — hover background
+  and foreground of `popup-close-button`.
+- `--lr-map-popup-close-button-active-bg` (default `color-mix(in oklab,
+  var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) and
+  `--lr-map-popup-close-button-active-color` (default `var(--lr-color-brand)`) — pressed
+  background and foreground of `popup-close-button`.
+- Shared tokens — `--lr-space-xs/-s`, `--lr-color-surface`, `--lr-color-border`, `--lr-shadow`,
+  `--lr-radius`.
 
 **Optional peer deps:** `maplibre-gl` `>=5 <7` (lazy-loaded). `<lr-map>` styles MapLibre's
 generated canvas, marker, popup, and control DOM inside its shadow root; a page-level MapLibre
@@ -350,8 +362,12 @@ https://maplibre.org/maplibre-gl-js/docs/#esm.
   way to place pins.
 - A marker uses `label` as its accessible name, falling back to the localized map label. Popup
   ownership is exposed through `aria-controls`/`aria-expanded`; an open popup is a named
-  `role="dialog"` and its close button is localized. The map canvas, markers, popups, and MapLibre's
-  own control strings all follow the component's effective locale.
+  `role="dialog"` and its localized close button exposes `part="popup-close-button"`. The map
+  canvas, markers, popups, and MapLibre's own control strings all follow the component's effective
+  locale.
+- Ancestor theme-attribute and custom-property changes repaint the already-applied choropleth and
+  data-layer colors/opacities in place. This does not recreate MapLibre sources/layers, replace the
+  style, or reset the current viewport.
 - a marker whose `color` changes for a persisting `id` is torn down and reconstructed (maplibre-gl's
   `Marker` has no `setColor()`) rather than mutated in place — this also closes any popup the user
   currently has open on that marker (a fresh, closed `Popup` is built for the new instance); an
