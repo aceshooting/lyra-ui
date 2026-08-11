@@ -2390,13 +2390,20 @@ it("does not overflow its container by the dividers' own width in the default (u
   }
 });
 
+const unbrokenPanelToken =
+  "unbrokenpanelcontentmustwrapinsideanarrowallocatedsplitwithoutcreatingahorizontalscrollbar";
+
 for (const direction of ["ltr", "rtl"] as const) {
-  it(`keeps long direct panels contained and independently scrollable in a fixed block allocation (${direction})`, async () => {
+  it(`keeps long direct panels contained, horizontally unoverflowing, and independently scrollable in a fixed 320px block allocation (${direction})`, async () => {
     const wrapper = await fixture(html`
       <div style="inline-size: 320px; block-size: 200px">
         <lr-split dir=${direction} style="block-size: 100%">
-          <div data-panel="first"><div style="block-size: 40rem">First pane</div></div>
-          <div data-panel="second"><div style="block-size: 40rem">Second pane</div></div>
+          <div data-panel="first">
+            <div style="block-size: 40rem" data-token>${unbrokenPanelToken}</div>
+          </div>
+          <div data-panel="second">
+            <div style="block-size: 40rem" data-token>${unbrokenPanelToken}</div>
+          </div>
         </lr-split>
       </div>
     `);
@@ -2406,11 +2413,14 @@ for (const direction of ["ltr", "rtl"] as const) {
     const panels = [...el.children] as HTMLElement[];
     const baseRect = base.getBoundingClientRect();
 
+    expect(Math.round(base.clientWidth)).to.equal(320);
     expect(Math.round(base.scrollHeight)).to.equal(Math.round(base.clientHeight));
+    expect(base.scrollWidth).to.be.at.most(base.clientWidth);
     for (const panel of panels) {
       const rect = panel.getBoundingClientRect();
       expect(rect.top).to.be.at.least(baseRect.top);
       expect(rect.bottom).to.be.at.most(baseRect.bottom);
+      expect(panel.scrollWidth).to.be.at.most(panel.clientWidth);
       expect(getComputedStyle(panel).overflowY).to.equal("auto");
       expect(panel.scrollHeight).to.be.greaterThan(panel.clientHeight);
       panel.scrollTop = 24;

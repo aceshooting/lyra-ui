@@ -108,3 +108,53 @@ export const RightToLeft: Story = {
     </lr-split-panel>
   `,
 };
+
+export const NarrowLongPanes: Story = {
+  name: 'Narrow long panes (320px, LTR and RTL)',
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m)">
+      <lr-split-panel
+        aria-label="Resize narrow panes"
+        style="inline-size: 320px; max-inline-size: 100%; block-size: 200px; border: var(--lr-border-width-thin) solid var(--lr-color-border)"
+      >
+        <section
+          slot="start"
+          style=${`${paneStyle} background: var(--lr-color-surface-raised);`}
+        >
+          <strong>Start pane</strong>
+          <p style="margin: var(--lr-space-s) 0 0">
+            <code>unbrokenpanecontentmustwrapinsideanarrowallocatedsplitpanelwithoutcreatingahorizontalscrollbar</code>
+          </p>
+        </section>
+        <section slot="end" style=${paneStyle}>
+          <strong>End pane</strong>
+          <p style="margin: var(--lr-space-s) 0 0">
+            <code>unbrokenpanecontentmustwrapinsideanarrowallocatedsplitpanelwithoutcreatingahorizontalscrollbar</code>
+          </p>
+        </section>
+      </lr-split-panel>
+
+      <lr-split-panel
+        dir="rtl"
+        aria-label="تغيير حجم الجزأين الضيقين"
+        style="inline-size: 320px; max-inline-size: 100%; block-size: 200px; border: var(--lr-border-width-thin) solid var(--lr-color-border)"
+      >
+        <section
+          slot="start"
+          style=${`${paneStyle} background: var(--lr-color-surface-raised);`}
+        >
+          <strong>البداية المنطقية</strong>
+          <p style="margin: var(--lr-space-s) 0 0">
+            <code>unbrokenpanecontentmustwrapinsideanarrowallocatedsplitpanelwithoutcreatingahorizontalscrollbar</code>
+          </p>
+        </section>
+        <section slot="end" style=${paneStyle}>
+          <strong>النهاية المنطقية</strong>
+          <p style="margin: var(--lr-space-s) 0 0">
+            <code>unbrokenpanecontentmustwrapinsideanarrowallocatedsplitpanelwithoutcreatingahorizontalscrollbar</code>
+          </p>
+        </section>
+      </lr-split-panel>
+    </div>
+  `,
+};

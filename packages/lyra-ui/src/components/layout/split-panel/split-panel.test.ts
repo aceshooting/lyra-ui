@@ -91,6 +91,56 @@ it('renders the exact two-pane slots, shared panel part, divider slot, and wrapp
   expect(base(element).style.getPropertyValue('--_lr-split-panel-start-position')).to.equal('50%');
 });
 
+const unbrokenNarrowPaneToken =
+  'unbrokenpanecontentmustwrapinsideanarrowallocatedsplitpanelwithoutcreatingahorizontalscrollbar';
+
+for (const direction of ['ltr', 'rtl'] as const) {
+  it(`keeps long unbroken start/end content and the divider usable in a 320px ${direction} allocation`, async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="inline-size: 320px; max-inline-size: 100%; block-size: 200px">
+        <lr-split-panel
+          dir=${direction}
+          aria-label="Resize narrow panes"
+          style="inline-size: 100%; block-size: 100%"
+        >
+          <div slot="start" data-pane-content="start">
+            <span data-token>${unbrokenNarrowPaneToken}</span>
+          </div>
+          <div slot="end" data-pane-content="end">
+            <span data-token>${unbrokenNarrowPaneToken}</span>
+          </div>
+        </lr-split-panel>
+      </div>
+    `);
+    const element = wrapper.querySelector('lr-split-panel') as LyraSplitPanel;
+    await elementUpdated(element);
+
+    const layout = base(element);
+    const layoutRect = layout.getBoundingClientRect();
+    const panels = [...layout.querySelectorAll<HTMLElement>('[part~="panel"]')];
+    expect(Math.round(layout.clientWidth)).to.equal(320);
+    expect(layout.scrollWidth).to.be.at.most(layout.clientWidth);
+    expect(panels).to.have.length(2);
+    for (const panel of panels) {
+      const panelRect = panel.getBoundingClientRect();
+      expect(panelRect.left).to.be.at.least(layoutRect.left);
+      expect(panelRect.right).to.be.at.most(layoutRect.right);
+      expect(panel.scrollWidth).to.be.at.most(panel.clientWidth);
+    }
+
+    const handle = divider(element);
+    const handleRect = handle.getBoundingClientRect();
+    expect(handle.getAttribute('aria-disabled')).to.equal('false');
+    expect(handle.getAttribute('tabindex')).to.equal('0');
+    expect(handleRect.left).to.be.at.least(layoutRect.left);
+    expect(handleRect.right).to.be.at.most(layoutRect.right);
+    const before = element.position;
+    keydown(element, direction === 'rtl' ? 'ArrowLeft' : 'ArrowRight');
+    await elementUpdated(element);
+    expect(element.position).to.be.greaterThan(before);
+  });
+}
+
 it('keeps percent and pixel positions synchronized in both directions', async () => {
   const element = (await fixture(html`
     <lr-split-panel style="inline-size: 400px; block-size: 200px"></lr-split-panel>
