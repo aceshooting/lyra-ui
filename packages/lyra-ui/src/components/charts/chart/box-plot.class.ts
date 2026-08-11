@@ -3,7 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
-import { loadChartJs, type ChartJsModule } from './chart-loader.js';
+import { loadChartJs, type ChartJsModule } from './chart-core-loader.js';
 import { styles } from './box-plot.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
@@ -152,7 +152,7 @@ export async function loadBoxPlotAndRegister(
 /**
  * Lazily loads `@sgratzl/chartjs-chart-boxplot` and registers its controller
  * only when a `<lr-box-plot>` connects — kept separate from the base
- * `chart-loader.ts` so importing `lr-chart.js` alone never pulls this in.
+ * `chart-core-loader.ts` so importing `lr-chart.js` alone never pulls this in.
  */
 function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
   if (!boxPlotPlugin) {

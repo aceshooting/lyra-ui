@@ -1,11 +1,13 @@
 import { expect } from '@open-wc/testing';
-import { loadChartJs, loadChartModule, type ChartJsModule } from './chart-loader.js';
 import {
+  loadChartJs,
+  loadChartModule,
   loadChartAndZoom,
   loadChartJsWithZoom,
   loadChartJsWithDataLabels,
   loadDataLabelsPlugin,
-} from './chart-feature-loader.js';
+  type ChartJsModule,
+} from './chart-loader.js';
 
 const CHART_REGISTERABLE_KEYS = [
   'LineController',

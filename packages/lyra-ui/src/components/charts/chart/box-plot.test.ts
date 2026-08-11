@@ -2,7 +2,7 @@ import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import './box-plot.js';
 import type { LyraBoxPlot } from './box-plot.js';
 import { loadBoxPlotAndRegister } from './box-plot.class.js';
-import type { ChartJsModule } from './chart-loader.js';
+import type { ChartJsModule } from './chart-core-loader.js';
 import { styles } from './box-plot.styles.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import type { LyraSkeleton } from '../../overlays/skeleton/skeleton.class.js';

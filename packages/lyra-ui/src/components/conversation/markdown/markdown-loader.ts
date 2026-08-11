@@ -168,7 +168,7 @@ export async function loadMarkdownAndSanitizer(
 /**
  * Lazily loads `marked` + `dompurify` once per page (see
  * `loadMarkdownAndSanitizer()` for why each is loaded and caught
- * independently). Cached the same way `chart-loader.ts`/`map-loader.ts`
+ * independently). Cached the same way `chart-core-loader.ts`/`map-loader.ts`
  * cache their promise, so every `<lr-markdown>` instance on a page shares
  * one load.
  *

@@ -7,7 +7,7 @@ import { nextId, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import type { LyraMessageKey } from '../../../internal/localization.js';
-import { loadChartJs, type ChartJsModule } from './chart-loader.js';
+import { loadChartJs, type ChartJsModule } from './chart-core-loader.js';
 import {
   loadChartJsWithZoom,
   loadChartJsWithDataLabels,

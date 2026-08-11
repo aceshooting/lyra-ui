@@ -3,7 +3,7 @@ import {
   loadChartJs,
   loadChartModule,
   type ChartJsModule,
-} from './chart-loader.js';
+} from './chart-core-loader.js';
 
 /** Peer-neutral Chart.js plugin capability used for registration and per-chart configuration. */
 export interface ChartPluginCapability {
