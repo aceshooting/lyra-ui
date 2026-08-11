@@ -130,8 +130,14 @@ export function resolveEffectiveMode(
  * @csspart header - The wrapper around the `header` slot.
  * @csspart body - The wrapper around the default slot.
  * @csspart footer - The wrapper around the `footer` slot.
+ * Overlay state properties are resolved as inline fallbacks, so setting one on a panel or any
+ * ancestor themes the overlay without changing docked panel chrome or shared tokens.
  * @cssprop [--lr-responsive-panel-overlay-color=var(--lr-color-overlay)] - The overlay
  *   presentation's scrim color, applied to `[part="backdrop"]`.
+ * @cssprop [--lr-responsive-panel-overlay-panel-bg=var(--lr-color-surface-overlay)] - Background
+ *   of `[part="panel"]` in the overlay presentation.
+ * @cssprop [--lr-responsive-panel-overlay-panel-shadow=var(--lr-shadow-l)] - Shadow of
+ *   `[part="panel"]` in the overlay presentation.
  * @cssprop [--lr-responsive-panel-sheet-max-block-size=85dvh] - Maximum height of the
  *   `variant="bottom-sheet"` overlay panel (falls back to `85vh` where `dvh` is unsupported).
  * @status stable

@@ -788,3 +788,212 @@ it('operates foreign-realm navigation-toggle and delegated data-toggle controls'
     iframe.remove();
   }
 });
+
+describe('Page state cssprops', () => {
+  function centreOf(target: HTMLElement): [number, number] {
+    const rect = target.getBoundingClientRect();
+    return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+  }
+
+  function resolvedInShadow(page: LyraPage, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    page.shadowRoot!.append(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  it('keeps pre-cssprop skip, navigation-toggle, backdrop, and drawer paint when props are unset', async () => {
+    const page = (await fixture(html`
+      <lr-page style="inline-size: 320px; --lr-transition-base: 0ms;">
+        <a slot="navigation" href="#inside">Inside navigation</a>
+        <p id="inside">Content</p>
+      </lr-page>
+    `)) as LyraPage;
+    access(page).applyMeasuredInlineSize(320);
+    await page.updateComplete;
+    const skip = byPart(page, 'skip-to-content');
+    const toggle = byPart(page, 'navigation-toggle');
+    skip.style.opacity = '1';
+    skip.style.pointerEvents = 'auto';
+    skip.style.transform = 'none';
+    skip.style.transition = 'none';
+
+    try {
+      expect(skip.getBoundingClientRect().width, 'the revealed skip link has pointer geometry').to.be.greaterThan(0);
+      await sendMouse({ type: 'move', position: centreOf(skip) });
+      expect(getComputedStyle(skip).backgroundColor).to.equal(
+        resolvedInShadow(page, 'background: var(--lr-color-brand-quiet)', 'background-color'),
+      );
+      expect(getComputedStyle(skip).color).to.equal(
+        resolvedInShadow(page, 'color: var(--lr-color-brand)', 'color'),
+      );
+      await sendMouse({ type: 'down' });
+      expect(skip.matches(':active'), 'the physical pointer activates the skip link').to.be.true;
+      expect(getComputedStyle(skip).backgroundColor).to.equal(
+        resolvedInShadow(
+          page,
+          'background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+          'background-color',
+        ),
+      );
+      expect(getComputedStyle(skip).color).to.equal(
+        resolvedInShadow(page, 'color: var(--lr-color-brand)', 'color'),
+      );
+      await sendMouse({ type: 'up' });
+      skip.style.pointerEvents = 'none';
+
+      await sendMouse({ type: 'move', position: centreOf(toggle) });
+      expect(getComputedStyle(toggle).backgroundColor).to.equal(
+        resolvedInShadow(page, 'background: var(--lr-color-brand-quiet)', 'background-color'),
+      );
+      expect(getComputedStyle(toggle).color).to.equal(
+        resolvedInShadow(page, 'color: var(--lr-color-brand)', 'color'),
+      );
+      await sendMouse({ type: 'down' });
+      expect(toggle.matches(':active'), 'the physical pointer activates the navigation toggle').to.be.true;
+      expect(getComputedStyle(toggle).backgroundColor).to.equal(
+        resolvedInShadow(
+          page,
+          'background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+          'background-color',
+        ),
+      );
+      expect(getComputedStyle(toggle).color).to.equal(
+        resolvedInShadow(page, 'color: var(--lr-color-brand)', 'color'),
+      );
+      await sendMouse({ type: 'up' });
+      await page.updateComplete;
+
+      expect(page.navOpen).to.equal(true);
+      expect(getComputedStyle(byPart(page, 'dialog-wrapper')).backgroundColor).to.equal(
+        resolvedInShadow(page, 'background: var(--lr-color-overlay)', 'background-color'),
+      );
+      expect(getComputedStyle(byPart(page, 'drawer')).backgroundColor).to.equal(
+        resolvedInShadow(page, 'background: var(--lr-color-surface-overlay)', 'background-color'),
+      );
+      expect(getComputedStyle(byPart(page, 'drawer')).boxShadow).to.equal(
+        resolvedInShadow(page, 'box-shadow: var(--lr-shadow-l)', 'box-shadow'),
+      );
+    } finally {
+      await resetMouse();
+      page.hideNavigation();
+      await page.updateComplete;
+      skip.style.removeProperty('opacity');
+      skip.style.removeProperty('pointer-events');
+      skip.style.removeProperty('transform');
+      skip.style.removeProperty('transition');
+    }
+  });
+
+  it('inherits independent Page state properties from ancestors, including a slotted navigation toggle', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div
+        style="
+          --lr-page-skip-to-content-hover-bg: rgb(0, 51, 102);
+          --lr-page-skip-to-content-hover-color: rgb(255, 255, 255);
+          --lr-page-skip-to-content-active-bg: rgb(0, 30, 60);
+          --lr-page-skip-to-content-active-color: rgb(255, 255, 0);
+          --lr-page-navigation-toggle-hover-bg: rgb(0, 80, 120);
+          --lr-page-navigation-toggle-hover-color: rgb(255, 255, 255);
+          --lr-page-navigation-toggle-active-bg: rgb(0, 40, 70);
+          --lr-page-navigation-toggle-active-color: rgb(255, 255, 0);
+          --lr-page-navigation-backdrop-bg: rgb(1, 2, 3);
+          --lr-page-navigation-drawer-bg: rgb(4, 5, 6);
+          --lr-page-navigation-drawer-shadow: none;
+        "
+      >
+        <lr-page style="inline-size: 320px; --lr-transition-base: 0ms;">
+          <a slot="navigation" href="#inside">Inside navigation</a>
+          <p id="inside">Content</p>
+        </lr-page>
+      </div>
+    `);
+    const page = wrapper.querySelector('lr-page') as LyraPage;
+    access(page).applyMeasuredInlineSize(320);
+    await page.updateComplete;
+    const pageSurface = byPart(page, 'page');
+    const pageSurfaceColor = getComputedStyle(pageSurface).backgroundColor;
+    const skip = byPart(page, 'skip-to-content');
+    const toggle = byPart(page, 'navigation-toggle');
+    skip.style.opacity = '1';
+    skip.style.pointerEvents = 'auto';
+    skip.style.transform = 'none';
+    skip.style.transition = 'none';
+
+    try {
+      await sendMouse({ type: 'move', position: centreOf(skip) });
+      expect(getComputedStyle(skip).backgroundColor).to.equal('rgb(0, 51, 102)');
+      expect(getComputedStyle(skip).color).to.equal('rgb(255, 255, 255)');
+      await sendMouse({ type: 'down' });
+      expect(getComputedStyle(skip).backgroundColor).to.equal('rgb(0, 30, 60)');
+      expect(getComputedStyle(skip).color).to.equal('rgb(255, 255, 0)');
+      await sendMouse({ type: 'up' });
+      skip.style.pointerEvents = 'none';
+
+      await sendMouse({ type: 'move', position: centreOf(toggle) });
+      expect(getComputedStyle(toggle).backgroundColor).to.equal('rgb(0, 80, 120)');
+      expect(getComputedStyle(toggle).color).to.equal('rgb(255, 255, 255)');
+      await sendMouse({ type: 'down' });
+      expect(getComputedStyle(toggle).backgroundColor).to.equal('rgb(0, 40, 70)');
+      expect(getComputedStyle(toggle).color).to.equal('rgb(255, 255, 0)');
+      await sendMouse({ type: 'up' });
+      await page.updateComplete;
+
+      expect(getComputedStyle(byPart(page, 'dialog-wrapper')).backgroundColor).to.equal('rgb(1, 2, 3)');
+      expect(getComputedStyle(byPart(page, 'drawer')).backgroundColor).to.equal('rgb(4, 5, 6)');
+      expect(getComputedStyle(byPart(page, 'drawer')).boxShadow).to.equal('none');
+      expect(getComputedStyle(pageSurface).backgroundColor, 'state props do not recolor the Page surface').to.equal(
+        pageSurfaceColor,
+      );
+    } finally {
+      await resetMouse();
+      page.hideNavigation();
+      await page.updateComplete;
+      skip.style.removeProperty('opacity');
+      skip.style.removeProperty('pointer-events');
+      skip.style.removeProperty('transform');
+      skip.style.removeProperty('transition');
+    }
+
+    const customWrapper = await fixture<HTMLElement>(html`
+      <div
+        style="
+          --lr-page-navigation-toggle-hover-bg: rgb(0, 80, 120);
+          --lr-page-navigation-toggle-hover-color: rgb(255, 255, 255);
+          --lr-page-navigation-toggle-active-bg: rgb(0, 40, 70);
+          --lr-page-navigation-toggle-active-color: rgb(255, 255, 0);
+        "
+      >
+        <lr-page style="inline-size: 320px" disable-navigation-toggle>
+          <button slot="navigation-toggle">Sections</button>
+        </lr-page>
+      </div>
+    `);
+    const customPage = customWrapper.querySelector('lr-page') as LyraPage;
+    access(customPage).applyMeasuredInlineSize(320);
+    await customPage.updateComplete;
+    const customToggle = customPage.querySelector<HTMLElement>('[slot="navigation-toggle"]')!;
+    customToggle.scrollIntoView();
+    await aTimeout(0);
+    expect(customPage.view).to.equal('mobile');
+    expect(getComputedStyle(customToggle).display).to.not.equal('none');
+    expect(customToggle.getBoundingClientRect().width, 'the slotted toggle has pointer geometry').to.be.greaterThan(0);
+
+    try {
+      await sendMouse({ type: 'move', position: centreOf(customToggle) });
+      expect(customToggle.matches(':hover'), 'the physical pointer hovers the slotted toggle').to.be.true;
+      expect(getComputedStyle(customToggle).backgroundColor).to.equal('rgb(0, 80, 120)');
+      expect(getComputedStyle(customToggle).color).to.equal('rgb(255, 255, 255)');
+      await sendMouse({ type: 'down' });
+      expect(customToggle.matches(':active'), 'the physical pointer activates the slotted toggle').to.be.true;
+      expect(getComputedStyle(customToggle).backgroundColor).to.equal('rgb(0, 40, 70)');
+      expect(getComputedStyle(customToggle).color).to.equal('rgb(255, 255, 0)');
+    } finally {
+      await resetMouse();
+      customPage.hideNavigation();
+      await customPage.updateComplete;
+    }
+  });
+});

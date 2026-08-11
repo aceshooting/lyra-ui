@@ -30,6 +30,15 @@ export interface LyraReorderItemEventMap {
  * @csspart move-down-button - The move-down button.
  * @csspart content - Wrapper around the default slot.
  * @cssprop [--lr-reorder-item-gap=var(--lr-space-xs)] - Gap between the move buttons and content.
+ * Move-button state properties are resolved as inline fallbacks, so setting one on an item or any
+ * ancestor themes only the requested hover or pressed state without replacing shared brand tokens.
+ * @cssprop [--lr-reorder-item-move-button-hover-bg=var(--lr-color-brand-quiet)] - Background of a
+ *   hovered move button.
+ * @cssprop [--lr-reorder-item-move-button-hover-color=var(--lr-color-brand)] - Text color of a
+ *   hovered move button.
+ * @cssprop [--lr-reorder-item-move-button-active-bg=color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Background of a pressed move button.
+ * @cssprop [--lr-reorder-item-move-button-active-color=var(--lr-color-brand)] - Text color of a
+ *   pressed move button.
  * @status stable
  * @since 6.0.0
  */

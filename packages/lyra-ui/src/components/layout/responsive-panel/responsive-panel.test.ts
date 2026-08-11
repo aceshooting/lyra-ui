@@ -981,3 +981,93 @@ it("keeps deliberate wide widgets scrollable inside the responsive-panel body", 
   expect(body.scrollWidth).to.be.greaterThan(body.clientWidth);
   expect(getComputedStyle(body).overflowX).to.equal("auto");
 });
+
+describe("overlay state cssprops", () => {
+  function resolvedInShadow(
+    el: LyraResponsivePanel,
+    declaration: string,
+    property: string
+  ): string {
+    const probe = document.createElement("span");
+    probe.setAttribute("style", declaration);
+    el.shadowRoot!.append(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  it("keeps the pre-cssprop scrim and overlay-surface treatment when the props are unset", async () => {
+    const el = (await fixture(
+      html`<lr-responsive-panel mode="overlay" variant="bottom-sheet" open label="Actions"
+        ><button>Share</button></lr-responsive-panel
+      >`
+    )) as LyraResponsivePanel;
+    await el.updateComplete;
+    const backdrop = el.shadowRoot!.querySelector<HTMLElement>('[part="backdrop"]')!;
+    const panel = el.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!;
+
+    try {
+      expect(getComputedStyle(backdrop).backgroundColor).to.equal(
+        resolvedInShadow(el, "background: var(--lr-color-overlay)", "background-color")
+      );
+      expect(getComputedStyle(panel).backgroundColor).to.equal(
+        resolvedInShadow(el, "background: var(--lr-color-surface-overlay)", "background-color")
+      );
+      expect(getComputedStyle(panel).boxShadow).to.equal(
+        resolvedInShadow(el, "box-shadow: var(--lr-shadow-l)", "box-shadow")
+      );
+    } finally {
+      el.open = false;
+      await el.updateComplete;
+    }
+  });
+
+  it("inherits overlay state props from an ancestor and confines them to the overlay panel", async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div
+        style="
+          --lr-responsive-panel-overlay-color: rgb(0, 51, 102);
+          --lr-responsive-panel-overlay-panel-bg: rgb(255, 255, 255);
+          --lr-responsive-panel-overlay-panel-shadow: none;
+        "
+      >
+        <lr-responsive-panel mode="overlay" variant="bottom-sheet" open label="Actions"
+          ><button>Share</button></lr-responsive-panel
+        >
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-responsive-panel") as LyraResponsivePanel;
+    await el.updateComplete;
+    const backdrop = el.shadowRoot!.querySelector<HTMLElement>('[part="backdrop"]')!;
+    const panel = el.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!;
+
+    try {
+      expect(getComputedStyle(backdrop).backgroundColor).to.equal("rgb(0, 51, 102)");
+      expect(getComputedStyle(panel).backgroundColor).to.equal("rgb(255, 255, 255)");
+      expect(getComputedStyle(panel).boxShadow).to.equal("none");
+    } finally {
+      el.open = false;
+      await el.updateComplete;
+    }
+
+    const inlineWrapper = await fixture<HTMLElement>(html`
+      <div
+        style="
+          --lr-responsive-panel-overlay-color: rgb(0, 51, 102);
+          --lr-responsive-panel-overlay-panel-bg: rgb(255, 255, 255);
+          --lr-responsive-panel-overlay-panel-shadow: none;
+        "
+      >
+        <lr-responsive-panel mode="inline" open><button>Share</button></lr-responsive-panel>
+      </div>
+    `);
+    const inline = inlineWrapper.querySelector("lr-responsive-panel") as LyraResponsivePanel;
+    await inline.updateComplete;
+    const inlinePanel = inline.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!;
+
+    expect(getComputedStyle(inlinePanel).backgroundColor).to.equal(
+      resolvedInShadow(inline, "background: var(--lr-color-surface)", "background-color")
+    );
+    expect(getComputedStyle(inlinePanel).boxShadow).to.equal("none");
+  });
+});

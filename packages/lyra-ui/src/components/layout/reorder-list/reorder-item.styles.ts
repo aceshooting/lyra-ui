@@ -38,19 +38,31 @@ export const styles = css`
   }
   [part='move-up-button']:hover,
   [part='move-down-button']:hover {
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
+    background: var(
+      --lr-reorder-item-move-button-hover-bg,
+      var(--lr-color-brand-quiet)
+    );
+    color: var(
+      --lr-reorder-item-move-button-hover-color,
+      var(--lr-color-brand)
+    );
   }
   /* Declared before the :disabled rule below, which restates background/color at equal
      specificity, so a disabled arrow stays flat whatever the pointer does to it. */
   [part='move-up-button']:active,
   [part='move-down-button']:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-reorder-item-move-button-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-color-brand-quiet),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
-    color: var(--lr-color-brand);
+    color: var(
+      --lr-reorder-item-move-button-active-color,
+      var(--lr-color-brand)
+    );
   }
   [part='move-up-button']:focus-visible,
   [part='move-down-button']:focus-visible {

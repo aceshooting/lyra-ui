@@ -2,12 +2,6 @@ import { css } from 'lit';
 
 export const styles = css`
   :host {
-    /* Overlay scrim color -- component-specific so a host can retheme it
-       without a raw literal leaking into the public API (no shared
-       --lr-*-overlay token exists in the design system to resolve through,
-       same rationale as lr-dialog's own --lr-dialog-overlay-color and
-       lr-widget's --lr-widget-overlay-color). */
-    --lr-responsive-panel-overlay-color: var(--lr-color-overlay);
     display: block;
     min-inline-size: 0;
     max-inline-size: 100%;
@@ -40,7 +34,7 @@ export const styles = css`
   [part='backdrop'] {
     position: absolute;
     inset: 0;
-    background: var(--lr-responsive-panel-overlay-color);
+    background: var(--lr-responsive-panel-overlay-color, var(--lr-color-overlay));
   }
 
   [part='panel'] {
@@ -72,10 +66,16 @@ export const styles = css`
        page's own flow and must keep the page surface, while an overlay sits over a scrim and in
        dark mode would otherwise be the same near-black as the page behind it. The bottom-sheet
        rule below narrows this same selector, so it inherits both declarations. */
-    background: var(--lr-color-surface-overlay);
+    background: var(
+      --lr-responsive-panel-overlay-panel-bg,
+      var(--lr-color-surface-overlay)
+    );
     /* Modal layer, lower step: the panel is flush with every viewport edge (bottom-sheet with all
        but one), so there is no free edge for a deeper shadow to read against. */
-    box-shadow: var(--lr-shadow-l);
+    box-shadow: var(
+      --lr-responsive-panel-overlay-panel-shadow,
+      var(--lr-shadow-l)
+    );
     overflow: auto;
   }
 

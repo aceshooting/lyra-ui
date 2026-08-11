@@ -52,16 +52,19 @@ export const styles = css`
     cursor: pointer;
   }
   [part~='skip-to-content']:where(:hover) {
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
+    background: var(--lr-page-skip-to-content-hover-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-page-skip-to-content-hover-color, var(--lr-color-brand));
   }
   [part~='skip-to-content']:where(:active) {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-page-skip-to-content-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-color-brand-quiet),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
-    color: var(--lr-color-brand);
+    color: var(--lr-page-skip-to-content-active-color, var(--lr-color-brand));
   }
   [part~='skip-to-content']:where(:focus-visible) {
     opacity: 1;
@@ -143,17 +146,20 @@ export const styles = css`
   }
   [part~='navigation-toggle']:where(:hover),
   ::slotted([slot='navigation-toggle']:hover) {
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
+    background: var(--lr-page-navigation-toggle-hover-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-page-navigation-toggle-hover-color, var(--lr-color-brand));
   }
   [part~='navigation-toggle']:where(:active),
   ::slotted([slot='navigation-toggle']:active) {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-page-navigation-toggle-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-color-brand-quiet),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
-    color: var(--lr-color-brand);
+    color: var(--lr-page-navigation-toggle-active-color, var(--lr-color-brand));
   }
   [part~='navigation-toggle']:where(:focus-visible),
   ::slotted([slot='navigation-toggle']:focus-visible) {
@@ -264,7 +270,7 @@ export const styles = css`
   :host([view='mobile'][nav-open]) [part~='dialog-wrapper'] {
     visibility: visible;
     pointer-events: auto;
-    background: var(--lr-color-overlay);
+    background: var(--lr-page-navigation-backdrop-bg, var(--lr-color-overlay));
   }
   :host([view='mobile']) [part~='drawer'] {
     position: absolute;
@@ -275,8 +281,8 @@ export const styles = css`
     max-inline-size: 100%;
     min-inline-size: 0;
     padding-block-end: var(--lr-safe-area-bottom);
-    background: var(--lr-color-surface-overlay);
-    box-shadow: var(--lr-shadow-l);
+    background: var(--lr-page-navigation-drawer-bg, var(--lr-color-surface-overlay));
+    box-shadow: var(--lr-page-navigation-drawer-shadow, var(--lr-shadow-l));
     overflow-y: auto;
     overflow-x: clip;
     transition: transform var(--lr-transition-base);

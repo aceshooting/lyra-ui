@@ -50,6 +50,33 @@ export const DockedInline: Story = {
   `,
 };
 
+export const ThemedOverlay: Story = {
+  name: 'Themed overlay surface (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Set the overlay scrim, panel background, and panel shadow on this panel or any ancestor. These properties affect only the overlay presentation; docked inline panels retain their page-surface treatment.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="
+        --lr-responsive-panel-overlay-color: var(--lr-color-danger-quiet);
+        --lr-responsive-panel-overlay-panel-bg: var(--lr-color-surface);
+        --lr-responsive-panel-overlay-panel-shadow: var(--lr-shadow-xl);
+      "
+    >
+      <lr-responsive-panel mode="overlay" variant="bottom-sheet" open label="Themed settings">
+        <span slot="header" style="font-weight: 600;">Themed settings</span>
+        <p style="margin: 0;">This sheet inherits its scrim, surface, and elevation from its wrapper.</p>
+        <div slot="footer"><button type="button">Apply</button></div>
+      </lr-responsive-panel>
+    </div>
+  `,
+};
+
 export const ForcedOverlayFullscreen: Story = {
   name: 'mode="overlay" variant="fullscreen"',
   render: () => html`

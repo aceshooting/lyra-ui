@@ -9,6 +9,31 @@ export const Default: StoryObj = {
   render: () => html`<lr-reorder-item value="a">Row content</lr-reorder-item>`,
 };
 
+export const ThemedMoveButtons: StoryObj = {
+  name: 'Themed move-button states (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Set the hover and pressed properties on the row or any ancestor. Each property applies only to the move buttons, preserving the row content and disabled-button treatment.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      role="list"
+      style="
+        --lr-reorder-item-move-button-hover-bg: var(--lr-color-success-quiet);
+        --lr-reorder-item-move-button-hover-color: var(--lr-color-success);
+        --lr-reorder-item-move-button-active-bg: var(--lr-color-success);
+        --lr-reorder-item-move-button-active-color: var(--lr-color-on-success);
+      "
+    >
+      <lr-reorder-item value="themed">Theme the movement controls independently</lr-reorder-item>
+    </div>
+  `,
+};
+
 export const Boundaries: StoryObj = {
   render: () => html`
     <div style="display:flex; flex-direction:column; gap:0.125rem;">

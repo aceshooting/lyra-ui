@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './reorder-item.js';
 import type { LyraReorderItem } from './reorder-item.class.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 describe('<lr-reorder-item>', () => {
   it('renders slotted content with role="listitem"', async () => {
@@ -137,4 +138,118 @@ it('contains a long reorder-item label in exact 320px LTR and RTL allocations', 
     expect(content.scrollWidth).to.be.at.most(content.clientWidth + 1);
     expect(getComputedStyle(base).direction).to.equal(direction);
   }
+});
+
+describe('move-button state cssprops', () => {
+  function centreOf(target: HTMLElement): [number, number] {
+    const rect = target.getBoundingClientRect();
+    return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+  }
+
+  function resolvedInShadow(
+    el: LyraReorderItem,
+    declaration: string,
+    property: string,
+  ): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.append(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  it('keeps the pre-cssprop hover and active paint when the props are unset', async () => {
+    const wrapper = await fixture<HTMLElement>(
+      html`<div role="list"><lr-reorder-item>Row</lr-reorder-item></div>`,
+    );
+    const el = wrapper.querySelector('lr-reorder-item') as LyraReorderItem;
+    const up = el.shadowRoot!.querySelector<HTMLElement>('[part="move-up-button"]')!;
+    expect(up.getBoundingClientRect().width, 'the move button has pointer geometry').to.be.greaterThan(0);
+
+    try {
+      await sendMouse({ type: 'move', position: centreOf(up) });
+      expect(getComputedStyle(up).backgroundColor).to.equal(
+        resolvedInShadow(el, 'background: var(--lr-color-brand-quiet)', 'background-color'),
+      );
+      expect(getComputedStyle(up).color).to.equal(
+        resolvedInShadow(el, 'color: var(--lr-color-brand)', 'color'),
+      );
+
+      await sendMouse({ type: 'down' });
+      expect(up.matches(':active'), 'the physical pointer activates the move button').to.be.true;
+      expect(getComputedStyle(up).backgroundColor).to.equal(
+        resolvedInShadow(
+          el,
+          'background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+          'background-color',
+        ),
+      );
+      expect(getComputedStyle(up).color).to.equal(
+        resolvedInShadow(el, 'color: var(--lr-color-brand)', 'color'),
+      );
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('inherits independent move-button hover and active paint from an ancestor', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div
+        role="list"
+        style="
+          --lr-reorder-item-move-button-hover-bg: rgb(0, 51, 102);
+          --lr-reorder-item-move-button-hover-color: rgb(255, 255, 255);
+          --lr-reorder-item-move-button-active-bg: rgb(0, 30, 60);
+          --lr-reorder-item-move-button-active-color: rgb(255, 255, 0);
+        "
+      >
+        <lr-reorder-item>Row</lr-reorder-item>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-reorder-item') as LyraReorderItem;
+    const up = el.shadowRoot!.querySelector<HTMLElement>('[part="move-up-button"]')!;
+    const down = el.shadowRoot!.querySelector<HTMLElement>('[part="move-down-button"]')!;
+    const content = el.shadowRoot!.querySelector<HTMLElement>('[part="content"]')!;
+    const contentColor = getComputedStyle(content).color;
+
+    try {
+      await sendMouse({ type: 'move', position: centreOf(up) });
+      expect(getComputedStyle(up).backgroundColor).to.equal('rgb(0, 51, 102)');
+      expect(getComputedStyle(up).color).to.equal('rgb(255, 255, 255)');
+      expect(getComputedStyle(content).color, 'the move-button props do not recolor row content').to.equal(
+        contentColor,
+      );
+
+      await sendMouse({ type: 'move', position: centreOf(down) });
+      await sendMouse({ type: 'down' });
+      expect(down.matches(':active'), 'the physical pointer activates the second move button').to.be.true;
+      expect(getComputedStyle(down).backgroundColor).to.equal('rgb(0, 30, 60)');
+      expect(getComputedStyle(down).color).to.equal('rgb(255, 255, 0)');
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('keeps disabled move buttons flat despite inherited state paint props', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div
+        role="list"
+        style="
+          --lr-reorder-item-move-button-hover-bg: rgb(0, 51, 102);
+          --lr-reorder-item-move-button-active-bg: rgb(0, 30, 60);
+        "
+      >
+        <lr-reorder-item disabled>Row</lr-reorder-item>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-reorder-item') as LyraReorderItem;
+    const up = el.shadowRoot!.querySelector<HTMLElement>('[part="move-up-button"]')!;
+
+    expect(getComputedStyle(up).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    expect(getComputedStyle(up).color).to.equal(
+      resolvedInShadow(el, 'color: var(--lr-color-text-quiet)', 'color'),
+    );
+    await expect(el).to.be.accessible();
+  });
 });

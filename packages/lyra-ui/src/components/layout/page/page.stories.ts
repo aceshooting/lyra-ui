@@ -65,6 +65,39 @@ export const Desktop: Story = {
   `,
 };
 
+export const ThemedInteractionStates: Story = {
+  name: 'Themed interaction states (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Set the state properties on the Page or any ancestor. Hover or press the revealed skip link and navigation toggle, then open the drawer to see the independently themed backdrop, drawer surface, and shadow.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="
+        --lr-page-skip-to-content-hover-bg: var(--lr-color-success-quiet);
+        --lr-page-skip-to-content-hover-color: var(--lr-color-success);
+        --lr-page-skip-to-content-active-bg: var(--lr-color-success);
+        --lr-page-skip-to-content-active-color: var(--lr-color-on-success);
+        --lr-page-navigation-toggle-hover-bg: var(--lr-color-warning-quiet);
+        --lr-page-navigation-toggle-hover-color: var(--lr-color-warning);
+        --lr-page-navigation-toggle-active-bg: var(--lr-color-warning);
+        --lr-page-navigation-toggle-active-color: var(--lr-color-on-warning);
+        --lr-page-navigation-backdrop-bg: var(--lr-color-danger-quiet);
+        --lr-page-navigation-drawer-bg: var(--lr-color-surface);
+        --lr-page-navigation-drawer-shadow: var(--lr-shadow-xl);
+      "
+    >
+      <lr-page style="inline-size: 320px; min-block-size: 34rem; --lr-page-header-height: 3rem;">
+        ${shell()}
+      </lr-page>
+    </div>
+  `,
+};
+
 export const MobileDrawer: Story = {
   parameters: {
     docs: {

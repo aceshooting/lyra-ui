@@ -126,6 +126,28 @@ function navigationIcon(): SVGTemplateResult {
  * @cssprop [--lr-page-main-width=1fr] - Desktop main column width.
  * @cssprop [--lr-page-menu-width=auto] - Desktop menu column width.
  * @cssprop [--lr-page-subheader-height=0px] - Minimum subheader height and sticky offset.
+ * Interaction-state properties below are resolved as inline fallbacks, so setting one on the Page
+ * or any ancestor themes only its named target without replacing shared design tokens.
+ * @cssprop [--lr-page-skip-to-content-hover-bg=var(--lr-color-brand-quiet)] - Background of the
+ *   hovered skip link.
+ * @cssprop [--lr-page-skip-to-content-hover-color=var(--lr-color-brand)] - Text color of the
+ *   hovered skip link.
+ * @cssprop [--lr-page-skip-to-content-active-bg=color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Background of the pressed skip link.
+ * @cssprop [--lr-page-skip-to-content-active-color=var(--lr-color-brand)] - Text color of the
+ *   pressed skip link.
+ * @cssprop [--lr-page-navigation-toggle-hover-bg=var(--lr-color-brand-quiet)] - Background of a
+ *   hovered default or slotted navigation toggle.
+ * @cssprop [--lr-page-navigation-toggle-hover-color=var(--lr-color-brand)] - Text color of a
+ *   hovered default or slotted navigation toggle.
+ * @cssprop [--lr-page-navigation-toggle-active-bg=color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Background of a pressed default or slotted navigation toggle.
+ * @cssprop [--lr-page-navigation-toggle-active-color=var(--lr-color-brand)] - Text color of a
+ *   pressed default or slotted navigation toggle.
+ * @cssprop [--lr-page-navigation-backdrop-bg=var(--lr-color-overlay)] - Background of the open
+ *   mobile navigation backdrop.
+ * @cssprop [--lr-page-navigation-drawer-bg=var(--lr-color-surface-overlay)] - Background of the
+ *   mobile navigation drawer.
+ * @cssprop [--lr-page-navigation-drawer-shadow=var(--lr-shadow-l)] - Shadow of the mobile
+ *   navigation drawer.
  * @cssprop [--aside-width] - Web Awesome alias for `--lr-page-aside-width`.
  * @cssprop [--banner-height] - Web Awesome alias for `--lr-page-banner-height`.
  * @cssprop [--header-height] - Web Awesome alias for `--lr-page-header-height`.
