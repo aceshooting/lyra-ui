@@ -1,7 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './tool-select-dialog.js';
-import type { LyraToolSelectDialog, ToolSelectDialogTool } from './tool-select-dialog.js';
+import type {
+  LyraToolSelectDialog,
+  ToolSelectDialogTool,
+  ToolSelectionChangeDetail,
+} from './tool-select-dialog.js';
 
 const meta: Meta = {
   title: 'ToolSelectDialog',
@@ -174,6 +178,28 @@ export const Events: Story = {
       ></lr-tool-select-dialog>
       <p id="tool-select-dialog-log">No change yet.</p>
       <p id="tool-select-dialog-close-log">No close yet.</p>
+    </div>
+  `,
+};
+
+export const CancelableChange: Story = {
+  name: 'Cancelable change',
+  render: (_args, context) => html`
+    <div>
+      <lr-tool-select-dialog
+        .open=${context.viewMode !== 'docs'}
+        .tools=${TOOLS}
+        .selected=${['web_search']}
+        @lr-change=${(event: CustomEvent<ToolSelectionChangeDetail>) => {
+          event.preventDefault();
+          const dialog = event.currentTarget as LyraToolSelectDialog;
+          const status = dialog.parentElement?.querySelector('[data-veto-status]');
+          if (status) {
+            status.textContent = `Rejected selected=[${event.detail.selected.join(', ')}] useDefaults=${event.detail.useDefaults}`;
+          }
+        }}
+      ></lr-tool-select-dialog>
+      <p data-veto-status role="status">Changes are rejected and the control is restored.</p>
     </div>
   `,
 };

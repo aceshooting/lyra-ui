@@ -457,10 +457,14 @@ shared overlay stack. First-party invention (no Web Awesome equivalent).
 **Methods:** `close(reason: ToolSelectDialogCloseReason = 'api'): void` — closes the dialog, emits
 `lr-close` with `reason`, and returns focus to whatever had it before the dialog opened.
 
-**Events:** `lr-change` (`detail: ToolSelectionChangeDetail` — the enabled-tool selection or the
-`useDefaults` toggle changed), `lr-close` (`detail: ToolSelectDialogCloseReason` — fired exactly once
-per dismissal, via Escape, a backdrop click, or a `close()` call), and no-detail `focus`/`blur`
-events re-dispatched when the internal search input gains or loses focus.
+**Events:** `lr-change` (`detail: ToolSelectionChangeDetail` — the proposed enabled-tool selection and
+`useDefaults` state) is cancelable and fires before either property changes. Calling
+`preventDefault()` retains the current `selected`/`useDefaults` values and restores the built-in
+checkbox or switch. A host can prevent a proposal while it validates or persists it, then assign
+the desired detail values after that work succeeds. `lr-close`
+(`detail: ToolSelectDialogCloseReason` — fired exactly once per dismissal, via Escape, a backdrop
+click, or a `close()` call), and no-detail `focus`/`blur` events re-dispatched when the
+internal search input gains or loses focus.
 
 **Slots:** `footer` — optional action buttons (e.g. a "Done" button), rendered in a bottom row. Changes
 already apply live via `lr-change`, so this slot is purely optional; only visually shown once it has

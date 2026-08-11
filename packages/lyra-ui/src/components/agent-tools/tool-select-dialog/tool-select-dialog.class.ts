@@ -37,6 +37,7 @@ export interface ToolSelectDialogTool {
  *  built-in case-insensitive name/description substring match entirely. */
 export type ToolSelectFilter = (tool: ToolSelectDialogTool, query: string) => boolean;
 
+/** The proposed state carried by the cancelable `lr-change` event. */
 export interface ToolSelectionChangeDetail {
   selected: string[];
   useDefaults: boolean;
@@ -107,8 +108,9 @@ interface ToolGroup {
  * @customElement lr-tool-select-dialog
  * @slot footer - Optional action buttons (e.g. a "Done" button), rendered in a bottom row.
  * Changes already apply live via `lr-change`, so this is optional.
- * @event lr-change - The enabled-tool selection or the `useDefaults` toggle changed.
- * `detail: { selected: string[], useDefaults: boolean }`.
+ * @event lr-change - A proposed enabled-tool selection or `useDefaults` toggle.
+ * `detail: { selected: string[], useDefaults: boolean }`. Cancelable; preventing it preserves
+ * both properties and restores the built-in checkbox or switch to its current checked state.
  * @event lr-close - `detail: ToolSelectDialogCloseReason`. Fired exactly once per dismissal,
  * via Escape, a backdrop click, or a `close()` call.
  * @event focus - Re-dispatched when the internal search input receives focus.
@@ -288,11 +290,20 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     this.overlay?.dismissBackdrop();
   };
 
-  private emitChange(): void {
-    this.emit('lr-change', {
-      selected: [...this.selected],
-      useDefaults: this.useDefaults,
-    });
+  private emitChange(next: ToolSelectionChangeDetail): boolean {
+    const event = this.emit(
+      'lr-change',
+      { selected: [...next.selected], useDefaults: next.useDefaults },
+      { cancelable: true },
+    );
+    return !event.defaultPrevented;
+  }
+
+  private restoreChildChecked(event: Event, checked: boolean): void {
+    // Both child controls update themselves before their lr-change event bubbles here. A veto keeps
+    // the host property unchanged, so it cannot rely on a host re-render to reconcile the child.
+    const control = event.currentTarget as { checked: boolean } | null;
+    if (control) control.checked = checked;
   }
 
   private onSearchInput = (e: Event): void => {
@@ -303,8 +314,15 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
 
   private onDefaultsToggle = (e: CustomEvent<{ checked: boolean }>): void => {
     e.stopPropagation();
-    this.useDefaults = e.detail.checked;
-    this.emitChange();
+    const next: ToolSelectionChangeDetail = {
+      selected: [...this.selected],
+      useDefaults: e.detail.checked,
+    };
+    if (this.emitChange(next)) {
+      this.useDefaults = next.useDefaults;
+      return;
+    }
+    this.restoreChildChecked(e, this.useDefaults);
   };
 
   private onToolToggle(tool: ToolSelectDialogTool, e: CustomEvent<{ checked: boolean }>): void {
@@ -312,8 +330,15 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     if (tool.disabled || this.useDefaults) return;
     const set = new Set(this.selected);
     e.detail.checked ? set.add(tool.id) : set.delete(tool.id);
-    this.selected = [...set];
-    this.emitChange();
+    const next: ToolSelectionChangeDetail = {
+      selected: [...set],
+      useDefaults: this.useDefaults,
+    };
+    if (this.emitChange(next)) {
+      this.selected = next.selected;
+      return;
+    }
+    this.restoreChildChecked(e, this.selected.includes(tool.id));
   }
 
   private categoryId(category: ToolCategoryKey): string {

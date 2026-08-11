@@ -1,7 +1,12 @@
 import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './tool-select-dialog.js';
-import type { LyraToolSelectDialog, ToolSelectDialogTool } from './tool-select-dialog.js';
+import type {
+  LyraToolSelectDialog,
+  ToolSelectDialogTool,
+  ToolSelectionChangeDetail,
+} from './tool-select-dialog.js';
 import type { LyraCheckbox } from '../../forms/checkbox/checkbox.js';
+import type { LyraSwitch } from '../../forms/switch/switch.js';
 import { styles } from './tool-select-dialog.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
@@ -367,6 +372,36 @@ describe('selection', () => {
     expect(el.selected).to.deep.equal(['run_python']);
   });
 
+  it('proposes a checkbox change before committing and restores its checkbox when lr-change is canceled', async () => {
+    const el = (await fixture(
+      html`<lr-tool-select-dialog .tools=${TOOLS} .selected=${['web_search']}></lr-tool-select-dialog>`,
+    )) as LyraToolSelectDialog;
+    const checkbox = checkboxFor(el, 'web_search');
+    let proposal: ToolSelectionChangeDetail | undefined;
+    let selectedAtProposal: string[] | undefined;
+    let useDefaultsAtProposal: boolean | undefined;
+    let cancelable = false;
+    el.addEventListener('lr-change', (event) => {
+      const change = event as CustomEvent<ToolSelectionChangeDetail>;
+      proposal = change.detail;
+      selectedAtProposal = [...el.selected];
+      useDefaultsAtProposal = el.useDefaults;
+      cancelable = change.cancelable;
+      change.preventDefault();
+    }, { once: true });
+
+    clickCheckbox(checkbox);
+    await checkbox.updateComplete;
+    await el.updateComplete;
+
+    expect(cancelable).to.be.true;
+    expect(proposal).to.deep.equal({ selected: [], useDefaults: false });
+    expect(selectedAtProposal).to.deep.equal(['web_search']);
+    expect(useDefaultsAtProposal).to.be.false;
+    expect(el.selected).to.deep.equal(['web_search']);
+    expect(checkbox.checked).to.be.true;
+  });
+
   it('emits one host lr-change for one bubbling tool-checkbox lr-change', async () => {
     const el = (await fixture(
       html`<lr-tool-select-dialog .tools=${TOOLS} .selected=${[]}></lr-tool-select-dialog>`,
@@ -429,6 +464,39 @@ describe('useDefaults', () => {
     expect(detail.useDefaults).to.be.false;
     expect(detail.selected).to.deep.equal(['web_search']);
     expect(checkboxFor(el, 'web_search').disabled).to.be.false;
+  });
+
+  it('proposes a defaults change before committing and restores its switch when lr-change is canceled', async () => {
+    const el = (await fixture(
+      html`<lr-tool-select-dialog use-defaults .tools=${TOOLS} .selected=${['web_search']}></lr-tool-select-dialog>`,
+    )) as LyraToolSelectDialog;
+    const toggle = el.shadowRoot!.querySelector('[part="defaults-toggle"]') as LyraSwitch;
+    const base = toggle.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    let proposal: ToolSelectionChangeDetail | undefined;
+    let selectedAtProposal: string[] | undefined;
+    let useDefaultsAtProposal: boolean | undefined;
+    let cancelable = false;
+    el.addEventListener('lr-change', (event) => {
+      const change = event as CustomEvent<ToolSelectionChangeDetail>;
+      proposal = change.detail;
+      selectedAtProposal = [...el.selected];
+      useDefaultsAtProposal = el.useDefaults;
+      cancelable = change.cancelable;
+      change.preventDefault();
+    }, { once: true });
+
+    base.click();
+    await toggle.updateComplete;
+    await el.updateComplete;
+
+    expect(cancelable).to.be.true;
+    expect(proposal).to.deep.equal({ selected: ['web_search'], useDefaults: false });
+    expect(selectedAtProposal).to.deep.equal(['web_search']);
+    expect(useDefaultsAtProposal).to.be.true;
+    expect(el.useDefaults).to.be.true;
+    expect(el.hasAttribute('use-defaults')).to.be.true;
+    expect(toggle.checked).to.be.true;
+    expect(checkboxFor(el, 'web_search').disabled).to.be.true;
   });
 
   it('emits one host lr-change for one bubbling defaults-toggle lr-change', async () => {
