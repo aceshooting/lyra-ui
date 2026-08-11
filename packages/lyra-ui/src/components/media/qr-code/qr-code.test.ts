@@ -521,6 +521,54 @@ describe('lr-qr-code', () => {
     }
   });
 
+  it('restores visibility and redraws after reconnecting into a realm without IntersectionObserver', async () => {
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const originalIntersectionObserver = Object.getOwnPropertyDescriptor(
+      frameWindow,
+      'IntersectionObserver',
+    );
+    Object.defineProperty(frameWindow, 'IntersectionObserver', {
+      configurable: true,
+      value: undefined,
+    });
+
+    const el = document.createElement('lr-qr-code') as LyraQrCode;
+    installFakeLoader(
+      el,
+      fakeApi(() => ({ modules: fakeModules(true) })),
+    );
+    el.size = 90;
+    try {
+      document.body.append(el);
+      el.value = 'reconnect without observer';
+      await waitForPart(el, 'canvas');
+      const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+      expect(parseInt(canvas.style.width, 10)).to.equal(90);
+
+      (el as unknown as { visible: boolean }).visible = false;
+      el.size = 150;
+      await el.updateComplete;
+      expect(parseInt(canvas.style.width, 10)).to.equal(90);
+
+      frameDocument.adoptNode(el);
+      frameDocument.body.append(el);
+      await el.updateComplete;
+      expect(parseInt(canvas.style.width, 10)).to.equal(150);
+    } finally {
+      el.remove();
+      if (originalIntersectionObserver) {
+        Object.defineProperty(frameWindow, 'IntersectionObserver', originalIntersectionObserver);
+      } else {
+        delete (frameWindow as unknown as { IntersectionObserver?: typeof IntersectionObserver })
+          .IntersectionObserver;
+      }
+      iframe.remove();
+    }
+  });
+
   it('redraws (coalesced) when an ancestor theme attribute mutates, via the shared ThemeWatcher', async () => {
     const el = (await fixture(html`<lr-qr-code size="90"></lr-qr-code>`)) as LyraQrCode;
     installFakeLoader(

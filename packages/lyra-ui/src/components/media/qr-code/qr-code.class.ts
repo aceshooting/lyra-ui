@@ -294,6 +294,11 @@ export class LyraQrCode extends LyraElement {
         if (this.visible && !wasVisible) this.draw();
       });
       this.intersectionObserver.observe(this);
+    } else if (!this.visible) {
+      // An earlier owner realm may have marked the code off-screen. Without an observer in this
+      // realm, there is nothing to make it visible again, so catch up on skipped redraws now.
+      this.visible = true;
+      this.draw();
     }
     // If an in-flight peer result settled while detached, generate() correctly discarded it at
     // the post-await `isConnected` guard and left the visible state at `loading`. Reconnects do
