@@ -6,6 +6,7 @@ import {
   LyraDockPanel,
   LyraMenuItem,
   LyraModelSettingsPanel,
+  LyraPromptStudio,
   LyraResponsivePanel,
   LyraSlider,
   LyraSourceList,
@@ -27,6 +28,7 @@ import type {
   LyraSelectSize,
   MatrixCellPos,
   PanelConstraint,
+  PromptStudioMessageReorderDetail,
   RejectedFile,
   StatRow,
   TimeRangePreset,
@@ -149,6 +151,7 @@ import type {
   LyraPhoneInputEventMap,
   LyraPollStatusEventMap,
   LyraPopoverEventMap,
+  LyraPromptStudioEventMap,
   LyraPptxViewerEventMap,
   LyraProvenancePanelEventMap,
   LyraPushToTalkEventMap,
@@ -351,6 +354,7 @@ const epicBarrelEventMapTypes: [
   LyraPhoneInputEventMap,
   LyraPollStatusEventMap,
   LyraPopoverEventMap,
+  LyraPromptStudioEventMap,
   LyraPptxViewerEventMap,
   LyraProvenancePanelEventMap,
   LyraPushToTalkEventMap,
@@ -410,6 +414,7 @@ const barrelPublicSurfaceTypes: [
   ChipSelectDetail,
   MenuItemChangeDetail,
   KbdLocalize,
+  PromptStudioMessageReorderDetail,
 ] | undefined = undefined;
 void barrelPublicSurfaceTypes;
 
@@ -511,6 +516,17 @@ declare const thinkingPanel: LyraThinkingPanel;
 thinkingPanel.addEventListener('lr-toggle', (event) => {
   const expanded: boolean = event.detail.expanded;
   void expanded;
+});
+
+declare const promptStudio: LyraPromptStudio;
+promptStudio.addEventListener('lr-message-reorder', (event) => {
+  const detail: PromptStudioMessageReorderDetail = event.detail;
+  const messageId: string = detail.messageId;
+  const fromIndex: number = detail.fromIndex;
+  const toIndex: number = detail.toIndex;
+  void messageId;
+  void fromIndex;
+  void toIndex;
 });
 
 declare const menuItem: LyraMenuItem;

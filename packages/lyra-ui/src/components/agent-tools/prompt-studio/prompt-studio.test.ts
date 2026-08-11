@@ -1,12 +1,24 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import './prompt-studio.js';
-import type { LyraPromptStudio, PromptStudioMessage, PromptStudioVersion } from './prompt-studio.js';
+import type {
+  LyraPromptStudio,
+  PromptStudioMessage,
+  PromptStudioMessageReorderDetail,
+  PromptStudioVersion,
+} from './prompt-studio.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const messages: PromptStudioMessage[] = [
   { id: 'system', role: 'system', content: 'Answer for {{audience}}.' },
   { id: 'user', role: 'user', content: 'Explain retrieval.' },
 ];
 const versions: PromptStudioVersion[] = [{ id: 'v1', label: 'Production', messages }];
+const reorderMessages: PromptStudioMessage[] = [
+  { id: 'system', role: 'system', content: 'Define the answer.' },
+  { id: 'user', role: 'user', content: 'Explain the tradeoff.' },
+  { id: 'assistant', role: 'assistant', content: 'I will compare both options.' },
+];
 
 it('renders messages, resolves variables in preview, and exposes versions', async () => {
   const el = (await fixture(
@@ -44,10 +56,73 @@ it('emits immutable edits, run requests, and complete version records', async ()
 
 it('is accessible when populated and gates all editing controls while disabled', async () => {
   const el = (await fixture(
-    html`<lr-prompt-studio disabled .messages=${messages} .versions=${versions}></lr-prompt-studio>`,
+    html`<lr-prompt-studio disabled reorderable .messages=${messages} .versions=${versions}></lr-prompt-studio>`,
   )) as LyraPromptStudio;
-  expect([...el.shadowRoot!.querySelectorAll('button, textarea, input')].every((node) => (node as HTMLInputElement).disabled)).to.be.true;
+  expect(
+    [...el.shadowRoot!.querySelectorAll('button, textarea, input, select')].every(
+      (node) => (node as HTMLInputElement).disabled,
+    ),
+  ).to.be.true;
   await expect(el).shadowDom.to.be.accessible();
+});
+
+it('forwards native editing assistance to every prompt and variable editor', async () => {
+  const el = (await fixture(html`
+    <lr-prompt-studio
+      .messages=${messages}
+      .variables=${[
+        { name: 'audience', value: 'developers' },
+        { name: 'tone', value: 'direct' },
+      ]}
+      .spellcheck=${false}
+      autocapitalize="sentences"
+      autocorrect="on"
+      wrap="hard"
+    ></lr-prompt-studio>
+  `)) as LyraPromptStudio;
+  const textarea = el.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="message-content"]')!;
+  const inputs = [...el.shadowRoot!.querySelectorAll<HTMLInputElement>('[part="variable"] input')];
+
+  expect(textarea.spellcheck).to.be.false;
+  expect(textarea.getAttribute('autocapitalize')).to.equal('sentences');
+  expect(textarea.getAttribute('autocorrect')).to.equal('on');
+  expect(textarea.getAttribute('wrap')).to.equal('hard');
+  expect(inputs).to.have.length(4);
+  for (const input of inputs) {
+    expect(input.spellcheck).to.be.false;
+    expect(input.getAttribute('autocapitalize')).to.equal('sentences');
+    expect(input.getAttribute('autocorrect')).to.equal('on');
+    expect(input.hasAttribute('wrap'), 'wrap belongs only to the native textarea').to.be.false;
+  }
+
+  el.autocapitalize = '';
+  el.autoCorrect = '';
+  await el.updateComplete;
+  expect(textarea.hasAttribute('autocapitalize')).to.be.false;
+  expect(textarea.hasAttribute('autocorrect')).to.be.false;
+  expect(inputs.every((input) => !input.hasAttribute('autocapitalize') && !input.hasAttribute('autocorrect'))).to.be.true;
+});
+
+it('parses literal spellcheck="false" for every native editor while retaining prose-friendly defaults', async () => {
+  const defaults = (await fixture(html`<lr-prompt-studio .messages=${messages} .variables=${[{ name: 'audience', value: 'developers' }]}></lr-prompt-studio>`)) as LyraPromptStudio;
+  const defaultTextarea = defaults.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="message-content"]')!;
+  const defaultInputs = [...defaults.shadowRoot!.querySelectorAll<HTMLInputElement>('[part="variable"] input')];
+  expect(defaults.spellcheck).to.be.true;
+  expect(defaultTextarea.spellcheck).to.be.true;
+  expect(defaultTextarea.getAttribute('wrap')).to.equal('soft');
+  expect(defaultInputs.every((input) => input.spellcheck)).to.be.true;
+
+  const el = (await fixture(html`<lr-prompt-studio
+    spellcheck="false"
+    .messages=${messages}
+    .variables=${[{ name: 'audience', value: 'developers' }]}
+  ></lr-prompt-studio>`)) as LyraPromptStudio;
+  expect(el.spellcheck).to.be.false;
+  const controls = [
+    el.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="message-content"]')!,
+    ...el.shadowRoot!.querySelectorAll<HTMLInputElement>('[part="variable"] input'),
+  ];
+  expect(controls.every((control) => !control.spellcheck)).to.be.true;
 });
 
 it('applies per-instance localized strings', async () => {
@@ -185,6 +260,66 @@ it('renders and exposes a component-scoped theme hook for the selected version',
   expect(getComputedStyle(version).borderTopColor).to.equal('rgb(1, 2, 3)');
 });
 
+it('uses a visibly distinct selected-version hover fallback in light and dark themes', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <lr-prompt-studio
+        data-lr-theme="light"
+        style="inline-size: 24rem;"
+        selected-version-id="v1"
+        .versions=${versions}
+      ></lr-prompt-studio>
+      <lr-prompt-studio
+        data-lr-theme="dark"
+        style="inline-size: 24rem;"
+        selected-version-id="v1"
+        .versions=${versions}
+      ></lr-prompt-studio>
+    </div>
+  `);
+  const studios = [...wrapper.querySelectorAll<LyraPromptStudio>('lr-prompt-studio')];
+
+  await resetMouse();
+  try {
+    for (const studio of studios) {
+      const version = studio.shadowRoot!.querySelector<HTMLElement>('[part="version"]')!;
+      const rest = getComputedStyle(version).backgroundColor;
+      const rect = version.getBoundingClientRect();
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      expect(getComputedStyle(version).backgroundColor, `${studio.dataset['lrTheme']} selected version hover`).not.to.equal(rest);
+      await resetMouse();
+    }
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('retains the explicit selected-version hover background override', async () => {
+  const el = (await fixture(html`
+    <lr-prompt-studio
+      style="--lr-prompt-studio-version-selected-hover-bg: rgb(1, 2, 3)"
+      selected-version-id="v1"
+      .versions=${versions}
+    ></lr-prompt-studio>
+  `)) as LyraPromptStudio;
+  const version = el.shadowRoot!.querySelector<HTMLElement>('[part="version"]')!;
+  const rect = version.getBoundingClientRect();
+
+  await resetMouse();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(version).backgroundColor).to.equal('rgb(1, 2, 3)');
+  } finally {
+    await resetMouse();
+  }
+});
+
 // -- Message removal and variable editing -----------------------------------
 
 it('removes a message immutably, leaving the original array untouched', async () => {
@@ -234,4 +369,116 @@ it('edits a variable name and value by index without disturbing its siblings', a
   inputs[1]!.dispatchEvent(new Event('input', { bubbles: true }));
   const afterValue = (await valuePending).detail as { variables: { name: string; value: string }[] };
   expect(afterValue.variables[0]).to.deep.equal({ name: 'audience', value: 'operators' });
+});
+
+// -- Opt-in controlled message reordering -----------------------------------
+
+it('keeps message reordering opt-in and disables boundary actions', async () => {
+  const el = (await fixture(html`<lr-prompt-studio .messages=${reorderMessages}></lr-prompt-studio>`)) as LyraPromptStudio;
+  expect(el.hasAttribute('reorderable')).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="message-actions"]')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('[part="move-message-up"]')).to.not.exist;
+
+  el.reorderable = true;
+  await el.updateComplete;
+  expect(el.hasAttribute('reorderable')).to.be.true;
+  const up = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="move-message-up"]')];
+  const down = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="move-message-down"]')];
+  expect(up).to.have.length(3);
+  expect(down).to.have.length(3);
+  expect(up[0]!.disabled).to.be.true;
+  expect(down[2]!.disabled).to.be.true;
+  expect(up[1]!.disabled).to.be.false;
+  expect(down[1]!.disabled).to.be.false;
+  el.strings = { moveUp: 'Déplacer vers le haut', moveDown: 'Déplacer vers le bas' };
+  await el.updateComplete;
+  expect(up[1]!.getAttribute('aria-label')).to.equal('Déplacer vers le haut');
+  expect(down[1]!.getAttribute('aria-label')).to.equal('Déplacer vers le bas');
+  await expect(el).shadowDom.to.be.accessible();
+
+  el.reorderable = false;
+  await el.updateComplete;
+  expect(el.hasAttribute('reorderable')).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="message-actions"]')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('[part="move-message-up"]')).to.not.exist;
+});
+
+it('emits a cancelable reorder request before applying an immutable next message order', async () => {
+  const original = reorderMessages.map((message) => ({ ...message }));
+  const el = (await fixture(html`<lr-prompt-studio reorderable .messages=${original}></lr-prompt-studio>`)) as LyraPromptStudio;
+  const emitted: string[] = [];
+  el.addEventListener('lr-message-reorder', () => emitted.push('lr-message-reorder'));
+  el.addEventListener('lr-change', () => emitted.push('lr-change'));
+  const reorderPending = oneEvent(el, 'lr-message-reorder');
+  const changePending = oneEvent(el, 'lr-change');
+  (el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="move-message-down"]')[0]!).click();
+
+  const reorder = (await reorderPending) as CustomEvent<PromptStudioMessageReorderDetail>;
+  const changed = await changePending;
+  expect(reorder.cancelable).to.be.true;
+  expect(reorder.detail).to.deep.equal({
+    messages: [original[1], original[0], original[2]],
+    messageId: 'system',
+    fromIndex: 0,
+    toIndex: 1,
+  });
+  expect(reorder.detail.messages === original, 'reorder detail must not expose the caller array').to.be.false;
+  expect(changed.detail.messages.map((message: PromptStudioMessage) => message.id)).to.deep.equal(['user', 'system', 'assistant']);
+  expect(el.messages.map((message) => message.id)).to.deep.equal(['user', 'system', 'assistant']);
+  expect(original.map((message) => message.id), 'the caller array remains untouched').to.deep.equal([
+    'system',
+    'user',
+    'assistant',
+  ]);
+  expect(emitted).to.deep.equal(['lr-message-reorder', 'lr-change']);
+});
+
+it('honors a prevented message reorder without mutating state or emitting lr-change', async () => {
+  const original = reorderMessages.map((message) => ({ ...message }));
+  const el = (await fixture(html`<lr-prompt-studio reorderable .messages=${original}></lr-prompt-studio>`)) as LyraPromptStudio;
+  let reorderCount = 0;
+  let changeCount = 0;
+  el.addEventListener('lr-message-reorder', (event) => {
+    reorderCount++;
+    event.preventDefault();
+  });
+  el.addEventListener('lr-change', () => changeCount++);
+
+  (el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="move-message-down"]')[0]!).click();
+  await el.updateComplete;
+  expect(reorderCount).to.equal(1);
+  expect(changeCount).to.equal(0);
+  expect(el.messages.map((message) => message.id)).to.deep.equal(['system', 'user', 'assistant']);
+  expect(original.map((message) => message.id)).to.deep.equal(['system', 'user', 'assistant']);
+});
+
+it('supports native keyboard activation and keeps focus with the moved message action', async () => {
+  const el = (await fixture(html`<lr-prompt-studio reorderable .messages=${reorderMessages}></lr-prompt-studio>`)) as LyraPromptStudio;
+  const moveDown = el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="move-message-down"]')[0]!;
+  moveDown.focus();
+  const reorderPending = oneEvent(el, 'lr-message-reorder');
+  const changePending = oneEvent(el, 'lr-change');
+  await sendKeys({ press: 'Enter' });
+  await Promise.all([reorderPending, changePending]);
+  await el.updateComplete;
+
+  const focusedAction = el.shadowRoot!.activeElement as HTMLElement | null;
+  expect(focusedAction?.closest<HTMLElement>('[data-message-id]')?.dataset['messageId']).to.equal('system');
+  expect(focusedAction?.getAttribute('part')).to.equal('move-message-down');
+  expect(el.messages.map((message) => message.id)).to.deep.equal(['user', 'system', 'assistant']);
+
+  const secondMoveDown = el.shadowRoot!.querySelector<HTMLButtonElement>(
+    '[data-message-id="system"] [part="move-message-down"]',
+  )!;
+  secondMoveDown.focus();
+  const secondReorderPending = oneEvent(el, 'lr-message-reorder');
+  const secondChangePending = oneEvent(el, 'lr-change');
+  await sendKeys({ press: 'Enter' });
+  await Promise.all([secondReorderPending, secondChangePending]);
+  await el.updateComplete;
+
+  const boundaryFocusedAction = el.shadowRoot!.activeElement as HTMLElement | null;
+  expect(boundaryFocusedAction?.closest<HTMLElement>('[data-message-id]')?.dataset['messageId']).to.equal('system');
+  expect(boundaryFocusedAction?.getAttribute('part')).to.equal('move-message-up');
+  expect(el.messages.map((message) => message.id)).to.deep.equal(['user', 'assistant', 'system']);
 });

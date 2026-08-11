@@ -8,6 +8,7 @@ export const styles = css`
   [part='editor'] { display: grid; grid-template-columns: minmax(0, 2fr) minmax(var(--lr-size-12rem), 1fr); gap: var(--lr-space-m); }
   [part='messages'] { display: flex; flex-direction: column; gap: var(--lr-space-s); margin: 0 0 var(--lr-space-s); padding: 0; list-style: none; }
   [part='message'] { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--lr-space-xs); align-items: start; }
+  [part='message-actions'] { display: flex; flex-direction: column; gap: var(--lr-space-xs); }
   [part='message-role'], [part='message-content'], [part='variable'] input {
     min-block-size: var(--lr-icon-button-size);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -49,7 +50,7 @@ export const styles = css`
   [part='variables'] h3, [part='preview'] h3 { margin: 0; font-size: var(--lr-font-size-m); }
   [part='variable'] { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--lr-space-xs); }
   [part='variable'] input { min-inline-size: 0; padding-inline: var(--lr-space-s); }
-  [part='toolbar'] button, [part='remove-message'], [part='add-message'], [part='version'] {
+  [part='toolbar'] button, [part='move-message-up'], [part='move-message-down'], [part='remove-message'], [part='add-message'], [part='version'] {
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     padding: var(--lr-space-xs) var(--lr-space-s);
@@ -60,32 +61,40 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
   }
-  :where([part='toolbar'] button, [part='remove-message'], [part='add-message'], [part='version']):hover { background: var(--lr-color-surface-raised); }
+  :where([part='toolbar'] button, [part='move-message-up'], [part='move-message-down'], [part='remove-message'], [part='add-message'], [part='version']):hover { background: var(--lr-color-surface-raised); }
   /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
      --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
      than hover in both light and dark themes rather than repeating it. */
-  :where([part='toolbar'] button, [part='remove-message'], [part='add-message'], [part='version']):active {
+  :where([part='toolbar'] button, [part='move-message-up'], [part='move-message-down'], [part='remove-message'], [part='add-message'], [part='version']):active {
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
-  [part='version'][aria-pressed='true'] {
+  [part='move-message-up'] { transform: rotate(-90deg); }
+  [part='move-message-down'] { transform: rotate(90deg); }
+  [part='version']:where([aria-pressed='true']) {
     border-color: var(--lr-prompt-studio-version-selected-border, var(--lr-color-brand));
     background: var(--lr-prompt-studio-version-selected-bg, var(--lr-color-brand-quiet));
     color: var(--lr-prompt-studio-version-selected-color, var(--lr-color-text));
   }
-  /* Both of these must stay after the generic :where(...) rules above: every selector here is
-     :where()-wrapped, so they all land at the same (0,1,0) specificity and source order alone
-     decides which background the already-selected version chip gets. */
-  :where([part='version'][aria-pressed='true']):hover {
-    background: var(--lr-prompt-studio-version-selected-hover-bg, var(--lr-color-brand-quiet));
+  /* Keep the internal pressed-state qualifier inside :where() so consumer ::part(version)
+     rules can still win. The part selector retains the base control's specificity; the pseudo
+     class makes hover/pressed more specific than rest. */
+  [part='version']:where([aria-pressed='true']):hover {
+    background: var(
+      --lr-prompt-studio-version-selected-hover-bg,
+      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+    );
   }
-  :where([part='version'][aria-pressed='true']):active {
+  [part='version']:where([aria-pressed='true']):active {
     background: color-mix(
       in oklab,
-      var(--lr-prompt-studio-version-selected-hover-bg, var(--lr-color-brand-quiet)),
+      var(
+        --lr-prompt-studio-version-selected-hover-bg,
+        color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+      ),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  [part='toolbar'] button:focus-visible, [part='remove-message']:focus-visible, [part='add-message']:focus-visible, [part='version']:focus-visible,
+  [part='toolbar'] button:focus-visible, [part='move-message-up']:focus-visible, [part='move-message-down']:focus-visible, [part='remove-message']:focus-visible, [part='add-message']:focus-visible, [part='version']:focus-visible,
   [part='message-role']:focus-visible, [part='message-content']:focus-visible, [part='variable'] input:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset);
   }
@@ -96,6 +105,7 @@ export const styles = css`
   @container (max-inline-size: 40rem) { [part='editor'] { grid-template-columns: 1fr; } }
   @container (max-inline-size: 319.98px) {
     [part='message'], [part='variable'], [part='preview'] article { grid-template-columns: 1fr; }
+    [part='message-actions'] { flex-direction: row; justify-self: end; }
     [part='remove-message'] { justify-self: end; }
   }
 `;

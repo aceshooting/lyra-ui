@@ -1,6 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components';
 import './prompt-studio.js';
+import type { LyraPromptStudio, PromptStudioMessageReorderDetail } from './prompt-studio.js';
 
 const meta: Meta = { title: 'Agent Tools/Prompt Studio', component: 'lr-prompt-studio' };
 export default meta;
@@ -41,5 +42,23 @@ export const Narrow320: Story = {
         ]}
       ></lr-prompt-studio>
     </div>
+  `,
+};
+
+/** The cancelable reorder event makes persistence host-controlled: this listener accepts the
+ * proposal by assigning its immutable next array back after vetoing the component's immediate
+ * update. Production hosts can persist the same proposal first, then assign it when accepted. */
+export const Reorderable: Story = {
+  name: 'Reorderable messages (host-controlled)',
+  render: () => html`
+    <lr-prompt-studio
+      reorderable
+      .messages=${messages}
+      .variables=${[{ name: 'audience', value: 'developers' }]}
+      @lr-message-reorder=${(event: CustomEvent<PromptStudioMessageReorderDetail>) => {
+        event.preventDefault();
+        (event.currentTarget as LyraPromptStudio).messages = event.detail.messages;
+      }}
+    ></lr-prompt-studio>
   `,
 };
