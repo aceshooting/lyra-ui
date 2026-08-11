@@ -31,6 +31,8 @@ Empty values render an empty state. `generate(): Promise<void>` explicitly re-en
 value. `refreshTheme(): void` redraws cached modules for consumer-owned token changes; ordinary
 ancestor theme and color-scheme changes redraw automatically. Async peer and image results are
 generation-guarded, including across disconnect/reconnect.
+`LyraQrCode.preload(): Promise<boolean>` is a static optional-peer warm-up that starts the shared
+`qrcode` import without encoding a value; it resolves to `false` when the peer is unavailable.
 **CSS parts:** `base` and `qr-code` are aliases on the same outer wrapper; `canvas`, `empty`,
 `loading`, and `error`. **CSS custom properties:**
 `--lr-qr-code-fill` and `--lr-qr-code-background`. Ancestor theme-attribute and color-scheme

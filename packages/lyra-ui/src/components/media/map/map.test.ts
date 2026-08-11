@@ -1,7 +1,7 @@
 import { aTimeout, fixture, expect, html, waitUntil } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import './map.js';
-import type { LyraMap } from './map.js';
+import { LyraMap } from './map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -47,6 +47,17 @@ async function connectedMapWithoutMaplibre(style = ''): Promise<{ wrapper: HTMLE
   await el.updateComplete;
   return { wrapper, el };
 }
+
+function dataLayerResourceId(el: LyraMap, publicSourceId: string): string {
+  return (
+    el as unknown as { _appliedDataLayerIds: Map<string, string> }
+  )._appliedDataLayerIds.get(publicSourceId) ?? '';
+}
+
+it('preloads the optional map peer without constructing a map', async () => {
+  const loaded = await LyraMap.preload();
+  expect(typeof loaded).to.equal('boolean');
+});
 
 it('shows a loading skeleton and aria-busy while maplibre-gl loads, then swaps to the container', async function () {
   if (!hasWebGL2) this.skip();
@@ -779,7 +790,7 @@ it('repaints applied layers once after an ancestor theme mutation without touchi
       _map?: unknown;
       _styleLoaded: boolean;
       _appliedFillLayerId?: string;
-      _appliedDataLayerIds: Set<string>;
+      _appliedDataLayerIds: Map<string, string>;
     };
     el.dataLayers = [{
       sourceId: 'zones',
@@ -790,7 +801,7 @@ it('repaints applied layers once after an ancestor theme mutation without touchi
     privateMap._map = fakeMap;
     privateMap._styleLoaded = true;
     privateMap._appliedFillLayerId = 'regions-fill';
-    privateMap._appliedDataLayerIds = new Set(['zones']);
+    privateMap._appliedDataLayerIds = new Map([['zones', 'lr-data-layer-0']]);
 
     wrapper.setAttribute('data-theme', 'dark');
     wrapper.style.setProperty('--lr-map-choropleth-fill-opacity', '0.42');
@@ -801,10 +812,10 @@ it('repaints applied layers once after an ancestor theme mutation without touchi
     expect(getComputedStyle(el).getPropertyValue('--lr-map-choropleth-fill-opacity').trim()).to.equal('0.42');
     expect(paintCalls).to.deep.equal([
       { layerId: 'regions-fill', name: 'fill-opacity', value: 0.42 },
-      { layerId: 'zones-fill', name: 'fill-color', value: successColor },
-      { layerId: 'zones-fill', name: 'fill-opacity', value: 0.42 },
-      { layerId: 'zones-line', name: 'line-color', value: successColor },
-      { layerId: 'zones-circle', name: 'circle-color', value: successColor },
+      { layerId: 'lr-data-layer-0-fill', name: 'fill-color', value: successColor },
+      { layerId: 'lr-data-layer-0-fill', name: 'fill-opacity', value: 0.42 },
+      { layerId: 'lr-data-layer-0-line', name: 'line-color', value: successColor },
+      { layerId: 'lr-data-layer-0-circle', name: 'circle-color', value: successColor },
     ]);
     expect(nonPaintCalls).to.deep.equal([]);
   } finally {
@@ -1159,6 +1170,30 @@ describe('dataLayers', () => {
     expect(el.dataLayers).to.deep.equal([]);
   });
 
+  it('keeps a colliding base-style source owned by its style across add and removal', async function () {
+    if (!hasWebGL2) this.skip();
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    el.mapStyle = RASTER_STYLE;
+    el.dataLayers = [{ ...POLY_LAYER, sourceId: 'demo' }];
+    await el.updateComplete;
+    await waitUntilMapLoaded(el);
+    await waitUntil(() => {
+      const dataSourceId = dataLayerResourceId(el, 'demo');
+      return Boolean(dataSourceId && el.map!.getSource(dataSourceId));
+    }, 'component-owned source never became available', { timeout: 2000 });
+
+    const dataSourceId = dataLayerResourceId(el, 'demo');
+    expect(dataSourceId === 'demo').to.be.false;
+    expect(el.map!.getSource('demo')).to.exist;
+    expect(el.map!.getSource(dataSourceId)).to.exist;
+
+    el.dataLayers = [];
+    await el.updateComplete;
+
+    expect(el.map!.getSource('demo')).to.exist;
+    expect(el.map!.getSource(dataSourceId)).to.not.exist;
+  });
+
   it('adds a source and fill/line/circle layers per entry once the style loads', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
@@ -1166,13 +1201,17 @@ describe('dataLayers', () => {
     el.dataLayers = [POLY_LAYER];
     await el.updateComplete;
     await waitUntilMapLoaded(el);
-    await waitUntil(() => el.map!.getLayer('zones-fill') != null, 'fill layer never added', {
+    await waitUntil(() => {
+      const sourceId = dataLayerResourceId(el, 'zones');
+      return el.map!.getLayer(`${sourceId}-fill`) != null;
+    }, 'fill layer never added', {
       timeout: 2000,
     });
 
-    expect(el.map!.getSource('zones')).to.exist;
-    expect(el.map!.getLayer('zones-fill')).to.exist;
-    expect(el.map!.getLayer('zones-line')).to.exist;
+    const sourceId = dataLayerResourceId(el, 'zones');
+    expect(el.map!.getSource(sourceId)).to.exist;
+    expect(el.map!.getLayer(`${sourceId}-fill`)).to.exist;
+    expect(el.map!.getLayer(`${sourceId}-line`)).to.exist;
   });
 
   it('removing an entry (dataLayers reassigned without it) removes its source/layers, leaking nothing', async function () {
@@ -1182,17 +1221,21 @@ describe('dataLayers', () => {
     el.dataLayers = [POLY_LAYER];
     await el.updateComplete;
     await waitUntilMapLoaded(el);
-    await waitUntil(() => el.map!.getLayer('zones-fill') != null, 'fill layer never added', {
+    await waitUntil(() => {
+      const sourceId = dataLayerResourceId(el, 'zones');
+      return el.map!.getLayer(`${sourceId}-fill`) != null;
+    }, 'fill layer never added', {
       timeout: 2000,
     });
+    const sourceId = dataLayerResourceId(el, 'zones');
 
     el.dataLayers = [];
     await el.updateComplete;
 
-    expect(el.map!.getSource('zones')).to.not.exist;
-    expect(el.map!.getLayer('zones-fill')).to.not.exist;
-    expect(el.map!.getLayer('zones-line')).to.not.exist;
-    expect(el.map!.getLayer('zones-circle')).to.not.exist;
+    expect(el.map!.getSource(sourceId)).to.not.exist;
+    expect(el.map!.getLayer(`${sourceId}-fill`)).to.not.exist;
+    expect(el.map!.getLayer(`${sourceId}-line`)).to.not.exist;
+    expect(el.map!.getLayer(`${sourceId}-circle`)).to.not.exist;
   });
 
   it('updates existing source data in place when the same sourceId is reassigned with new geojson', async function () {
@@ -1202,9 +1245,13 @@ describe('dataLayers', () => {
     el.dataLayers = [POLY_LAYER];
     await el.updateComplete;
     await waitUntilMapLoaded(el);
-    await waitUntil(() => el.map!.getSource('zones') != null, 'source never added', { timeout: 2000 });
+    await waitUntil(() => {
+      const sourceId = dataLayerResourceId(el, 'zones');
+      return el.map!.getSource(sourceId) != null;
+    }, 'source never added', { timeout: 2000 });
 
-    const source = el.map!.getSource('zones') as { setData: (g: unknown) => void };
+    const sourceId = dataLayerResourceId(el, 'zones');
+    const source = el.map!.getSource(sourceId) as { setData: (g: unknown) => void };
     let called = 0;
     const originalSetData = source.setData.bind(source);
     source.setData = (g: unknown) => {
@@ -1216,7 +1263,7 @@ describe('dataLayers', () => {
     await el.updateComplete;
 
     expect(called).to.equal(1);
-    expect(el.map!.getSource('zones')).to.equal(source);
+    expect(el.map!.getSource(sourceId)).to.equal(source);
   });
 
   it('re-applies dataLayers after a mapStyle change (style.load handshake)', async function () {
@@ -1226,7 +1273,10 @@ describe('dataLayers', () => {
     el.dataLayers = [POLY_LAYER];
     await el.updateComplete;
     await waitUntilMapLoaded(el);
-    await waitUntil(() => el.map!.getLayer('zones-fill') != null, 'fill layer never added', {
+    await waitUntil(() => {
+      const sourceId = dataLayerResourceId(el, 'zones');
+      return el.map!.getLayer(`${sourceId}-fill`) != null;
+    }, 'fill layer never added', {
       timeout: 2000,
     });
 
@@ -1240,10 +1290,13 @@ describe('dataLayers', () => {
     el.mapStyle = NEXT_STYLE as typeof RASTER_STYLE;
     await el.updateComplete;
 
-    await waitUntil(() => el.map!.getLayer('zones-fill') != null, 'dataLayers never re-applied', {
+    await waitUntil(() => {
+      const sourceId = dataLayerResourceId(el, 'zones');
+      return el.map!.getLayer(`${sourceId}-fill`) != null;
+    }, 'dataLayers never re-applied', {
       timeout: 2000,
     });
-    expect(el.map!.getSource('zones')).to.exist;
+    expect(el.map!.getSource(dataLayerResourceId(el, 'zones'))).to.exist;
   });
 });
 
@@ -1385,15 +1438,18 @@ it('keeps choropleth and data-layer sources distinct when their public sourceId 
   await el.updateComplete;
   await waitUntilMapLoaded(el);
   await waitUntil(
-    () => Boolean(el.map!.getLayer('shared-fill') && el.map!.getLayer('shared-line')),
+    () => {
+      const dataSourceId = dataLayerResourceId(el, 'shared');
+      return Boolean(el.map!.getLayer('shared-fill') && el.map!.getLayer(`${dataSourceId}-line`));
+    },
     'colliding layers never became distinct',
     { timeout: 2000 },
   );
   expect(el.map!.getSource('shared')).to.exist;
-  expect(el.map!.getSource('lr-choropleth-shared')).to.exist;
+  expect(el.map!.getSource(dataLayerResourceId(el, 'shared'))).to.exist;
 });
 
-it('keeps the choropleth namespace distinct from both a colliding data source and its first fallback id', async function () {
+it('keeps the choropleth source distinct from every colliding public data source id', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
   el.mapStyle = RASTER_STYLE;
@@ -1405,14 +1461,18 @@ it('keeps the choropleth namespace distinct from both a colliding data source an
   await el.updateComplete;
   await waitUntilMapLoaded(el);
   await waitUntil(
-    () => Boolean(el.map!.getSource('lr-choropleth-lr-choropleth-shared')),
-    'choropleth did not move past both occupied data-layer ids',
+    () => {
+      const first = dataLayerResourceId(el, 'shared');
+      const second = dataLayerResourceId(el, 'lr-choropleth-shared');
+      return Boolean(first && second && first !== second && el.map!.getSource('shared'));
+    },
+    'component-owned data source ids did not become distinct',
     { timeout: 2000 },
   );
 
   expect(el.map!.getSource('shared')).to.exist;
-  expect(el.map!.getSource('lr-choropleth-shared')).to.exist;
-  expect(el.map!.getSource('lr-choropleth-lr-choropleth-shared')).to.exist;
+  expect(el.map!.getSource(dataLayerResourceId(el, 'shared'))).to.exist;
+  expect(el.map!.getSource(dataLayerResourceId(el, 'lr-choropleth-shared'))).to.exist;
 });
 
 it('can replace a choropleth with a same-id data layer in one reactive update', async function () {
@@ -1433,10 +1493,12 @@ it('can replace a choropleth with a same-id data layer in one reactive update', 
   }];
   await el.updateComplete;
 
-  expect(el.map!.getSource('shared')).to.exist;
-  expect(el.map!.getLayer('shared-fill')).to.exist;
-  expect(el.map!.getLayer('shared-line')).to.exist;
-  expect(el.map!.getLayer('shared-circle')).to.exist;
+  const dataSourceId = dataLayerResourceId(el, 'shared');
+  expect(el.map!.getSource('shared')).to.not.exist;
+  expect(el.map!.getSource(dataSourceId)).to.exist;
+  expect(el.map!.getLayer(`${dataSourceId}-fill`)).to.exist;
+  expect(el.map!.getLayer(`${dataSourceId}-line`)).to.exist;
+  expect(el.map!.getLayer(`${dataSourceId}-circle`)).to.exist;
 });
 
 it('preserves colliding choropleth and data-layer namespaces across clear and style reload', async function () {
@@ -1457,16 +1519,17 @@ it('preserves colliding choropleth and data-layer namespaces across clear and st
   } as typeof RASTER_STYLE;
   await el.updateComplete;
   await waitUntil(
-    () => Boolean(el.map!.getSource('shared') && el.map!.getSource('lr-choropleth-shared')),
+    () => Boolean(el.map!.getSource('shared') && el.map!.getSource(dataLayerResourceId(el, 'shared'))),
     'colliding sources were not restored after style reload',
     { timeout: 2000 },
   );
 
   el.choropleth = undefined;
   await el.updateComplete;
-  expect(el.map!.getSource('lr-choropleth-shared')).to.not.exist;
-  expect(el.map!.getSource('shared')).to.exist;
-  expect(el.map!.getLayer('shared-line')).to.exist;
+  const dataSourceId = dataLayerResourceId(el, 'shared');
+  expect(el.map!.getSource('shared')).to.not.exist;
+  expect(el.map!.getSource(dataSourceId)).to.exist;
+  expect(el.map!.getLayer(`${dataSourceId}-line`)).to.exist;
 });
 
 it('removes markers no longer present and reuses markers that persist', async function () {

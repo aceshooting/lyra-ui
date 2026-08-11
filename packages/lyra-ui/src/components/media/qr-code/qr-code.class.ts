@@ -181,6 +181,13 @@ export class LyraQrCode extends LyraElement {
 
   static override styles = [LyraElement.styles, styles];
 
+  /** Starts the shared optional-peer import without generating a QR code. Returns false when the
+   * optional peer is unavailable, so applications can decide whether to render their own fallback
+   * before connecting an element. */
+  static preload(): Promise<boolean> {
+    return loadQrCodeCached().then((api) => api !== null);
+  }
+
   /** The data to encode. Empty renders `[part="empty"]` -- no encode is attempted. */
   @property() value = '';
 
