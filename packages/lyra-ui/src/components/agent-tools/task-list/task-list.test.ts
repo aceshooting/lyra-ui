@@ -147,6 +147,29 @@ it('accepts expanded="false" as a plain-HTML attribute string', async () => {
   expect(el.expanded).to.be.false;
 });
 
+it('requests an opt-in controlled sibling reorder with Ctrl+ArrowDown', async () => {
+  const el = (await fixture(html`<lr-task-list reorderable .items=${items}></lr-task-list>`)) as LyraTaskList;
+  const row = el.shadowRoot!.querySelector('[part="item"][data-id="step-1"]') as HTMLElement;
+  const events: CustomEvent[] = [];
+  el.addEventListener('lr-reorder', (event) => events.push(event as CustomEvent));
+  row.focus();
+
+  row.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowDown',
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+      ctrlKey: true,
+    }),
+  );
+  await el.updateComplete;
+
+  expect(events.length).to.equal(1);
+  expect(events[0]!.detail).to.deep.equal({ id: 'step-1', parentId: null, fromIndex: 0, toIndex: 1 });
+  expect(el.items.map((item) => item.id)).to.deep.equal(['step-1', 'step-2', 'step-3']);
+});
+
 it('renders a dynamic detail-<id> slot per item for rich detail content', async () => {
   const el = (await fixture(html`
     <lr-task-list .items=${items}>

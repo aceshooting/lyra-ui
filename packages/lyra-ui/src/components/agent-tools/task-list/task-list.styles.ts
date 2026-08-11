@@ -114,6 +114,19 @@ export const styles = [
       align-items: baseline;
       gap: var(--lr-space-xs);
     }
+    [part='item'][tabindex] {
+      border-radius: var(--lr-radius);
+    }
+    :where([part='item'][tabindex]):hover {
+      background: var(--lr-color-brand-quiet);
+    }
+    :where([part='item'][tabindex]):active {
+      background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    }
+    [part='item'][tabindex]:focus-visible {
+      outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+      outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+    }
     [part='item'][data-depth='1'] {
       margin-inline-start: var(--lr-space-l);
     }

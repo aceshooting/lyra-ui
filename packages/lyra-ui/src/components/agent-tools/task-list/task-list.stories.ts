@@ -31,6 +31,28 @@ const items: TaskItem[] = [
   { id: 'step-3', label: 'Write summary', status: 'pending' },
 ];
 
+function moveTasks(tasks: TaskItem[], fromIndex: number, toIndex: number): TaskItem[] {
+  const next = [...tasks];
+  const [moved] = next.splice(fromIndex, 1);
+  if (!moved) return next;
+  next.splice(toIndex, 0, moved);
+  return next;
+}
+
+function reorderTasks(
+  tasks: TaskItem[],
+  parentId: string | null,
+  fromIndex: number,
+  toIndex: number,
+): TaskItem[] {
+  if (parentId === null) return moveTasks(tasks, fromIndex, toIndex);
+  return tasks.map((task) =>
+    task.id === parentId && task.children
+      ? { ...task, children: moveTasks(task.children, fromIndex, toIndex) }
+      : task,
+  );
+}
+
 export const Default: Story = {
   render: () => html`<lr-task-list style="max-width: 32rem;" .items=${items}></lr-task-list>`,
 };
@@ -54,6 +76,46 @@ export const WithNestedSubSteps: Story = {
       ]}
     ></lr-task-list>
   `,
+};
+
+/**
+ * `reorderable` turns Ctrl/Cmd+ArrowUp/ArrowDown on a focused task into a controlled request.
+ * This story applies each `lr-reorder` request by creating and assigning a new `items` array.
+ * Moves stay inside their current sibling group: a boundary key does nothing rather than making a
+ * child a top-level task or vice versa.
+ */
+export const Reorderable: Story = {
+  name: 'Keyboard reorderable (controlled)',
+  render: () => {
+    const reorderableItems: TaskItem[] = [
+      {
+        id: 'research',
+        label: 'Research the request',
+        status: 'running',
+        children: [
+          { id: 'sources', label: 'Collect sources', status: 'success' },
+          { id: 'findings', label: 'Extract findings', status: 'pending' },
+        ],
+      },
+      { id: 'draft', label: 'Draft response', status: 'pending' },
+      { id: 'review', label: 'Review response', status: 'pending' },
+    ];
+    const onReorder = (event: Event): void => {
+      const list = event.currentTarget as HTMLElement & { items: TaskItem[] };
+      const { parentId, fromIndex, toIndex } = (
+        event as CustomEvent<{ parentId: string | null; fromIndex: number; toIndex: number }>
+      ).detail;
+      list.items = reorderTasks(list.items, parentId, fromIndex, toIndex);
+    };
+    return html`
+      <lr-task-list
+        style="max-width: 32rem;"
+        reorderable
+        .items=${reorderableItems}
+        @lr-reorder=${onReorder}
+      ></lr-task-list>
+    `;
+  },
 };
 
 export const WithToolCallChipDetail: Story = {
