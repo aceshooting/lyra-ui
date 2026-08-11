@@ -110,6 +110,31 @@ export const Statuses: Story = {
   `,
 };
 
+export const RethemedPending: Story = {
+  name: 'Rethemed pending status',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The pending badge has independent foreground and background hooks, so a waiting call can match a product-specific emphasis without retinting the shared quiet token.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <lr-tool-result-dialog
+      .open=${context.viewMode !== 'docs'}
+      tool-name="search_web"
+      status="pending"
+      style="
+        --lr-tool-result-dialog-pending-color: var(--lr-color-brand);
+        --lr-tool-result-dialog-pending-bg: var(--lr-color-brand-quiet);
+      "
+    >
+      <p slot="body">Waiting for the scheduled search to begin…</p>
+    </lr-tool-result-dialog>
+  `,
+};
+
 export const MaximizedInitially: Story = {
   render: (_args, context) => html`
     <lr-tool-result-dialog .open=${context.viewMode !== 'docs'} maximized tool-name="run_python" status="success" duration-ms="2300">

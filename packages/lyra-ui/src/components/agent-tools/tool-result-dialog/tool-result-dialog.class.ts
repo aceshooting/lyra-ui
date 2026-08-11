@@ -238,6 +238,8 @@ function formatDuration(ms: number): {
  * @cssprop --lr-tool-result-dialog-maximized-inset - Insets for the maximized panel.
  * @cssprop [--lr-tool-result-dialog-spin=var(--lr-transition-ambient)] - Running-status animation
  *   duration and timing.
+ * @cssprop [--lr-tool-result-dialog-pending-color=var(--lr-color-text-quiet)] - Pending status foreground.
+ * @cssprop [--lr-tool-result-dialog-pending-bg=transparent] - Pending status background.
  * @cssprop [--lr-tool-result-dialog-running-color=var(--lr-color-brand)] - Running status foreground.
  * @cssprop [--lr-tool-result-dialog-running-bg=var(--lr-color-brand-quiet)] - Running status background.
  * @cssprop [--lr-tool-result-dialog-success-color=var(--lr-color-success)] - Success status foreground.

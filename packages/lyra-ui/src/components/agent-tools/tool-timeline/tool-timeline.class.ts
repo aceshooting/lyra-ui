@@ -60,6 +60,9 @@ export interface ToolTimelineApprovalDetail extends ToolApprovalEventDetail {
   args?: unknown;
 }
 
+/** Which approval action is waiting for a host that vetoed `lr-tool-approval-decide` to settle it. */
+export type ToolTimelineApprovalPending = 'approve' | 'deny' | null;
+
 export interface LyraToolTimelineEventMap {
   'lr-tool-approval-decide': CustomEvent<ToolTimelineApprovalDetail>;
 }
@@ -126,16 +129,20 @@ function redactField(value: unknown, root: string, paths: readonly string[], pla
  * `entries` itself — a host applies the decision (and any resulting status change) and re-assigns
  * `entries`; if the entry currently under review disappears or no longer qualifies as pending
  * (its `approved` was resolved some other way) by the time `entries` changes, the dialog closes on
- * its own rather than staying open over stale data. A chip belonging to an entry that isn't
- * pending approval is left alone — its own `lr-tool-call-chip-select` (and deprecated
- * `lr-tool-chip-select` alias) still bubble out normally for a host that wants to react to raw
- * chip selection for its own purposes.
+ * its own rather than staying open over stale data. If a host cancels `lr-tool-approval-decide` to
+ * persist it asynchronously, `pendingApproval` identifies the held action. After success, update
+ * the controlled entries and call `finalizePendingApproval()`; after failure, call
+ * `revertPendingApproval()` to restore the same open dialog and its draft for retry. A chip
+ * belonging to an entry that isn't pending approval is left alone — its own
+ * `lr-tool-call-chip-select` (and deprecated `lr-tool-chip-select` alias) still bubble out
+ * normally for a host that wants to react to raw chip selection for its own purposes.
  *
  * @customElement lr-tool-timeline
  * @event lr-tool-approval-decide - A pending entry's approval dialog was resolved.
  *   `detail: { invocationId, approved, args? }` — `args` (the dialog's current, possibly
  *   host-edited arguments) is present only when `approved` is `true`. Cancelable; preventing it
- *   preserves the pending dialog and its current argument edits.
+ *   preserves the pending dialog and its current argument edits, sets `pendingApproval`, and
+ *   requires `finalizePendingApproval()` or `revertPendingApproval()` to settle the held action.
  * @csspart base - The root `<ol>`.
  * @csspart entry - One entry's `<li>`; carries `data-status` (the entry's `status`) and
  *   `data-pending-approval` (`"true"`/`"false"`).
@@ -160,6 +167,8 @@ function redactField(value: unknown, root: string, paths: readonly string[], pla
  * @cssprop [--lr-tool-timeline-denied-marker-color=var(--lr-color-warning)] - Rail-dot color for a
  *   `status="denied"` entry, decoupled from the pending-approval border below so a consumer can
  *   retint either independently.
+ * @cssprop [--lr-tool-timeline-pending-marker-color=var(--lr-color-text-quiet)] - Rail-dot color
+ *   for a `status="pending"` entry.
  * @cssprop [--lr-tool-timeline-pending-approval-border-color=var(--lr-color-warning)] - Color of
  *   the entry body's leading border while `data-pending-approval="true"`.
  * @cssprop [--lr-tool-timeline-running-marker-color=var(--lr-color-brand)] - Running rail dot.
@@ -202,13 +211,22 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   /** The `id` of the entry currently under review in the shared approval dialog, or `undefined`
    *  while it's closed. */
   @state() private reviewingEntryId?: string;
+  @state() private approvalPending: ToolTimelineApprovalPending = null;
   @state() private openedEntryIds = new Set<string>();
+
+  /** The approval/denial action held after a listener vetoes `lr-tool-approval-decide`, or `null`
+   *  otherwise. Read-only: call `finalizePendingApproval()` after persisting the controlled entry,
+   *  or `revertPendingApproval()` to release the same dialog and draft for another attempt. */
+  get pendingApproval(): ToolTimelineApprovalPending {
+    return this.approvalPending;
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('entries') && this.reviewingEntryId !== undefined) {
       const still = this.entries.find((entry) => entry.id === this.reviewingEntryId);
       if (!still || !(still.needsApproval && still.approved === undefined)) {
         this.reviewingEntryId = undefined;
+        this.approvalPending = null;
       }
     }
   }
@@ -263,6 +281,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
       { cancelable: true },
     );
     if (wrapperEvent.defaultPrevented) {
+      this.approvalPending = 'approve';
       event.preventDefault();
       return;
     }
@@ -279,6 +298,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
       { cancelable: true },
     );
     if (wrapperEvent.defaultPrevented) {
+      this.approvalPending = 'deny';
       event.preventDefault();
       return;
     }
@@ -287,8 +307,24 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
 
   private onDialogClose = (event: CustomEvent): void => {
     event.stopPropagation();
+    this.approvalPending = null;
     this.reviewingEntryId = undefined;
   };
+
+  /** Completes a vetoed approval/denial after the host has persisted the controlled entry. Closes
+   *  the review dialog without changing `entries`; no-op when no approval action is pending. */
+  finalizePendingApproval(): void {
+    if (this.approvalPending === null) return;
+    this.approvalPending = null;
+    this.reviewingEntryId = undefined;
+  }
+
+  /** Releases a vetoed approval/denial after host persistence fails. Keeps the same dialog open
+   *  and retains any edited arguments so the reviewer can retry; no-op when nothing is pending. */
+  revertPendingApproval(): void {
+    if (this.approvalPending === null) return;
+    this.approvalPending = null;
+  }
 
   private onDetailsToggle(entryId: string, event: CustomEvent<{ open: boolean }>): void {
     event.stopPropagation();
@@ -389,6 +425,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
         tool-name=${reviewing?.name ?? ''}
         .args=${reviewing?.args ?? {}}
         .editable=${this.approvalEditable}
+        .pending=${this.approvalPending}
         ?open=${reviewing !== undefined}
         @lr-approve=${this.onDialogApprove}
         @lr-deny=${this.onDialogDeny}

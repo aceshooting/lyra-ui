@@ -17,6 +17,8 @@ export const styles = css`
       max(var(--lr-space-l), var(--lr-safe-area-bottom))
       max(var(--lr-space-l), var(--lr-safe-area-inline-start));
     --lr-tool-result-dialog-spin: var(--lr-transition-ambient);
+    --lr-tool-result-dialog-pending-color: var(--lr-color-text-quiet);
+    --lr-tool-result-dialog-pending-bg: transparent;
     --lr-tool-result-dialog-running-color: var(--lr-color-brand);
     --lr-tool-result-dialog-running-bg: var(--lr-color-brand-quiet);
     --lr-tool-result-dialog-success-color: var(--lr-color-success);
@@ -99,15 +101,15 @@ export const styles = css`
     border-radius: var(--lr-radius);
     font-size: var(--lr-font-size-xs);
     font-weight: var(--lr-font-weight-semibold);
-    color: var(--lr-color-text-quiet);
-    background: transparent;
+    color: var(--lr-tool-result-dialog-pending-color);
+    background: var(--lr-tool-result-dialog-pending-bg);
   }
   [part='status'] svg {
     inline-size: var(--lr-size-1em);
     block-size: var(--lr-size-1em);
   }
-  /* pending stays the neutral/quiet treatment above -- it's the resting
-     state before a tool call has done anything worth calling out. */
+  /* Pending is the resting state before a tool call has done anything worth
+     calling out; its foreground and background remain independently themeable. */
   :host([status='running']) [part='status'] {
     color: var(--lr-tool-result-dialog-running-color);
     background: var(--lr-tool-result-dialog-running-bg);

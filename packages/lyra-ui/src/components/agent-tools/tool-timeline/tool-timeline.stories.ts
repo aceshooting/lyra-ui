@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { createRef, ref } from 'lit/directives/ref.js';
 import './tool-timeline.js';
-import type { ToolTimelineEntry, ToolTimelineApprovalDetail } from './tool-timeline.js';
+import type { LyraToolTimeline, ToolTimelineEntry, ToolTimelineApprovalDetail } from './tool-timeline.js';
 
 const meta: Meta = {
   title: 'ToolTimeline',
@@ -115,6 +115,47 @@ export const PendingApproval: Story = {
       }}
     ></lr-tool-timeline>
     <p id="tool-timeline-approval-log">No decision yet — click the chip above to review.</p>
+  `,
+};
+
+export const DeferredApproval: Story = {
+  name: 'Deferred approval with retry',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'This simulates an asynchronous persistence failure. Preventing the decision event holds the shared dialog; `revertPendingApproval()` releases it without discarding an in-progress argument edit, so the reviewer can retry.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-tool-timeline
+      style="
+        max-width:36rem;
+        --lr-tool-timeline-pending-marker-color: var(--lr-color-brand);
+      "
+      .entries=${[
+        {
+          id: 'call-1',
+          name: 'delete_file',
+          args: { path: '/workspace/report-draft.md' },
+          status: 'pending',
+          startedAt: Date.now() - 2_000,
+          needsApproval: true,
+        },
+      ] satisfies ToolTimelineEntry[]}
+      @lr-tool-approval-decide=${(event: CustomEvent<ToolTimelineApprovalDetail>) => {
+        event.preventDefault();
+        const timeline = event.currentTarget as LyraToolTimeline;
+        const log = document.getElementById('tool-timeline-deferred-approval-log');
+        if (log) log.textContent = 'Saving decision…';
+        setTimeout(() => {
+          timeline.revertPendingApproval();
+          if (log) log.textContent = 'Save was rejected. Review the unchanged draft and try again.';
+        }, 1_200);
+      }}
+    ></lr-tool-timeline>
+    <p id="tool-timeline-deferred-approval-log">No decision yet — approve or deny the call above.</p>
   `,
 };
 

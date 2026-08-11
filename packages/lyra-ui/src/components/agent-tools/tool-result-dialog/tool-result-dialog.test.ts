@@ -570,3 +570,35 @@ it('retints status chrome through component-scoped state hooks', async () => {
   expect(getComputedStyle(status).color).to.equal('rgb(1, 2, 3)');
   expect(getComputedStyle(status).backgroundColor).to.equal('rgb(4, 5, 6)');
 });
+
+it('retints pending status chrome through dedicated component-scoped state hooks', async () => {
+  const el = (await fixture(html`
+    <lr-tool-result-dialog
+      status="pending"
+      style="
+        --lr-tool-result-dialog-pending-color: rgb(1, 2, 3);
+        --lr-tool-result-dialog-pending-bg: rgb(4, 5, 6);
+      "
+    ></lr-tool-result-dialog>
+  `)) as LyraToolResultDialog;
+  const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
+  expect(getComputedStyle(status).color).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(status).backgroundColor).to.equal('rgb(4, 5, 6)');
+});
+
+it('uses the quiet foreground and transparent background defaults for pending status chrome', async () => {
+  const el = (await fixture(html`<lr-tool-result-dialog status="pending"></lr-tool-result-dialog>`)) as LyraToolResultDialog;
+  const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
+  const quietProbe = document.createElement('span');
+  quietProbe.style.color = 'var(--lr-color-text-quiet)';
+  const transparentProbe = document.createElement('span');
+  transparentProbe.style.background = 'transparent';
+  el.shadowRoot!.append(quietProbe, transparentProbe);
+  const quietColor = getComputedStyle(quietProbe).color;
+  const transparentBackground = getComputedStyle(transparentProbe).backgroundColor;
+  quietProbe.remove();
+  transparentProbe.remove();
+
+  expect(getComputedStyle(status).color).to.equal(quietColor);
+  expect(getComputedStyle(status).backgroundColor).to.equal(transparentBackground);
+});

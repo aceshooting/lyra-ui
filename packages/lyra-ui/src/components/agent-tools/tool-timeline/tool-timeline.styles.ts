@@ -6,6 +6,7 @@ export const styles = css`
     --lr-tool-timeline-gap: var(--lr-space-l);
     --lr-tool-timeline-marker-size: var(--lr-size-0-625rem);
     --lr-tool-timeline-denied-marker-color: var(--lr-color-warning);
+    --lr-tool-timeline-pending-marker-color: var(--lr-color-text-quiet);
     --lr-tool-timeline-pending-approval-border-color: var(--lr-color-warning);
   }
 
@@ -38,7 +39,7 @@ export const styles = css`
     block-size: var(--lr-tool-timeline-marker-size);
     margin-block-start: var(--lr-size-0-3em);
     border-radius: var(--lr-radius-pill);
-    background: var(--lr-color-text-quiet);
+    background: var(--lr-tool-timeline-pending-marker-color);
   }
   [part='entry']:not(:last-child) [part='entry-marker']::after {
     content: '';

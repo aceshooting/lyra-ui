@@ -397,6 +397,8 @@ state, so no additional scroll-lock/focus-trap bookkeeping is needed for that tr
 
 - `--lr-tool-result-dialog-running-color` — Running status foreground. Default: `var(--lr-color-brand)`.
 - `--lr-tool-result-dialog-running-bg` — Running status background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-tool-result-dialog-pending-color` — Pending status foreground. Default: `var(--lr-color-text-quiet)`.
+- `--lr-tool-result-dialog-pending-bg` — Pending status background. Default: `transparent`.
 - `--lr-tool-result-dialog-success-color` — Success status foreground. Default: `var(--lr-color-success)`.
 - `--lr-tool-result-dialog-success-bg` — Success status background. Default: `var(--lr-color-success-quiet)`.
 - `--lr-tool-result-dialog-error-color` — Error status foreground. Default: `var(--lr-color-danger)`.
@@ -2148,6 +2150,14 @@ primitives, with retry counts and sensitive-field redaction.
   works
 - `formatTimestamp?: (date: Date) => string` (attribute: false) — overrides the default
   `hour:minute` rendering of each entry's `startedAt`
+- `pendingApproval: ToolTimelineApprovalPending = null` (read-only) — `'approve'` or `'deny'` while
+  a listener has vetoed `lr-tool-approval-decide` and the timeline is holding the shared dialog for
+  host persistence; otherwise `null`
+
+**Methods:** `finalizePendingApproval(): void` closes a held dialog after the host has persisted and
+applied its controlled `entries` update (it never mutates `entries` itself). `revertPendingApproval():
+void` releases a held dialog after persistence fails, retaining the reviewer’s current argument edit
+so they can retry. Both are no-ops when no decision is held.
 
 **Events:** `lr-tool-approval-decide` (`detail: ToolTimelineApprovalDetail` =
 `ToolApprovalEventDetail & { args?: unknown }` = `{ invocationId: string; approved: boolean; args?:
@@ -2156,8 +2166,21 @@ unknown }`, extending the shared detail from `@aceshooting/lyra-ui/ai`). `args` 
 edit step can hand back different arguments. A listener that only needs `{ invocationId, approved }`
 can ignore it; one actually executing the tool needs it. This is a cancelable veto point:
 `preventDefault()` preserves the pending approval dialog and its current inline argument edits
-instead of closing/resetting them, so asynchronous host validation can finish before resolving the
-decision.
+instead of closing/resetting them, sets `pendingApproval`, and requires the host to call
+`finalizePendingApproval()` after persistence succeeds or `revertPendingApproval()` after it fails.
+
+```ts
+timeline.addEventListener('lr-tool-approval-decide', async (event) => {
+  event.preventDefault();
+  try {
+    await persistDecision(event.detail);
+    timeline.entries = applyDecision(timeline.entries, event.detail);
+    timeline.finalizePendingApproval();
+  } catch {
+    timeline.revertPendingApproval();
+  }
+});
+```
 
 **CSS parts:** `base`,
 `entry`, `entry-marker`, `entry-header`, `entry-timestamp`, `entry-body`, `entry-details`,
@@ -2171,7 +2194,9 @@ gap between entries; `--lr-tool-timeline-marker-size` (default `var(--lr-size-0-
 per-entry timeline marker dot's size, which also sets the entry grid's leading column width;
 `--lr-tool-timeline-denied-marker-color` (default `var(--lr-color-warning)`) — rail-dot color for a
 `status="denied"` entry, decoupled from the pending-approval border color below so either can be
-retinted independently; `--lr-tool-timeline-pending-approval-border-color` (default
+retinted independently; `--lr-tool-timeline-pending-marker-color` (default
+`var(--lr-color-text-quiet)`) — rail-dot color for a `status="pending"` entry;
+`--lr-tool-timeline-pending-approval-border-color` (default
 `var(--lr-color-warning)`) — color of the entry body's leading border while that entry's
 `data-pending-approval` is `"true"`.
 

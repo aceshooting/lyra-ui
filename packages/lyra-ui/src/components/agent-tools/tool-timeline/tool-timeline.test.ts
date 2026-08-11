@@ -50,18 +50,65 @@ it('suppresses both chip-selection events while opening a pending approval', asy
   expect(dialog(el).open).to.be.true;
 });
 
-it('preserves the dialog pending contract when the wrapper approval event is vetoed', async () => {
+it('exposes a vetoed approval at the timeline boundary and lets a host revert it without losing edits', async () => {
+  const entry = makeEntry({ needsApproval: true, approved: undefined, args: { path: '/workspace/draft.md' } });
+  const el = (await fixture(html`<lr-tool-timeline .entries=${[entry]}></lr-tool-timeline>`)) as LyraToolTimeline;
+  chipIn(entriesEl(el)[0]).dispatchEvent(
+    new CustomEvent('lr-tool-call-chip-select', { bubbles: true, composed: true }),
+  );
+  await el.updateComplete;
+  const approvalDialog = dialog(el);
+  approvalDialog.shadowRoot!.querySelector<HTMLButtonElement>('[part="edit-button"]')!.click();
+  await approvalDialog.updateComplete;
+  const editor = approvalDialog.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="args-editor"]')!;
+  const editedArgs = '{\n  "path": "/workspace/retry.md"\n}';
+  editor.value = editedArgs;
+  editor.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await approvalDialog.updateComplete;
+  el.addEventListener('lr-tool-approval-decide', (event) => event.preventDefault(), { once: true });
+  approvalDialog.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
+  await el.updateComplete;
+  await approvalDialog.updateComplete;
+  expect(el.pendingApproval).to.equal('approve');
+  expect(approvalDialog.open).to.be.true;
+  expect(approvalDialog.pending).to.equal('approve');
+
+  el.revertPendingApproval();
+  await el.updateComplete;
+  await approvalDialog.updateComplete;
+  expect(el.pendingApproval).to.equal(null);
+  expect(approvalDialog.open).to.be.true;
+  expect(approvalDialog.pending).to.equal(null);
+  expect(editor.value).to.equal(editedArgs);
+
+  const retry = oneEvent(el, 'lr-tool-approval-decide');
+  approvalDialog.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
+  const event = (await retry) as CustomEvent<ToolTimelineApprovalDetail>;
+  expect(event.detail).to.deep.equal({ invocationId: 'call-1', approved: true, args: { path: '/workspace/retry.md' } });
+  await el.updateComplete;
+  expect(approvalDialog.open).to.be.false;
+});
+
+it('lets a host finalize a vetoed denial through the timeline boundary', async () => {
   const entry = makeEntry({ needsApproval: true, approved: undefined });
   const el = (await fixture(html`<lr-tool-timeline .entries=${[entry]}></lr-tool-timeline>`)) as LyraToolTimeline;
   chipIn(entriesEl(el)[0]).dispatchEvent(
     new CustomEvent('lr-tool-call-chip-select', { bubbles: true, composed: true }),
   );
   await el.updateComplete;
+  const approvalDialog = dialog(el);
   el.addEventListener('lr-tool-approval-decide', (event) => event.preventDefault(), { once: true });
-  dialog(el).shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
-  await dialog(el).updateComplete;
-  expect(dialog(el).open).to.be.true;
-  expect(dialog(el).pending).to.equal('approve');
+  approvalDialog.shadowRoot!.querySelector<HTMLElement>('[part="deny-button"]')!.click();
+  await el.updateComplete;
+  await approvalDialog.updateComplete;
+  expect(el.pendingApproval).to.equal('deny');
+  expect(approvalDialog.pending).to.equal('deny');
+
+  el.finalizePendingApproval();
+  await el.updateComplete;
+  await approvalDialog.updateComplete;
+  expect(el.pendingApproval).to.equal(null);
+  expect(approvalDialog.open).to.be.false;
 });
 
 it('uses prototype-safe redaction clones', async () => {
@@ -100,7 +147,17 @@ it('defaults to entries=[] and approvalEditable=true, rendering an empty list wi
   const el = (await fixture(html`<lr-tool-timeline></lr-tool-timeline>`)) as LyraToolTimeline;
   expect(el.entries).to.deep.equal([]);
   expect(el.approvalEditable).to.be.true;
+  expect(el.pendingApproval).to.equal(null);
   expect(entriesEl(el).length).to.equal(0);
+  expect(dialog(el).open).to.be.false;
+});
+
+it('leaves timeline approval recovery methods inert when no approval is held', async () => {
+  const el = (await fixture(html`<lr-tool-timeline></lr-tool-timeline>`)) as LyraToolTimeline;
+  el.finalizePendingApproval();
+  el.revertPendingApproval();
+  await el.updateComplete;
+  expect(el.pendingApproval).to.equal(null);
   expect(dialog(el).open).to.be.false;
 });
 
@@ -277,16 +334,22 @@ it('does not reopen the dialog for an already-decided entry, and shows the local
   expect(entriesEl(elDenied)[0].querySelector('[part="entry-approval-status"]')!.textContent!.trim()).to.equal('Denied');
 });
 
-it('closes the review dialog if its entry disappears or resolves out from under it via a new entries assignment', async () => {
+it('clears a held approval and closes the review dialog if its entry disappears or resolves via a new entries assignment', async () => {
   const entries: ToolTimelineEntry[] = [makeEntry({ id: 'call-x', needsApproval: true })];
   const el = (await fixture(html`<lr-tool-timeline .entries=${entries}></lr-tool-timeline>`)) as LyraToolTimeline;
   chipIn(entriesEl(el)[0]).shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!.click();
   await el.updateComplete;
   expect(dialog(el).open).to.be.true;
 
+  el.addEventListener('lr-tool-approval-decide', (event) => event.preventDefault(), { once: true });
+  dialog(el).shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
+  await el.updateComplete;
+  expect(el.pendingApproval).to.equal('approve');
+
   el.entries = [];
   await el.updateComplete;
   expect(dialog(el).open).to.be.false;
+  expect(el.pendingApproval).to.equal(null);
 });
 
 it('renders a retry badge with the localized "Retry" label and formatted count only when retryCount > 0', async () => {
@@ -373,7 +436,7 @@ it('stays within a 320px allocation without the host overflowing it', async () =
   expect((el as unknown as HTMLElement).getBoundingClientRect().width).to.be.at.most(320);
 });
 
-it('retints a denied entry\'s rail-dot and a pending-approval entry\'s leading border independently via their own cssprops, both falling back to --lr-color-warning', async () => {
+it('retints denied and pending rail-dots plus the pending-approval border through independent cssprops', async () => {
   const denied: ToolTimelineEntry[] = [
     makeEntry({ id: 'c-denied', status: 'denied', approved: false }),
     makeEntry({ id: 'c-pending', status: 'pending', needsApproval: true }),
@@ -383,19 +446,22 @@ it('retints a denied entry\'s rail-dot and a pending-approval entry\'s leading b
       .entries=${denied}
       style="
         --lr-tool-timeline-denied-marker-color: rgb(1, 2, 3);
+        --lr-tool-timeline-pending-marker-color: rgb(4, 5, 6);
         --lr-tool-timeline-pending-approval-border-color: rgb(7, 8, 9);
       "
     ></lr-tool-timeline>`,
   )) as LyraToolTimeline;
   const rows = entriesEl(el);
   const deniedMarker = rows[0].querySelector('[part="entry-marker"]') as HTMLElement;
+  const pendingMarker = rows[1].querySelector('[part="entry-marker"]') as HTMLElement;
   const pendingBody = rows[1].querySelector('[part="entry-body"]') as HTMLElement;
 
   expect(getComputedStyle(deniedMarker, '::before').backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(pendingMarker, '::before').backgroundColor).to.equal('rgb(4, 5, 6)');
   expect(getComputedStyle(pendingBody).borderInlineStartColor).to.equal('rgb(7, 8, 9)');
 });
 
-it('falls back both denied-marker and pending-approval-border colors to the shared --lr-color-warning token when unset', async () => {
+it('falls back denied and pending marker colors plus the pending-approval border to their shared token defaults when unset', async () => {
   const entries: ToolTimelineEntry[] = [
     makeEntry({ id: 'c-denied', status: 'denied', approved: false }),
     makeEntry({ id: 'c-pending', status: 'pending', needsApproval: true }),
@@ -403,14 +469,20 @@ it('falls back both denied-marker and pending-approval-border colors to the shar
   const el = (await fixture(html`<lr-tool-timeline .entries=${entries}></lr-tool-timeline>`)) as LyraToolTimeline;
   const rows = entriesEl(el);
   const deniedMarker = rows[0].querySelector('[part="entry-marker"]') as HTMLElement;
+  const pendingMarker = rows[1].querySelector('[part="entry-marker"]') as HTMLElement;
   const pendingBody = rows[1].querySelector('[part="entry-body"]') as HTMLElement;
   const probe = document.createElement('div');
   probe.style.color = 'var(--lr-color-warning)';
-  el.shadowRoot!.appendChild(probe);
+  const quietProbe = document.createElement('div');
+  quietProbe.style.color = 'var(--lr-color-text-quiet)';
+  el.shadowRoot!.append(probe, quietProbe);
   const warningColor = getComputedStyle(probe).color;
+  const quietColor = getComputedStyle(quietProbe).color;
   probe.remove();
+  quietProbe.remove();
 
   expect(getComputedStyle(deniedMarker, '::before').backgroundColor).to.equal(warningColor);
+  expect(getComputedStyle(pendingMarker, '::before').backgroundColor).to.equal(quietColor);
   expect(getComputedStyle(pendingBody).borderInlineStartColor).to.equal(warningColor);
 });
 
