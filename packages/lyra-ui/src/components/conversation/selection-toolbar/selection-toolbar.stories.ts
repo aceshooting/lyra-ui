@@ -51,6 +51,29 @@ export const Narrow320: Story = {
   `,
 };
 
+export const ThemedPlacementGap: Story = {
+  name: 'Themed placement gap',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The placement gap controls both the selection-anchor distance and the viewport collision inset. It accepts a CSS length and defaults to `var(--lr-space-s)`.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="min-block-size: var(--lr-size-15rem); max-inline-size: var(--lr-size-20rem);">
+      <p>The toolbar stays farther from this selection and from the viewport edges.</p>
+      <lr-selection-toolbar
+        open
+        text="A themed selection toolbar"
+        style="--lr-selection-toolbar-placement-gap: var(--lr-size-2rem)"
+        .rect=${new DOMRect(24, 160, 180, 24)}
+      ></lr-selection-toolbar>
+    </div>
+  `,
+};
+
 export const ControlledActionRefreshFocus: Story = {
   name: 'Controlled action refresh focus',
   render: () => html`

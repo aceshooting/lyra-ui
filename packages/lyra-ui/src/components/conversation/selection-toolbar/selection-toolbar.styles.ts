@@ -3,6 +3,7 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: contents;
+    --lr-selection-toolbar-placement-gap: var(--lr-space-s);
   }
 
   [part='toolbar'] {
@@ -22,11 +23,11 @@ export const styles = css`
     background: var(--lr-color-surface);
     /* Anchored overlay: a floating toolbar pinned to the current selection, not a modal layer. */
     box-shadow: var(--lr-shadow-m);
-    transform: translate(-50%, calc(-100% - var(--lr-space-xs)));
+    transform: translate(-50%, calc(-100% - var(--lr-selection-toolbar-placement-gap)));
   }
 
   :host(:dir(rtl)) [part='toolbar'] {
-    transform: translate(50%, calc(-100% - var(--lr-space-xs)));
+    transform: translate(50%, calc(-100% - var(--lr-selection-toolbar-placement-gap)));
   }
 
   [part='toolbar'][data-positioned] {

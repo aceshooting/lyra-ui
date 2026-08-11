@@ -3004,7 +3004,10 @@ ownership even when the detach lasts past an event-loop turn.
 
 **Themeable custom properties:** `--lr-selection-toolbar-inline-start` and
 `--lr-selection-toolbar-block-start` are normally computed from `rect`; hosts may override them to
-provide their own fixed-position anchor.
+provide their own fixed-position anchor. `--lr-selection-toolbar-placement-gap` (default
+`var(--lr-space-s)`) is the non-negative distance from the selection and from viewport edges while
+the toolbar avoids collisions. It accepts unitless pixel values and `px`, `rem`, and `em` values; unsupported
+values fall back to the default and negative values clamp to `0`.
 
 **Slots:** none. **Optional peer deps:** none.
 

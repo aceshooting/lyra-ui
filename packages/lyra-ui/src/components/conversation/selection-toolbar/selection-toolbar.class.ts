@@ -3,8 +3,9 @@ import { property, query } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import type { DocumentLocator } from '../../../ai/types.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { resolveCssLength } from '../../../internal/css-length.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { finiteNumber } from '../../../internal/numbers.js';
+import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import {
   activateOverlay,
   type OverlayHandle,
@@ -37,6 +38,8 @@ const ACTION_KEYS: Record<SelectionAction, string> = {
   copy: 'copy',
 };
 
+const DEFAULT_PLACEMENT_GAP_PX = 8;
+
 /**
  * `<lr-selection-toolbar>` — a nonmodal action toolbar positioned above selected text. It carries
  * the selected text and a format-neutral document anchor into ask, quote, cite, or copy actions.
@@ -57,6 +60,10 @@ const ACTION_KEYS: Record<SelectionAction, string> = {
  * @cssprop --lr-selection-toolbar-block-start - Computed logical block anchor position.
  * @cssprop --lr-selection-toolbar-inline-shift - Computed inline collision-avoidance offset.
  * @cssprop --lr-selection-toolbar-block-shift - Computed block collision-avoidance offset.
+ * @cssprop [--lr-selection-toolbar-placement-gap=var(--lr-space-s)] - Non-negative distance
+ *   between the selection and toolbar, and between the toolbar and viewport during collision
+ *   avoidance. Unitless pixel values and `px`, `rem`, and `em` values are resolved live; invalid values
+ *   fall back to the default and negative values clamp to `0`.
  * @status stable
  * @since 7.0.0
  */
@@ -354,12 +361,27 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     };
   }
 
+  /** Resolves the shared selection-anchor and collision-edge distance from the host's live
+   *  custom property. Placement works in viewport pixels, so it must not pass an unresolved CSS
+   *  expression into geometry math; unsupported values retain the historical 8px fallback. */
+  private placementGapPx(): number {
+    const raw = this.ownerDocument.defaultView
+      ?.getComputedStyle(this)
+      .getPropertyValue('--lr-selection-toolbar-placement-gap')
+      .trim() ?? '';
+    return finiteRange(
+      resolveCssLength(raw, this) ?? DEFAULT_PLACEMENT_GAP_PX,
+      DEFAULT_PLACEMENT_GAP_PX,
+      0,
+    );
+  }
+
   private updateToolbarPosition = (): void => {
     const toolbar = this.toolbar;
     const view = this.ownerDocument.defaultView;
     if (!toolbar || !view) return;
-    const edge = 8;
-    const gap = 8;
+    const gap = this.placementGapPx();
+    const edge = gap;
     const rect = this.safeRect(this.rect ?? new view.DOMRect(view.innerWidth / 2, 0, 0, 0));
     const width = toolbar.offsetWidth;
     const height = toolbar.offsetHeight;

@@ -85,6 +85,77 @@ it('keeps every viewport-edge placement inside the visible viewport', async () =
   }
 });
 
+it('keeps the historical 8px placement gap when the themeable hook is unset', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar
+      open
+      text="selected"
+      .rect=${new DOMRect(240, 200, 20, 20)}
+    ></lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+  await waitUntil(() => toolbar.hasAttribute('data-positioned'));
+  await aTimeout(0);
+
+  expect(Math.round(200 - toolbar.getBoundingClientRect().bottom)).to.equal(8);
+});
+
+it('resolves a themeable placement gap for both the selection anchor and viewport collisions', async () => {
+  const gap = 1.5 * Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+  const el = (await fixture(html`
+    <lr-selection-toolbar
+      open
+      text="selected"
+      style="--lr-selection-toolbar-placement-gap: 1.5rem"
+      .rect=${new DOMRect(240, 200, 20, 20)}
+    ></lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+  await waitUntil(() => toolbar.hasAttribute('data-positioned'));
+  await aTimeout(0);
+
+  expect(Math.round(200 - toolbar.getBoundingClientRect().bottom)).to.equal(Math.round(gap));
+
+  el.rect = new DOMRect(0, 0, 1, 1);
+  await el.updateComplete;
+  await aTimeout(0);
+  const edgePosition = toolbar.getBoundingClientRect();
+  expect(Math.round(edgePosition.left)).to.be.at.least(Math.round(gap));
+  expect(Math.round(edgePosition.top)).to.be.at.least(Math.round(gap));
+});
+
+it('falls back to the historical placement gap for an unsupported CSS length', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar
+      open
+      text="selected"
+      style="--lr-selection-toolbar-placement-gap: calc(1rem + 2px)"
+      .rect=${new DOMRect(240, 200, 20, 20)}
+    ></lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+  await waitUntil(() => toolbar.hasAttribute('data-positioned'));
+  await aTimeout(0);
+
+  expect(Math.round(200 - toolbar.getBoundingClientRect().bottom)).to.equal(8);
+});
+
+it('clamps a negative placement gap at zero', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar
+      open
+      text="selected"
+      style="--lr-selection-toolbar-placement-gap: -1rem"
+      .rect=${new DOMRect(240, 200, 20, 20)}
+    ></lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+  await waitUntil(() => toolbar.hasAttribute('data-positioned'));
+  await aTimeout(0);
+
+  expect(Math.round(toolbar.getBoundingClientRect().bottom)).to.equal(200);
+});
+
 it('contains long localized action labels inside a 375px toolbar allocation', async () => {
   const token = 'Supercalifragilisticexpialidocious'.repeat(4);
   const el = (await fixture(html`
