@@ -15,9 +15,13 @@ it('provides hover feedback for keyboard-focusable bars and points', () => {
 async function mount(tpl: ReturnType<typeof html>): Promise<LyraLiteChart> {
   const el = (await fixture(tpl)) as LyraLiteChart;
   // Let the ResizeObserver callback (async, fires after connect) settle so
-  // plotWidth/plotHeight reflect the real rendered size, not the 400x200
-  // pre-measurement fallback — needed for any geometry-dependent assertion.
-  await waitUntil(() => el.shadowRoot!.querySelector('svg')!.getAttribute('viewBox') !== '0 0 400 200');
+  // plotWidth/plotHeight reflect the real rendered size before geometry-dependent
+  // assertions. A realm without ResizeObserver intentionally retains the legacy
+  // 400x200 fallback instead.
+  await waitUntil(() => {
+    const chart = el as unknown as { plotWidth: number; plotHeight: number };
+    return !el.ownerDocument.defaultView?.ResizeObserver || (chart.plotWidth > 0 && chart.plotHeight > 0);
+  });
   await el.updateComplete;
   return el;
 }
@@ -505,11 +509,11 @@ it('appends legendText output next to each series label when set', async () => {
 });
 
 it('uses tickFormat for y-axis labels when provided', async () => {
-  const el = (await fixture(html`<lr-lite-chart
+  const el = await mount(html`<lr-lite-chart
     .labels=${['a', 'b']}
     .datasets=${[{ label: 'S', data: [10, 20] }]}
     .tickFormat=${(v: number) => `$${v.toFixed(2)}`}
-  ></lr-lite-chart>`)) as LyraLiteChart;
+  ></lr-lite-chart>`);
   const labels = Array.from(el.shadowRoot!.querySelectorAll('[part="axis-label"]')).map(
     (n) => n.textContent,
   );
@@ -517,10 +521,10 @@ it('uses tickFormat for y-axis labels when provided', async () => {
 });
 
 it('falls back to the default nice-number formatter without tickFormat', async () => {
-  const el = (await fixture(html`<lr-lite-chart
+  const el = await mount(html`<lr-lite-chart
     .labels=${['a', 'b']}
     .datasets=${[{ label: 'S', data: [10, 20] }]}
-  ></lr-lite-chart>`)) as LyraLiteChart;
+  ></lr-lite-chart>`);
   const labels = Array.from(el.shadowRoot!.querySelectorAll('[part="axis-label"]')).map(
     (n) => n.textContent,
   );
@@ -655,10 +659,9 @@ it('breaks the line at multiple disjoint null gaps, producing one M per segment'
 });
 
 it('renders no invalid/NaN geometry when every value is non-finite', async () => {
-  const el = (await fixture(
+  const el = await mount(
     html`<lr-lite-chart type="line" .labels=${['a']} .datasets=${[{ label: 's', data: [NaN] }]}></lr-lite-chart>`,
-  )) as LyraLiteChart;
-  await el.updateComplete;
+  );
   const path = el.shadowRoot!.querySelector('[part="line"]') as SVGPathElement;
   expect(path.getAttribute('d') ?? '').to.not.include('NaN');
 });
@@ -694,6 +697,52 @@ it('excludes a non-finite (NaN) bar value, same as null, without throwing', asyn
   await el.updateComplete;
   const rects = el.shadowRoot!.querySelectorAll('[part="bar"]');
   expect(rects.length).to.equal(1);
+});
+
+it('withholds fit-mode geometry until its first ResizeObserver measurement', async () => {
+  const callbacks: ResizeObserverCallback[] = [];
+  const OriginalRO = window.ResizeObserver;
+  class FakeResizeObserver implements ResizeObserver {
+    constructor(callback: ResizeObserverCallback) {
+      callbacks.push(callback);
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+    FakeResizeObserver as unknown as typeof ResizeObserver;
+
+  try {
+    const el = (await fixture(
+      html`<lr-lite-chart
+        type="bar"
+        style="width: 320px"
+        .labels=${['a', 'b']}
+        .datasets=${[{ label: 's', data: [1, 2] }]}
+      ></lr-lite-chart>`,
+    )) as LyraLiteChart;
+    await el.updateComplete;
+
+    expect(callbacks.length).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="grid-line"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="axis-label"]').length).to.equal(0);
+
+    callbacks[0](
+      [{ contentBoxSize: [{ inlineSize: 320, blockSize: 280 }] } as unknown as ResizeObserverEntry],
+      {} as ResizeObserver,
+    );
+    await el.updateComplete;
+
+    const svg = el.shadowRoot!.querySelector('svg');
+    expect(svg?.getAttribute('viewBox')).to.equal('0 0 320 280');
+    expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(2);
+    expect(el.shadowRoot!.querySelectorAll('[part="grid-line"]').length).to.be.greaterThan(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]').length).to.equal(2);
+  } finally {
+    (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = OriginalRO;
+  }
 });
 
 it('re-arms the ResizeObserver on reconnect after a disconnect, so a resize still triggers a re-render', async () => {
@@ -780,7 +829,8 @@ it('tolerates a realm with no ResizeObserver constructor instead of throwing', a
     )) as LyraLiteChart;
     await el.updateComplete;
     expect((el as unknown as { resizeObserver?: ResizeObserver }).resizeObserver).to.be.undefined;
-    expect((el.shadowRoot!.querySelector('svg')) != null).to.equal(true);
+    expect(el.shadowRoot!.querySelector('svg')?.getAttribute('viewBox')).to.equal('0 0 400 200');
+    expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(1);
   } finally {
     (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = OriginalRO;
   }
@@ -1421,7 +1471,7 @@ it('renders gridlines and y-axis tick labels by default (hideAxis unset, regress
 
 describe('minBarHeight', () => {
   it('floors a tiny nonzero stacked segment to at least minBarHeight px', async () => {
-    const el = (await fixture(html`
+    const el = await mount(html`
       <lr-lite-chart
         type="bar"
         stacked
@@ -1432,7 +1482,7 @@ describe('minBarHeight', () => {
           { label: 'tiny', data: [1] },
         ]}
       ></lr-lite-chart>
-    `)) as LyraLiteChart;
+    `);
     el.style.height = '300px';
     await el.updateComplete;
     await aTimeout(0);
@@ -1443,7 +1493,7 @@ describe('minBarHeight', () => {
   });
 
   it('leaves bar height untouched when minBarHeight is unset', async () => {
-    const el = (await fixture(html`
+    const el = await mount(html`
       <lr-lite-chart
         type="bar"
         stacked
@@ -1453,7 +1503,7 @@ describe('minBarHeight', () => {
           { label: 'tiny', data: [1] },
         ]}
       ></lr-lite-chart>
-    `)) as LyraLiteChart;
+    `);
     el.style.height = '300px';
     await el.updateComplete;
     await aTimeout(0);
@@ -1463,7 +1513,7 @@ describe('minBarHeight', () => {
   });
 
   it('treats a non-finite or negative minBarHeight as a no-op floor instead of corrupting bar geometry', async () => {
-    const el = (await fixture(html`
+    const el = await mount(html`
       <lr-lite-chart
         type="bar"
         stacked
@@ -1473,7 +1523,7 @@ describe('minBarHeight', () => {
           { label: 'tiny', data: [1] },
         ]}
       ></lr-lite-chart>
-    `)) as LyraLiteChart;
+    `);
     el.style.height = '300px';
     await el.updateComplete;
     await aTimeout(0);
@@ -1493,7 +1543,7 @@ describe('minBarHeight', () => {
   });
 
   it('does not let a floored tiny segment get overdrawn by the next stacked segment (z-order/gap check)', async () => {
-    const el = (await fixture(html`
+    const el = await mount(html`
       <lr-lite-chart
         type="bar"
         stacked
@@ -1504,7 +1554,7 @@ describe('minBarHeight', () => {
           { label: 'big', data: [1000] },
         ]}
       ></lr-lite-chart>
-    `)) as LyraLiteChart;
+    `);
     el.style.height = '300px';
     await el.updateComplete;
     await aTimeout(0);
@@ -1532,7 +1582,7 @@ describe('scale="sqrt" stacked proportionality', () => {
     // Reproduces the filed bug's exact repro: three categories, one stacked bar, values
     // 10/10/80 (domain max 100) -- segment heights must come out to 10%/10%/80% of the
     // sqrt-compressed bar height, not 31.6%/13.1%/55.3% (today's buggy per-segment-position sqrt).
-    const el = (await fixture(html`
+    const el = await mount(html`
       <lr-lite-chart
         type="bar"
         stacked
@@ -1545,7 +1595,7 @@ describe('scale="sqrt" stacked proportionality', () => {
           { label: 'C', data: [80] },
         ]}
       ></lr-lite-chart>
-    `)) as LyraLiteChart;
+    `);
     el.style.height = '300px';
     await el.updateComplete;
     await aTimeout(0);
@@ -1607,7 +1657,7 @@ describe('scale="sqrt" stacked proportionality', () => {
   });
 
   it('non-stacked scale="sqrt" is unaffected (already proportional, single segment per bar)', async () => {
-    const el = (await fixture(html`
+    const el = await mount(html`
       <lr-lite-chart
         type="bar"
         scale="sqrt"
@@ -1615,7 +1665,7 @@ describe('scale="sqrt" stacked proportionality', () => {
         .labels=${['a', 'b']}
         .datasets=${[{ label: 'A', data: [10, 90] }]}
       ></lr-lite-chart>
-    `)) as LyraLiteChart;
+    `);
     el.style.height = '300px';
     await el.updateComplete;
     await aTimeout(0);
@@ -2161,9 +2211,9 @@ it('excludes null and skip-zero values from the stacked+sqrt per-category totals
 });
 
 it('handles a stacked+sqrt category whose only positive-side value is exactly zero without dividing by zero', async () => {
-  const el = (await fixture(html`
+  const el = await mount(html`
     <lr-lite-chart type="bar" stacked scale="sqrt" .labels=${['a']} .datasets=${[{ label: 's', data: [0] }]}></lr-lite-chart>
-  `)) as LyraLiteChart;
+  `);
   el.style.height = '300px';
   await el.updateComplete;
   await aTimeout(0);
@@ -2176,7 +2226,7 @@ it('handles a stacked+sqrt category whose only positive-side value is exactly ze
 // --- minBarHeight: negative-side plain-stacked floor, and the separate non-stacked path ---------
 
 it('floors a tiny negative stacked segment to at least minBarHeight px too (mirrors the positive-side floor)', async () => {
-  const el = (await fixture(html`
+  const el = await mount(html`
     <lr-lite-chart
       type="bar"
       stacked
@@ -2187,7 +2237,7 @@ it('floors a tiny negative stacked segment to at least minBarHeight px too (mirr
         { label: 'tiny', data: [-1] },
       ]}
     ></lr-lite-chart>
-  `)) as LyraLiteChart;
+  `);
   el.style.height = '300px';
   await el.updateComplete;
   await aTimeout(0);
@@ -2200,9 +2250,9 @@ it('floors a tiny negative stacked segment to at least minBarHeight px too (mirr
 });
 
 it('floors a tiny non-stacked bar to at least minBarHeight px (separate code path from the plain-stacked floor above)', async () => {
-  const el = (await fixture(html`
+  const el = await mount(html`
     <lr-lite-chart type="bar" min-bar-height="40" .labels=${['tiny', 'big']} .datasets=${[{ label: 's', data: [1, 1000] }]}></lr-lite-chart>
-  `)) as LyraLiteChart;
+  `);
   el.style.height = '300px';
   await el.updateComplete;
   await aTimeout(0);

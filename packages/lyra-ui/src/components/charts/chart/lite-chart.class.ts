@@ -588,7 +588,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     return hasValue ? total : null;
   }
 
-  /** The ordered set of visible marks used by both keyboard navigation and
+  /** The ordered set of eligible marks used by both keyboard navigation and
    * the screen-reader data alternative. */
   private interactiveMarks(): InteractiveMark[] {
     const marks: InteractiveMark[] = [];
@@ -609,6 +609,17 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       });
     }
     return marks;
+  }
+
+  /** A fit-layout chart needs the SVG's allocated dimensions before any coordinate-based
+   * content can be drawn. Keep the SVG itself mounted so ResizeObserver can provide that first
+   * measurement, while a realm without ResizeObserver keeps the established fallback rendering. */
+  private awaitingFitMeasurement(): boolean {
+    return (
+      this.layout === 'fit' &&
+      typeof this.ownerDocument.defaultView?.ResizeObserver === 'function' &&
+      (this.plotWidth <= 0 || this.plotHeight <= 0)
+    );
   }
 
   private markIndexMap(): Map<string, number> {
@@ -1223,6 +1234,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   private renderChart(): TemplateResult {
     const n = this.labels.length;
+    const awaitingFitMeasurement = this.awaitingFitMeasurement();
     const h = this.plotHeight || 200;
     // padLeft is a non-negative pixel gutter width -- a non-finite explicit value (NaN/Infinity,
     // e.g. an unparsable attribute) falls back to the PAD_LEFT default; an explicit negative value
@@ -1259,9 +1271,13 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     }
     const { lo, hi, ticks } = this.domain();
 
-    const grid = this.hideAxis ? [] : this.renderGrid(plotX, plotY, plotW, plotH, ticks, lo, hi);
+    const grid = awaitingFitMeasurement || this.hideAxis
+      ? []
+      : this.renderGrid(plotX, plotY, plotW, plotH, ticks, lo, hi);
     const marks =
-      this.type === 'bar'
+      awaitingFitMeasurement
+        ? []
+        : this.type === 'bar'
         ? this.renderBars(plotX, plotY, plotH, slot, lo, hi)
         : this.renderLines(plotX, plotY, plotW, plotH, lo, hi);
 
@@ -1274,7 +1290,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           ? plotW / (n - 1)
           : plotW) - BAR_CORNER_RADIUS,
     );
-    const categoryLabels = this.labels.map((label, i) => {
+    const categoryLabels = awaitingFitMeasurement ? [] : this.labels.map((label, i) => {
       if (visibleLabelIndexes && !visibleLabelIndexes.has(i)) return nothing;
       const fullLabel = label ?? '';
       const x =
@@ -1310,12 +1326,12 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           style=${this.layout === 'scroll' ? `inline-size: ${w}px` : nothing}
           role="group"
           aria-label=${chartLabel}
-          tabindex=${marksForA11y.length ? '-1' : '0'}
+          tabindex=${!awaitingFitMeasurement && marksForA11y.length ? '-1' : '0'}
         >
           ${grid}
           ${categoryLabels}
           ${marks}
-          ${this.yLabel
+          ${!awaitingFitMeasurement && this.yLabel
             ? svg`<text
                 part="axis-title"
                 x=${rtl ? w - 12 : 12}
@@ -1324,7 +1340,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                 transform="rotate(${rtl ? 90 : -90}, ${rtl ? w - 12 : 12}, ${plotY + plotH / 2})"
               >${this.yLabel}</text>`
             : nothing}
-          ${this.xLabel
+          ${!awaitingFitMeasurement && this.xLabel
             ? svg`<text part="axis-title" x=${plotX + plotW / 2} y=${plotY + plotH + padBottom - 2} text-anchor="middle">${this.xLabel}</text>`
             : nothing}
         </svg>
