@@ -80,6 +80,64 @@ describe('lr-rubric-form', () => {
     expect(el.shadowRoot!.querySelector('[data-key="comment"] lr-textarea')).to.exist;
   });
 
+  it('uses one shared required marker for owned and child labels', async () => {
+    const markerKeys: RubricKey[] = [
+      { key: 'score', type: 'score', label: 'Score', required: true },
+      {
+        key: 'category',
+        type: 'category',
+        label: 'Category',
+        required: true,
+        options: [{ value: 'one', label: 'One' }],
+      },
+      {
+        key: 'categories',
+        type: 'category',
+        label: 'Categories',
+        required: true,
+        multiple: true,
+        options: [{ value: 'one', label: 'One' }],
+      },
+      { key: 'comment', type: 'comment', label: 'Comment', required: true },
+      { key: 'unsupported', type: 'unsupported', label: 'Unsupported', required: true } as unknown as RubricKey,
+    ];
+    const el = (await fixture(html`
+      <lr-rubric-form
+        style="--lr-form-control-required-content: ' (required)'"
+        .keys=${markerKeys}
+      ></lr-rubric-form>
+    `)) as LyraRubricForm;
+    await el.updateComplete;
+
+    for (const key of ['score', 'unsupported']) {
+      const field = el.shadowRoot!.querySelector(`[data-key="${key}"]`) as HTMLElement;
+      const label = field.querySelector('[part="label"]') as HTMLElement;
+      expect(field.hasAttribute('data-required'), `${key} field owns its label`).to.be.true;
+      expect(label.querySelectorAll('span[aria-hidden]').length, `${key} has no literal marker`).to.equal(0);
+      expect(getComputedStyle(label, '::after').content, `${key} shared marker`).to.contain('required');
+    }
+
+    for (const key of ['category', 'categories']) {
+      const categoryField = el.shadowRoot!.querySelector(`[data-key="${key}"]`) as HTMLElement;
+      const category = categoryField.querySelector('lr-select, lr-checkbox-group') as HTMLElement & {
+        updateComplete: Promise<boolean>;
+      };
+      await category.updateComplete;
+      const categoryLabel = category.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement;
+      expect(categoryField.hasAttribute('data-required'), `${key} label stays child-owned`).to.be.false;
+      expect(category.querySelectorAll('span[aria-hidden]').length, `${key} has no literal marker`).to.equal(0);
+      expect(getComputedStyle(categoryLabel, '::after').content, `${key} shared marker`).to.contain('required');
+    }
+
+    const commentField = el.shadowRoot!.querySelector('[data-key="comment"]') as HTMLElement;
+    const comment = commentField.querySelector('lr-textarea') as HTMLElement & { updateComplete: Promise<boolean> };
+    await comment.updateComplete;
+    const commentLabel = comment.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement;
+    expect(commentField.hasAttribute('data-required'), 'comment label stays child-owned').to.be.false;
+    expect(comment.querySelectorAll('span[aria-hidden]').length, 'comment has no literal marker').to.equal(0);
+    expect(getComputedStyle(commentLabel, '::after').content, 'comment shared marker').to.contain('required');
+  });
+
   it('renders a score field with >10 discrete steps as lr-slider instead of lr-segmented', async () => {
     const keys: RubricKey[] = [{ key: 'score', type: 'score', min: 0, max: 100, step: 1 }];
     const el = (await fixture(html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`)) as LyraRubricForm;

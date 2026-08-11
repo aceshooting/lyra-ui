@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -53,10 +54,8 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
     color: var(--lr-color-text);
   }
-  [part='label'] span {
-    color: var(--lr-color-danger);
-    margin-inline-start: var(--lr-space-2xs);
-  }
+
+  ${formControlRequiredMarker}
 
   [part='description'] {
     margin: 0;

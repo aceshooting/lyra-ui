@@ -146,6 +146,12 @@ export interface LyraRubricFormEventMap {
  * @cssprop [--lr-rubric-form-skip-hover-bg=var(--lr-color-brand-quiet)] - Skip background while
  * hovered.
  * @cssprop [--lr-rubric-form-skip-active-bg=color-mix(...)] - Skip background while pressed.
+ * @cssprop [--lr-form-control-required-content=' *'] - Required-field marker after rubric-owned
+ *   score and unsupported-field labels. Set it to `''` to suppress the marker, or to any other
+ *   quoted string (`' (required)'`, a localized word) to replace it.
+ * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Color of that marker,
+ *   independently retunable from field errors.
+ * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and marker.
  * @cssstate required - Matches while at least one `RubricKey` is `required` — this control has no
  *   `required` property of its own, so "required" means the rubric cannot be submitted empty.
  * @cssstate optional - Matches while no key is required (the complement of `required`).
@@ -752,7 +758,6 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     const options = k.options ?? [];
     const disabled = this.effectiveDisabled;
     const label = k.label ?? k.key;
-    const requiredMark = k.required ? html`<span aria-hidden="true">*</span>` : nothing;
     const description = k.description ? html`<span slot="hint" part="description">${k.description}</span>` : nothing;
     const error = hasError ? html`<span slot="error" part="error">${this._errors[k.key]}</span>` : nothing;
     if (k.multiple) {
@@ -770,7 +775,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
           this.setFieldValue(k.key, e.detail.value);
         }}
       >
-        <span slot="label" part="label">${label}${requiredMark}</span>
+        <span slot="label" part="label">${label}</span>
         ${description} ${error}
         ${options.map(
           (opt) =>
@@ -799,7 +804,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
       }}
       @lr-change=${this.stopChildEvent}
     >
-      <span slot="label" part="label">${label}${requiredMark}</span>
+      <span slot="label" part="label">${label}</span>
       ${description} ${error}
       ${options.map(
         (opt) => html`<lr-option value=${opt.value} .sub=${opt.description ?? ''}>${opt.label ?? opt.value}</lr-option>`
@@ -826,7 +831,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
         this.setFieldValue(k.key, e.detail.value);
       }}
     >
-      <span slot="label" part="label">${label}${k.required ? html`<span aria-hidden="true">*</span>` : nothing}</span>
+      <span slot="label" part="label">${label}</span>
       ${k.description ? html`<span slot="hint" part="description">${k.description}</span>` : nothing}
       ${hasError ? html`<span slot="error" part="error">${this._errors[k.key]}</span>` : nothing}
     </lr-textarea>`;
@@ -835,6 +840,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   private renderField(k: RubricKey, index: number): TemplateResult {
     const fieldId = `${this.baseId}-f${index}`;
     const required = Boolean(k.required);
+    const ownsFieldLabel = k.type !== 'category' && k.type !== 'comment';
     const hasError = this.touchedFields.has(k.key) && Boolean(this._errors[k.key]);
     const errId = hasError ? `${fieldId}-err` : '';
     const label = k.label ?? k.key;
@@ -851,11 +857,14 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     }
 
     return html`
-      <div part="field" data-key=${k.key} @focusout=${() => this.markTouched(k.key)}>
-        ${k.type === 'score' || (k.type !== 'category' && k.type !== 'comment')
-          ? html`<label part="label" for=${fieldId}
-              >${label}${required ? html`<span aria-hidden="true">*</span>` : nothing}</label
-            >`
+      <div
+        part="field"
+        data-key=${k.key}
+        ?data-required=${ownsFieldLabel && required}
+        @focusout=${() => this.markTouched(k.key)}
+      >
+        ${ownsFieldLabel
+          ? html`<label part="label" for=${fieldId}>${label}</label>`
           : nothing}
         ${control} ${k.type === 'score' && k.description ? html`<p part="description">${k.description}</p>` : nothing}
         ${k.type === 'score' && hasError ? html`<p part="error" id=${errId}>${this._errors[k.key]}</p>` : nothing}

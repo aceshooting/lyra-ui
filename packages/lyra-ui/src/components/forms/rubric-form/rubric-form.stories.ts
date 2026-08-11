@@ -28,6 +28,8 @@ const keys: RubricKey[] = [
   { key: 'comment', type: 'comment', label: 'Notes', placeholder: 'Optional reviewer notes' },
 ];
 
+const requiredMarkerKeys = keys.map((key) => ({ ...key, required: true }));
+
 const meta: Meta = {
   title: 'Observability/Rubric Form',
   component: 'lr-rubric-form',
@@ -38,6 +40,16 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`<lr-rubric-form style="max-width: 28rem" .keys=${keys}></lr-rubric-form>`,
+};
+
+export const RequiredMarkerTheme: Story = {
+  name: 'Shared required-marker theme',
+  render: () => html`
+    <lr-rubric-form
+      style="max-inline-size: var(--lr-size-28rem); --lr-form-control-required-content: ' (required)'"
+      .keys=${requiredMarkerKeys}
+    ></lr-rubric-form>
+  `,
 };
 
 /** Native form reset restores the structured value supplied before the component's first render,
