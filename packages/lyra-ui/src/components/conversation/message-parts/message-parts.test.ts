@@ -166,6 +166,56 @@ it('honors false literals for true-default rendering options', async () => {
   expect(el.shadowRoot!.querySelectorAll('[data-type="reasoning"]')).to.have.lengthOf(0);
 });
 
+it('uses safe public fallbacks for optional part fields and media sources', async () => {
+  const widget = { type: 'stat', props: { label: 'Fallback widget', value: '1' } };
+  const fallbackParts: MessagePart[] = [
+    { id: 'plain-reasoning', type: 'reasoning', text: 'Plain reasoning' },
+    { id: 'result', type: 'tool-result', invocationId: 'missing-result' },
+    { id: 'citation', type: 'citation', citation: { id: 'bare-citation' } },
+    { id: 'attachment', type: 'attachment', document: { id: 'bare-document', name: 'Untyped file' } },
+    { id: 'widget', type: 'data', data: { ignored: true }, widget },
+    { id: 'unsafe-audio', type: 'audio', src: 'javascript:alert(1)' },
+    { id: 'safe-audio', type: 'audio', src: ' data:audio/wav;base64,UklGRg== ' },
+  ];
+  const el = (await fixture(
+    html`<lr-message-parts render-markdown="false" .parts=${fallbackParts}></lr-message-parts>`
+  )) as LyraMessageParts;
+
+  const reasoning = el.shadowRoot!.querySelector('lr-thinking-panel') as HTMLElement;
+  const result = el.shadowRoot!.querySelector('lr-tool-result-view') as HTMLElement & {
+    toolName: string;
+    result: unknown;
+    status: string;
+  };
+  const citation = el.shadowRoot!.querySelector('lr-citation-badge') as HTMLElement & {
+    sourceId: string;
+    label: string;
+  };
+  const attachment = el.shadowRoot!.querySelector('lr-attachment-chip') as HTMLElement & {
+    mimeType: string;
+    previewSrc: string;
+    previewable: boolean;
+  };
+  const renderer = el.shadowRoot!.querySelector('lr-widget-renderer') as HTMLElement & {
+    tree: unknown;
+    updateComplete: Promise<unknown>;
+  };
+
+  expect(reasoning.textContent).to.contain('Plain reasoning');
+  expect(reasoning.querySelectorAll('lr-markdown')).to.have.lengthOf(0);
+  expect([result.toolName, result.result, result.status]).to.deep.equal(['', null, 'success']);
+  expect([citation.sourceId, citation.label]).to.deep.equal(['', '']);
+  expect([attachment.mimeType, attachment.previewSrc, attachment.previewable]).to.deep.equal(['', '', false]);
+  expect(renderer.tree).to.equal(widget);
+  await renderer.updateComplete;
+  expect(renderer.shadowRoot!.querySelectorAll('lr-stat')).to.have.lengthOf(1);
+
+  const audio = el.shadowRoot!.querySelectorAll('audio');
+  expect(audio).to.have.lengthOf(1);
+  expect(audio[0]!.getAttribute('src')).to.equal('data:audio/wav;base64,UklGRg==');
+  expect(el.shadowRoot!.querySelectorAll('[part="audio-transcript"]')).to.have.lengthOf(0);
+});
+
 it('applies per-instance strings to retry controls', async () => {
   const el = (await fixture(
     html`<lr-message-parts

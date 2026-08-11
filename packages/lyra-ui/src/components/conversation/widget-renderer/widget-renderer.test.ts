@@ -222,6 +222,34 @@ describe("lr-widget-renderer", () => {
     ).to.equal(0);
   });
 
+  it("falls back to a generic render error when a supplied document state accessor fails", async () => {
+    const el = (await fixture(
+      html`<lr-widget-renderer
+        .tree=${{ type: "stat", props: { label: "Previous", value: "1" } }}
+      ></lr-widget-renderer>`
+    )) as LyraWidgetRenderer;
+    expect(el.shadowRoot!.querySelectorAll("lr-stat")).to.have.lengthOf(1);
+
+    const documentWithUnreadableState = {
+      version: "1" as const,
+      root: { type: "stat", props: { label: "Unreadable", value: "2" } },
+      get state(): never {
+        throw "state accessor failed";
+      },
+    };
+    const renderedError = oneEvent(el, "lr-render-error");
+    el.document = documentWithUnreadableState;
+    await el.updateComplete;
+    const event = (await renderedError) as CustomEvent<{ error: unknown }>;
+
+    expect(event.detail.error).to.be.instanceOf(Error);
+    expect((event.detail.error as Error).message).to.equal("lr-widget-renderer: tree resolution failed");
+    expect(el.shadowRoot!.querySelectorAll("lr-stat")).to.have.lengthOf(0);
+    expect(
+      el.shadowRoot!.querySelector('[part="base"]')!.children.length
+    ).to.equal(0);
+  });
+
   it("reconciles a streamed update in place: the same mapped element instance survives a re-resolve", async () => {
     const el = (await fixture(
       html`<lr-widget-renderer></lr-widget-renderer>`
