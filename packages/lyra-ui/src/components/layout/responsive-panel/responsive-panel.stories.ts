@@ -189,3 +189,40 @@ export const SettingsSidebarPattern: Story = {
     </div>
   `,
 };
+
+export const NarrowLongContent: Story = {
+  name: 'Narrow long content LTR/RTL (320px)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Paired exact 320px docked allocations keep unbroken localized header, body, and footer content inside the panel. The same wrappers also protect the overlay presentation, whose panel fills the viewport rather than an ancestor allocation.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m);">
+      ${(['ltr', 'rtl'] as const).map(
+        (direction) => html`
+          <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+            <lr-responsive-panel mode="inline" open style="inline-size: 100%;">
+              <span slot="header"
+                >${direction === 'rtl'
+                  ? 'عنوانلوحةمحليطويلجداًبدونأيفرصةللفصلالتلقائي'
+                  : 'InternationalizedResponsivePanelHeaderWithoutAnyNaturalBreakOpportunity'}</span
+              >
+              ${direction === 'rtl'
+                ? 'محتوىلوحةمحليطويلجداًبدونأيفرصةللفصلالتلقائي'
+                : 'InternationalizedResponsivePanelBodyWithoutAnyNaturalBreakOpportunity'}
+              <button slot="footer" type="button"
+                >${direction === 'rtl'
+                  ? 'إجراءلوحةمحليطويلجداًبدونأيفرصةللفصلالتلقائي'
+                  : 'InternationalizedResponsivePanelFooterActionWithoutAnyNaturalBreakOpportunity'}</button
+              >
+            </lr-responsive-panel>
+          </div>
+        `,
+      )}
+    </div>
+  `,
+};

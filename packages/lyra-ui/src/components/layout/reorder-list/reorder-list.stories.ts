@@ -76,3 +76,37 @@ export const CancelableMove: StoryObj = {
     </lr-reorder-list>
   `,
 };
+
+export const NarrowLongContent: StoryObj = {
+  name: 'Narrow long content LTR/RTL (320px)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Exact 320px LTR and RTL allocations keep long localized rows and both movement controls visible. Reordering remains a block-direction action, so the same controls apply in either direction.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m);">
+      ${(['ltr', 'rtl'] as const).map(
+        (direction) => html`
+          <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+            <lr-reorder-list label=${direction === 'rtl' ? 'حقول النموذج' : 'Form fields'} style="inline-size: 100%;">
+              <lr-reorder-item value="first"
+                >${direction === 'rtl'
+                  ? 'حقلنموذجمحليطويلجداًبدونأيفرصةللفصلالتلقائي'
+                  : 'InternationalizedReorderListRowWithoutAnyNaturalBreakOpportunity'}</lr-reorder-item
+              >
+              <lr-reorder-item value="second"
+                >${direction === 'rtl'
+                  ? 'حقلنموذجثانيمحليطويلجداًبدونأيفرصةللفصلالتلقائي'
+                  : 'InternationalizedSecondaryReorderListRowWithoutAnyNaturalBreakOpportunity'}</lr-reorder-item
+              >
+            </lr-reorder-list>
+          </div>
+        `,
+      )}
+    </div>
+  `,
+};

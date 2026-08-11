@@ -1158,3 +1158,25 @@ describe('submenu parent', () => {
     expect(item.submenuOpen).to.equal(false);
   });
 });
+
+it('contains a long menu-item label in exact 320px LTR and RTL allocations', async () => {
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir=${direction} role="menu" aria-label="Document actions" style="inline-size: 320px; max-inline-size: 100%;">
+        <lr-menu-item value=${direction}>
+          <span slot="icon" aria-hidden="true">✎</span>
+          InternationalizedMenuItemLabelWithoutAnyNaturalBreakOpportunity
+          <span slot="details">⌘R</span>
+        </lr-menu-item>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-menu-item') as LyraMenuItem;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector<HTMLElement>("[part='base']")!;
+
+    expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth + 1);
+    expect(el.scrollWidth).to.be.at.most(el.clientWidth + 1);
+    expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
+    expect(getComputedStyle(base).direction).to.equal(direction);
+  }
+});

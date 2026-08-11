@@ -290,3 +290,37 @@ export const NestedSubmenus: Story = {
     </div>
   `,
 };
+
+export const NarrowLongContent: Story = {
+  name: 'Narrow long content LTR/RTL (320px)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Paired 320px LTR and RTL allocations keep long localized menu rows inside the standalone menu surface. The row labels intentionally use their existing truncation behavior rather than widening the menu.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m);">
+      ${(['ltr', 'rtl'] as const).map(
+        (direction) => html`
+          <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+            <lr-menu label=${direction === 'rtl' ? 'إجراءات المستند' : 'Document actions'} style="inline-size: 100%;">
+              <lr-menu-item value="rename"
+                >${direction === 'rtl'
+                  ? 'عنوانإجراءمحليطويلجداًبدونأيفرصةللفصلالتلقائي'
+                  : 'InternationalizedMenuItemWithoutAnyNaturalBreakOpportunity'}</lr-menu-item
+              >
+              <lr-menu-item value="archive"
+                >${direction === 'rtl'
+                  ? 'أرشفةالمستنداتذاتالعناوينالمحليةالطويلةجداً'
+                  : 'InternationalizedSecondaryMenuItemWithoutAnyNaturalBreakOpportunity'}</lr-menu-item
+              >
+            </lr-menu>
+          </div>
+        `,
+      )}
+    </div>
+  `,
+};

@@ -133,3 +133,32 @@ export const SubmenuOffset: StoryObj = {
     </div>
   `,
 };
+
+export const NarrowLongContent: StoryObj = {
+  name: 'Narrow long content LTR/RTL (320px)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The focusable row retains its icon and keyboard detail affordance in exact 320px LTR and RTL allocations while an unbroken label uses the menu-item truncation contract.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m);">
+      ${(['ltr', 'rtl'] as const).map(
+        (direction) => html`
+          <div dir=${direction} role="menu" aria-label="Document actions" style="inline-size: 320px; max-inline-size: 100%;">
+            <lr-menu-item value=${direction}>
+              <span slot="icon" aria-hidden="true">✎</span>
+              ${direction === 'rtl'
+                ? 'عنوانإجراءقائمةمحليطويلجداًبدونأيفرصةللفصلالتلقائي'
+                : 'InternationalizedMenuItemLabelWithoutAnyNaturalBreakOpportunity'}
+              <span slot="details">⌘R</span>
+            </lr-menu-item>
+          </div>
+        `,
+      )}
+    </div>
+  `,
+};

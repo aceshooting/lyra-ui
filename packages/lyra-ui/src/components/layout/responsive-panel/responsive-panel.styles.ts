@@ -9,6 +9,8 @@ export const styles = css`
        lr-widget's --lr-widget-overlay-color). */
     --lr-responsive-panel-overlay-color: var(--lr-color-overlay);
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
 
   /* [part="base"] is display:none whenever the panel isn't open, in both
@@ -17,6 +19,8 @@ export const styles = css`
      mechanics to do it. */
   [part='base'] {
     display: none;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   :host([open]) [part='base'] {
     display: block;
@@ -43,6 +47,8 @@ export const styles = css`
     position: relative;
     display: flex;
     flex-direction: column;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     min-block-size: 0;
     background: var(--lr-color-surface);
   }
@@ -96,8 +102,11 @@ export const styles = css`
   }
 
   [part='header'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
     padding: var(--lr-space-m) var(--lr-space-l);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    overflow-wrap: anywhere;
   }
   [part='header'][hidden] {
     display: none;
@@ -105,17 +114,24 @@ export const styles = css`
 
   [part='body'] {
     flex: 1;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     padding: var(--lr-space-l);
+    overflow-wrap: anywhere;
     overflow: auto;
   }
 
   [part='footer'] {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: flex-end;
     gap: var(--lr-space-s);
+    min-inline-size: 0;
+    max-inline-size: 100%;
     padding: var(--lr-space-m) var(--lr-space-l);
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    overflow-wrap: anywhere;
   }
   [part='footer'][hidden] {
     display: none;

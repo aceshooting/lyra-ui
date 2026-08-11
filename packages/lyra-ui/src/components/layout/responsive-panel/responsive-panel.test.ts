@@ -925,3 +925,59 @@ it("is accessible while open in the bottom-sheet overlay variant", async () => {
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
+
+it("contains unbroken header, body, and footer content in 320px LTR/RTL inline and overlay allocations", async () => {
+  for (const direction of ["ltr", "rtl"] as const) {
+    for (const mode of ["inline", "overlay"] as const) {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+          <lr-responsive-panel mode=${mode} open label="Long content">
+            <span slot="header">InternationalizedResponsivePanelHeaderWithoutAnyNaturalBreakOpportunity</span>
+            InternationalizedResponsivePanelBodyWithoutAnyNaturalBreakOpportunity
+            <button slot="footer" type="button"
+              >InternationalizedResponsivePanelFooterActionWithoutAnyNaturalBreakOpportunity</button
+            >
+          </lr-responsive-panel>
+        </div>
+      `);
+      const el = wrapper.querySelector("lr-responsive-panel") as LyraResponsivePanel;
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+      const panel = el.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!;
+      const header = el.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+      const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+      const footer = el.shadowRoot!.querySelector<HTMLElement>('[part="footer"]')!;
+
+      // The overlay base is intentionally viewport-fixed, so give the same
+      // rendered panel the 320px allocation as the inline case before
+      // measuring its internal wrappers.
+      if (mode === "overlay") {
+        base.style.inlineSize = "320px";
+        base.style.insetInlineEnd = "auto";
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      }
+
+      expect(Math.ceil(panel.getBoundingClientRect().width)).to.be.at.most(320);
+      expect(header.scrollWidth).to.be.at.most(header.clientWidth + 1);
+      expect(body.scrollWidth).to.be.at.most(body.clientWidth + 1);
+      expect(footer.scrollWidth).to.be.at.most(footer.clientWidth + 1);
+      expect(getComputedStyle(panel).direction).to.equal(direction);
+
+      el.open = false;
+      await el.updateComplete;
+    }
+  }
+});
+
+it("keeps deliberate wide widgets scrollable inside the responsive-panel body", async () => {
+  const el = (await fixture(html`
+    <lr-responsive-panel mode="inline" open style="inline-size: 320px;">
+      <div style="inline-size: 640px;">Intentionally wide widget</div>
+    </lr-responsive-panel>
+  `)) as LyraResponsivePanel;
+  await el.updateComplete;
+  const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+
+  expect(body.scrollWidth).to.be.greaterThan(body.clientWidth);
+  expect(getComputedStyle(body).overflowX).to.equal("auto");
+});

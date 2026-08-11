@@ -458,4 +458,31 @@ describe("double-click jumps to an edge", () => {
     expect(Math.round(await settled(() => viewport.scrollLeft))).to.equal(0);
   });
 
+  it("keeps controls inside exact 320px LTR and RTL allocations while the long row scrolls in its viewport", async () => {
+    for (const direction of ["ltr", "rtl"] as const) {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+          <lr-scroller controls label="Project cards" style="inline-size: 100%;">
+            <span>InternationalizedScrollerCardWithoutAnyNaturalBreakOpportunity</span>
+            <span>InternationalizedSecondaryScrollerCardWithoutAnyNaturalBreakOpportunity</span>
+          </lr-scroller>
+        </div>
+      `);
+      const el = wrapper.querySelector("lr-scroller") as LyraScroller;
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+      const viewport = viewportOf(el);
+      const previous = controlOf(el, "previous");
+      const next = controlOf(el, "next");
+      const baseRect = base.getBoundingClientRect();
+
+      expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth + 1);
+      expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
+      expect(viewport.scrollWidth).to.be.greaterThan(viewport.clientWidth);
+      expect(previous.getBoundingClientRect().left).to.be.at.least(baseRect.left - 1);
+      expect(next.getBoundingClientRect().right).to.be.at.most(baseRect.right + 1);
+      expect(getComputedStyle(base).direction).to.equal(direction);
+    }
+  });
+
 });

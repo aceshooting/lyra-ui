@@ -19,3 +19,30 @@ export const Boundaries: StoryObj = {
     </div>
   `,
 };
+
+export const NarrowLongContent: StoryObj = {
+  name: 'Narrow long content LTR/RTL (320px)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Each exact 320px list allocation retains both 40px movement controls while an unbroken localized row label wraps within the remaining logical inline space.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m);">
+      ${(['ltr', 'rtl'] as const).map(
+        (direction) => html`
+          <div dir=${direction} role="list" style="inline-size: 320px; max-inline-size: 100%;">
+            <lr-reorder-item value=${direction}
+              >${direction === 'rtl'
+                ? 'عنصرترتيبمحليطويلجداًبدونأيفرصةللفصلالتلقائي'
+                : 'InternationalizedReorderItemLabelWithoutAnyNaturalBreakOpportunity'}</lr-reorder-item
+            >
+          </div>
+        `,
+      )}
+    </div>
+  `,
+};

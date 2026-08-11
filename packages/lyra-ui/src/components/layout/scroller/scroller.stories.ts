@@ -60,3 +60,37 @@ export const ShadowTheme: Story = {
     )}
   </lr-scroller>`,
 };
+
+export const NarrowLongContent: Story = {
+  name: 'Narrow long content LTR/RTL (320px)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Each exact 320px allocation keeps both scroll controls inside the component while deliberately wide, unbroken cards remain reachable through the native logical scroll viewport in LTR and RTL.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m);">
+      ${(['ltr', 'rtl'] as const).map(
+        (direction) => html`
+          <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+            <lr-scroller controls label=${direction === 'rtl' ? 'بطاقات المشاريع' : 'Project cards'} style="inline-size: 100%;">
+              <span style="display: inline-block; padding: var(--lr-space-l); background: var(--lr-color-brand-quiet);"
+                >${direction === 'rtl'
+                  ? 'بطاقةمشروعمحليةطويلةجداًبدونأيفرصةللفصلالتلقائي'
+                  : 'InternationalizedScrollerCardWithoutAnyNaturalBreakOpportunity'}</span
+              >
+              <span style="display: inline-block; padding: var(--lr-space-l); background: var(--lr-color-success-quiet);"
+                >${direction === 'rtl'
+                  ? 'بطاقةمشروعثانيةمحليةطويلةجداًبدونأيفرصةللفصلالتلقائي'
+                  : 'InternationalizedSecondaryScrollerCardWithoutAnyNaturalBreakOpportunity'}</span
+              >
+            </lr-scroller>
+          </div>
+        `,
+      )}
+    </div>
+  `,
+};

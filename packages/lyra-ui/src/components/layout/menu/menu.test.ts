@@ -2402,3 +2402,29 @@ it("makes lr-show/lr-hide cancelable veto points", async () => {
   expect(seen.map((event) => event.type)).to.deep.equal(["lr-show", "lr-hide"]);
   expect(seen.every((event) => event.cancelable)).to.be.true;
 });
+
+it("contains long localized items in exact 320px LTR and RTL standalone menus", async () => {
+  for (const direction of ["ltr", "rtl"] as const) {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+        <lr-menu label="Document actions" style="inline-size: 100%;">
+          <lr-menu-item value="rename">InternationalizedMenuItemWithoutAnyNaturalBreakOpportunity</lr-menu-item>
+          <lr-menu-item value="archive">InternationalizedSecondaryMenuItemWithoutAnyNaturalBreakOpportunity</lr-menu-item>
+        </lr-menu>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-menu") as LyraMenu;
+    const menuItems = items(el);
+    await Promise.all([el.updateComplete, ...menuItems.map((item) => item.updateComplete)]);
+    const popup = el.shadowRoot!.querySelector<HTMLElement>('[part="popup"]')!;
+    const menu = list(el);
+
+    expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth + 1);
+    expect(popup.scrollWidth).to.be.at.most(popup.clientWidth + 1);
+    expect(menu.scrollWidth).to.be.at.most(menu.clientWidth + 1);
+    expect(
+      menuItems.every((item) => Math.ceil(item.getBoundingClientRect().width) <= 320)
+    ).to.equal(true);
+    expect(getComputedStyle(popup).direction).to.equal(direction);
+  }
+});

@@ -118,3 +118,23 @@ describe('<lr-reorder-item>', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it('contains a long reorder-item label in exact 320px LTR and RTL allocations', async () => {
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir=${direction} role="list" style="inline-size: 320px; max-inline-size: 100%;">
+        <lr-reorder-item value=${direction}>InternationalizedReorderItemLabelWithoutAnyNaturalBreakOpportunity</lr-reorder-item>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-reorder-item') as LyraReorderItem;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector<HTMLElement>("[part='base']")!;
+    const content = el.shadowRoot!.querySelector<HTMLElement>("[part='content']")!;
+
+    expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth + 1);
+    expect(el.scrollWidth).to.be.at.most(el.clientWidth + 1);
+    expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
+    expect(content.scrollWidth).to.be.at.most(content.clientWidth + 1);
+    expect(getComputedStyle(base).direction).to.equal(direction);
+  }
+});

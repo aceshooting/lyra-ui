@@ -615,3 +615,31 @@ it("formats move positions with the effective locale", async () => {
   expect(text).to.include(number.format(1));
   expect(text).to.include(number.format(3));
 });
+
+it("contains long localized rows in exact 320px LTR and RTL reorder lists", async () => {
+  for (const direction of ["ltr", "rtl"] as const) {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+        <lr-reorder-list label="Ordered fields" style="inline-size: 100%;">
+          <lr-reorder-item value="first">InternationalizedReorderListRowWithoutAnyNaturalBreakOpportunity</lr-reorder-item>
+          <lr-reorder-item value="second">InternationalizedSecondaryReorderListRowWithoutAnyNaturalBreakOpportunity</lr-reorder-item>
+        </lr-reorder-list>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-reorder-list") as LyraReorderList;
+    const reorderItems = [
+      ...el.querySelectorAll("lr-reorder-item"),
+    ] as LyraReorderItem[];
+    await Promise.all([el.updateComplete, ...reorderItems.map((item) => item.updateComplete)]);
+    const base = el.shadowRoot!.querySelector<HTMLElement>("[part='base']")!;
+    const content = reorderItems.map(
+      (item) => item.shadowRoot!.querySelector<HTMLElement>("[part='content']")!
+    );
+
+    expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth + 1);
+    expect(el.scrollWidth).to.be.at.most(el.clientWidth + 1);
+    expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
+    expect(content.every((part) => part.scrollWidth <= part.clientWidth + 1)).to.equal(true);
+    expect(getComputedStyle(base).direction).to.equal(direction);
+  }
+});
