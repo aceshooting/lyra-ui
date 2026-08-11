@@ -234,6 +234,15 @@ function isSet(value: FilterBarFieldValue): boolean {
   return Array.isArray(value) ? value.length > 0 : value !== "";
 }
 
+/** Clones the controlled value at its object and string-array boundaries. */
+function cloneFilterValue(value: FilterBarValue | null | undefined): FilterBarValue {
+  const clone: FilterBarValue = {};
+  for (const [id, fieldValue] of Object.entries(value ?? {})) {
+    clone[id] = Array.isArray(fieldValue) ? [...fieldValue] : fieldValue;
+  }
+  return clone;
+}
+
 /**
  * `<lr-filter-bar>` — a row of dashboard filters, each declared by the host (`filters`) rather
  * than invented by this component: every filter composes an existing Lyra input --
@@ -393,14 +402,15 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     this.requestUpdate("filters", old);
   }
 
-  /** The current value of every filter -- see the class doc's serialization contract. Always a
-   *  fresh shallow copy; mutating a returned object does not affect this component's own state. */
+  /** The current value of every filter -- see the class doc's serialization contract. Reads and
+   *  writes clone the object and each string-array field, so mutations never affect this
+   *  component's state or a subsequent `lr-input` detail. */
   get value(): FilterBarValue {
-    return { ...this._value };
+    return cloneFilterValue(this._value);
   }
   set value(next: FilterBarValue) {
     const old = this._value;
-    this._value = next ? { ...next } : {};
+    this._value = cloneFilterValue(next);
     this.requestUpdate("value", old);
   }
 

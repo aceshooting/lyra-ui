@@ -2066,7 +2066,8 @@ outputs may render as Markdown or code, with optional grounding and tool-trace s
   falls back to a localized "Example {index}" (1-based, array order). Controlled and never mutated
 - `total: number | null = null` — the batch's expected total example count. `null` derives it from
   `examples.length`; set it explicitly while a batch is still streaming and the eventual total is
-  already known
+  already known. An explicit total below the current observed count is raised to `examples.length`,
+  so progress never reports an impossible total
 - `label: string = ''` — header label and accessible-name source; falls back to a localized
   "Evaluation run"
 
@@ -2224,11 +2225,9 @@ request and keeps the decision dialog pending.
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
 `tool-name`, `request-id`, `status`, `empty`. The `[part='request']` row matching `selectedId`
-carries both `data-selected` (the styling hook) and `aria-current="true"` (the semantic one), so the
-selection is announced, not merely painted. Following this library's convention for `aria-current` —
-and unlike `aria-pressed`/`aria-expanded`/`aria-selected`, which must render both states — an
-unselected row omits the attribute rather than writing `"false"`, because ARIA already defines
-`aria-current`'s own default as false.
+carries both `data-selected="true"` (the styling hook) and `aria-current="true"` (the semantic
+state), so the selection is announced, not merely painted. Other request rows explicitly render
+`data-selected="false"` and `aria-current="false"`.
 
 **Additional API surface:**
 

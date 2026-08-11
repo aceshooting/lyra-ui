@@ -463,6 +463,64 @@ describe('lr-video-playlist public contract', () => {
     expect(incomingFrench.mode).to.equal('disabled');
   });
 
+  it('transfers playback and preferences when its active child is removed', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist>
+        <lr-video title="A"></lr-video>
+        <lr-video title="B"></lr-video>
+      </lr-video-playlist>
+    `);
+    await settle(el);
+    const [a, b] = childVideos(el);
+    const outgoingCaption = { kind: 'captions', label: 'English', language: 'en', mode: 'showing' } as TextTrack;
+    const incomingCaption = { kind: 'captions', label: 'English', language: 'en', mode: 'disabled' } as TextTrack;
+    const alternateCaption = { kind: 'captions', label: 'Français', language: 'fr', mode: 'showing' } as TextTrack;
+    stubPlayback(a!, false);
+    const incomingPlayback = stubPlayback(b!);
+    a!.dispatchEvent(new Event('play'));
+    Object.defineProperties(media(a!), {
+      volume: { configurable: true, value: 0.35, writable: true },
+      muted: { configurable: true, value: true, writable: true },
+      playbackRate: { configurable: true, value: 1.5, writable: true },
+      textTracks: { configurable: true, value: { 0: outgoingCaption, length: 1 } },
+    });
+    Object.defineProperties(media(b!), {
+      volume: { configurable: true, value: 1, writable: true },
+      muted: { configurable: true, value: false, writable: true },
+      playbackRate: { configurable: true, value: 1, writable: true },
+      textTracks: { configurable: true, value: { 0: incomingCaption, 1: alternateCaption, length: 2 } },
+    });
+    a!.remove();
+    await settle(el);
+
+    expect(b!.hidden).to.be.false;
+    expect(incomingPlayback.playCalls).to.equal(1);
+    expect(media(b!).volume).to.equal(0.35);
+    expect(media(b!).muted).to.be.true;
+    expect(media(b!).playbackRate).to.equal(1.5);
+    expect(incomingCaption.mode).to.equal('showing');
+    expect(alternateCaption.mode).to.equal('disabled');
+  });
+
+  it('does not resume the successor after the user pauses the active child before removal', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist><lr-video title="A"></lr-video><lr-video title="B"></lr-video></lr-video-playlist>
+    `);
+    await settle(el);
+    const [a, b] = childVideos(el);
+    const outgoingPlayback = stubPlayback(a!, false);
+    const incomingPlayback = stubPlayback(b!);
+
+    a!.dispatchEvent(new Event('play'));
+    outgoingPlayback.paused = true;
+    a!.dispatchEvent(new Event('pause'));
+    a!.remove();
+    await settle(el);
+
+    expect(b!.hidden).to.be.false;
+    expect(incomingPlayback.playCalls).to.equal(0);
+  });
+
   it('recognizes description tracks as selectable, alongside subtitles and captions', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist><lr-video title="A"></lr-video><lr-video title="B"></lr-video></lr-video-playlist>

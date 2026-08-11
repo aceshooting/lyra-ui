@@ -428,7 +428,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
 
   override render(): TemplateResult {
     const heading = this.label || this.localize('knowledgeBaseHeading');
-    const accessibleHeading = this.getAttribute('aria-label') || heading;
+    const accessibleHeading = this.hasAttribute('aria-label') ? this.getAttribute('aria-label')! : heading;
     return html`
       <div part="base">
         <div part="toolbar">

@@ -65,6 +65,17 @@ it('renders a batch progress bar reflecting completed/total and a completed-of-t
   );
 });
 
+it('never reports an explicit total below the observed example count', async () => {
+  const el = (await fixture(
+    html`<lr-evaluation-run .examples=${examples} total="1"></lr-evaluation-run>`,
+  )) as LyraEvaluationRun;
+  const progress = el.shadowRoot!.querySelector('[part="progress"]') as HTMLElement;
+  expect(progress.getAttribute('max')).to.equal('3');
+  expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal(
+    '2 of 3 examples complete',
+  );
+});
+
 it('formats generated example, progress, and status counts with the effective locale', async () => {
   const el = (await fixture(
     html`<lr-evaluation-run lang="ar-EG" .examples=${examples} total="4"></lr-evaluation-run>`,
@@ -193,6 +204,17 @@ it('deletes the id from expandedIds (and reports expanded: false) when an exampl
   summary.click(); // was open -> collapses
   const event = await firing;
   expect((event as CustomEvent).detail).to.deep.equal({ id: 'ex-1', expanded: false });
+});
+
+it('forgets an expanded example id once that example is removed', async () => {
+  const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  await expandExample(el);
+  el.examples = examples.slice(1);
+  await el.updateComplete;
+  el.examples = [examples[0]!];
+  await el.updateComplete;
+  const restored = el.shadowRoot!.querySelector('[part="example"]') as HTMLElement & { open: boolean };
+  expect(restored.open).to.be.false;
 });
 
 it('renders no tool-trace section when the example has no toolTrace', async () => {

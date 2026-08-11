@@ -139,7 +139,7 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
 
   override render(): TemplateResult {
     const position = `${this.normalizedPosition}%`;
-    const label = this.accessibleLabel || this.localize('imageComparerLabel');
+    const label = this.accessibleLabel ?? this.localize('imageComparerLabel');
     return html`<div
       part="base comparison"
       data-orientation=${this.orientation}

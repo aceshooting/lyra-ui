@@ -312,6 +312,34 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('forwards host aria-label presence to an optional playback control group', async () => {
+  const el = (await fixture(
+    html`<lr-playback length="3" aria-label="Timeline playback"></lr-playback>`,
+  )) as LyraPlayback;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
+  const position = el.shadowRoot!.querySelector('[part="slider"]') as HTMLInputElement;
+
+  expect(base.getAttribute('role')).to.equal('group');
+  expect(base.getAttribute('aria-label')).to.equal('Timeline playback');
+  expect(button.getAttribute('aria-label')).to.equal('Play');
+  expect(position.getAttribute('aria-label')).to.equal('Playback position');
+  await expect(el).to.be.accessible();
+
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(base.getAttribute('role')).to.equal('group');
+  expect(base.hasAttribute('aria-label')).to.equal(true);
+  expect(base.getAttribute('aria-label')).to.equal('');
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(base.hasAttribute('role')).to.equal(false);
+  expect(base.hasAttribute('aria-label')).to.equal(false);
+  expect(button.getAttribute('aria-label')).to.equal('Play');
+  expect(position.getAttribute('aria-label')).to.equal('Playback position');
+});
+
 it('renders the play/pause button content as an SVG icon, not a literal glyph, and swaps it with `playing`', async () => {
   const el = (await fixture(html`<lr-playback length="3"></lr-playback>`)) as LyraPlayback;
   const button = () => el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;

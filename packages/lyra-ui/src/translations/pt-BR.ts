@@ -1102,7 +1102,7 @@ const strings: LyraLocaleStrings = {
   claimEvidenceConfidence: '{percent} de confiança',
   retrievalCompareLabel: 'Comparação de recuperação',
   retrievalCompareEmpty: 'Nenhum conjunto de resultados de recuperação para comparar',
-  retrievalCompareOverlap: 'Sobreposição no top-k: {percent}',
+  retrievalCompareOverlap: 'Sobreposição no top-k entre {left} e {right}: {percent}',
   retrievalCompareRank: 'Posição {rank}',
   retrievalCompareDenseScore: 'Densa',
   retrievalCompareSparseScore: 'Esparsa',

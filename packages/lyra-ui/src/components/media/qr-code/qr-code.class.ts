@@ -553,7 +553,7 @@ export class LyraQrCode extends LyraElement {
   }
 
   private accessibleName(): string {
-    return this.getAttribute('aria-label') || this.label || this.value;
+    return this.getAttribute('aria-label') ?? (this.label || this.value);
   }
 
   private renderBody(): TemplateResult {

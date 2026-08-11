@@ -114,6 +114,31 @@ it('forwards aria-label to the focusable viewport and localizes visible zoom out
   expect(el.shadowRoot!.querySelector('[part="reset"]')!.textContent?.trim()).to.equal('100 pourcent');
 });
 
+it('preserves present host aria-labels on the region and viewport, then restores the fallback on removal', async () => {
+  const el = await fixture<LyraPanZoom>(html`
+    <lr-pan-zoom aria-label="" .strings=${{ zoomableFrameLabel: 'Localized zoom surface' }}></lr-pan-zoom>
+  `);
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+  const labels = (): Array<string | null> => [base.getAttribute('aria-label'), viewport.getAttribute('aria-label')];
+
+  expect(base.getAttribute('role')).to.equal('region');
+  expect(viewport.getAttribute('role')).to.equal('group');
+  expect(labels()).to.deep.equal(['', '']);
+
+  el.setAttribute('aria-label', 'Updated zoom surface');
+  await el.updateComplete;
+  expect(labels()).to.deep.equal(['Updated zoom surface', 'Updated zoom surface']);
+
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(labels()).to.deep.equal(['', '']);
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(labels()).to.deep.equal(['Localized zoom surface', 'Localized zoom surface']);
+});
+
 it('contains unbroken localized reset labels inside 320px LTR and RTL allocations', async () => {
   const longCurrentZoom = `${'Zoom'.repeat(120)} {percent}`;
   for (const direction of ['ltr', 'rtl']) {

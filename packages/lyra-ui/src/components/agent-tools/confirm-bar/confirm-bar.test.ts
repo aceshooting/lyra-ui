@@ -69,6 +69,24 @@ it('hides the empty body wrapper when no default-slot content is projected, and 
   expect(filledBody.hasAttribute('hidden')).to.be.false;
 });
 
+it('shows initial and dynamically-added text-only default-slot content', async () => {
+  const initial = (await fixture(html`<lr-confirm-bar>Proposed diff preview</lr-confirm-bar>`)) as LyraConfirmBar;
+  const initialBody = initial.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+  expect(initialBody.hasAttribute('hidden')).to.be.false;
+
+  const dynamic = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
+  dynamic.append('Runtime diff preview');
+  const slot = dynamic.shadowRoot!.querySelector<HTMLSlotElement>('[part="body"] slot')!;
+  slot.dispatchEvent(new Event('slotchange'));
+  await dynamic.updateComplete;
+  const dynamicBody = dynamic.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+  expect(dynamicBody.hasAttribute('hidden')).to.be.false;
+
+  const whitespace = (await fixture(html`<lr-confirm-bar>  \n  </lr-confirm-bar>`)) as LyraConfirmBar;
+  const whitespaceBody = whitespace.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+  expect(whitespaceBody.hasAttribute('hidden')).to.be.true;
+});
+
 it('shows args read-only inside a collapsed lr-details + lr-json-viewer only when args is defined', async () => {
   const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
   expect(el.shadowRoot!.querySelector('[part="args"]')).to.not.exist;
@@ -131,6 +149,14 @@ it('announces the decision via an internal polite live region', async () => {
   await el.updateComplete;
   await new Promise((r) => requestAnimationFrame(r));
   expect(regionText()).to.equal('Action denied.');
+});
+
+it('does not announce an initially supplied decision on mount', async () => {
+  const el = (await fixture(html`<lr-confirm-bar decision="approved"></lr-confirm-bar>`)) as LyraConfirmBar;
+  const liveRegion = el.shadowRoot!.querySelector('lr-live-region')!;
+  const regionText = () => liveRegion.shadowRoot!.querySelector('[part="region"]')!.textContent ?? '';
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  expect(regionText()).to.equal('');
 });
 
 it('a host-set decision renders identically but emits nothing itself', async () => {

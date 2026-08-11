@@ -26,6 +26,25 @@ describe('<lr-button-group>', () => {
     expect(base.getAttribute('aria-label')).to.equal('Author actions');
   });
 
+  it('retains an explicit empty host aria-label until the attribute is removed', async () => {
+    const el = await fixture<LyraButtonGroup>(html`
+      <lr-button-group label="Visible actions" aria-label="">
+        <lr-button>Open</lr-button>
+      </lr-button-group>
+    `);
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+
+    expect(base.getAttribute('aria-label')).to.equal('');
+
+    el.setAttribute('aria-label', 'Archived actions');
+    await el.updateComplete;
+    expect(base.getAttribute('aria-label')).to.equal('Archived actions');
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(base.getAttribute('aria-label')).to.equal('Visible actions');
+  });
+
   it('is accessible', async () => {
     const el = await fixture<LyraButtonGroup>(html`<lr-button-group label="Actions"><lr-button>Open</lr-button></lr-button-group>`);
     await expect(el).to.be.accessible();

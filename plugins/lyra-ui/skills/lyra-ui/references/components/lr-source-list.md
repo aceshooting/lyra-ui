@@ -122,7 +122,7 @@ elsewhere. Plus shared tokens — `--lr-color-border`, `--lr-color-surface`,
   // for that, only source-id to be targeted by:
   document.addEventListener('lr-citation-activate', (e) => {
     const card = document.querySelector(`lr-source-card[source-id="${e.detail.sourceId}"]`);
-    card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card?.scrollIntoView({ block: 'center' });
   });
 </script>
 ```

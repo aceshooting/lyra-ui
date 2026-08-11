@@ -1138,7 +1138,7 @@ const strings: LyraLocaleStrings = {
   claimEvidenceConfidence: 'ثقة {percent}',
   retrievalCompareLabel: 'مقارنة الاسترجاع',
   retrievalCompareEmpty: 'لا توجد مجموعات نتائج استرجاع للمقارنة',
-  retrievalCompareOverlap: 'التداخل في أفضل k: {percent}',
+  retrievalCompareOverlap: 'التداخل في أفضل k بين {left} و{right}: {percent}',
   retrievalCompareRank: 'الترتيب {rank}',
   retrievalCompareDenseScore: 'كثيف',
   retrievalCompareSparseScore: 'متفرّق',

@@ -920,7 +920,7 @@ directly — set instead by the `:host([status=...])` rules), plus shared tokens
 <script type="module">
   document.addEventListener('lr-citation-activate', (e) => {
     document.querySelector(`lr-source-card[source-id="${e.detail.sourceId}"]`)
-      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      ?.scrollIntoView({ block: 'center' });
   });
 </script>
 ```
@@ -1061,7 +1061,7 @@ elsewhere. Plus shared tokens — `--lr-color-border`, `--lr-color-surface`,
   // for that, only source-id to be targeted by:
   document.addEventListener('lr-citation-activate', (e) => {
     const card = document.querySelector(`lr-source-card[source-id="${e.detail.sourceId}"]`);
-    card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card?.scrollIntoView({ block: 'center' });
   });
 </script>
 ```

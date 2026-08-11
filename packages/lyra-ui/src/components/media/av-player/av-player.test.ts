@@ -84,6 +84,17 @@ describe('kind detection', () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} mime-type="audio/mpeg" kind="video"></lr-av-player>`)) as LyraAvPlayer;
     expect((el.shadowRoot!.querySelector('video')) != null).to.equal(true);
   });
+
+  it('ignores an unrecognized kind and retains MIME auto-detection for rendering and lr-load', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC} mime-type="audio/mpeg" kind="audio-file"></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    expect(media.localName).to.equal('audio');
+
+    const loadPromise = oneEvent(el, 'lr-load');
+    media.dispatchEvent(new Event('loadedmetadata'));
+    const loaded = (await loadPromise) as CustomEvent<{ duration: number; kind: string }>;
+    expect(loaded.detail.kind).to.equal('audio');
+  });
 });
 
 describe('playback controls', () => {

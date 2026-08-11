@@ -1147,7 +1147,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     super.firstUpdated(changed);
     // A grid with no accessible name is a real a11y defect but silently renders. Warn once per
     // element (dev signal; the guard keeps it out of hot render paths and prevents log spam).
-    if (isDevelopmentRuntime() && !this.accessibleLabel && !this.getAttribute('aria-label') && !this.caption) {
+    if (isDevelopmentRuntime() && !this.accessibleLabel && !this.hasAttribute('aria-label') && !this.caption) {
       console.warn(
         '<lr-table> has no accessible name: set `accessibleLabel`, a host `aria-label`, or ' +
           '`caption` so assistive technology can identify the grid.'
@@ -2280,6 +2280,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       </div>`;
     }
 
+    const hasHostAriaLabel = this.hasAttribute('aria-label');
+    const gridAriaLabel =
+      this.accessibleLabel || (hasHostAriaLabel ? this.getAttribute('aria-label')! : nothing);
+
     // Sorted, not merely filtered: `footer`/`grandTotal` are documented as seeing every rendered
     // row "post-sort, pre-pagination", and an aggregate that reads position (a first/last value, a
     // running comparison) would otherwise disagree with the order actually painted below. Free
@@ -2348,8 +2352,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
         : html`<table
             part="table"
             role="grid"
-            aria-label=${this.accessibleLabel || this.getAttribute('aria-label') || nothing}
-            aria-labelledby=${!this.accessibleLabel && !this.getAttribute('aria-label') && this.caption
+            aria-label=${gridAriaLabel}
+            aria-labelledby=${!this.accessibleLabel && !hasHostAriaLabel && this.caption
               ? this.captionId
               : nothing}
             aria-multiselectable=${this.selectionMode === 'multiple' ? 'true' : nothing}

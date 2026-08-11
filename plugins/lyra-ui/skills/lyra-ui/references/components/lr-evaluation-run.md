@@ -35,7 +35,8 @@ outputs may render as Markdown or code, with optional grounding and tool-trace s
   falls back to a localized "Example {index}" (1-based, array order). Controlled and never mutated
 - `total: number | null = null` — the batch's expected total example count. `null` derives it from
   `examples.length`; set it explicitly while a batch is still streaming and the eventual total is
-  already known
+  already known. An explicit total below the current observed count is raised to `examples.length`,
+  so progress never reports an impossible total
 - `label: string = ''` — header label and accessible-name source; falls back to a localized
   "Evaluation run"
 

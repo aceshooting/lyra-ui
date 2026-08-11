@@ -1223,7 +1223,7 @@
       "name": "--lr-attachment-chip-compact-thumbnail-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-attachment-chip>`** (default: `var(--lr-size-1-75rem)`) — Thumbnail and retry/preview/remove-button minimum size while `compact`, rethemeable independently of `--lr-icon-button-size`."
+        "value": "**`<lr-attachment-chip>`** (default: `var(--lr-size-1-75rem)`) — Thumbnail size while `compact`, rethemeable independently of `--lr-icon-button-size`. Retry, preview, and remove actions retain that shared token's minimum hit-area floor."
       }
     },
     {

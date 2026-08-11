@@ -30,9 +30,11 @@ adapters.
 
 - `messages: ChatMessage[] = []` (attribute: false) — **`ChatMessage` from
   `@aceshooting/lyra-ui/ai`**: `{ id: string; role: ChatMessageRole; status?: ChatMessageStatus;
-timestamp?: Date | string; text?: string; attachments?: DocumentRef[] }`. Each entry renders as an
-  `lr-chat-message` whose `role`/`status`/`timestamp` come straight across, with `text` rendered as
-  sanitized Markdown through `lr-markdown`. Replace the whole region with the `messages` slot for
+timestamp?: Date | string; text?: string; attachments?: DocumentRef[]; parts?: MessagePart[];
+metadata?: Record<string, unknown> }`. Each entry renders as an `lr-chat-message` whose
+  `role`/`status`/`timestamp` come straight across. A nonempty `parts` array renders in order through
+  `lr-message-parts` and takes precedence over the legacy `text` shortcut; otherwise `text` renders
+  as sanitized Markdown through `lr-markdown`. Replace the whole region with the `messages` slot for
   richer bodies. Host owns ordering, updates, and persistence
 - `follow: boolean = true` (reflected) — forwarded to the internal `lr-chat-viewport`
 - `unreadStartIndex: number | null = null` (attribute `unread-start-index`) — forwarded to the viewport

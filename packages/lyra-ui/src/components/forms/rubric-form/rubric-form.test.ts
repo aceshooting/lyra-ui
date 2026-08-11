@@ -1181,6 +1181,29 @@ it('reportValidity() reveals current field errors and answers overall validity',
   expect(el.reportValidity(), 'a satisfied rubric reports valid').to.be.true;
 });
 
+it('emits a cancelable lr-invalid alias whose cancellation cancels the native invalid event', async () => {
+  const el = (await fixture(html`<lr-rubric-form .keys=${KEYS}></lr-rubric-form>`)) as LyraRubricForm;
+  await el.updateComplete;
+  const aliases: CustomEvent[] = [];
+  const nativePrevented: boolean[] = [];
+  el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
+  // Registered after the alias relay's constructor-installed listener, so it observes the native
+  // event after the relay has had the opportunity to forward a cancellation.
+  el.addEventListener('invalid', (event) => nativePrevented.push(event.defaultPrevented));
+
+  expect(el.checkValidity()).to.equal(false);
+  expect(aliases).to.have.lengthOf(1);
+  expect(aliases[0]!.cancelable, 'lr-invalid is a real veto point').to.equal(true);
+  expect(nativePrevented).to.deep.equal([false]);
+
+  el.addEventListener('lr-invalid', (event) => event.preventDefault(), { once: true });
+  expect(el.checkValidity()).to.equal(false);
+  expect(
+    nativePrevented,
+    'preventDefault() on lr-invalid suppresses the native validation bubble',
+  ).to.deep.equal([false, true]);
+});
+
 // `CustomStateSet` and the `:state()` selector ship separately from each other and from the rest
 // of `ElementInternals` -- these two guards are why the same block passes on WebKit, where a
 // missing `CustomStateSet` would otherwise throw on the very first assertion.

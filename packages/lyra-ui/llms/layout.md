@@ -642,7 +642,8 @@ controls and exposes `role="group"` on its internal wrapper.
 
 **Properties:**
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected)
-- `label: string = ''` — accessible group name; a host `aria-label` is used when `label` is empty
+- `label: string = ''` — accessible group-name fallback; a host `aria-label`, when present, wins
+  including an explicitly empty value
 
 **Slots:** default action controls.
 
@@ -1820,6 +1821,10 @@ removing the label from the accessibility tree.
   since the label is already visible there. `false` (the default) reproduces the exact existing
   output.
 
+A host `aria-label` is copied to the rendered native link or button by attribute presence,
+including an explicitly empty value; without it, the default slot supplies the native name. The
+same precedence supplies the tooltip text when that opt-in flyout is visible.
+
 **Methods:** `click(): void` activates the internal native link or button; it is a no-op while
 `disabled`.
 
@@ -2561,9 +2566,10 @@ to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where t
   `lr-card-activate` never fires. Consumer slots stay outside that link, so their controls remain
   independent. `false` (the default) reproduces a plain static card: no button, no listeners, no
   events.
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — the accessible name of that
-  activation button. Left unset it falls back to the card's own text content, so a text card is
-  named without extra markup; set it explicitly for a card whose content is an image or a chart.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — the accessible name of the
+  native whole-card owner: the activation button without `href`, or the stretched link with it.
+  An explicitly empty value is retained; only an absent value falls back to card or linked content,
+  so set it explicitly for a card whose content is an image or a chart.
 - `href?: string` — when set, a real stretched `<a href=...>` renders behind the consumer slots for
   a whole-card link (e.g. a wide CTA tile). A click on noninteractive card content follows that
   link, while slotted controls keep their own native or Lyra behavior. Unset (the default) renders
@@ -2927,7 +2933,9 @@ non-link form; assigning `undefined` clears it and reads back as the canonical `
 `target?: string`, and `current: boolean = false` (reflected — renders a
 `<span aria-current="page">` instead of an `<a>`, even when `href` is set). A target derives
 `rel="noopener noreferrer"`; there is intentionally no independently settable `rel`. Each item
-sets `role="listitem"` on itself. A non-current item without `href` renders a native button.
+sets `role="listitem"` on itself. A non-current item without `href` renders a native button. A host
+`aria-label` is forwarded to either non-current native owner by attribute presence, including an
+explicitly empty value; when absent, the default slot supplies its name.
 
 **`lr-breadcrumb-item` methods:** `click(): void` activates the internal native link or button. It
 is a no-op for the current-page label.
@@ -3026,7 +3034,7 @@ Dashboard filter row that composes Lyra inputs and removable chips, with reset a
 
 - `filters: FilterBarFilterDefinition[] = []` (attribute: false) — filter schema in render order.
 - `value: FilterBarValue = {}` (attribute: false) — current values keyed by filter id; reads and
-  writes are shallow-copied.
+  writes clone the object and each string-array field independently.
 - `label: string = ''` — accessible-name fallback for the internal `role="group"`. A host
   `aria-label` wins by attribute presence, including an explicitly empty value.
 - `disabled: boolean = false` (reflected) — disables every filter control and reset action.

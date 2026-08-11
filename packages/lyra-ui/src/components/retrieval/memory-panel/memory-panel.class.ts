@@ -574,7 +574,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
 
   override render(): TemplateResult {
     const allEmpty = this.shortTerm.length === 0 && this.longTerm.length === 0;
-    const groupLabel = this.getAttribute('aria-label') || this.label || this.localize('memoryPanelLabel');
+    const groupLabel = this.getAttribute('aria-label') ?? (this.label || this.localize('memoryPanelLabel'));
 
     if (allEmpty) {
       return html`<div part="base" tabindex="-1" aria-label=${groupLabel}><lr-empty part="empty" heading=${this.localize('noData')}></lr-empty></div>`;

@@ -560,6 +560,25 @@ describe('aria-label forwarding', () => {
     await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
     expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('Forwarded label');
   });
+
+  it('preserves an explicit empty host aria-label on the MapLibre canvas, updates it live, and restores the label fallback after removal', async function () {
+    if (!hasWebGL2) this.skip();
+    const el = (await fixture(
+      html`<lr-map label="Delivery regions" aria-label=""></lr-map>`,
+    )) as LyraMap;
+    await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+    const canvas = () => el.map?.getCanvas();
+
+    expect(canvas()?.getAttribute('aria-label')).to.equal('');
+
+    el.setAttribute('aria-label', 'Live delivery map');
+    await el.updateComplete;
+    expect(canvas()?.getAttribute('aria-label')).to.equal('Live delivery map');
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(canvas()?.getAttribute('aria-label')).to.equal('Delivery regions');
+  });
 });
 
 it('is accessible', async function () {

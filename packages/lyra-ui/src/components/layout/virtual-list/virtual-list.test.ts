@@ -379,6 +379,28 @@ describe("aria-label forwarding", () => {
     ).to.equal("Recent activity");
   });
 
+  it('preserves an explicitly empty host aria-label and removes it from the semantic owner when cleared', async () => {
+    const el = (await fixture(
+      html`<lr-virtual-list
+        aria-label="Recent activity"
+        .items=${[1, 2, 3]}
+        .renderItem=${renderText}
+        .keyFunction=${numberKey}
+      ></lr-virtual-list>`
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    expect(base.getAttribute('aria-label')).to.equal('Recent activity');
+
+    el.setAttribute('aria-label', '');
+    await el.updateComplete;
+    expect(base.getAttribute('aria-label')).to.equal('');
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(base.hasAttribute('aria-label')).to.be.false;
+  });
+
   it("has no aria-label on the internal element when the host has none", async () => {
     const el = (await fixture(
       html`<lr-virtual-list

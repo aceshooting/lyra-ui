@@ -1090,7 +1090,7 @@ const strings: LyraLocaleStrings = {
   claimEvidenceConfidence: 'اطمینان {percent}',
   retrievalCompareLabel: 'مقایسهٔ بازیابی',
   retrievalCompareEmpty: 'هیچ مجموعه‌ای از نتایج بازیابی برای مقایسه وجود ندارد',
-  retrievalCompareOverlap: 'هم‌پوشانی Top-k: {percent}',
+  retrievalCompareOverlap: 'هم‌پوشانی Top-k بین {left} و {right}: {percent}',
   retrievalCompareRank: 'رتبه {rank}',
   retrievalCompareDenseScore: 'چگال',
   retrievalCompareSparseScore: 'پراکنده',

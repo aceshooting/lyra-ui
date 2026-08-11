@@ -81,6 +81,33 @@ describe('lr-knowledge-base', () => {
     expect(el.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('Research library');
   });
 
+  it('preserves an explicitly empty host aria-label at the nested grid and restores label after removal', async () => {
+    const el = (await fixture(
+      html`<lr-knowledge-base
+        aria-label="Team A sources"
+        label="Research library"
+        .sources=${[sources[0]!]}
+     ></lr-knowledge-base>`,
+    )) as LyraKnowledgeBase;
+    const table = tableEl(el);
+    await table.updateComplete;
+    const grid = table.shadowRoot!.querySelector<HTMLElement>('[part="table"]')!;
+    expect(table.getAttribute('aria-label')).to.equal('Team A sources');
+    expect(grid.getAttribute('aria-label')).to.equal('Team A sources');
+
+    el.setAttribute('aria-label', '');
+    await el.updateComplete;
+    await table.updateComplete;
+    expect(table.getAttribute('aria-label')).to.equal('');
+    expect(grid.getAttribute('aria-label')).to.equal('');
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    await table.updateComplete;
+    expect(table.getAttribute('aria-label')).to.equal('Research library');
+    expect(grid.getAttribute('aria-label')).to.equal('Research library');
+  });
+
   it('renders one table row per source with the source name and type', async () => {
     const el = (await fixture(html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`)) as LyraKnowledgeBase;
     await el.updateComplete;

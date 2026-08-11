@@ -90,6 +90,18 @@ it('formats ranks with the effective locale', async () => {
   expect(el.shadowRoot!.querySelector('[part="chunk-rank"]')!.textContent).to.contain('١');
 });
 
+it('lets the localized overlap template compose caller-supplied set labels', async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-compare
+      .sets=${sets}
+      .strings=${{ retrievalCompareOverlap: 'Comparison: {right} / {left} ({percent})' }}
+    ></lr-retrieval-compare>`,
+  )) as LyraRetrievalCompare;
+  expect(el.shadowRoot!.querySelector('[part="overlap"]')!.textContent).to.equal(
+    'Comparison: Reranked / Baseline (33.3%)',
+  );
+});
+
 it('renders a labeled overlap summary for every pair of result sets', async () => {
   const threeSets: RetrievalComparisonSet[] = [
     ...sets,
@@ -101,8 +113,8 @@ it('renders a labeled overlap summary for every pair of result sets', async () =
   const summaries = [...el.shadowRoot!.querySelectorAll('[part="overlap"]')];
   expect(summaries.length).to.equal(3);
   expect(summaries.map((summary) => summary.textContent)).to.deep.include.members([
-    'BaselineRerankedTop-k overlap: 33.3%',
-    'BaselineHybridTop-k overlap: 33.3%',
-    'RerankedHybridTop-k overlap: 33.3%',
+    'Top-k overlap between Baseline and Reranked: 33.3%',
+    'Top-k overlap between Baseline and Hybrid: 33.3%',
+    'Top-k overlap between Reranked and Hybrid: 33.3%',
   ]);
 });

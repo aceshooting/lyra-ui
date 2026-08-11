@@ -505,6 +505,7 @@ describe('copy button', () => {
       expect(writes).to.deep.equal([jsSample]);
     } finally {
       if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
     }
   });
 
@@ -593,6 +594,7 @@ describe('copy button', () => {
       expect(detail).to.deep.equal({ text: jsSample });
     } finally {
       if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
     }
   });
 
@@ -630,6 +632,7 @@ describe('copy button', () => {
       expect(detail).to.deep.equal({ text: jsSample });
     } finally {
       if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
     }
   });
 

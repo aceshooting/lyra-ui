@@ -357,6 +357,34 @@ it('resolves the default svg accessible name through a .strings override for min
   expect(el.shadowRoot!.querySelector('[part="svg"]')!.getAttribute('aria-label')).to.equal('Carte mentale');
 });
 
+it('preserves an explicitly empty host aria-label across semantic owners and the implicit hub, then restores label after removal', async () => {
+  const roots: LyraTopic[] = [
+    { id: 'research', label: 'Research' },
+    { id: 'sources', label: 'Sources' },
+  ];
+  const el = (await fixture(
+    html`<lr-mind-map label="Knowledge topics" aria-label="" .topics=${roots}></lr-mind-map>`,
+  )) as LyraMindMap;
+  const svg = () => el.shadowRoot!.querySelector<SVGElement>('[part="svg"]')!;
+  const tree = () => el.shadowRoot!.querySelector<HTMLElement>('[role="tree"]')!;
+  const nodeLabels = () =>
+    Array.from(el.shadowRoot!.querySelectorAll<SVGTextElement>('[part="node-label"]')).map(
+      (node) => node.textContent ?? '',
+    );
+
+  for (const owner of [svg(), tree()]) {
+    expect(owner.hasAttribute('aria-label')).to.equal(true);
+    expect(owner.getAttribute('aria-label')).to.equal('');
+  }
+  expect(nodeLabels()).to.include('');
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(svg().getAttribute('aria-label')).to.equal('Knowledge topics');
+  expect(tree().getAttribute('aria-label')).to.equal('Knowledge topics');
+  expect(nodeLabels()).to.include('Knowledge topics');
+});
+
 it('is accessible with an expanded, multi-level tree', async () => {
   const el = (await fixture(html`<lr-mind-map expand-depth="2"></lr-mind-map>`)) as LyraMindMap;
   el.topics = topics;

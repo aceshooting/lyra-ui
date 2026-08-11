@@ -1371,7 +1371,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         style=${stickyInset > 0
           ? `scroll-padding-block-start:${stickyInset}px`
           : nothing}
-        aria-label=${this.getAttribute("aria-label") || nothing}
+        aria-label=${this.hasAttribute("aria-label") ? this.getAttribute("aria-label")! : nothing}
         aria-busy=${this.loading ? "true" : "false"}
       >
         <div

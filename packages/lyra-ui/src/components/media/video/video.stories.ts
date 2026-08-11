@@ -5,6 +5,8 @@ import './video.js';
 const VIDEO_SRC = '/fixtures/sample-video.mp4';
 const POSTER =
   'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 960 540%22%3E%3Crect width=%22960%22 height=%22540%22 fill=%22%231a2438%22/%3E%3Ccircle cx=%22480%22 cy=%22270%22 r=%22110%22 fill=%22%235b8def%22/%3E%3Cpath d=%22M450 205v130l105-65z%22 fill=%22white%22/%3E%3C/svg%3E';
+const NARROW_CAPTION_TRACK =
+  'data:text/vtt,WEBVTT%0A%0A00%3A00.000%20--%3E%2000%3A02.000%0AA%20narrow%20caption%20line%0Awith%20a%20second%20line';
 
 const meta: Meta = {
   title: 'Media/Video',
@@ -57,9 +59,36 @@ export const Narrow320: Story = {
         src=${VIDEO_SRC}
         poster=${POSTER}
         title="A long video title at a narrow 320 pixel allocation"
-      ></lr-video>
+      >
+        <track src=${NARROW_CAPTION_TRACK} kind="captions" srclang="en" label="English" default>
+      </lr-video>
     </div>
   `,
+  play: async ({ canvasElement }) => {
+    const video = canvasElement.querySelector('lr-video') as HTMLElement & {
+      getVideoElement(): HTMLVideoElement | undefined;
+      updateComplete: Promise<unknown>;
+    };
+    await video.updateComplete;
+    const native = video.getVideoElement()!;
+    const track = new EventTarget() as EventTarget & {
+      kind: string; label: string; language: string; mode: TextTrackMode; activeCues: Array<{ text: string }>;
+    };
+    Object.assign(track, {
+      kind: 'captions',
+      label: 'English',
+      language: 'en',
+      mode: 'showing',
+      activeCues: [{ text: 'A narrow caption line\nwith a second line' }],
+    });
+    Object.defineProperty(native, 'textTracks', {
+      configurable: true,
+      value: { 0: track, length: 1 },
+    });
+    native.dispatchEvent(new Event('loadedmetadata'));
+    track.dispatchEvent(new Event('cuechange'));
+    await video.updateComplete;
+  },
 };
 
 export const RightToLeft: Story = {

@@ -172,6 +172,21 @@ it('names the region with a host aria-label override, then the label property, t
   expect(withAria.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Custom');
 });
 
+it('preserves an explicitly empty host aria-label on the list and restores label after removal', async () => {
+  const el = (await fixture(
+    html`<lr-neighbor-list label="Family tree" aria-label="" .rows=${rows}></lr-neighbor-list>`,
+  )) as LyraNeighborList;
+  const list = () => el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+
+  expect(list().getAttribute('role')).to.equal('list');
+  expect(list().hasAttribute('aria-label')).to.equal(true);
+  expect(list().getAttribute('aria-label')).to.equal('');
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(list().getAttribute('aria-label')).to.equal('Family tree');
+});
+
 describe('localization', () => {
   it('localizes the empty state and a row accessible name via .strings', async () => {
     const empty = (await fixture(

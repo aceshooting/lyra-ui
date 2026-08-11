@@ -1347,6 +1347,15 @@ const DECISION_OVERRIDES = new Map([
       expectedDrift: INCLUDE_SECURITY_DRIFT,
     },
   ],
+  [
+    'wa-zoomable-frame',
+    {
+      classification: 'warning-required',
+      rationale:
+        'Lyra always renders a sandbox with an `allow-same-origin` default, rejects active and non-embeddable URL schemes, and drops `allow-same-origin` when paired with `allow-scripts`; migration leaves the use unchanged and reports the security-sensitive difference.',
+      expectedDrift: [],
+    },
+  ],
 ]);
 
 export function reviewedMigrationDecision(upstreamTag) {
@@ -1390,6 +1399,12 @@ const BEHAVIOR_PARITY_OVERRIDES = new Map([
         'reduced-motion-autoplay',
         'visible-pause-control',
       ],
+    },
+  ],
+  [
+    'wa-zoomable-frame',
+    {
+      behaviorReviewFlags: ['sandbox-and-url-safety'],
     },
   ],
 ]);

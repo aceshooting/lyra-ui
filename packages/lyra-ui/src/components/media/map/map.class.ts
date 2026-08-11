@@ -829,7 +829,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   private get effectiveMapLabel(): string {
-    return this.getAttribute('aria-label') || this.label || this.localize('map');
+    return this.getAttribute('aria-label') ?? (this.label || this.localize('map'));
   }
 
   private validMarkerLngLat(candidate: unknown): [number, number] | null {

@@ -2,7 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { place } from '../../../internal/positioner.js';
-import { nextId } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { styles } from './mention-popover.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -644,7 +644,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
    *  `label` itself to be set. */
   private get effectiveLabel(): string {
     return (
-      this.getAttribute('aria-label') ||
+      hostAriaLabel(this) ??
       this.localize('mentionSuggestions', this.label === 'Suggestions' ? undefined : this.label)
     );
   }

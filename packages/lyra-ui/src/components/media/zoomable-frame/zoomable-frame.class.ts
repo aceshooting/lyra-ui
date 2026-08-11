@@ -120,8 +120,10 @@ export interface LyraZoomableFrameEventMap {
  * tokens are allowlisted, and `allow-scripts` is never combined with `allow-same-origin`.
  *
  * @customElement lr-zoomable-frame
- * @slot zoom-in-icon - Override for the decorative zoom-in glyph.
- * @slot zoom-out-icon - Override for the decorative zoom-out glyph.
+ * @slot zoom-in-icon - Override for the decorative zoom-in glyph. Its flattened subtree is inert
+ *   and hidden from assistive technology; the native zoom-in button remains the sole action.
+ * @slot zoom-out-icon - Override for the decorative zoom-out glyph. Its flattened subtree is inert
+ *   and hidden from assistive technology; the native zoom-out button remains the sole action.
  * @event load - Relayed native iframe load event; non-bubbling and non-composed.
  * @event error - Relayed native iframe error event; non-bubbling and non-composed.
  * @csspart iframe - The internal `<iframe>` element.
@@ -398,14 +400,14 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
         aria-label=${this.localize('zoomOut')}
         ?disabled=${this.isZoomOutDisabled()}
         @click=${() => this.zoomOut()}
-      ><span aria-hidden="true"><slot name="zoom-out-icon">−</slot></span></button>
+      ><span aria-hidden="true" inert><slot name="zoom-out-icon">−</slot></span></button>
       <button
         part="zoom-in-button"
         type="button"
         aria-label=${this.localize('zoomIn')}
         ?disabled=${this.isZoomInDisabled()}
         @click=${() => this.zoomIn()}
-      ><span aria-hidden="true"><slot name="zoom-in-icon">+</slot></span></button>
+      ><span aria-hidden="true" inert><slot name="zoom-in-icon">+</slot></span></button>
     </div>`;
   }
 

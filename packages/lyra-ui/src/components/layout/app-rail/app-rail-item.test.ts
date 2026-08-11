@@ -53,6 +53,48 @@ it("renders a disabled button when no href is available", async () => {
   expect(button.getAttribute("aria-disabled")).to.equal("true");
 });
 
+describe("host aria-label precedence", () => {
+  for (const [name, markup] of [
+    [
+      "link",
+      html`<lr-app-rail-item href="/inbox" aria-label="">Inbox</lr-app-rail-item>`,
+    ],
+    [
+      "button",
+      html`<lr-app-rail-item aria-label="">Settings</lr-app-rail-item>`,
+    ],
+  ] as const) {
+    it(`preserves an explicit empty host label on its ${name} owner and restores name-from-content when removed`, async () => {
+      const el = (await fixture(markup)) as LyraAppRailItem;
+      const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+
+      expect(base.getAttribute("aria-label")).to.equal("");
+
+      el.setAttribute("aria-label", "Archived item");
+      await el.updateComplete;
+      expect(base.getAttribute("aria-label")).to.equal("Archived item");
+
+      el.removeAttribute("aria-label");
+      await el.updateComplete;
+      expect(base.hasAttribute("aria-label")).to.be.false;
+    });
+  }
+
+  it("does not replace an explicit empty host label with tooltip text", async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item tooltip icon-only aria-label="">Dashboard</lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+
+    base.dispatchEvent(new FocusEvent("focus", { bubbles: true }));
+    await el.updateComplete;
+
+    expect(
+      el.shadowRoot!.querySelector<HTMLElement>('[part="tooltip"]')!.textContent!.trim()
+    ).to.equal("");
+  });
+});
+
 describe("host click()", () => {
   for (const [name, markup] of [
     ["button", html`<lr-app-rail-item>Settings</lr-app-rail-item>`],

@@ -73,6 +73,12 @@ export const WithExplicitTotal: Story = {
     html`<lr-evaluation-run style="max-width: 40rem;" .examples=${examples.slice(0, 2)} total="4"></lr-evaluation-run>`,
 };
 
+export const StaleExplicitTotal: Story = {
+  name: 'Observed examples exceed a stale explicit total',
+  render: () =>
+    html`<lr-evaluation-run style="max-width: 40rem;" .examples=${examples.slice(0, 3)} total="1"></lr-evaluation-run>`,
+};
+
 export const AsyncApprovalVeto: Story = {
   name: 'Async approval veto',
   parameters: {

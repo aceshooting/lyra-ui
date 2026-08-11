@@ -229,6 +229,20 @@ it('prefixes the group aria-label with a host aria-label override, then the labe
   expect(withAria.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Custom');
 });
 
+it('preserves an explicitly empty host aria-label on the group and restores label after removal', async () => {
+  const el = (await fixture(
+    html`<lr-grounding-summary label="Answer grounding" aria-label=""></lr-grounding-summary>`,
+  )) as LyraGroundingSummary;
+  const group = () => el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+
+  expect(group().hasAttribute('aria-label')).to.equal(true);
+  expect(group().getAttribute('aria-label')).to.equal('');
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(group().getAttribute('aria-label')).to.equal('Answer grounding');
+});
+
 describe('localization', () => {
   it('localizes the empty-state heading via .strings overriding groundingSummaryEmpty', async () => {
     const el = (await fixture(

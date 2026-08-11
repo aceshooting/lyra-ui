@@ -51,6 +51,28 @@ describe('lr-knowledge-base-admin', () => {
     expect(heading.textContent).to.equal('Visible knowledge base');
   });
 
+  it('preserves an explicitly empty host aria-label at the section and tablist, then restores label after removal', async () => {
+    const el = (await fixture(
+      html`<lr-knowledge-base-admin
+        label="Visible knowledge base"
+        aria-label="Author admin region"
+      ></lr-knowledge-base-admin>`,
+    )) as LyraKnowledgeBaseAdmin;
+    const owners = () => [
+      el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.getAttribute('aria-label'),
+      el.shadowRoot!.querySelector<HTMLElement>('[role="tablist"]')!.getAttribute('aria-label'),
+    ];
+    expect(owners()).to.deep.equal(['Author admin region', 'Author admin region']);
+
+    el.setAttribute('aria-label', '');
+    await el.updateComplete;
+    expect(owners()).to.deep.equal(['', '']);
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(owners()).to.deep.equal(['Visible knowledge base', 'Visible knowledge base']);
+  });
+
   it('forwards source actions under namespaced events', async () => {
     const el = (await fixture(html`<lr-knowledge-base-admin></lr-knowledge-base-admin>`)) as LyraKnowledgeBaseAdmin;
     await el.updateComplete;

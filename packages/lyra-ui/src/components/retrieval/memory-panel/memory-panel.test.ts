@@ -70,6 +70,23 @@ describe('lr-memory-panel', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="item"]').length).to.equal(4);
   });
 
+  it('preserves an explicitly empty host aria-label on the populated group and restores label after removal', async () => {
+    const el = (await fixture(
+      html`<lr-memory-panel label="Remembered context" aria-label=""></lr-memory-panel>`,
+    )) as LyraMemoryPanel;
+    el.shortTerm = shortTermItems;
+    await el.updateComplete;
+    const group = () => el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+
+    expect(group().getAttribute('role')).to.equal('group');
+    expect(group().hasAttribute('aria-label')).to.equal(true);
+    expect(group().getAttribute('aria-label')).to.equal('');
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(group().getAttribute('aria-label')).to.equal('Remembered context');
+  });
+
   it('shows a localized "no items" message for an empty section while the other section has items', async () => {
     const el = (await fixture(html`<lr-memory-panel></lr-memory-panel>`)) as LyraMemoryPanel;
     el.shortTerm = shortTermItems;

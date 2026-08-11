@@ -1227,6 +1227,54 @@ test('the checked-in inventory warns for a reflection-sensitive Shoelace checkbo
   );
 });
 
+test('the checked-in inventory leaves Web Awesome Zoomable Frame sandbox and URL policy unchanged with location-aware warnings', () => {
+  const input = [
+    "import '@awesome.me/webawesome/dist/components/zoomable-frame/zoomable-frame.js';",
+    '<wa-zoomable-frame src="data:text/html,preview" sandbox="allow-scripts allow-same-origin"></wa-zoomable-frame>',
+    '',
+  ].join('\n');
+  const result = migrateText(input, buildMigrationContract(checkedInventory), {
+    file: 'zoomable-frame.html',
+  });
+
+  assert.equal(result.content, input);
+  assert.deepEqual(result.changes, []);
+  assert.deepEqual(
+    result.warnings.map(({ action, column, file, line, target, upstreamMember, upstreamTag, warningCode }) => ({
+      action,
+      column,
+      file,
+      line,
+      target,
+      upstreamMember,
+      upstreamTag,
+      warningCode,
+    })),
+    [
+      {
+        action: 'manual-review',
+        column: 9,
+        file: 'zoomable-frame.html',
+        line: 1,
+        target: 'lr-zoomable-frame',
+        upstreamMember: 'module',
+        upstreamTag: 'wa-zoomable-frame',
+        warningCode: 'WARNING_REQUIRED',
+      },
+      {
+        action: 'manual-review',
+        column: 2,
+        file: 'zoomable-frame.html',
+        line: 2,
+        target: 'lr-zoomable-frame',
+        upstreamMember: null,
+        upstreamTag: 'wa-zoomable-frame',
+        warningCode: 'WARNING_REQUIRED',
+      },
+    ],
+  );
+});
+
 test('the checked-in inventory rewrites a Pro chart deep import with its granular registration and peer requirements', () => {
   const checkedContract = buildMigrationContract(checkedInventory);
   const input = [

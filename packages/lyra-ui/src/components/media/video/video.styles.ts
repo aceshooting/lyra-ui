@@ -318,6 +318,41 @@ export const styles = css`
   }
 
   @container (max-inline-size: 20rem) {
+    :host(:not([controls='none'])) [part~='video-wrapper'] {
+      aspect-ratio: auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        'media'
+        'controls';
+    }
+
+    :host(:not([controls='none'])) [part='video'] {
+      grid-area: media;
+      block-size: auto;
+      aspect-ratio: 16 / 9;
+    }
+
+    :host(:not([controls='none'])) [part='poster-overlay'] {
+      position: relative;
+      inset: auto;
+      grid-area: media;
+    }
+
+    :host(:not([controls='none'])) [part='caption-overlay'] {
+      position: relative;
+      inset: auto;
+      grid-area: media;
+      align-self: end;
+      margin-block-end: var(--lr-space-m);
+    }
+
+    :host(:not([controls='none'])) [part='controls-overlay'] {
+      position: relative;
+      inset: auto;
+      grid-area: controls;
+    }
+
     [part='controls-overlay'] {
       padding: var(--lr-space-xs);
     }

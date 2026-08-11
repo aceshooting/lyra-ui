@@ -178,6 +178,34 @@ it('falls back to the localized default label when no aria-label is set', async 
   expect(handle.getAttribute('aria-label')).to.equal('Image comparison');
 });
 
+it('preserves present host aria-labels on the comparison group and range, then restores the fallback on removal', async () => {
+  const el = (await fixture(html`
+    <lr-image-comparer aria-label="" .strings=${{ imageComparerLabel: 'Localized comparison' }}>
+      <div slot="before">Before</div>
+      <div slot="after">After</div>
+    </lr-image-comparer>
+  `)) as LyraImageComparer;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="input"]')!;
+  const labels = (): Array<string | null> => [base.getAttribute('aria-label'), input.getAttribute('aria-label')];
+
+  expect(base.getAttribute('role')).to.equal('group');
+  expect(input.type).to.equal('range');
+  expect(labels()).to.deep.equal(['', '']);
+
+  el.setAttribute('aria-label', 'Updated comparison');
+  await el.updateComplete;
+  expect(labels()).to.deep.equal(['Updated comparison', 'Updated comparison']);
+
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(labels()).to.deep.equal(['', '']);
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(labels()).to.deep.equal(['Localized comparison', 'Localized comparison']);
+});
+
 it('renders a .strings override for the default label', async () => {
   const el = (await fixture(html`
     <lr-image-comparer .strings=${{ imageComparerLabel: 'Comparaison des images' }}>

@@ -10,7 +10,7 @@ import type {
   AnchorResultDetail,
 } from '../../viewers/document-viewer/anchors.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import type { LyraPanZoom } from '../pan-zoom/pan-zoom.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
@@ -541,7 +541,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   }
 
   override render(): TemplateResult {
-    const label = this.getAttribute('aria-label') || this.name || this.localize('imageViewerLabel');
+    const label = hostAriaLabel(this) ?? (this.name || this.localize('imageViewerLabel'));
     return html`<div part="base" role="region" aria-label=${label}>
       <div part="toolbar">
         <span class="fit-control-wrapper">

@@ -619,6 +619,55 @@ describe('accessibility', () => {
     file.accessibleLabel = 'Save quarterly report';
     await file.updateComplete;
     expect(link.getAttribute('aria-label')).to.equal('Save quarterly report');
+
+    file.accessibleLabel = '';
+    await file.updateComplete;
+    expect(link.getAttribute('aria-label')).to.equal('Open report.pdf');
+  });
+
+  it('preserves an explicit empty host aria-label on every action owner, updates it live, and restores the per-kind fallback after removal', async () => {
+    const cases = [
+      {
+        kind: 'image',
+        src: 'https://example.test/image.png',
+        filename: 'image.png',
+        selector: '[part="base"]',
+      },
+      {
+        kind: 'video',
+        src: 'https://example.test/clip.mp4',
+        filename: 'clip.mp4',
+        selector: '[part="open-button"]',
+      },
+      {
+        kind: 'file',
+        src: 'https://example.test/report.pdf',
+        filename: 'report.pdf',
+        selector: '[part="base"]',
+      },
+    ] as const;
+
+    for (const { kind, src, filename, selector } of cases) {
+      const el = (await fixture(html`
+        <lr-media-card
+          aria-label=""
+          kind=${kind}
+          src=${src}
+          filename=${filename}
+        ></lr-media-card>
+      `)) as LyraMediaCard;
+      const action = () => el.shadowRoot?.querySelector<HTMLElement>(selector);
+
+      expect(action()?.getAttribute('aria-label')).to.equal('');
+
+      el.setAttribute('aria-label', `Live ${kind} action`);
+      await el.updateComplete;
+      expect(action()?.getAttribute('aria-label')).to.equal(`Live ${kind} action`);
+
+      el.removeAttribute('aria-label');
+      await el.updateComplete;
+      expect(action()?.getAttribute('aria-label')).to.equal(`Open ${filename}`);
+    }
   });
 
   it('is accessible in the default (empty) state', async () => {

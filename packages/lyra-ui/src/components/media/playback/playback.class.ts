@@ -1,5 +1,6 @@
-import { html, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { playIcon, pauseIcon } from '../../../internal/icons.js';
 import { finiteCount, finiteDuration, MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
@@ -7,7 +8,7 @@ import { styles } from './playback.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -65,6 +66,9 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
     pause: LYRA_DEFAULT_pause,
     play: LYRA_DEFAULT_play,
     playbackPosition: LYRA_DEFAULT_playbackPosition,
@@ -284,8 +288,13 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
     const maxIndex = this.maxIndex;
     const index = finiteCount(this.index, 0, maxIndex);
     const disabled = finiteCount(this.length) <= 1;
+    const accessibleLabel = hostAriaLabel(this);
     return html`
-      <div part="base">
+      <div
+        part="base"
+        role=${accessibleLabel === null ? nothing : 'group'}
+        aria-label=${accessibleLabel ?? nothing}
+      >
         <button
           part="play-button"
           type="button"

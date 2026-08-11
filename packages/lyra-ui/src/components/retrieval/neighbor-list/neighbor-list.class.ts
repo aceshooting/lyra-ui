@@ -187,7 +187,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
 
   override render(): TemplateResult {
     const sorted = this.sortedRows();
-    const label = this.getAttribute('aria-label') || this.label || this.localize('neighborListLabel');
+    const label = this.getAttribute('aria-label') ?? (this.label || this.localize('neighborListLabel'));
     if (sorted.length === 0) {
       // `heading` is passed as slotted light-DOM content (rather than the `heading` attribute)
       // so `[part="empty"]`'s `.textContent` -- a plain DOM accessor, which never pierces

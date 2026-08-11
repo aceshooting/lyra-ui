@@ -645,7 +645,10 @@ allocated inline size with a 16:9 aspect ratio by default (override `aspect-rati
 `zoomOut()` selects the nearest below it. The toolbar also accepts `+`/`=` and `-`/`_` while one
 of its controls has focus.
 
-**Slots:** `zoom-in-icon` and `zoom-out-icon` replace the decorative control glyphs.
+**Slots:** `zoom-in-icon` and `zoom-out-icon` replace the decorative control glyphs. Their
+flattened subtrees are always inert and hidden from assistive technology, so use an SVG or glyph
+rather than a second interactive control; the native zoom buttons remain the sole focus and pointer
+actions.
 
 **Events:** native `load` and `error`, relayed exactly once from the current iframe generation as
 non-bubbling, non-composed `Event` instances. Navigation/source-policy changes replace the iframe,
@@ -1635,6 +1638,10 @@ distinct from `<lr-transcript-feed>` (live captions for an in-progress voice ses
 number[] = []` (attribute: false), and `tracks: LyraAvTrack[] = []` (attribute: false).
 `LyraAvCue = { id, start, end?, text, speaker? }`; `LyraAvTrack = { src, kind: 'subtitles' |
 'captions' | 'descriptions', srclang, label, default? }`.
+
+Only exact `kind="audio"` and `kind="video"` values override MIME auto-detection. An unrecognized
+runtime or attribute value falls back to `mimeType` (`audio/*` renders audio; every other value
+renders video) and never appears in `lr-load`'s `detail.kind`.
 
 `poster` is ignored for audio and is validated with the same safe media-source allowlist as `src`
 before reaching the native video element; an unsafe poster URL is omitted.

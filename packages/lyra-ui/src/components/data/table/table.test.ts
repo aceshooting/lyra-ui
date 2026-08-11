@@ -2532,6 +2532,29 @@ it('forwards a host aria-label into the shadow-DOM grid element', async () => {
   expect(grid.getAttribute('aria-label')).to.equal('Scores');
 });
 
+it('preserves an explicitly empty host aria-label on the grid and restores caption naming after removal', async () => {
+  const el = (await fixture(
+    html`<lr-table aria-label="Author grid" caption="Quarterly results"></lr-table>`,
+  )) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+  const grid = el.shadowRoot!.querySelector<HTMLElement>('[part="table"]')!;
+  const caption = el.shadowRoot!.querySelector<HTMLElement>('[part="caption"]')!;
+  expect(grid.getAttribute('aria-label')).to.equal('Author grid');
+  expect(grid.hasAttribute('aria-labelledby')).to.be.false;
+
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(grid.getAttribute('aria-label')).to.equal('');
+  expect(grid.hasAttribute('aria-labelledby')).to.be.false;
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(grid.hasAttribute('aria-label')).to.be.false;
+  expect(grid.getAttribute('aria-labelledby')).to.equal(caption.id);
+});
+
 it('omits aria-label on the shadow-DOM grid element when the host has none', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;

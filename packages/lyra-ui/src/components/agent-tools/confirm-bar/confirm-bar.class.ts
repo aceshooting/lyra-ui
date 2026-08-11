@@ -2,7 +2,7 @@ import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type T
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraVariant } from '../../../internal/variants.js';
-import { nextId } from '../../../internal/a11y.js';
+import { hasRealContent, nextId } from '../../../internal/a11y.js';
 import { resolveLocalizedParts } from '../../../internal/localization-runtime.js';
 import '../../layout/details/details.class.js';
 import '../../utility/json-viewer/json-viewer.class.js';
@@ -216,7 +216,10 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
-      this.hasBodySlot = Array.from(this.children).some((el) => !el.hasAttribute('slot'));
+      const defaultSlotNodes = Array.from(this.childNodes).filter(
+        (node) => node.nodeType !== Node.ELEMENT_NODE || !(node as Element).getAttribute('slot'),
+      );
+      this.hasBodySlot = hasRealContent(defaultSlotNodes);
     }
     if (
       changed.has('decision') &&
@@ -230,7 +233,9 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   }
 
   private onBodySlotChange = (e: Event): void => {
-    this.hasBodySlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    this.hasBodySlot = hasRealContent(
+      (e.target as HTMLSlotElement).assignedNodes({ flatten: true }),
+    );
   };
 
   private decide(next: 'approved' | 'denied'): void {

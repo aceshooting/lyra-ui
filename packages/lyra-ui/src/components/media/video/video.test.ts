@@ -54,6 +54,34 @@ function stubPlayback(media: HTMLVideoElement, initialPaused = true) {
   };
 }
 
+function installVisibilityObserver() {
+  const originalObserver = window.IntersectionObserver;
+  let callback!: IntersectionObserverCallback;
+  class FakeIntersectionObserver {
+    constructor(next: IntersectionObserverCallback) {
+      callback = next;
+    }
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords(): IntersectionObserverEntry[] { return []; }
+    readonly root = null;
+    readonly rootMargin = '';
+    readonly thresholds = [0];
+  }
+  (window as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver =
+    FakeIntersectionObserver as unknown as typeof IntersectionObserver;
+  return {
+    emit(isIntersecting: boolean): void {
+      callback([{ isIntersecting } as IntersectionObserverEntry], {} as IntersectionObserver);
+    },
+    restore(): void {
+      (window as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver =
+        originalObserver;
+    },
+  };
+}
+
 describe('lr-video public contract', () => {
   it('exposes the documented defaults and always opts into inline playback', async () => {
     const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
@@ -856,6 +884,64 @@ describe('lr-video public contract', () => {
     }
   });
 
+  it('does not resume after public pause() takes ownership from the visibility observer', async () => {
+    const observer = installVisibilityObserver();
+    try {
+      const el = await fixture<LyraVideo>(html`<lr-video autoplay-on-visible></lr-video>`);
+      const stub = stubPlayback(nativeVideo(el), false);
+
+      observer.emit(false);
+      expect(stub.pauseCalls).to.equal(1);
+      el.pause();
+
+      observer.emit(true);
+      await aTimeout(0);
+      expect(stub.playCalls).to.equal(0);
+    } finally {
+      observer.restore();
+    }
+  });
+
+  it('does not resume after src replacement starts a new source generation', async () => {
+    const observer = installVisibilityObserver();
+    try {
+      const el = await fixture<LyraVideo>(html`<lr-video autoplay-on-visible></lr-video>`);
+      const stub = stubPlayback(nativeVideo(el), false);
+
+      observer.emit(false);
+      expect(stub.pauseCalls).to.equal(1);
+      el.src = 'https://example.test/replacement.mp4';
+      await el.updateComplete;
+      await aTimeout(0);
+      expect(stub.loadCalls).to.equal(1);
+
+      observer.emit(true);
+      await aTimeout(0);
+      expect(stub.playCalls).to.equal(0);
+    } finally {
+      observer.restore();
+    }
+  });
+
+  it('does not resume after load() starts a new source generation', async () => {
+    const observer = installVisibilityObserver();
+    try {
+      const el = await fixture<LyraVideo>(html`<lr-video autoplay-on-visible></lr-video>`);
+      const stub = stubPlayback(nativeVideo(el), false);
+
+      observer.emit(false);
+      expect(stub.pauseCalls).to.equal(1);
+      el.load();
+      expect(stub.loadCalls).to.equal(1);
+
+      observer.emit(true);
+      await aTimeout(0);
+      expect(stub.playCalls).to.equal(0);
+    } finally {
+      observer.restore();
+    }
+  });
+
   it('reconstructs its visibility observer in the adopted iframe realm', async () => {
     const iframe = document.createElement('iframe');
     const loaded = new Promise<void>((resolve) =>
@@ -972,6 +1058,77 @@ describe('lr-video public contract', () => {
     const controls = el.shadowRoot!.querySelector('[part="controls"]') as HTMLElement;
     expect(getComputedStyle(controls).flexWrap).to.equal('wrap');
     await expect(el).to.be.accessible();
+  });
+
+  it('keeps a two-line caption clear of every full control at a 320px allocation', async () => {
+    const fullscreenEnabled = Object.getOwnPropertyDescriptor(document, 'fullscreenEnabled');
+    const pipEnabled = Object.getOwnPropertyDescriptor(document, 'pictureInPictureEnabled');
+    const requestFullscreen = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'requestFullscreen');
+    const requestPictureInPicture = Object.getOwnPropertyDescriptor(
+      HTMLVideoElement.prototype,
+      'requestPictureInPicture',
+    );
+    try {
+      Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, value: true });
+      Object.defineProperty(document, 'pictureInPictureEnabled', { configurable: true, value: true });
+      Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', {
+        configurable: true,
+        value: () => Promise.resolve(),
+      });
+      Object.defineProperty(HTMLVideoElement.prototype, 'requestPictureInPicture', {
+        configurable: true,
+        value: () => Promise.resolve(),
+      });
+      const wrapper = await fixture<HTMLElement>(html`
+        <div style="inline-size: 320px"><lr-video controls="full"></lr-video></div>
+      `);
+      const el = wrapper.querySelector('lr-video') as LyraVideo;
+      const media = nativeVideo(el);
+      const track = new EventTarget() as EventTarget & {
+        kind: string; label: string; language: string; mode: TextTrackMode; activeCues: Array<{ text: string }>;
+      };
+      Object.assign(track, {
+        kind: 'captions',
+        label: 'English',
+        language: 'en',
+        mode: 'showing',
+        activeCues: [{ text: 'A deliberately long first caption line\nand a second caption line' }],
+      });
+      Object.defineProperty(media, 'textTracks', {
+        configurable: true,
+        value: { 0: track, length: 1 },
+      });
+      media.dispatchEvent(new Event('loadedmetadata'));
+      track.dispatchEvent(new Event('cuechange'));
+      await el.updateComplete;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+
+      const caption = el.shadowRoot!.querySelector<HTMLElement>('[part="caption"]')!;
+      const video = el.shadowRoot!.querySelector<HTMLElement>('[part="video"]')!;
+      const captionRect = caption.getBoundingClientRect();
+      const videoRect = video.getBoundingClientRect();
+      const controls = [...el.shadowRoot!.querySelectorAll<HTMLElement>(
+        '[part="controls"] button, [part="controls"] select, [part="controls"] input',
+      )];
+      expect(controls.length).to.equal(8);
+      expect(captionRect.top >= videoRect.top).to.equal(true);
+      expect(captionRect.bottom <= videoRect.bottom).to.equal(true);
+      for (const control of controls) {
+        const controlRect = control.getBoundingClientRect();
+        expect(controlRect.width > 0 && controlRect.height > 0, `${control.localName} is visible`).to.equal(true);
+        const overlaps =
+          captionRect.left < controlRect.right &&
+          captionRect.right > controlRect.left &&
+          captionRect.top < controlRect.bottom &&
+          captionRect.bottom > controlRect.top;
+        expect(overlaps, `caption must clear ${control.localName}`).to.equal(false);
+      }
+    } finally {
+      restoreOwnProperty(document, 'fullscreenEnabled', fullscreenEnabled);
+      restoreOwnProperty(document, 'pictureInPictureEnabled', pipEnabled);
+      restoreOwnProperty(HTMLElement.prototype, 'requestFullscreen', requestFullscreen);
+      restoreOwnProperty(HTMLVideoElement.prototype, 'requestPictureInPicture', requestPictureInPicture);
+    }
   });
 
   it('inherits RTL while keeping elapsed-time progression physical and uses no nonessential motion', async () => {
@@ -1489,41 +1646,52 @@ describe('lr-video coverage gap-filling', () => {
   });
 
   it('drives exitFullscreen once fullscreen is active, updates its aria-label, and clears transient state on disconnect', async () => {
-    const fsEnabled = Object.getOwnPropertyDescriptor(document, 'fullscreenEnabled');
-    const fsElement = Object.getOwnPropertyDescriptor(document, 'fullscreenElement');
-    const exitFs = Object.getOwnPropertyDescriptor(Document.prototype, 'exitFullscreen');
+    const originalFsElement = Object.getOwnPropertyDescriptor(document, 'fullscreenElement');
+    const preservedFullscreenElement = document.createElement('div');
     try {
-      Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, value: true });
-      let exits = 0;
-      Object.defineProperty(Document.prototype, 'exitFullscreen', {
+      Object.defineProperty(document, 'fullscreenElement', {
         configurable: true,
-        value: () => { exits += 1; return Promise.resolve(); },
+        value: preservedFullscreenElement,
       });
+      const fsEnabled = Object.getOwnPropertyDescriptor(document, 'fullscreenEnabled');
+      const fsElement = Object.getOwnPropertyDescriptor(document, 'fullscreenElement');
+      const exitFs = Object.getOwnPropertyDescriptor(Document.prototype, 'exitFullscreen');
+      try {
+        Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, value: true });
+        let exits = 0;
+        Object.defineProperty(Document.prototype, 'exitFullscreen', {
+          configurable: true,
+          value: () => { exits += 1; return Promise.resolve(); },
+        });
 
-      const el = await fixture<LyraVideo>(html`<lr-video controls="full"></lr-video>`);
-      const wrapper = el.shadowRoot!.querySelector('[part~="video-wrapper"]');
-      expect((wrapper) !== (null)).to.equal(true);
-      expect(button(el, 'fullscreen')?.getAttribute('aria-label')).to.equal('Enter fullscreen');
+        const el = await fixture<LyraVideo>(html`<lr-video controls="full"></lr-video>`);
+        const wrapper = el.shadowRoot!.querySelector('[part~="video-wrapper"]');
+        expect((wrapper) !== (null)).to.equal(true);
+        expect(button(el, 'fullscreen')?.getAttribute('aria-label')).to.equal('Enter fullscreen');
 
-      Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: wrapper });
-      document.dispatchEvent(new Event('fullscreenchange'));
-      await el.updateComplete;
-      expect(el.fullscreen).to.be.true;
-      expect(button(el, 'fullscreen')?.getAttribute('aria-label')).to.equal('Exit fullscreen');
+        Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: wrapper });
+        document.dispatchEvent(new Event('fullscreenchange'));
+        await el.updateComplete;
+        expect(el.fullscreen).to.be.true;
+        expect(button(el, 'fullscreen')?.getAttribute('aria-label')).to.equal('Exit fullscreen');
 
-      button(el, 'fullscreen')!.click();
-      await el.updateComplete;
-      expect(exits).to.equal(1);
+        button(el, 'fullscreen')!.click();
+        await el.updateComplete;
+        expect(exits).to.equal(1);
 
-      (el as unknown as { pictureInPicture: boolean }).pictureInPicture = true;
-      el.remove();
-      await aTimeout(0);
-      expect((el as unknown as { fullscreen: boolean }).fullscreen).to.be.false;
-      expect((el as unknown as { pictureInPicture: boolean }).pictureInPicture).to.be.false;
+        (el as unknown as { pictureInPicture: boolean }).pictureInPicture = true;
+        el.remove();
+        await aTimeout(0);
+        expect((el as unknown as { fullscreen: boolean }).fullscreen).to.be.false;
+        expect((el as unknown as { pictureInPicture: boolean }).pictureInPicture).to.be.false;
+      } finally {
+        restoreOwnProperty(document, 'fullscreenElement', fsElement);
+        restoreOwnProperty(document, 'fullscreenEnabled', fsEnabled);
+        restoreOwnProperty(Document.prototype, 'exitFullscreen', exitFs);
+      }
+      expect(document.fullscreenElement === preservedFullscreenElement).to.equal(true);
     } finally {
-      Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: null });
-      restoreOwnProperty(document, 'fullscreenEnabled', fsEnabled);
-      restoreOwnProperty(Document.prototype, 'exitFullscreen', exitFs);
+      restoreOwnProperty(document, 'fullscreenElement', originalFsElement);
     }
   });
 

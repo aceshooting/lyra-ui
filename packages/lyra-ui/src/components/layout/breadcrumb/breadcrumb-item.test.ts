@@ -26,6 +26,42 @@ it('renders a native button when a non-current item has no href', async () => {
   await expect(breadcrumb).to.be.accessible();
 });
 
+describe('owner names and direct a11y coverage', () => {
+  for (const [name, markup] of [
+    ['link', html`<lr-breadcrumb-item href="/reports" aria-label="">Reports</lr-breadcrumb-item>`],
+    ['button', html`<lr-breadcrumb-item aria-label="">Open reports</lr-breadcrumb-item>`],
+  ] as const) {
+    it(`forwards an explicit host label to its ${name} owner by presence`, async () => {
+      const list = await fixture(html`<div role="list">${markup}</div>`);
+      const el = list.querySelector('lr-breadcrumb-item') as LyraBreadcrumbItem;
+      const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+
+      expect(base.getAttribute('aria-label')).to.equal('');
+
+      el.setAttribute('aria-label', 'Archive reports');
+      await el.updateComplete;
+      expect(base.getAttribute('aria-label')).to.equal('Archive reports');
+
+      el.removeAttribute('aria-label');
+      await el.updateComplete;
+      expect(base.hasAttribute('aria-label')).to.be.false;
+      await expect(el).to.be.accessible();
+    });
+  }
+
+  it('axe-checks the current-page branch on its own tag', async () => {
+    const list = await fixture(html`
+      <div role="list"><lr-breadcrumb-item current>Reports</lr-breadcrumb-item></div>
+    `);
+    const el = list.querySelector('lr-breadcrumb-item') as LyraBreadcrumbItem;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+
+    expect(base.tagName).to.equal('SPAN');
+    expect(base.getAttribute('aria-current')).to.equal('page');
+    await expect(el).to.be.accessible();
+  });
+});
+
 describe('host click()', () => {
   for (const [name, markup] of [
     ['button', html`<lr-breadcrumb-item>Open menu</lr-breadcrumb-item>`],

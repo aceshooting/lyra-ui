@@ -97,16 +97,8 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
     );
   }
 
-  private overlaps(): Array<{
-    left: RetrievalComparisonSet;
-    right: RetrievalComparisonSet;
-    summary: string;
-  }> {
-    const summaries: Array<{
-      left: RetrievalComparisonSet;
-      right: RetrievalComparisonSet;
-      summary: string;
-    }> = [];
+  private overlaps(): string[] {
+    const summaries: string[] = [];
     for (let leftIndex = 0; leftIndex < this.sets.length; leftIndex += 1) {
       const leftSet = this.sets[leftIndex]!;
       const left = new Set(this.orderedChunks(leftSet).map((chunk) => chunk.id));
@@ -116,11 +108,13 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
         const intersection = [...left].filter((id) => right.has(id)).length;
         const union = new Set([...left, ...right]).size;
         const percent = this.formatScore(union ? intersection / union : 0);
-        summaries.push({
-          left: leftSet,
-          right: rightSet,
-          summary: this.localize('retrievalCompareOverlap', undefined, { percent }),
-        });
+        summaries.push(
+          this.localize('retrievalCompareOverlap', undefined, {
+            left: leftSet.label,
+            right: rightSet.label,
+            percent,
+          }),
+        );
       }
     }
     return summaries;
@@ -187,10 +181,7 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
     const overlaps = this.overlaps();
     return html`
       <section part="base" aria-label=${label}>
-        ${overlaps.map(
-          ({ left, right, summary }) =>
-            html`<p part="overlap"><span>${left.label}</span><span>${right.label}</span><span>${summary}</span></p>`,
-        )}
+        ${overlaps.map((summary) => html`<p part="overlap">${summary}</p>`)}
         <div part="sets">${this.sets.map((set, index) => this.renderSet(set, index))}</div>
       </section>
     `;

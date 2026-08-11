@@ -144,7 +144,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   }
 
   override render(): TemplateResult {
-    const groupLabel = this.getAttribute('aria-label') || this.label || this.localize('graphLegendLabel');
+    const groupLabel = this.getAttribute('aria-label') ?? (this.label || this.localize('graphLegendLabel'));
     return html`
       <div part="base" role="group" aria-label=${groupLabel}>
         ${this.types.map((type, index) => {

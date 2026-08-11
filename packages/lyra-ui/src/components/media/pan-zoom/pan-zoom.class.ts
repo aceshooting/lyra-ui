@@ -143,7 +143,7 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
     const zoom = this.safeZoom;
     const min = this.safeMinZoom;
     const max = this.safeMaxZoom;
-    const label = this.accessibleLabel || this.localize('zoomableFrameLabel');
+    const label = this.accessibleLabel ?? this.localize('zoomableFrameLabel');
     return html`<div part="base" role="region" aria-label=${label}>
       <div part="viewport" role="group" aria-label=${label} tabindex="0" @keydown=${this.onViewportKeyDown}>
         <div

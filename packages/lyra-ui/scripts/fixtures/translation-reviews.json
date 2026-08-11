@@ -4,7 +4,7 @@
   "source": {
     "path": "src/internal/localization.ts#DEFAULT_STRINGS",
     "keyCount": 1237,
-    "sha256": "sha256:30a800f401914d7d273f0e1c07fb443e181f03d9ba8d8ba0100869eaae94ed7f"
+    "sha256": "sha256:9724ed797773a1540e5b737a4b016dea78a9431bfe5ee54763e250036e1a2386"
   },
   "upstreamLocaleBreadth": {
     "webAwesome": {
@@ -168,23 +168,23 @@
       "direction": "rtl",
       "source": {
         "keyCount": 1237,
-        "sha256": "sha256:30a800f401914d7d273f0e1c07fb443e181f03d9ba8d8ba0100869eaae94ed7f"
+        "sha256": "sha256:9724ed797773a1540e5b737a4b016dea78a9431bfe5ee54763e250036e1a2386"
       },
       "catalog": {
         "keyCount": 1237,
-        "sha256": "sha256:e9f15903429f492c2a41bbccf35058deec6a6edf19b1a5a2d9e209513b72ae9f"
+        "sha256": "sha256:d188250884ea148ea162fe139211c410f536e1755652df611cd332c1188e4f6c"
       },
       "translator": {
         "status": "complete-original",
         "role": "project localization contributor",
-        "completedAt": "2026-08-02",
-        "evidence": "Drafted afresh from DEFAULT_STRINGS, then terminology-corrected and structurally validated in this repository; no upstream translated text was consulted."
+        "completedAt": "2026-08-10",
+        "evidence": "Drafted afresh from DEFAULT_STRINGS, then terminology-corrected and structurally validated in this repository; no upstream translated text was consulted. The retrievalCompareOverlap template was updated on 2026-08-10 with context-specific {left}, {right}, and {percent} composition."
       },
       "reviewer": {
         "status": "approved",
         "role": "independent localization reviewer",
-        "reviewedAt": "2026-08-03",
-        "evidence": "An AI-assisted independent repository review inspected the original 1,232 English/Persian message pairs in source order, identified and re-reviewed 621 semantic, grammar, register, and orthography corrections, and verified every placeholder and plural shape plus all 42 original exact-English allowlist rationales. A second independent review verified the two added Carousel announcement messages, their placeholder order and RTL punctuation, both new allowlist rationales, the exact 1,234-key catalog hash, and strict Chromium/Firefox/WebKit behavior; no upstream translated text was consulted. This records code-and-language reviews and does not claim human or native-speaker identity."
+        "reviewedAt": "2026-08-10",
+        "evidence": "An AI-assisted independent repository review inspected the original 1,232 English/Persian message pairs in source order, identified and re-reviewed 621 semantic, grammar, register, and orthography corrections, and verified every placeholder and plural shape plus all 42 original exact-English allowlist rationales. A second independent review verified the two added Carousel announcement messages, their placeholder order and RTL punctuation, both new allowlist rationales, the exact 1,234-key catalog hash, and strict Chromium/Firefox/WebKit behavior; no upstream translated text was consulted. This records code-and-language reviews and does not claim human or native-speaker identity. An AI-assisted independent follow-up review checked the updated retrievalCompareOverlap message for Persian RTL grammar, {left}/{right}/{percent} placement, punctuation, catalog order, and the current source/catalog snapshots; it does not claim native-speaker review."
       },
       "englishIdenticalAllowlist": [
         {
@@ -370,23 +370,23 @@
       "direction": "rtl",
       "source": {
         "keyCount": 1237,
-        "sha256": "sha256:30a800f401914d7d273f0e1c07fb443e181f03d9ba8d8ba0100869eaae94ed7f"
+        "sha256": "sha256:9724ed797773a1540e5b737a4b016dea78a9431bfe5ee54763e250036e1a2386"
       },
       "catalog": {
         "keyCount": 1237,
-        "sha256": "sha256:0591ee092de38f2fc877f6049352e7b2ee8b13dadade39a941a0250941d6ba18"
+        "sha256": "sha256:38f03627f60f580e9e112921d7587c4239aae6a309b6c1b03b5abe6a378678a4"
       },
       "translator": {
         "status": "complete-original",
         "role": "project localization contributor",
-        "completedAt": "2026-08-02",
-        "evidence": "Drafted afresh from DEFAULT_STRINGS, then terminology-corrected and structurally validated in this repository; no upstream translated text was consulted."
+        "completedAt": "2026-08-10",
+        "evidence": "Drafted afresh from DEFAULT_STRINGS, then terminology-corrected and structurally validated in this repository; no upstream translated text was consulted. The retrievalCompareOverlap template was updated on 2026-08-10 with context-specific {left}, {right}, and {percent} composition."
       },
       "reviewer": {
         "status": "approved",
         "role": "independent localization reviewer",
-        "reviewedAt": "2026-08-03",
-        "evidence": "An AI-assisted independent repository review checked the original 1,232 Hebrew messages in DEFAULT_STRINGS order for meaning, fluent UI grammar and register, RTL wording, plural categories, placeholder preservation, punctuation, technical terminology, and all 57 original English-identical rationales. A second independent review verified the two added Carousel announcement messages, their placeholder order and RTL punctuation, both new allowlist rationales, the exact 1,234-key catalog hash, and strict Chromium/Firefox/WebKit behavior. This records code-and-language reviews and does not claim human or native-speaker identity."
+        "reviewedAt": "2026-08-10",
+        "evidence": "An AI-assisted independent repository review checked the original 1,232 Hebrew messages in DEFAULT_STRINGS order for meaning, fluent UI grammar and register, RTL wording, plural categories, placeholder preservation, punctuation, technical terminology, and all 57 original English-identical rationales. A second independent review verified the two added Carousel announcement messages, their placeholder order and RTL punctuation, both new allowlist rationales, the exact 1,234-key catalog hash, and strict Chromium/Firefox/WebKit behavior. This records code-and-language reviews and does not claim human or native-speaker identity. An AI-assisted independent follow-up review checked the updated retrievalCompareOverlap message for Hebrew RTL grammar, {left}/{right}/{percent} placement, punctuation, catalog order, and the current source/catalog snapshots; it does not claim native-speaker review."
       },
       "englishIdenticalAllowlist": [
         {

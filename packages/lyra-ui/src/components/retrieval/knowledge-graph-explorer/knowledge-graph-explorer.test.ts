@@ -69,6 +69,20 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(el.renderer).to.equal('svg');
   });
 
+  it('preserves an explicitly empty host aria-label on the root group and restores label after removal', async () => {
+    const el = (await fixture(
+      html`<lr-knowledge-graph-explorer label="Research graph" aria-label=""></lr-knowledge-graph-explorer>`,
+    )) as LyraKnowledgeGraphExplorer;
+    const group = () => el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+
+    expect(group().hasAttribute('aria-label')).to.equal(true);
+    expect(group().getAttribute('aria-label')).to.equal('');
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(group().getAttribute('aria-label')).to.equal('Research graph');
+  });
+
   it('registers every composed custom element', async () => {
     // Importing a *.class.js module alone never calls defineElement() -- only the barrel (*.js)
     // does; this proves the registration entry point actually pulls every composed child in.

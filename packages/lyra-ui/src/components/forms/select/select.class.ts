@@ -524,6 +524,11 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     // `updated()`'s `open`-handling below to consult.
     this._isFirstUpdate = !this.hasUpdated;
     this.announceOpenTransition(changed);
+    if (changed.has('open') && !this.open && !this.openVetoed) {
+      // The veto has already run synchronously. Clear only for an accepted close, so a vetoed
+      // listbox retains its active descendant for assistive technology and Enter.
+      this.setActiveIndex(-1);
+    }
   }
 
   /**
@@ -1158,7 +1163,6 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     this.resolveTransitionWaiters('lr-after-show');
     const settled = this.waitForTransition('lr-after-hide');
     this.open = false;
-    this.setActiveIndex(-1);
     return settled;
   }
   private onDocPointer = (e: PointerEvent): void => {

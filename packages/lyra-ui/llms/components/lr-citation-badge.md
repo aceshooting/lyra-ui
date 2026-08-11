@@ -77,7 +77,7 @@ directly — set instead by the `:host([status=...])` rules), plus shared tokens
 <script type="module">
   document.addEventListener('lr-citation-activate', (e) => {
     document.querySelector(`lr-source-card[source-id="${e.detail.sourceId}"]`)
-      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      ?.scrollIntoView({ block: 'center' });
   });
 </script>
 ```

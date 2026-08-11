@@ -941,6 +941,7 @@ describe("copy button", () => {
       expect(button.textContent!.trim()).to.equal("Copy");
     } finally {
       if (original) Object.defineProperty(navigator, "clipboard", original);
+      else Reflect.deleteProperty(navigator, "clipboard");
     }
   });
 
@@ -1065,6 +1066,7 @@ describe("copy button", () => {
       expect(detail).to.deep.equal({ text: "const x = 1;" });
     } finally {
       if (original) Object.defineProperty(navigator, "clipboard", original);
+      else Reflect.deleteProperty(navigator, "clipboard");
     }
   });
 
@@ -1091,6 +1093,7 @@ describe("copy button", () => {
       expect(detail).to.deep.equal({ text: "const x = 1;" });
     } finally {
       if (original) Object.defineProperty(navigator, "clipboard", original);
+      else Reflect.deleteProperty(navigator, "clipboard");
     }
   });
 

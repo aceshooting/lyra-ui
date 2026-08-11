@@ -315,6 +315,29 @@ describe('lr-qr-code', () => {
     expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-label')).to.equal('Host label');
   });
 
+  it('preserves an explicit empty host aria-label on the ready canvas, updates it live, and restores the label fallback after removal', async () => {
+    const el = (await fixture(
+      html`<lr-qr-code label="Label fallback" aria-label=""></lr-qr-code>`,
+    )) as LyraQrCode;
+    installFakeLoader(
+      el,
+      fakeApi(() => ({ modules: fakeModules(true) })),
+    );
+    el.value = 'https://example.test';
+    await waitForPart(el, 'canvas');
+    const canvas = () => el.shadowRoot?.querySelector('canvas');
+
+    expect(canvas()?.getAttribute('aria-label')).to.equal('');
+
+    el.setAttribute('aria-label', 'Live QR label');
+    await el.updateComplete;
+    expect(canvas()?.getAttribute('aria-label')).to.equal('Live QR label');
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(canvas()?.getAttribute('aria-label')).to.equal('Label fallback');
+  });
+
   it('refreshTheme() redraws from the cached matrix without recalling loadLibrary/create', async () => {
     const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
     let loadCalls = 0;

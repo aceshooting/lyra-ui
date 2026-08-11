@@ -1102,7 +1102,7 @@ const strings: LyraLocaleStrings = {
   claimEvidenceConfidence: '{percent} ודאות',
   retrievalCompareLabel: 'השוואת אחזור',
   retrievalCompareEmpty: 'אין ערכות תוצאות אחזור להשוואה',
-  retrievalCompareOverlap: 'חפיפה בין k התוצאות המובילות: {percent}',
+  retrievalCompareOverlap: 'חפיפה בין {left} ל־{right} בתוצאות ה־k המובילות: {percent}',
   retrievalCompareRank: 'דירוג {rank}',
   retrievalCompareDenseScore: 'צפוף',
   retrievalCompareSparseScore: 'דליל',

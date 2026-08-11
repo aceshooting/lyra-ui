@@ -3475,6 +3475,31 @@ test('Random Content migration metadata names every behavior that requires manua
   assert.match(decision.rationale, /visible pause\/resume control/i);
 });
 
+test('Zoomable Frame migration metadata requires review of sandbox and URL safety behavior', () => {
+  const parity = migrationParityMetadata({
+    upstream: {
+      tag: 'wa-zoomable-frame',
+      review: { status: 'complete' },
+      surface: { slots: [{ name: '' }] },
+    },
+    target: {
+      tag: 'lr-zoomable-frame',
+      rootIncluded: true,
+      optionalPeers: [],
+    },
+    classification: 'warning-required',
+  });
+
+  assert.deepEqual(parity.behaviorReviewFlags, ['sandbox-and-url-safety']);
+
+  assert.deepEqual(reviewedMigrationDecision('wa-zoomable-frame'), {
+    classification: 'warning-required',
+    rationale:
+      'Lyra always renders a sandbox with an `allow-same-origin` default, rejects active and non-embeddable URL schemes, and drops `allow-same-origin` when paired with `allow-scripts`; migration leaves the use unchanged and reports the security-sensitive difference.',
+    expectedDrift: [],
+  });
+});
+
 test('checked-in inventory covers every pinned tag and every Lyra declaration', () => {
   const inventory = readJson('scripts', 'fixtures', 'component-inventory.json');
   const upstreamTags = readJson('scripts', 'fixtures', 'upstream-tags.json');

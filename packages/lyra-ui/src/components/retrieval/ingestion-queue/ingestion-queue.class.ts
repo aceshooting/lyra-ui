@@ -411,7 +411,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
 
   override render(): TemplateResult {
     const computedLabel = this.label || this.localize('ingestionQueueLabel');
-    const ariaLabel = this.getAttribute('aria-label') || computedLabel;
+    const ariaLabel = this.hasAttribute('aria-label') ? this.getAttribute('aria-label')! : computedLabel;
 
     if (this.items.length === 0) {
       return html`<lr-empty
