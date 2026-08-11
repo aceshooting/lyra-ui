@@ -1172,6 +1172,14 @@ control sizes against, so a tier is restated in exactly one place. `--lr-model-s
 `--lr-icon-button-size` via `min()`); this one is a glyph box rather than a control metric, so the
 shared ladder has no equivalent and its per-tier values stay local. `size` is the primary lever;
 override a cssprop directly only to retune a single element or step outside the scale entirely.
+`--lr-model-select-gap` (default `var(--lr-space-xs)`) controls the child gap in the trigger,
+combobox, and option rows; `--lr-model-select-radius` (default `var(--lr-radius)`) controls the
+corner radius of the trigger, combobox, listbox, and option rows. Both remain inheritable fallback
+arms, so set them on an ancestor to retheme a group without changing unrelated controls.
+`--lr-model-select-open-border-color` (default `var(--lr-color-brand)`) controls the trigger
+border while the listbox is open. A synthetic stale-value row has independent
+`--lr-model-select-option-synthetic-border-style` (default `dashed`) and
+`--lr-model-select-option-synthetic-border-color` (default `var(--lr-color-border)`) hooks.
 `--lr-model-select-option-active-bg` (default
 `var(--lr-color-brand-quiet)`) — background of a hovered or keyboard-active `[part="option"]` row;
 declared as a `var()` fallback at the point of use, not on `:host`, so it isn't tied to `size`. The
@@ -2822,6 +2830,15 @@ events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`
 
 **CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-result`,
 `citation`, `attachment`, `data`, `audio`, `audio-transcript`, `error`, `retry`.
+
+**Themeable custom properties:** `--lr-message-parts-streaming-color` (default
+`var(--lr-color-text-quiet)`) controls a streaming wrapper's inherited text color.
+`--lr-message-parts-audio-transcript-color` (default `var(--lr-color-text-quiet)`) controls an
+audio transcript's text color. Error parts have separate
+`--lr-message-parts-error-border-color` (default `var(--lr-color-danger)`),
+`--lr-message-parts-error-background` (default `var(--lr-color-danger-quiet)`), and
+`--lr-message-parts-error-color` (default `var(--lr-color-danger)`) hooks. All five are inline
+fallbacks, so setting one on an ancestor rethemes only that state longhand.
 
 **Slots:** none. **Optional peer deps:** those of composed content only: Markdown can use
 `marked`/`dompurify`, and code content can use `shiki`; every composed primitive retains its own

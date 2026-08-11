@@ -12,6 +12,7 @@ export default meta;
 type Story = StoryObj;
 
 const OLLAMA_CATALOG = ['llama3.1', 'llama3.1:70b', 'mistral', 'qwen2.5-coder'];
+const LONG_PROVIDER = `provider-${'unbroken-model-provider-name-'.repeat(12)}`;
 
 const OPENAI_CATALOG = [
   { id: 'gpt-4.1', label: 'GPT-4.1' },
@@ -124,6 +125,48 @@ export const StaleValue: Story = {
         value="llama2-uncensored"
         .catalog=${OLLAMA_CATALOG}
       ></lr-model-select>
+    </div>
+  `,
+};
+
+/** Long provider labels stay within the field's allocation and truncate in both modes and directions. */
+export const NarrowLongProviders: Story = {
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m); inline-size: var(--lr-size-20rem); max-inline-size: 100%">
+      <div dir="ltr" style="display: grid; gap: var(--lr-space-xs)">
+        <lr-model-select provider=${LONG_PROVIDER} .catalog=${OLLAMA_CATALOG}></lr-model-select>
+        <lr-model-select provider=${LONG_PROVIDER} allow-custom .catalog=${OLLAMA_CATALOG}></lr-model-select>
+      </div>
+      <div dir="rtl" style="display: grid; gap: var(--lr-space-xs)">
+        <lr-model-select provider=${LONG_PROVIDER} .catalog=${OLLAMA_CATALOG}></lr-model-select>
+        <lr-model-select provider=${LONG_PROVIDER} allow-custom .catalog=${OLLAMA_CATALOG}></lr-model-select>
+      </div>
+    </div>
+  `,
+};
+
+/** Component-scoped geometry and state hooks retheme only these model-select surfaces. */
+export const ThemeableGeometryAndStates: Story = {
+  render: () => html`
+    <div
+      style="
+        display: grid;
+        gap: var(--lr-space-m);
+        max-inline-size: var(--lr-size-24rem);
+        --lr-model-select-gap: var(--lr-space-s);
+        --lr-model-select-radius: var(--lr-radius-pill);
+        --lr-model-select-open-border-color: var(--lr-color-success);
+        --lr-model-select-option-synthetic-border-style: dotted;
+        --lr-model-select-option-synthetic-border-color: var(--lr-color-warning);
+      "
+    >
+      <lr-model-select
+        provider="ollama"
+        value="retired-model"
+        .catalog=${OLLAMA_CATALOG}
+        .open=${true}
+      ></lr-model-select>
+      <lr-model-select provider="ollama" allow-custom size="xl" .catalog=${OLLAMA_CATALOG}></lr-model-select>
     </div>
   `,
 };

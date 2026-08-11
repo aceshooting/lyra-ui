@@ -178,6 +178,32 @@ it('applies per-instance strings to retry controls', async () => {
   expect(retry.textContent?.trim()).to.equal('Réessayer');
 });
 
+it('inherits independently rethemeable streaming, transcript, and error state longhands', async () => {
+  const wrapper = (await fixture(html`
+    <div
+      style="
+        --lr-message-parts-streaming-color: rgb(1, 2, 3);
+        --lr-message-parts-audio-transcript-color: rgb(4, 5, 6);
+        --lr-message-parts-error-border-color: rgb(7, 8, 9);
+        --lr-message-parts-error-background: rgb(10, 11, 12);
+        --lr-message-parts-error-color: rgb(13, 14, 15);
+      "
+    >
+      <lr-message-parts .parts=${[parts[1]!, parts[7]!, parts[8]!]}></lr-message-parts>
+    </div>
+  `)) as HTMLDivElement;
+  const el = wrapper.querySelector('lr-message-parts') as LyraMessageParts;
+  const streaming = el.shadowRoot!.querySelector('[part~="part-streaming"]') as HTMLElement;
+  const transcript = el.shadowRoot!.querySelector('[part~="audio-transcript"]') as HTMLElement;
+  const error = el.shadowRoot!.querySelector('[part~="error"]') as HTMLElement;
+
+  expect(getComputedStyle(streaming).color).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(transcript).color).to.equal('rgb(4, 5, 6)');
+  expect(getComputedStyle(error).borderTopColor).to.equal('rgb(7, 8, 9)');
+  expect(getComputedStyle(error).backgroundColor).to.equal('rgb(10, 11, 12)');
+  expect(getComputedStyle(error).color).to.equal('rgb(13, 14, 15)');
+});
+
 it('announces only newly added error parts through the shared assertive light-DOM sink', async () => {
   const mountedError: MessagePart = { id: 'old-error', type: 'error', message: 'Earlier failure' };
   const freshError: MessagePart = { id: 'new-error', type: 'error', message: 'Fresh failure' };

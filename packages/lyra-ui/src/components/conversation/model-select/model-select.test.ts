@@ -8,6 +8,7 @@ const OBJECT_CATALOG = [
   { id: 'gpt-4.1', label: 'GPT-4.1' },
   { id: 'gpt-4.1-mini', label: 'GPT-4.1 mini' },
 ];
+const LONG_PROVIDER = `provider-${'unbroken-model-provider-name-'.repeat(12)}`;
 
 let originalWarn: typeof console.warn;
 let scheduledUpdateWarnings: unknown[][];
@@ -381,6 +382,94 @@ it('shows a synthetic, distinctly-marked row for a stale value not present in th
   expect(synthetic.querySelector('[part="option-badge"]')).to.exist;
   // The trigger label still shows the stale value's text, unmarked.
   expect(trigger(el).textContent).to.contain('ancient-model');
+});
+
+it('keeps a long provider badge inside a 320px allocation in both modes and text directions', async () => {
+  for (const direction of ['ltr', 'rtl'] as const) {
+    for (const allowCustom of [false, true]) {
+      const allocation = (await fixture(html`
+        <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%">
+          <lr-model-select
+            provider=${LONG_PROVIDER}
+            ?allow-custom=${allowCustom}
+            .catalog=${CATALOG}
+          ></lr-model-select>
+        </div>
+      `)) as HTMLDivElement;
+      const el = allocation.querySelector('lr-model-select') as LyraModelSelect;
+      const control = allowCustom
+        ? (el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement)
+        : trigger(el);
+      const badge = el.shadowRoot!.querySelector('[part="provider-badge"]') as HTMLElement;
+      const allocationRect = allocation.getBoundingClientRect();
+      const controlRect = control.getBoundingClientRect();
+      const badgeRect = badge.getBoundingClientRect();
+      const context = `${direction} ${allowCustom ? 'free-text' : 'closed'} mode`;
+
+      expect(controlRect.left, `${context}: control stays inside its allocation`).to.be.at.least(
+        allocationRect.left - 0.5
+      );
+      expect(controlRect.right, `${context}: control stays inside its allocation`).to.be.at.most(
+        allocationRect.right + 0.5
+      );
+      expect(badgeRect.left, `${context}: badge stays inside its control`).to.be.at.least(controlRect.left - 0.5);
+      expect(badgeRect.right, `${context}: badge stays inside its control`).to.be.at.most(controlRect.right + 0.5);
+      expect(badge.scrollWidth, `${context}: badge actually truncates long text`).to.be.greaterThan(badge.clientWidth);
+      expect(getComputedStyle(badge).textOverflow, `${context}: truncation has an ellipsis`).to.equal('ellipsis');
+    }
+  }
+});
+
+describe('component-scoped geometry cssprops', () => {
+  it('inherits gap and radius overrides across closed and free-text sizes', async () => {
+    const themed = (await fixture(html`
+      <div style="--lr-model-select-gap: 13px; --lr-model-select-radius: 17px">
+        <lr-model-select size="2xs" .catalog=${CATALOG}></lr-model-select>
+        <lr-model-select size="xl" allow-custom .catalog=${CATALOG}></lr-model-select>
+      </div>
+    `)) as HTMLDivElement;
+    const [closed, freeText] = Array.from(themed.querySelectorAll('lr-model-select')) as LyraModelSelect[];
+    closed.open = true;
+    freeText.open = true;
+    await Promise.all([closed.updateComplete, freeText.updateComplete]);
+
+    const closedTrigger = trigger(closed);
+    const freeTextCombobox = freeText.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
+    const closedListbox = closed.shadowRoot!.querySelector('[part="listbox"]') as HTMLElement;
+    const closedOption = rows(closed)[0]!;
+
+    expect(getComputedStyle(closedTrigger).gap).to.equal('13px');
+    expect(getComputedStyle(freeTextCombobox).gap).to.equal('13px');
+    expect(getComputedStyle(closedOption).gap).to.equal('13px');
+    expect(getComputedStyle(closedTrigger).borderTopLeftRadius).to.equal('17px');
+    expect(getComputedStyle(freeTextCombobox).borderTopLeftRadius).to.equal('17px');
+    expect(getComputedStyle(closedListbox).borderTopLeftRadius).to.equal('17px');
+    expect(getComputedStyle(closedOption).borderTopLeftRadius).to.equal('17px');
+  });
+});
+
+describe('open and synthetic-row theme cssprops', () => {
+  it('inherits independent open-border and synthetic-border longhands in the combined state', async () => {
+    const wrapper = (await fixture(html`
+      <div
+        style="
+          --lr-model-select-open-border-color: rgb(1, 2, 3);
+          --lr-model-select-option-synthetic-border-style: dotted;
+          --lr-model-select-option-synthetic-border-color: rgb(4, 5, 6);
+        "
+      >
+        <lr-model-select value="ancient-model" .catalog=${CATALOG}></lr-model-select>
+      </div>
+    `)) as HTMLDivElement;
+    const el = wrapper.querySelector('lr-model-select') as LyraModelSelect;
+    el.open = true;
+    await el.updateComplete;
+    const synthetic = Array.from(rows(el)).find((row) => row.hasAttribute('data-synthetic')) as HTMLElement;
+
+    expect(getComputedStyle(trigger(el)).borderTopColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(synthetic).borderTopStyle).to.equal('dotted');
+    expect(getComputedStyle(synthetic).borderTopColor).to.equal('rgb(4, 5, 6)');
+  });
 });
 
 it('localizes the synthetic-row "not in catalog" badge via this.localize(), not hardcoded English', async () => {

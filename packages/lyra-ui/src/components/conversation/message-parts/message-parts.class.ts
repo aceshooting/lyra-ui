@@ -77,6 +77,11 @@ export interface LyraMessagePartsEventMap
  * @csspart audio-transcript - An audio part's transcript.
  * @csspart error - An error part.
  * @csspart retry - A retryable error part's action.
+ * @cssprop [--lr-message-parts-streaming-color=var(--lr-color-text-quiet)] - Text color of a streaming part wrapper.
+ * @cssprop [--lr-message-parts-audio-transcript-color=var(--lr-color-text-quiet)] - Text color of an audio transcript.
+ * @cssprop [--lr-message-parts-error-border-color=var(--lr-color-danger)] - Border color of an error part.
+ * @cssprop [--lr-message-parts-error-background=var(--lr-color-danger-quiet)] - Background color of an error part.
+ * @cssprop [--lr-message-parts-error-color=var(--lr-color-danger)] - Text color of an error part.
  * @status stable
  * @since 7.0.0
  */

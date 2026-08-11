@@ -18,6 +18,8 @@ export const styles = css`
     --lr-model-select-trigger-min-height: var(--lr-form-control-height);
     --lr-model-select-font-size: var(--lr-form-control-font-size);
     --lr-model-select-expand-size: var(--lr-size-1-75rem);
+    --_lr-model-select-gap-default: var(--lr-space-xs);
+    --_lr-model-select-radius-default: var(--lr-radius);
   }
   :host(:disabled) {
     cursor: not-allowed;
@@ -54,13 +56,14 @@ export const styles = css`
   [part='combobox'] {
     display: flex;
     align-items: center;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-model-select-gap, var(--_lr-model-select-gap-default));
     inline-size: 100%;
+    min-inline-size: 0;
     min-block-size: var(--lr-model-select-trigger-min-height);
     box-sizing: border-box;
     padding: var(--lr-model-select-trigger-padding);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-model-select-radius, var(--_lr-model-select-radius-default));
     background: var(--lr-color-surface);
     color: inherit;
     font: inherit;
@@ -88,7 +91,7 @@ export const styles = css`
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   :host([open]) [part='trigger'] {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-model-select-open-border-color, var(--lr-color-brand));
   }
   :host(:disabled) [part='trigger'],
   :host(:disabled) [part='combobox'] {
@@ -97,7 +100,11 @@ export const styles = css`
   }
 
   [part='provider-badge'] {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    max-inline-size: 40%;
+    overflow: hidden;
+    text-overflow: ellipsis;
     padding-inline-end: var(--lr-space-xs);
     margin-inline-end: var(--lr-space-xs);
     border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -161,7 +168,7 @@ export const styles = css`
     padding: var(--lr-space-xs);
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-model-select-radius, var(--_lr-model-select-radius-default));
     /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
     box-shadow: var(--lr-shadow-m);
     /* Closed state: invisible + slightly raised. visibility (not
@@ -189,12 +196,12 @@ export const styles = css`
   [part='option'] {
     display: flex;
     align-items: center;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-model-select-gap, var(--_lr-model-select-gap-default));
     inline-size: 100%;
     box-sizing: border-box;
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid transparent;
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-model-select-radius, var(--_lr-model-select-radius-default));
     background: none;
     color: inherit;
     font: inherit;
@@ -235,8 +242,8 @@ export const styles = css`
      solid border every real row uses) so it visually reads as "remembered,
      not offered" rather than a normal selectable catalog entry. */
   [part='option'][data-synthetic] {
-    border-style: dashed;
-    border-color: var(--lr-color-border);
+    border-style: var(--lr-model-select-option-synthetic-border-style, dashed);
+    border-color: var(--lr-model-select-option-synthetic-border-color, var(--lr-color-border));
   }
   [part='option'][data-synthetic] [part='option-label'] {
     font-style: italic;

@@ -75,6 +75,29 @@ export const StreamingTextAndReasoning: Story = {
   `,
 };
 
+/** State-specific custom properties independently retheme streaming, transcript, and error parts. */
+export const ThemeableStateColors: Story = {
+  render: () => html`
+    <div
+      style="
+        --lr-message-parts-streaming-color: var(--lr-color-success);
+        --lr-message-parts-audio-transcript-color: var(--lr-color-warning);
+        --lr-message-parts-error-border-color: var(--lr-color-danger);
+        --lr-message-parts-error-background: var(--lr-color-warning-quiet);
+        --lr-message-parts-error-color: var(--lr-color-danger);
+      "
+    >
+      <lr-message-parts
+        .parts=${[
+          { id: 'draft', type: 'text', text: 'Drafting an answer…', state: 'streaming' },
+          { id: 'audio', type: 'audio', transcript: 'Spoken answer transcript.' },
+          { id: 'error', type: 'error', message: 'The response could not complete.', retryable: true },
+        ] satisfies MessagePart[]}
+      ></lr-message-parts>
+    </div>
+  `,
+};
+
 export const HighCitationDensity: Story = {
   parameters: {
     docs: {

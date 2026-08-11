@@ -136,11 +136,16 @@ export interface LyraModelSelectEventMap {
  * @cssprop [--lr-model-select-trigger-min-height=var(--lr-form-control-height)] - Trigger/combobox block-size floor, scaled by `size` off the shared control ladder.
  * @cssprop [--lr-model-select-font-size=var(--lr-form-control-font-size)] - Trigger/combobox font size, scaled by `size` off the shared control ladder.
  * @cssprop [--lr-model-select-expand-size=var(--lr-size-1-75rem)] - Decorative expand-icon box size, scaled by `size`.
+ * @cssprop [--lr-model-select-gap=var(--lr-space-xs)] - Trigger, combobox, and option child gap.
+ * @cssprop [--lr-model-select-radius=var(--lr-radius)] - Trigger, combobox, listbox, and option corner radius.
+ * @cssprop [--lr-model-select-open-border-color=var(--lr-color-brand)] - Open trigger border color.
  * @cssprop [--lr-model-select-option-active-bg=var(--lr-color-brand-quiet)] - Background of a hovered or keyboard-active option row.
  * @cssprop [--lr-model-select-option-selected-bg=transparent] - Background of the currently-selected option row. Not declared on `:host`; retheme without hijacking `--lr-color-brand`.
  * @cssprop [--lr-model-select-option-selected-border=var(--lr-color-brand)] - Border color of the selected option row.
  * @cssprop [--lr-model-select-option-selected-color=var(--lr-color-brand)] - Text color of the selected option row.
  * @cssprop [--lr-model-select-option-selected-font-weight=var(--lr-font-weight-semibold)] - Font weight of the selected option row.
+ * @cssprop [--lr-model-select-option-synthetic-border-style=dashed] - Border style of a synthetic stale-value option row.
+ * @cssprop [--lr-model-select-option-synthetic-border-color=var(--lr-color-border)] - Border color of a synthetic stale-value option row.
  * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
  *   `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
  *   other quoted string (`' (required)'`, a localized word) to replace it.

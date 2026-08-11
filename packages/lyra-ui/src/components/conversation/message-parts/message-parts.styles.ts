@@ -24,7 +24,7 @@ export const styles = css`
      a container opacity multiplies that down through it — which is a WCAG 1.4.3 failure the nested
      component cannot see or defend against. color only reaches text that actually inherits it. */
   [part~='part-streaming'] {
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-message-parts-streaming-color, var(--lr-color-text-quiet));
   }
 
   [part~='tool-call'],
@@ -45,7 +45,7 @@ export const styles = css`
 
   [part~='audio-transcript'] {
     margin-block: var(--lr-space-xs) 0;
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-message-parts-audio-transcript-color, var(--lr-color-text-quiet));
   }
 
   [part~='error'] {
@@ -54,10 +54,10 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
     padding: var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-color-danger);
+    border: var(--lr-border-width-thin) solid var(--lr-message-parts-error-border-color, var(--lr-color-danger));
     border-radius: var(--lr-radius);
-    background: var(--lr-color-danger-quiet);
-    color: var(--lr-color-danger);
+    background: var(--lr-message-parts-error-background, var(--lr-color-danger-quiet));
+    color: var(--lr-message-parts-error-color, var(--lr-color-danger));
   }
 
   [part='retry'] {
