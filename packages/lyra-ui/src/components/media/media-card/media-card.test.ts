@@ -1,5 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './media-card.js';
+import '../../conversation/chat-message/chat-message.js';
 import type { LyraMediaCard } from './media-card.js';
 import { safeMediaSrc, safeLinkHref } from './media-card.js';
 
@@ -768,5 +770,181 @@ describe('frame', () => {
     const chrome = baseChrome(el);
     expect(chrome.borderTopWidth, 'the card border is still drawn').to.not.equal('0px');
     expect(chrome.backgroundColor, 'the card background is still drawn').to.not.equal('rgba(0, 0, 0, 0)');
+  });
+});
+
+describe('active-state cssprops', () => {
+  type ActivePaint = Readonly<{ borderTopColor: string; backgroundColor: string }>;
+
+  function centerOf(target: HTMLElement): [number, number] {
+    const rect = target.getBoundingClientRect();
+    expect(rect.width, 'the press target has real geometry').to.be.greaterThan(0);
+    expect(rect.height, 'the press target has real geometry').to.be.greaterThan(0);
+    return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+  }
+
+  async function pressedPaint(target: HTMLElement): Promise<ActivePaint> {
+    try {
+      await sendMouse({ type: 'move', position: centerOf(target) });
+      await sendMouse({ type: 'down' });
+      expect(target.matches(':active'), 'the physical pointer puts the card action in its active state').to.be.true;
+      const style = getComputedStyle(target);
+      return { borderTopColor: style.borderTopColor, backgroundColor: style.backgroundColor };
+    } finally {
+      await resetMouse();
+    }
+  }
+
+  function fallbackPaint(card: LyraMediaCard): ActivePaint {
+    const probe = document.createElement('span');
+    probe.style.setProperty(
+      'border-top-color',
+      'color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+    );
+    probe.style.setProperty(
+      'background-color',
+      'color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+    );
+    card.shadowRoot!.append(probe);
+    const style = getComputedStyle(probe);
+    const paint = { borderTopColor: style.borderTopColor, backgroundColor: style.backgroundColor };
+    probe.remove();
+    return paint;
+  }
+
+  it('keeps the prior token-derived active paint when no component property is supplied', async () => {
+    const card = (await fixture(html`
+      <lr-media-card
+        style="--lr-transition-fast: 0ms"
+        src="https://example.test/roof-photo.png"
+        kind="image"
+        filename="roof-photo.png"
+      ></lr-media-card>
+    `)) as LyraMediaCard;
+    const target = card.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+    expect(await pressedPaint(target)).to.deep.equal(fallbackPaint(card));
+  });
+
+  it('inherits pressed border and background properties from an ancestor for image and file actions', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="
+        --lr-media-card-active-border-color: rgb(10, 20, 30);
+        --lr-media-card-active-bg: rgb(40, 50, 60);
+      ">
+        <lr-media-card
+          style="--lr-transition-fast: 0ms"
+          src="https://example.test/roof-photo.png"
+          kind="image"
+          filename="roof-photo.png"
+        ></lr-media-card>
+        <lr-media-card
+          style="--lr-transition-fast: 0ms"
+          src="https://example.test/quarterly-report.pdf"
+          kind="file"
+          filename="quarterly-report.pdf"
+        ></lr-media-card>
+      </div>
+    `);
+    const cards = [...wrapper.querySelectorAll<LyraMediaCard>('lr-media-card')];
+    expect(cards.length).to.equal(2);
+
+    for (const card of cards) {
+      const target = card.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      expect(getComputedStyle(card).getPropertyValue('--lr-media-card-active-border-color').trim()).to.equal(
+        'rgb(10, 20, 30)',
+      );
+      expect(getComputedStyle(card).getPropertyValue('--lr-media-card-active-bg').trim()).to.equal('rgb(40, 50, 60)');
+      expect(getComputedStyle(target).getPropertyValue('--lr-media-card-active-border-color').trim()).to.equal(
+        'rgb(10, 20, 30)',
+      );
+      expect(getComputedStyle(target).getPropertyValue('--lr-media-card-active-bg').trim()).to.equal('rgb(40, 50, 60)');
+      if (target instanceof HTMLAnchorElement) {
+        // resetMouse() releases the physical pointer after the assertion. Keep that real click
+        // from navigating away while preserving the browser's actual :active state.
+        target.addEventListener('click', (event) => event.preventDefault());
+      }
+      expect(await pressedPaint(target), `${card.kind} action receives the inherited pressed paint`).to.deep.equal({
+        borderTopColor: 'rgb(10, 20, 30)',
+        backgroundColor: 'rgb(40, 50, 60)',
+      });
+    }
+  });
+});
+
+describe('narrow chat-message attachment compositions', () => {
+  const longLtrFilename = 'quarterly-rooftop-installation-verification-and-compliance-summary-final-revision.pdf';
+  const longRtlFilename = 'ملخص-التحقق-والامتثال-لتركيب-الألواح-الشمسية-النهائي-للمراجعة.pdf';
+
+  it('keeps long file names and video open actions inside a 320px LTR and Arabic RTL chat allocation', async () => {
+    const cases = [
+      {
+        dir: 'ltr',
+        lang: 'en',
+        body: 'Here is the complete installation report and the walkthrough recording for the rooftop team.',
+        filename: longLtrFilename,
+      },
+      {
+        dir: 'rtl',
+        lang: 'ar',
+        body: 'إليك تقرير التركيب الكامل وتسجيل الجولة لفريق السطح.',
+        filename: longRtlFilename,
+      },
+    ] as const;
+
+    for (const { dir, lang, body, filename } of cases) {
+      const allocation = await fixture<HTMLElement>(html`
+        <div dir=${dir} lang=${lang} style="inline-size: 320px; max-inline-size: 100%;">
+          <lr-chat-message data-role="assistant">
+            ${body}
+            <lr-media-card
+              slot="attachments"
+              src="https://example.test/${filename}"
+              kind="file"
+              filename=${filename}
+            ></lr-media-card>
+            <lr-media-card
+              slot="attachments"
+              src="data:video/mp4;base64,AAAA"
+              kind="video"
+              filename="${lang === 'ar' ? 'جولة-السطح.mp4' : 'rooftop-walkthrough.mp4'}"
+            ></lr-media-card>
+          </lr-chat-message>
+        </div>
+      `);
+      const message = allocation.querySelector('lr-chat-message') as HTMLElement;
+      await (message as { updateComplete: Promise<unknown> }).updateComplete;
+      const bubble = message.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+      const [fileCard, videoCard] = [...message.querySelectorAll<LyraMediaCard>('lr-media-card')];
+      const fileBase = fileCard!.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const filenamePart = fileCard!.shadowRoot!.querySelector('[part="filename"]') as HTMLElement;
+      const videoBase = videoCard!.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const openButton = videoCard!.shadowRoot!.querySelector('[part="open-button"]') as HTMLElement;
+      const allocationRect = allocation.getBoundingClientRect();
+      const bubbleRect = bubble.getBoundingClientRect();
+      const fileRect = fileBase.getBoundingClientRect();
+      const filenameRect = filenamePart.getBoundingClientRect();
+      const videoRect = videoBase.getBoundingClientRect();
+      const openRect = openButton.getBoundingClientRect();
+
+      expect(bubbleRect.left, `${dir} bubble stays inside the allocation`).to.be.at.least(allocationRect.left - 0.5);
+      expect(bubbleRect.right, `${dir} bubble stays inside the allocation`).to.be.at.most(allocationRect.right + 0.5);
+      expect(fileRect.left, `${dir} file card stays inside the bubble`).to.be.at.least(bubbleRect.left - 0.5);
+      expect(fileRect.right, `${dir} file card stays inside the bubble`).to.be.at.most(bubbleRect.right + 0.5);
+      expect(filenameRect.left, `${dir} filename stays inside its chip`).to.be.at.least(fileRect.left - 0.5);
+      expect(filenameRect.right, `${dir} filename stays inside its chip`).to.be.at.most(fileRect.right + 0.5);
+      expect(getComputedStyle(filenamePart).textOverflow, `${dir} filename can ellipsize`).to.equal('ellipsis');
+      expect(filenamePart.scrollWidth, `${dir} filename actually has an ellipsis boundary`).to.be.greaterThan(
+        filenamePart.clientWidth,
+      );
+      expect(videoRect.left, `${dir} video card stays inside the bubble`).to.be.at.least(bubbleRect.left - 0.5);
+      expect(videoRect.right, `${dir} video card stays inside the bubble`).to.be.at.most(bubbleRect.right + 0.5);
+      expect(openRect.left, `${dir} video open action stays inside the video card`).to.be.at.least(videoRect.left - 0.5);
+      expect(openRect.right, `${dir} video open action stays inside the video card`).to.be.at.most(videoRect.right + 0.5);
+      expect(openRect.top, `${dir} video open action stays inside the video card`).to.be.at.least(videoRect.top - 0.5);
+      expect(openRect.bottom, `${dir} video open action stays inside the video card`).to.be.at.most(videoRect.bottom + 0.5);
+      expect(getComputedStyle(openButton).minInlineSize, `${dir} video open action keeps its hit floor`).to.equal('40px');
+      expect(getComputedStyle(openButton).minBlockSize, `${dir} video open action keeps its hit floor`).to.equal('40px');
+    }
   });
 });

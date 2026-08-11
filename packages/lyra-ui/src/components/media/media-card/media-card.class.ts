@@ -114,6 +114,12 @@ function detectKind(mimeType: string): MediaCardKind {
  * calls `preventDefault()` on it suppresses that default download/open so it
  * can substitute its own handling instead.
  *
+ * **Pressed-state theme controls.** `--lr-media-card-active-border-color`
+ * and `--lr-media-card-active-bg` retint only an image/file card while it is
+ * pressed. They are resolved in the state rule, rather than declared on the
+ * host, so a conversation or attachment-list ancestor can theme every card
+ * without muting its own values.
+ *
  * **Accessible action name.** The host `aria-label` maps to
  * `accessibleLabel` and overrides the filename/alt/per-kind action name on
  * whichever internal element is actionable for the resolved kind. The name
@@ -137,6 +143,8 @@ function detectKind(mimeType: string): MediaCardKind {
  * `[part="media"]` for `kind="video"` only — see the class doc.
  * @cssprop [--lr-media-card-max-height=var(--lr-size-20rem)] - Cap on the block size of the
  * `<img>`/`<video>` in `[part="media"]`.
+ * @cssprop [--lr-media-card-active-border-color=color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed border color for image/file card actions.
+ * @cssprop [--lr-media-card-active-bg=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed background color for image/file card actions.
  *
  * **Chrome escape hatch.** `frame="plain"` drops `[part="base"]`'s border, background,
  * padding, and corner radius — for a dense list/feed of cards (this component's own documented

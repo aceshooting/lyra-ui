@@ -26,6 +26,8 @@ const SAMPLE_IMAGE = 'https://picsum.photos/seed/lr-media-card/640/400';
 // A local fixture (not an external URL like SAMPLE_IMAGE above) -- see .storybook/main.js's
 // staticDirs entry for why.
 const SAMPLE_VIDEO = '/fixtures/sample-video.mp4';
+const LONG_LTR_FILENAME = 'quarterly-rooftop-installation-verification-and-compliance-summary-final-revision.pdf';
+const LONG_RTL_FILENAME = 'ملخص-التحقق-والامتثال-لتركيب-الألواح-الشمسية-النهائي-للمراجعة.pdf';
 
 export const Image: Story = {
   render: () => html`
@@ -74,6 +76,41 @@ export const FileChip: Story = {
       filename="quarterly-summary.pdf"
       mime-type="application/pdf"
     ></lr-media-card>
+  `,
+};
+
+export const ThemedPressedState: Story = {
+  name: 'Themed pressed state (CSS properties)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Hold either action to see an ancestor retint only its pressed border and fill with `--lr-media-card-active-border-color` and `--lr-media-card-active-bg`. The properties are intentionally inherited, so a chat transcript or attachment list can theme all of its cards without changing unrelated shared tokens.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--lr-space-s);
+        --lr-media-card-active-border-color: var(--lr-color-success);
+        --lr-media-card-active-bg: var(--lr-color-success-quiet);
+      "
+    >
+      <lr-media-card
+        src=${SAMPLE_IMAGE}
+        kind="image"
+        filename="roof-photo.jpg"
+        alt="Aerial photo of a rooftop solar installation"
+      ></lr-media-card>
+      <lr-media-card
+        src="https://example.com/reports/quarterly-summary.pdf"
+        kind="file"
+        filename="quarterly-summary.pdf"
+      ></lr-media-card>
+    </div>
   `,
 };
 
@@ -160,6 +197,56 @@ export const InsideAChatMessage: Story = {
         mime-type="application/pdf"
       ></lr-media-card>
     </lr-chat-message>
+  `,
+};
+
+export const Narrow320ChatAttachments: Story = {
+  name: 'Narrow 320px chat attachments (LTR and RTL)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Both exact 320px chat allocations keep a long file name ellipsized within its chip and the local video preview’s full-size open action within the video frame. The Arabic composition verifies the same bounds under RTL.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-l);">
+      <div dir="ltr" lang="en" style="inline-size: 320px; max-inline-size: 100%;">
+        <lr-chat-message data-role="assistant">
+          Here is the complete installation report and the walkthrough recording for the rooftop team.
+          <lr-media-card
+            slot="attachments"
+            src="https://example.com/reports/${LONG_LTR_FILENAME}"
+            kind="file"
+            filename=${LONG_LTR_FILENAME}
+          ></lr-media-card>
+          <lr-media-card
+            slot="attachments"
+            src=${SAMPLE_VIDEO}
+            kind="video"
+            filename="rooftop-walkthrough.mp4"
+          ></lr-media-card>
+        </lr-chat-message>
+      </div>
+      <div dir="rtl" lang="ar" style="inline-size: 320px; max-inline-size: 100%;">
+        <lr-chat-message data-role="assistant">
+          إليك تقرير التركيب الكامل وتسجيل الجولة لفريق السطح.
+          <lr-media-card
+            slot="attachments"
+            src="https://example.com/reports/${LONG_RTL_FILENAME}"
+            kind="file"
+            filename=${LONG_RTL_FILENAME}
+          ></lr-media-card>
+          <lr-media-card
+            slot="attachments"
+            src=${SAMPLE_VIDEO}
+            kind="video"
+            filename="جولة-السطح.mp4"
+          ></lr-media-card>
+        </lr-chat-message>
+      </div>
+    </div>
   `,
 };
 

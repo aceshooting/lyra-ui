@@ -46,8 +46,14 @@ export const styles = css`
      pressed included. */
   button[part='base']:active,
   a[part='base']:active {
-    border-color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    border-color: var(
+      --lr-media-card-active-border-color,
+      color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
+    background: var(
+      --lr-media-card-active-bg,
+      color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
   }
   [part='base']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
