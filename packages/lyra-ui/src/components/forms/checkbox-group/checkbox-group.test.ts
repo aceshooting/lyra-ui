@@ -57,6 +57,31 @@ it('collects checked children and emits a group change', async () => {
   expect(result.detail.value).to.deep.equal(['a']);
 });
 
+it('forwards host click to the first enabled checkbox and leaves focus alone when none are enabled', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <button type="button">Elsewhere</button>
+      <lr-checkbox-group>
+        <lr-checkbox value="disabled" disabled>Disabled</lr-checkbox>
+        <lr-checkbox value="enabled">Enabled</lr-checkbox>
+      </lr-checkbox-group>
+    </div>
+  `);
+  const button = wrapper.querySelector('button') as HTMLButtonElement;
+  const group = wrapper.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+  const [disabled, enabled] = [...group.querySelectorAll('lr-checkbox')] as LyraCheckbox[];
+  await Promise.all([disabled.updateComplete, enabled.updateComplete]);
+
+  group.click();
+  expect(document.activeElement === enabled, 'the disabled option is skipped').to.equal(true);
+  expect(enabled.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base checkbox');
+
+  enabled.disabled = true;
+  button.focus();
+  group.click();
+  expect(document.activeElement === button, 'an all-disabled group has no focus destination').to.equal(true);
+});
+
 it('reports required validity when no box is checked', async () => {
   const el = (await fixture(html`<lr-checkbox-group required><lr-checkbox>A</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
   expect(el.checkValidity()).to.be.false;

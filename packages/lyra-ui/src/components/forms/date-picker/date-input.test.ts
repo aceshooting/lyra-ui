@@ -2491,6 +2491,19 @@ it('reads valueAsRange back in range mode and reports nulls outside it', async (
   expect(el.valueAsRange).to.deep.equal({ from: null, to: null });
 });
 
+it('normalizes reversed valueAsRange assignments and clears null endpoints', async () => {
+  const el = (await fixture(html`<lr-date-input mode="range"></lr-date-input>`)) as LyraDateInput;
+
+  el.valueAsRange = { from: new Date(2026, 6, 20), to: new Date(2026, 6, 10) };
+  expect(el.value).to.equal('2026-07-10/2026-07-20');
+  expect(el.valueAsRange.from?.getDate()).to.equal(10);
+  expect(el.valueAsRange.to?.getDate()).to.equal(20);
+
+  el.valueAsRange = { from: null, to: null };
+  expect(el.value).to.equal('');
+  expect(el.valueAsRange).to.deep.equal({ from: null, to: null });
+});
+
 it('treats a throwing isDateDisabled predicate as not-disabled rather than propagating', async () => {
   const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
   el.isDateDisabled = () => { throw new Error('boom'); };
@@ -2667,7 +2680,9 @@ describe('lr-date-input cross-document and reconnect listener guards', () => {
   });
 
   it('a reconnect that finds the popup already open repositions it and reactivates the overlay', async () => {
-    const el = (await fixture(html`<lr-date-input open></lr-date-input>`)) as LyraDateInput;
+    const el = (await fixture(html`
+      <lr-date-input open style="--show-duration: 1ms; --hide-duration: 1ms"></lr-date-input>
+    `)) as LyraDateInput;
     await el.updateComplete;
     expect(el.open).to.be.true;
 
@@ -2682,6 +2697,20 @@ describe('lr-date-input cross-document and reconnect listener guards', () => {
     const priv = el as unknown as { cleanupFn?: () => void; overlayHandle?: unknown };
     expect(priv.cleanupFn, 'popup repositioned on reconnect').to.be.a('function');
     expect(priv.overlayHandle, 'overlay reactivated on reconnect').to.exist;
+
+    // Reconnection takes a separate overlay-activation path. Its replacement overlay must still
+    // own Escape rather than leaving an open, keyboard-undismissable popup behind.
+    const afterHide = oneEvent(el, 'lr-after-hide');
+    const escape = new KeyboardEvent('keydown', {
+      key: 'Escape',
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    });
+    el.ownerDocument.dispatchEvent(escape);
+    await afterHide;
+    expect(escape.defaultPrevented).to.equal(true);
+    expect(el.open).to.equal(false);
 
     el.remove();
   });
