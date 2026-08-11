@@ -167,6 +167,9 @@ export interface LyraTabGroupEventMap {
  * `no-scroll-controls`) opts out, leaving the pre-8.0.0 behavior: native scrolling plus the fade.
  * The fade is deliberately kept alongside the controls — it says "the row continues past this
  * edge", which the controls themselves cannot show, and both appear on exactly the same condition.
+ * A vertical `start`/`end` nav stays shrinkable and is capped at
+ * `--lr-tab-group-vertical-nav-max-inline-size` (default `var(--lr-size-12rem)`), so long labels
+ * ellipsize rather than consuming the panel's allocation.
  *
  * **The scroll controls are `aria-hidden="true"` and `tabindex="-1"`** — a pointer affordance only,
  * matching upstream. The tablist is already fully keyboard-scrollable without them: the roving
@@ -211,6 +214,9 @@ export interface LyraTabGroupEventMap {
  *   underline, themeable independently of its text color.
  * @cssprop [--lr-tab-group-hover-color=var(--lr-color-text)] - Text color of a hovered, non-disabled tab.
  *   Independent of the selected-state props above.
+ * @cssprop [--lr-tab-group-vertical-nav-max-inline-size=var(--lr-size-12rem)] - Maximum logical
+ *   inline size of a vertical `start`/`end` nav. Long labels ellipsize inside that bound so the
+ *   panel remains usable at narrow allocations.
  * @status stable
  * @since 8.0.0
  */

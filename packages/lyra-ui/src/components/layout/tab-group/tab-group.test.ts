@@ -1271,6 +1271,76 @@ it("turns the tablist vertical for a start/end placement", async () => {
   expect(getComputedStyle(tablist).flexDirection).to.equal("column");
 });
 
+it("bounds and ellipsizes long vertical labels at an exact 320px allocation in LTR and RTL", async () => {
+  const longLabel = "Localized navigation label ".repeat(32);
+  const scenarios = [
+    { direction: "ltr", placement: "start" },
+    { direction: "ltr", placement: "end" },
+    { direction: "rtl", placement: "start" },
+    { direction: "rtl", placement: "end" },
+  ] as const;
+
+  for (const { direction, placement } of scenarios) {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+        <lr-tab-group placement=${placement} style="inline-size: 100%;">
+          <div slot="long" label=${longLabel}>Long-label panel</div>
+          <div slot="details" label="Details">Details panel</div>
+        </lr-tab-group>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-tab-group") as LyraTabGroup;
+    await el.updateComplete;
+    const nav = el.shadowRoot!.querySelector('[part="nav"]') as HTMLElement;
+    const longTab = tabButtons(el)[0]!;
+    const panel = panels(el)[0]!;
+    const groupBox = el.getBoundingClientRect();
+    const navBox = nav.getBoundingClientRect();
+    const panelBox = panel.getBoundingClientRect();
+    const navMaxInlineSize = Number.parseFloat(getComputedStyle(nav).maxInlineSize);
+
+    expect(Math.round(groupBox.width), `${direction}/${placement} group width`).to.equal(320);
+    expect(Number.isFinite(navMaxInlineSize), `${direction}/${placement} nav maximum`).to.equal(true);
+    expect(navBox.width, `${direction}/${placement} nav width`).to.be.at.most(navMaxInlineSize + 1);
+    expect(nav.scrollWidth, `${direction}/${placement} nav scroll width`).to.be.at.most(
+      Math.ceil(groupBox.width),
+    );
+    expect(panelBox.width, `${direction}/${placement} panel width`).to.be.greaterThan(0);
+    expect(panelBox.left, `${direction}/${placement} panel start`).to.be.at.least(groupBox.left - 1);
+    expect(panelBox.right, `${direction}/${placement} panel end`).to.be.at.most(groupBox.right + 1);
+    expect(longTab.scrollWidth, `${direction}/${placement} long label clipping`).to.be.greaterThan(
+      longTab.clientWidth,
+    );
+    expect(getComputedStyle(longTab).textOverflow).to.equal("ellipsis");
+  }
+});
+
+it("inherits the vertical nav maximum from an ancestor", async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-tab-group placement="start" style="inline-size: 100%;">
+        <div slot="long" label=${"Long navigation label ".repeat(32)}>Long-label panel</div>
+        <div slot="details" label="Details">Details panel</div>
+      </lr-tab-group>
+    </div>
+  `);
+  const el = wrapper.querySelector("lr-tab-group") as LyraTabGroup;
+  const ancestor = el.parentElement as HTMLElement;
+  ancestor.style.setProperty(
+    "--lr-tab-group-vertical-nav-max-inline-size",
+    "8rem",
+  );
+  await el.updateComplete;
+  const nav = el.shadowRoot!.querySelector('[part="nav"]') as HTMLElement;
+  const navMaxInlineSize = Number.parseFloat(getComputedStyle(nav).maxInlineSize);
+
+  expect(
+    getComputedStyle(el).getPropertyValue("--lr-tab-group-vertical-nav-max-inline-size").trim(),
+  ).to.not.equal("");
+  expect(navMaxInlineSize).to.be.closeTo(128, 0.1);
+  expect(nav.getBoundingClientRect().width).to.be.closeTo(navMaxInlineSize, 1);
+});
+
 it("navigates a vertical strip with Up/Down, not Left/Right", async () => {
   const el = (await fixture(html`
     <lr-tab-group placement="end">

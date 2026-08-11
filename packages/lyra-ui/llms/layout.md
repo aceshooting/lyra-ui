@@ -877,7 +877,11 @@ an attribute selector after `::part()`), which previously left overriding the li
 repainting everything else that reads them. Unset, each falls back to the token its rule used
 before, so rendering is unchanged. The upstream hooks `--indicator-color` (selected indicator),
 `--track-color` (resting strip rule), and `--track-width` (resting strip-rule thickness) are read
-first, with the Lyra/token values as fallbacks. Otherwise shared tokens —
+first, with the Lyra/token values as fallbacks. `--lr-tab-group-vertical-nav-max-inline-size`
+(default `var(--lr-size-12rem)`) caps a `start`/`end` nav's logical inline size while still allowing
+it to shrink in a constrained allocation. Its inline fallback means it can be set on the group or
+an ancestor; long single-line tab labels ellipsize within the cap rather than expanding the group or
+starving the panel. Otherwise shared tokens —
 `--lr-space-xs/-s/-m`, `--lr-color-border/-text-quiet/-text/-brand`, `--lr-transition-fast`,
 `--lr-radius`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 

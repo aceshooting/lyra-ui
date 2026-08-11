@@ -246,12 +246,17 @@ export const styles = css`
     inset-block-start: calc(-1 * var(--lr-border-width-medium));
     inset-block-end: auto;
   }
-  /* A vertical strip renders no scroll controls at all, so [part='nav'] is a bare wrapper here --
-     it must hand the tablist's own intrinsic width straight through to [part~='base']'s row rather
-     than shrinking it. */
+  /* A vertical strip renders no scroll controls at all. Its nav keeps its natural width for short
+     labels, but is allowed to shrink and capped so one unbroken label cannot consume the panel's
+     entire allocation. Keep the fallback inline: consumers can set it on the group or an ancestor. */
   :host([placement='start']) [part='nav'],
   :host([placement='end']) [part='nav'] {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    max-inline-size: var(
+      --lr-tab-group-vertical-nav-max-inline-size,
+      var(--lr-size-12rem)
+    );
   }
   :host([placement='start']) [part~='base'],
   :host([placement='end']) [part~='base'] {
@@ -265,11 +270,22 @@ export const styles = css`
   :host([placement='end']) [part~='tablist'] {
     flex-direction: column;
     align-items: stretch;
-    flex: 0 0 auto;
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     gap: var(--lr-space-2xs);
     overflow-x: hidden;
     overflow-y: auto;
     border-block-end: none;
+  }
+  /* The vertical nav is deliberately single-line: clipping the visual label preserves a compact
+     side rail while the full label remains the tab's accessible name. */
+  :host([placement='start']) [part='tab'],
+  :host([placement='end']) [part='tab'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   :host([placement='start']) [part~='tablist'] {
     border-inline-end: var(--track-width, var(--lr-border-width-thin)) solid

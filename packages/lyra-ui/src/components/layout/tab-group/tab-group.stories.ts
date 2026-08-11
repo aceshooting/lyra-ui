@@ -325,6 +325,36 @@ export const Placement: StoryObj = {
   `,
 };
 
+export const VerticalLongLabelsNarrow: StoryObj = {
+  name: 'Vertical long labels at 320px (LTR / RTL)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The `--lr-tab-group-vertical-nav-max-inline-size` hook bounds a logical start/end strip without fixing its width. At an exact 320px allocation, long labels ellipsize while the adjacent panel remains usable in both directions.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-l);">
+      <div style="inline-size: 320px; max-inline-size: 100%;">
+        <p style="margin-block: 0 var(--lr-space-xs);">LTR / start</p>
+        <lr-tab-group placement="start" style="--lr-tab-group-vertical-nav-max-inline-size: var(--lr-size-10rem);">
+          <div slot="overview" label="Overview with an intentionally long navigation label">Overview panel.</div>
+          <div slot="history" label="Complete audit history for this workspace">History panel.</div>
+        </lr-tab-group>
+      </div>
+      <div dir="rtl" style="inline-size: 320px; max-inline-size: 100%;">
+        <p style="margin-block: 0 var(--lr-space-xs);">RTL / end</p>
+        <lr-tab-group placement="end" style="--lr-tab-group-vertical-nav-max-inline-size: var(--lr-size-10rem);">
+          <div slot="overview" label="نظرة عامة بعنوان تنقل طويل للغاية">لوحة النظرة العامة.</div>
+          <div slot="history" label="سجل المراجعة الكامل لمساحة العمل">لوحة السجل.</div>
+        </lr-tab-group>
+      </div>
+    </div>
+  `,
+};
+
 export const ManualActivation: StoryObj = {
   parameters: {
     docs: {
