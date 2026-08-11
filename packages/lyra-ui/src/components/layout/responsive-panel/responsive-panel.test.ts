@@ -194,6 +194,78 @@ it('re-evaluates against the new mobile-breakpoint when it changes at runtime wh
   ).to.equal("dialog");
 });
 
+it("uses its live MediaQueryList listener and ignores a retired query after mobile-breakpoint changes", async () => {
+  interface MediaRecord {
+    list: MediaQueryList;
+    listeners: Set<(event: MediaQueryListEvent) => void>;
+  }
+
+  const originalMatchMedia = window.matchMedia;
+  const records: MediaRecord[] = [];
+  window.matchMedia = ((query: string) => {
+    const listeners = new Set<(event: MediaQueryListEvent) => void>();
+    const list = {
+      matches: false,
+      media: query,
+      addEventListener: (
+        _type: string,
+        listener: (event: MediaQueryListEvent) => void
+      ) => listeners.add(listener),
+      removeEventListener: (
+        _type: string,
+        listener: (event: MediaQueryListEvent) => void
+      ) => listeners.delete(listener),
+    } as unknown as MediaQueryList;
+    records.push({ list, listeners });
+    return list;
+  }) as typeof window.matchMedia;
+
+  try {
+    const el = (await fixture(
+      html`<lr-responsive-panel open>body</lr-responsive-panel>`
+    )) as LyraResponsivePanel;
+    await el.updateComplete;
+    const first = records.find(
+      (record) => record.list === asAny(el).mediaQuery
+    )!;
+    const retiredListener = [...first.listeners][0]!;
+
+    el.mobileBreakpoint = "900px";
+    await el.updateComplete;
+    const current = records.find(
+      (record) => record.list === asAny(el).mediaQuery
+    )!;
+    expect(current === first).to.be.false;
+
+    // A delayed event from the old query must not re-open modal chrome after
+    // the component has subscribed to the replacement query.
+    retiredListener({
+      matches: true,
+      currentTarget: first.list,
+    } as unknown as MediaQueryListEvent);
+    await el.updateComplete;
+    expect(
+      (el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement).hasAttribute(
+        "role"
+      )
+    ).to.be.false;
+
+    const currentListener = [...current.listeners][0]!;
+    currentListener({
+      matches: true,
+      currentTarget: current.list,
+    } as unknown as MediaQueryListEvent);
+    await el.updateComplete;
+    expect(
+      (el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement).getAttribute(
+        "role"
+      )
+    ).to.equal("dialog");
+  } finally {
+    window.matchMedia = originalMatchMedia;
+  }
+});
+
 it('hides [part="base"] entirely while closed, in both presentations', async () => {
   const inline = (await fixture(
     html`<lr-responsive-panel mode="inline">body</lr-responsive-panel>`

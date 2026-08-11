@@ -1205,6 +1205,37 @@ it("omits a rich label branch skipped by content-visibility:auto", async () => {
   await expect(el).to.be.accessible();
 });
 
+it("keeps a rich tab label when the browser does not expose checkVisibility", async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(
+    Element.prototype,
+    "checkVisibility"
+  );
+  Object.defineProperty(Element.prototype, "checkVisibility", {
+    configurable: true,
+    value: undefined,
+  });
+
+  try {
+    const el = (await fixture(html`
+      <lr-tab-group aria-label="Workspace tabs">
+        <lr-tab panel="general"><span>Fallback label</span></lr-tab>
+        <lr-tab-panel name="general">General body</lr-tab-panel>
+      </lr-tab-group>
+    `)) as LyraTabGroup;
+    await el.updateComplete;
+
+    expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal(
+      "Fallback label"
+    );
+  } finally {
+    if (descriptor) {
+      Object.defineProperty(Element.prototype, "checkVisibility", descriptor);
+    } else {
+      Reflect.deleteProperty(Element.prototype, "checkVisibility");
+    }
+  }
+});
+
 it("omits closed <details> text from a rich tab name and restores it when opened", async () => {
   const el = (await fixture(html`
     <lr-tab-group aria-label="Workspace tabs">

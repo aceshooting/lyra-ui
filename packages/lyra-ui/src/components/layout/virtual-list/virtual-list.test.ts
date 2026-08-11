@@ -299,6 +299,73 @@ it("measures each row's real height via ResizeObserver in row-height='auto' mode
   expect(measuredTotal).to.be.greaterThan(400);
 });
 
+it("uses a row's rendered height when a ResizeObserver entry omits borderBoxSize", async () => {
+  interface ResizeRecord {
+    callback: ResizeObserverCallback;
+    observer: ResizeObserver;
+  }
+
+  const originalResizeObserver = window.ResizeObserver;
+  const records: ResizeRecord[] = [];
+  class TestResizeObserver {
+    readonly record: ResizeRecord;
+
+    constructor(callback: ResizeObserverCallback) {
+      this.record = {
+        callback,
+        observer: this as unknown as ResizeObserver,
+      };
+      records.push(this.record);
+    }
+
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  (
+    window as unknown as { ResizeObserver: typeof ResizeObserver }
+  ).ResizeObserver = TestResizeObserver as unknown as typeof ResizeObserver;
+
+  try {
+    const el = (await fixture(
+      html`<lr-virtual-list
+        style="--lr-virtual-list-height:200px"
+        .items=${[1]}
+        .renderItem=${renderText}
+        .keyFunction=${numberKey}
+      ></lr-virtual-list>`
+    )) as LyraVirtualList;
+    await nextFrame();
+    await el.updateComplete;
+    const row = el.renderedRows[0]!;
+    Object.defineProperty(row, "getBoundingClientRect", {
+      configurable: true,
+      value: () => new DOMRect(0, 0, 0, 96),
+    });
+    const rowObserver = (el as unknown as {
+      rowResizeObserver?: ResizeObserver;
+    }).rowResizeObserver;
+    const record = records.find(
+      (candidate) => candidate.observer === rowObserver
+    );
+    expect(record !== undefined, "row measurement observer is present").to.equal(
+      true
+    );
+
+    record!.callback(
+      [{ target: row } as unknown as ResizeObserverEntry],
+      record!.observer
+    );
+    await el.updateComplete;
+
+    expect(el.offsetForIndex(1)).to.equal(96);
+  } finally {
+    (
+      window as unknown as { ResizeObserver: typeof ResizeObserver }
+    ).ResizeObserver = originalResizeObserver;
+  }
+});
+
 it("wraps ordinary long row content and measures its auto height at 320px in LTR and RTL", async () => {
   const longToken = "x".repeat(128);
 
@@ -2016,6 +2083,13 @@ describe("sticky group overlay", () => {
           }`
       );
   }
+
+  it("renders no sticky layer or scroll inset when only renderStickyGroup is configured", async () => {
+    const el = await mount(true, { groups: [] });
+
+    expect(overlay(el) === null).to.be.true;
+    expect(el.scrollContainer!.style.scrollPaddingBlockStart).to.equal("");
+  });
 
   it("renders no overlay at all, and output identical to the no-callback render, while renderStickyGroup is unset", async () => {
     const plain = await mount(false);
