@@ -23,7 +23,7 @@ import {
 } from './chart-table-sampling.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_liteChartBarLabel, LYRA_DEFAULT_liteChartCustomMarkSummary, LYRA_DEFAULT_liteChartMarkSummary, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_liteChartBarLabel, LYRA_DEFAULT_liteChartCustomMarkSummary, LYRA_DEFAULT_liteChartMarkSummary, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -281,6 +281,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     chart: LYRA_DEFAULT_chart,
     chartCategory: LYRA_DEFAULT_chartCategory,
     chartData: LYRA_DEFAULT_chartData,
+    chartDataSampled: LYRA_DEFAULT_chartDataSampled,
     chartSeriesLabel: LYRA_DEFAULT_chartSeriesLabel,
     chartTotal: LYRA_DEFAULT_chartTotal,
     collapse: LYRA_DEFAULT_collapse,

@@ -90,6 +90,12 @@ while not disabled; handled by the parent `<lr-reorder-list>`, which performs th
 wrapper).
 
 **Themeable custom properties:** `--lr-reorder-item-gap` (default `var(--lr-space-xs)`) — gap
-between the move buttons and the row content.
+between the move buttons and the row content. The move-button interaction paints are independent,
+inherited inline fallbacks: `--lr-reorder-item-move-button-hover-bg` (default
+`var(--lr-color-brand-quiet)`), `--lr-reorder-item-move-button-hover-color` (default
+`var(--lr-color-brand)`), `--lr-reorder-item-move-button-active-bg` (default `color-mix(in oklab,
+var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`), and
+`--lr-reorder-item-move-button-active-color` (default `var(--lr-color-brand)`). Set them on an item
+or any ancestor to retheme only the hover or pressed move affordance.
 
 ---

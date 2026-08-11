@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `@sgratzl/chartjs-chart-boxplot`, `chart.js` — see `llms/peers.md`
-- **Themeable via** 10 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,9 +22,16 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 - `labels: string[] = []` (attribute: false)
 - `boxes: BoxPlotSeries[] = []` (attribute: false) — `BoxPlotSeries { label: string; data:
   BoxPlotPoint[]; color?: string }`, `BoxPlotPoint { min, q1, median, q3, max }`
+- `hiddenDatasets?: readonly number[]` (attribute: false) — complete controlled visibility snapshot
+  for the DOM legend. `undefined` leaves every box series visible; `[]` likewise explicitly makes
+  every series visible, while a defined canonical list of zero-based indexes hides those series.
+  Duplicate, non-integer, negative, and out-of-range indexes are discarded. Accepted user toggles
+  write their complete next snapshot back to this property; programmatic writes reconcile silently.
 - `legend: boolean = false` — renders a wrapping DOM legend whose buttons toggle box-series
   visibility without clipping long labels.
-- `height: string = '280px'`
+- `height: string = '280px'` — valid CSS height used as a private fallback only. A consumer-set
+  `--lr-chart-height` always wins; invalid values remove the fallback and leave the public
+  token/default in control.
 - `yLabel: string = ''` (attribute `y-label`)
 - `beginAtZero: boolean = true` (attribute `begin-at-zero`)
 - `accessibleLabel: string = ''` (attribute `accessible-label`) — canvas name override; host
@@ -37,19 +44,31 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 change. Canvas work remains connected/visible-gated, while a rendered DOM legend also refreshes
 its computed color swatches.
 
-**Events:** none.
+**Events:** `lr-before-legend-visibility-change` (cancelable proposed legend toggle) and
+`lr-legend-visibility-change` (accepted commit). Both carry
+`{ datasetIndex: number, visible: boolean, hiddenDatasets: readonly number[] }`, where
+`hiddenDatasets` is the complete sorted, valid next snapshot. Calling `preventDefault()` on the
+proposal leaves state untouched and suppresses the commit event.
 
-**Slots:** `data-table` — an optional consumer-provided accessible table alternative.
+**Slots:** `data-table` — an optional consumer-provided complete, paginated, or virtualized
+accessible table alternative.
+
+**Bounded data alternative:** the generated table, automatic canvas name, and generated per-series
+description use at most 1,000 category×series records. When sampling is needed, its category and
+series indexes are deterministic and retain the first and last endpoint; a localized
+`data-truncation` notice is shown and announced. A slotted `data-table` replaces the generated
+detailed sample and notice, making it the escape hatch for complete data.
 
 **CSS parts:** `base`, `plot` (the fixed-height canvas region), `canvas`, `legend`,
 `legend-item`, `legend-item-hidden` (added to a legend item while its box series is hidden),
 `legend-swatch`, `description`, `data-table`, `error` (neutral visible message shown
 instead of `canvas` when the optional box-plot peer fails to load; the failure transition is
-announced through the shared document-level light-DOM assertive sink)
+announced through the shared document-level light-DOM assertive sink), `data-truncation` (the
+bounded-alternative sampling notice)
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
-`--lr-chart-tooltip-text` — same host-level mechanism, token names, and defaults as `lr-chart`
+`--lr-chart-tooltip-text` — same public host-level precedence, token names, and defaults as `lr-chart`
 (also `getComputedStyle`-resolved and CSS-color-validated on every draw; invalid expressions use
 concrete semantic fallbacks rather than retaining a prior canvas paint), but declared in its own stylesheet, not a
 re-export: `lr-box-plot` has no `zoom`, so no `reset-zoom-button` chrome exists here. A `BoxPlotSeries`
@@ -76,7 +95,8 @@ through the same cached `chart-loader.ts` used by `lr-chart`.
   without requiring another box property write. Canvas tooltip/axis colors are token-driven, and
   animation is disabled under reduced motion.
 - `--lr-chart-height` fixes the `plot` height and the host's minimum height, not the complete host.
-  A visible or slotted table and the wrapping legend remain in normal document flow, grow the
+  It is consumer-owned and wins over the `height` property's private fallback. A visible or slotted
+  table and the wrapping legend remain in normal document flow, grow the
   component, and cannot overlap following content; oversized tables scroll inside the host.
 - If `@sgratzl/chartjs-chart-boxplot` fails to load, the component warns to the console and
   fails closed with a localized, neutral visible error part rather than leaving a blank canvas.

@@ -48,8 +48,9 @@ cannot leak into state or events. `rates` keeps only unique finite values in the
 promise/rejection (before the media mounts it returns an already-resolved promise). `pause()` and
 `toggle()` proxy the native element; an internal toggle that cannot start playback renders the
 error state and emits `lr-render-error`. `seek(seconds)` sets `currentTime` and forces an immediate
-`lr-time-change`. `search(query)` resolves the match count; `searchNext()`/`searchPrevious()` wrap;
-`clearSearch()` resets.
+`lr-time-change`. `search(query)` resolves the match count; `searchNext()`/`searchPrevious()` wrap
+and reveal the active match in the virtualized transcript without seeking playback; `clearSearch()`
+resets the query and match state.
 
 **Events:** `lr-play`, `lr-pause`, `lr-load` (`detail: { duration, kind }`), `lr-time-change`
 (`detail: { currentTime }`, throttled to at most 4/s while playing plus one extra per `seek()`),

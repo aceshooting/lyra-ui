@@ -10270,6 +10270,18 @@
         ],
         "events": [
           {
+            "name": "lr-before-legend-visibility-change",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-legend-visibility-change",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-point-click",
             "type": "CustomEvent<{ datasetIndex: number; index: number; label: string | undefined; value: unknown; }>",
             "cancelable": "never",
@@ -10300,11 +10312,19 @@
             "deprecated": null
           },
           {
+            "name": "data-truncation",
+            "deprecated": null
+          },
+          {
             "name": "description",
             "deprecated": null
           },
           {
             "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "feature-warning",
             "deprecated": null
           },
           {
@@ -10321,6 +10341,10 @@
           },
           {
             "name": "legend-swatch",
+            "deprecated": null
+          },
+          {
+            "name": "notices",
             "deprecated": null
           },
           {
@@ -10700,6 +10724,15 @@
             "default": "280px"
           },
           {
+            "name": "hiddenDatasets",
+            "attribute": null,
+            "type": "readonly number[] | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "labels",
             "attribute": null,
             "type": "string[]",
@@ -10756,7 +10789,20 @@
             "deprecated": null
           }
         ],
-        "events": [],
+        "events": [
+          {
+            "name": "lr-before-legend-visibility-change",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-legend-visibility-change",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          }
+        ],
         "parts": [
           {
             "name": "base",
@@ -10768,6 +10814,10 @@
           },
           {
             "name": "data-table",
+            "deprecated": null
+          },
+          {
+            "name": "data-truncation",
             "deprecated": null
           },
           {
@@ -10799,7 +10849,14 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-chart-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-280px)"
+          }
+        ],
         "cssStates": [],
         "methods": [
           {
@@ -12327,6 +12384,18 @@
         ],
         "events": [
           {
+            "name": "lr-before-legend-visibility-change",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-legend-visibility-change",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-point-click",
             "type": "CustomEvent<{ datasetIndex: number; index: number; label: string | undefined; value: unknown; }>",
             "cancelable": "never",
@@ -12357,11 +12426,19 @@
             "deprecated": null
           },
           {
+            "name": "data-truncation",
+            "deprecated": null
+          },
+          {
             "name": "description",
             "deprecated": null
           },
           {
             "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "feature-warning",
             "deprecated": null
           },
           {
@@ -12378,6 +12455,10 @@
           },
           {
             "name": "legend-swatch",
+            "deprecated": null
+          },
+          {
+            "name": "notices",
             "deprecated": null
           },
           {
@@ -16469,6 +16550,15 @@
             "default": "280px"
           },
           {
+            "name": "hiddenDatasets",
+            "attribute": null,
+            "type": "readonly number[] | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "horizontal",
             "attribute": "horizontal",
             "type": "boolean",
@@ -16704,6 +16794,18 @@
         ],
         "events": [
           {
+            "name": "lr-before-legend-visibility-change",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-legend-visibility-change",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-point-click",
             "type": "CustomEvent<{ datasetIndex: number; index: number; label: string | undefined; value: unknown; }>",
             "cancelable": "never",
@@ -16734,11 +16836,19 @@
             "deprecated": null
           },
           {
+            "name": "data-truncation",
+            "deprecated": null
+          },
+          {
             "name": "description",
             "deprecated": null
           },
           {
             "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "feature-warning",
             "deprecated": null
           },
           {
@@ -16755,6 +16865,10 @@
           },
           {
             "name": "legend-swatch",
+            "deprecated": null
+          },
+          {
+            "name": "notices",
             "deprecated": null
           },
           {
@@ -38247,6 +38361,18 @@
         ],
         "events": [
           {
+            "name": "lr-before-legend-visibility-change",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-legend-visibility-change",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-point-click",
             "type": "CustomEvent<{ datasetIndex: number; index: number; label: string | undefined; value: unknown; }>",
             "cancelable": "never",
@@ -38277,11 +38403,19 @@
             "deprecated": null
           },
           {
+            "name": "data-truncation",
+            "deprecated": null
+          },
+          {
             "name": "description",
             "deprecated": null
           },
           {
             "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "feature-warning",
             "deprecated": null
           },
           {
@@ -38298,6 +38432,10 @@
           },
           {
             "name": "legend-swatch",
+            "deprecated": null
+          },
+          {
+            "name": "notices",
             "deprecated": null
           },
           {
@@ -40223,7 +40361,7 @@
           {
             "name": "lr-menu-item-change",
             "type": "CustomEvent<MenuItemChangeDetail>",
-            "cancelable": "never",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -45248,6 +45386,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-form-control-font-size)"
+          },
+          {
+            "name": "--lr-file-input-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-file-input-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
           },
           {
             "name": "--lr-file-input-reject-bg",
@@ -52631,6 +52781,18 @@
         ],
         "events": [
           {
+            "name": "lr-before-legend-visibility-change",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-legend-visibility-change",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-point-click",
             "type": "CustomEvent<{ datasetIndex: number; index: number; label: string | undefined; value: unknown; }>",
             "cancelable": "never",
@@ -52661,11 +52823,19 @@
             "deprecated": null
           },
           {
+            "name": "data-truncation",
+            "deprecated": null
+          },
+          {
             "name": "description",
             "deprecated": null
           },
           {
             "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "feature-warning",
             "deprecated": null
           },
           {
@@ -52682,6 +52852,10 @@
           },
           {
             "name": "legend-swatch",
+            "deprecated": null
+          },
+          {
+            "name": "notices",
             "deprecated": null
           },
           {
@@ -60682,6 +60856,18 @@
         ],
         "events": [
           {
+            "name": "lr-before-legend-visibility-change",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-legend-visibility-change",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-point-click",
             "type": "CustomEvent<{ datasetIndex: number; index: number; label: string | undefined; value: unknown; }>",
             "cancelable": "never",
@@ -60712,11 +60898,19 @@
             "deprecated": null
           },
           {
+            "name": "data-truncation",
+            "deprecated": null
+          },
+          {
             "name": "description",
             "deprecated": null
           },
           {
             "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "feature-warning",
             "deprecated": null
           },
           {
@@ -60733,6 +60927,10 @@
           },
           {
             "name": "legend-swatch",
+            "deprecated": null
+          },
+          {
+            "name": "notices",
             "deprecated": null
           },
           {
@@ -61444,7 +61642,12 @@
             "default": ""
           }
         ],
-        "slots": [],
+        "slots": [
+          {
+            "name": "data-table",
+            "deprecated": null
+          }
+        ],
         "events": [
           {
             "name": "lr-point-click",
@@ -61476,6 +61679,10 @@
           },
           {
             "name": "data-table",
+            "deprecated": null
+          },
+          {
+            "name": "data-truncation",
             "deprecated": null
           },
           {
@@ -61512,6 +61719,12 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-chart-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-280px)"
+          },
           {
             "name": "--lr-lite-chart-selected-outline-color",
             "deprecated": null,
@@ -65364,7 +65577,7 @@
           {
             "name": "lr-menu-item-change",
             "type": "CustomEvent<MenuItemChangeDetail>",
-            "cancelable": "never",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -74076,6 +74289,72 @@
             "default": "auto"
           },
           {
+            "name": "--lr-page-navigation-backdrop-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-overlay)"
+          },
+          {
+            "name": "--lr-page-navigation-drawer-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-overlay)"
+          },
+          {
+            "name": "--lr-page-navigation-drawer-shadow",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-shadow-l)"
+          },
+          {
+            "name": "--lr-page-navigation-toggle-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-page-navigation-toggle-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-page-navigation-toggle-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-page-navigation-toggle-hover-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-page-skip-to-content-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-page-skip-to-content-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-page-skip-to-content-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-page-skip-to-content-hover-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
             "name": "--lr-page-subheader-height",
             "deprecated": null,
             "hasDefault": true,
@@ -77973,6 +78252,18 @@
         ],
         "events": [
           {
+            "name": "lr-before-legend-visibility-change",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-legend-visibility-change",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-point-click",
             "type": "CustomEvent<{ datasetIndex: number; index: number; label: string | undefined; value: unknown; }>",
             "cancelable": "never",
@@ -78003,11 +78294,19 @@
             "deprecated": null
           },
           {
+            "name": "data-truncation",
+            "deprecated": null
+          },
+          {
             "name": "description",
             "deprecated": null
           },
           {
             "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "feature-warning",
             "deprecated": null
           },
           {
@@ -78024,6 +78323,10 @@
           },
           {
             "name": "legend-swatch",
+            "deprecated": null
+          },
+          {
+            "name": "notices",
             "deprecated": null
           },
           {
@@ -79249,6 +79552,18 @@
         ],
         "events": [
           {
+            "name": "lr-before-legend-visibility-change",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-legend-visibility-change",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-point-click",
             "type": "CustomEvent<{ datasetIndex: number; index: number; label: string | undefined; value: unknown; }>",
             "cancelable": "never",
@@ -79279,11 +79594,19 @@
             "deprecated": null
           },
           {
+            "name": "data-truncation",
+            "deprecated": null
+          },
+          {
             "name": "description",
             "deprecated": null
           },
           {
             "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "feature-warning",
             "deprecated": null
           },
           {
@@ -79300,6 +79623,10 @@
           },
           {
             "name": "legend-swatch",
+            "deprecated": null
+          },
+          {
+            "name": "notices",
             "deprecated": null
           },
           {
@@ -85019,6 +85346,18 @@
         ],
         "events": [
           {
+            "name": "lr-before-legend-visibility-change",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-legend-visibility-change",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-point-click",
             "type": "CustomEvent<{ datasetIndex: number; index: number; label: string | undefined; value: unknown; }>",
             "cancelable": "never",
@@ -85049,11 +85388,19 @@
             "deprecated": null
           },
           {
+            "name": "data-truncation",
+            "deprecated": null
+          },
+          {
             "name": "description",
             "deprecated": null
           },
           {
             "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "feature-warning",
             "deprecated": null
           },
           {
@@ -85070,6 +85417,10 @@
           },
           {
             "name": "legend-swatch",
+            "deprecated": null
+          },
+          {
+            "name": "notices",
             "deprecated": null
           },
           {
@@ -89631,6 +89982,30 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-reorder-item-move-button-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-reorder-item-move-button-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-reorder-item-move-button-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-reorder-item-move-button-hover-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
           }
         ],
         "cssStates": [],
@@ -90181,6 +90556,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-overlay)"
+          },
+          {
+            "name": "--lr-responsive-panel-overlay-panel-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-overlay)"
+          },
+          {
+            "name": "--lr-responsive-panel-overlay-panel-shadow",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-shadow-l)"
           },
           {
             "name": "--lr-responsive-panel-sheet-max-block-size",
@@ -93102,6 +93489,18 @@
         ],
         "events": [
           {
+            "name": "lr-before-legend-visibility-change",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-legend-visibility-change",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-point-click",
             "type": "CustomEvent<{ datasetIndex: number; index: number; label: string | undefined; value: unknown; }>",
             "cancelable": "never",
@@ -93132,11 +93531,19 @@
             "deprecated": null
           },
           {
+            "name": "data-truncation",
+            "deprecated": null
+          },
+          {
             "name": "description",
             "deprecated": null
           },
           {
             "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "feature-warning",
             "deprecated": null
           },
           {
@@ -93153,6 +93560,10 @@
           },
           {
             "name": "legend-swatch",
+            "deprecated": null
+          },
+          {
+            "name": "notices",
             "deprecated": null
           },
           {
@@ -94071,6 +94482,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "2rem"
+          },
+          {
+            "name": "--lr-segmented-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-segmented-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-segmented-hover-color, var(--lr-color-text))"
           },
           {
             "name": "--lr-segmented-font-size",
@@ -95672,6 +96095,12 @@
             "name": "--lr-selection-toolbar-inline-start",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-selection-toolbar-placement-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
           }
         ],
         "cssStates": [],
@@ -101017,6 +101446,18 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-stepper-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-stepper-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
             "name": "--lr-stepper-current-color",
             "deprecated": null,
             "hasDefault": true,
@@ -101045,6 +101486,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-stepper-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-stepper-hover-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
           }
         ],
         "cssStates": [],
@@ -103651,6 +104104,18 @@
             "default": "2rem"
           },
           {
+            "name": "--lr-tab-group-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-tab-group-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-tab-group-hover-color, var(--lr-color-text))"
+          },
+          {
             "name": "--lr-tab-group-hover-color",
             "deprecated": null,
             "hasDefault": true,
@@ -103661,6 +104126,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-tab-group-scroll-button-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-tab-group-scroll-button-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-tab-group-scroll-button-hover-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
           },
           {
             "name": "--lr-tab-group-selected-color",
@@ -119230,6 +119713,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-border-strong)"
+          },
+          {
+            "name": "--lr-virtual-list-hover-outline-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "calc(-1 * var(--lr-border-width-thin))"
+          },
+          {
+            "name": "--lr-virtual-list-hover-outline-style",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "solid"
+          },
+          {
+            "name": "--lr-virtual-list-hover-outline-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thin)"
           }
         ],
         "cssStates": [],
@@ -120068,6 +120569,12 @@
             "default": 0
           },
           {
+            "name": "--lr-voice-picker-open-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
             "name": "--lr-voice-picker-option-active-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -120096,6 +120603,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-voice-picker-option-synthetic-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-voice-picker-option-synthetic-border-style",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "dashed"
+          },
+          {
+            "name": "--lr-voice-picker-option-synthetic-font-style",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "italic"
           },
           {
             "name": "--lr-voice-picker-preview-active-border",
@@ -120837,6 +121362,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-widget-view-toggle-active-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
           },
           {
             "name": "--lr-widget-view-toggle-active-color",

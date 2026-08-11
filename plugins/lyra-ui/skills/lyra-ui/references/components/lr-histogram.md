@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 12 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -31,7 +31,7 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   lock is the same `lockChartType()` accessor pair the typed `lr-*-chart` subclasses use (e.g.
   `llms/components/lr-bar-chart.md`) — `el.type = 'line'` is a genuine no-op here too.
 - All other `LyraChart` properties are inherited and usable: `description`, `grid`, `indexAxis`
-  (`index-axis`), `legend`, `legendPosition` (`legend-position`), `max`, `min`, `plugins`,
+  (`index-axis`), `hiddenDatasets`, `legend`, `legendPosition` (`legend-position`), `max`, `min`, `plugins`,
   `withoutAnimation` (`without-animation`), `withoutLegend` (`without-legend`), `withoutTooltip`
   (`without-tooltip`), `valueFormatter`, `area`, `zoom`, `config`, `height`, `xLabel` (`x-label`),
   `yLabel` (`y-label`), `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`), `horizontal`,
@@ -44,13 +44,14 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
 optionally retains only the newest `maxPoints`. The label argument is ignored because bucket
 labels are regenerated from the rebinned sample range.
 
-**Events:** `lr-zoom`, `lr-point-click` — inherited; `lr-point-click`'s `index` is the bucket index
-and `label` the generated bucket range string (`"lo–hi"`, both bounds at one decimal place).
+**Events:** `lr-zoom`, `lr-point-click`, `lr-before-legend-visibility-change` (cancelable), and
+`lr-legend-visibility-change` — inherited; `lr-point-click`'s `index` is the bucket index and
+`label` the generated bucket range string (`"lo–hi"`, both bounds at one decimal place).
 
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
-`reset-zoom-button`, `description`, `data-table`, `center`, `error` (neutral visible message
+`reset-zoom-button`, `description`, `notices`, `data-table`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink —
 inherited from `LyraChart`, unaffected by the binning logic).

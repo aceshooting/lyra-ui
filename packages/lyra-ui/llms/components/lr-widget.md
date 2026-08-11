@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -85,11 +85,12 @@ the fullscreen backdrop scrim color), `--lr-widget-fullscreen-inset` (default pe
 tokens (`--lr-space-*`, `--lr-color-border/-surface/-text-quiet`,
 `--lr-radius`, `--lr-shadow`, `--lr-icon-button-size`, `--lr-focus-ring-*`).
 
-Two further properties style the pressed view toggle: `--lr-widget-view-toggle-active-bg` (default
+Three properties style the pressed view toggle: `--lr-widget-view-toggle-active-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-widget-view-toggle-active-color` (default
-`var(--lr-color-brand)`) — the background and text color of the `aria-pressed="true"` toggle. Both
+`var(--lr-color-brand)`), plus `--lr-widget-view-toggle-active-border-color` (default
+`transparent`) — the background, text, and border color of the `aria-pressed="true"` toggle. All three
 are **state hooks**: declared as inline `var()` fallbacks at the point of use and never on `:host`,
-so setting either on the element *or on any ancestor* reaches the toggle. That shape exists because
+so setting any of them on the element *or on any ancestor* reaches the toggle. That shape exists because
 `::part(view-toggle)[aria-pressed='true']` is not valid CSS — Shadow Parts forbids an attribute
 selector after `::part()` — so before these hooks the only way to recolor an active toggle was to
 override the library-wide `--lr-color-brand-quiet`/`--lr-color-brand` tokens, repainting every other

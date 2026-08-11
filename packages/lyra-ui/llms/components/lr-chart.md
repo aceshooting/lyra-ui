@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 12 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -56,12 +56,19 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
     `segment.borderColor` scriptable option, so it is only meaningful for line-type series.
     Typical use is threshold/anomaly banding along one line. A series that omits it (or passes an
     empty array) emits no `segment` key at all, leaving line rendering exactly as before.
+- `hiddenDatasets?: readonly number[]` (attribute: false) — complete controlled DOM-legend
+  visibility state. Leave it `undefined` (the default) to honor each effective dataset's declarative
+  `hidden` value; pass `[]` to deliberately show every dataset, or a canonical list of zero-based
+  indexes to hide those datasets. A defined value wins over the declarative defaults. Duplicate,
+  non-integer, negative, and out-of-range indexes are discarded. The component writes the accepted
+  legend-toggle snapshot back to this property so a host can persist it, and a programmatic write
+  reconciles Chart.js and the DOM legend silently without emitting either legend-visibility event.
 - `legend: boolean = true` — additive positive alias for the visible legend; renders a wrapping DOM
   legend whose keyboard-operable buttons toggle
   dataset visibility. The DOM surface preserves long public labels that a canvas legend would clip.
-  Its pressed state honors an effective dataset's declarative `hidden` value before Chart.js is
-  ready and across chart type/plugin rebuilds, while an in-place redraw preserves an explicit
-  legend-button toggle.
+  Its pressed state follows `hiddenDatasets` whenever that controlled snapshot is defined, otherwise
+  the effective dataset's declarative `hidden` value before Chart.js is ready and across chart
+  type/plugin rebuilds.
 - `legendPosition: LyraChartLegendPosition = 'top'` (attribute `legend-position`) — accepts the
   Chart.js `left|top|right|bottom|center|chartArea|{ [scaleId]: number }` positions plus logical
   `start`/`end`; the additive `auto` chooses right above 480px and bottom below that allocation
@@ -74,7 +81,9 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
 - `area: boolean = false`
 - `zoom: boolean = false` — wheel/drag/pinch zoom on the `x` axis only (pan disabled, and the zoom
   range is limited to the original data extent); shows the `reset-zoom-button` while zoomed
-- `height: string = '280px'`
+- `height: string = '280px'` — a valid CSS length used only as the component's private fallback.
+  A consumer-set `--lr-chart-height` always takes precedence; invalid values remove that fallback
+  and likewise leave the public token/default in control.
 - `xLabel: string | null = null` (attribute `x-label`)
 - `yLabel: string | null = null` (attribute `y-label`)
 - `y2Label: string = ''` (attribute `y2-label`)
@@ -93,16 +102,19 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
 - `dataLabels: boolean = false` (attribute `data-labels`) — draws each point's value on the chart via
   the optional `chartjs-plugin-datalabels` peer (see `peers.md`). Unset (the default) leaves labels
   off; because the plugin is registered **per chart instance** (not globally), a `<lr-chart
-  data-labels>` never affects any other chart on the page. If the peer is not installed the chart
-  still renders and the attribute is inert, with one `console.warn`. The screen-reader equivalent is
-  the always-present accessible data table (`show-data-table` makes it visible) — labels are a
-  purely visual, canvas-only addition and add no new a11y surface.
+  data-labels>` never affects any other chart on the page. If the peer is unavailable or cannot
+  register, the core chart remains usable, labels stay disabled, and a localized visible
+  `feature-warning` plus assertive announcement explains the nonfatal limitation. The screen-reader
+  equivalent is the always-present accessible data table (`show-data-table` makes it visible) —
+  labels are a purely visual, canvas-only addition and add no new a11y surface.
 - `stackTotals: boolean = false` (attribute `stack-totals`) — with `stacked` (bar/line only), draws
   the per-category stack total above each stack, via the same `chartjs-plugin-datalabels` peer.
   Null/undefined points are skipped; a category whose every value is null shows no total (not
   `0`). The generated accessible table receives the same formatted total column; a dual-axis stack
   receives separately labelled primary- and secondary-axis total columns. The table totals do not
-  depend on the optional visual-label peer being installed
+  depend on the optional visual-label peer being installed. If that peer is unavailable, the chart
+  retains its core rendering and generated table totals while a localized nonfatal warning explains
+  that the canvas labels cannot be drawn.
 - `config?: LyraChartConfiguration` (attribute: false) — peer-neutral configuration structurally
   compatible with Chart.js's `ChartConfiguration`, deep-merged over the generated
   config; any nested key wins without clobbering sibling generated keys. This is the raw Chart.js
@@ -204,24 +216,41 @@ const series = [
 point/segment, when a generated-table value is activated, or when Enter/Space activates the
 keyboard-current canvas datum; `detail: { datasetIndex: number, index: number, label: string |
 undefined, value: unknown }`). For scatter/bubble points, `label` prefers the per-point label and
-`value` is the complete `ChartPoint`, including optional `r` and `label`.
+`value` is the complete `ChartPoint`, including optional `r` and `label`),
+`lr-before-legend-visibility-change` (cancelable proposal), and
+`lr-legend-visibility-change` (accepted commit). Both legend events carry
+`{ datasetIndex: number, visible: boolean, hiddenDatasets: readonly number[] }`; the latter is the
+complete, sorted, valid next snapshot. Call `preventDefault()` on the proposal to veto the toggle;
+then no property change or commit event occurs.
 
 **Slots:** default — one optional `<script type="application/json">` Chart.js configuration;
-`data-table` — an optional consumer-provided accessible table alternative; `center` —
+`data-table` — an optional consumer-provided complete, paginated, or virtualized accessible table
+alternative; `center` —
 optional overlay content positioned at the chart area's center, useful for doughnut and pie totals.
+
+**Bounded data alternative:** the generated table, keyboard-operable datum model, generated
+point-details in the summary, and automatic canvas name render at most 1,000 category×series
+records. When sampling is necessary, the selected category and series indexes are distributed
+deterministically and retain their first and last endpoints; a localized `data-truncation` notice
+is shown and announced. Supplying `slot="data-table"` suppresses the generated detailed sample and
+notice, so use that escape hatch when the complete data set needs pagination, virtualization, or
+another application-owned presentation.
 
 **CSS parts:** `base`, `plot` (the fixed-height canvas/overlay region), `canvas`, `legend` (the
 wrapping DOM legend), `legend-item` (a dataset-visibility button), `legend-item-hidden` (added to
 that button while its dataset is hidden), `legend-swatch`,
-`reset-zoom-button`, `description`, `data-table`, `center` (the chart-area-centered wrapper for the
-`center` slot), `error` (neutral visible message rendered in place of `canvas` when the optional
-`chart.js` peer dependency fails to load; the failure transition is announced through the shared
-document-level light-DOM assertive sink)
+`reset-zoom-button`, `description`, `notices` (wrapper for nonfatal feature warnings and
+bounded-alternative truncation notices), `data-table`, `data-truncation` (the bounded-alternative
+notice), `feature-warning` (a nonfatal missing optional-feature warning), `center` (the
+chart-area-centered wrapper for the `center` slot), `error` (neutral visible message rendered in
+place of `canvas` when the optional `chart.js` peer dependency fails to load; the failure transition
+is announced through the shared document-level light-DOM assertive sink)
 
-**Themeable custom properties:** `--lr-chart-height` (set programmatically on the host from the
-`height` property; sizes the `plot` region and the host's minimum block size, while a visible table
-or wrapping legend grows the host in normal flow — it must be read from the host, not a shadow-tree
-descendant, since custom properties only cascade downward);
+**Themeable custom properties:** `--lr-chart-height` (the public, consumer-owned plot-height hook;
+it sizes the `plot` region and the host's minimum block size, while a visible table or wrapping
+legend grows the host in normal flow. The `height` property writes only a private fallback, so this
+public token wins across valid, invalid, and unset `height` updates. Set it on the host or an
+ancestor, not a shadow-tree descendant, since custom properties only cascade downward);
 `--lr-chart-grid-color` (default `var(--lr-color-border)`),
 `--lr-chart-tick-color` (default `var(--lr-color-text-quiet)`), `--lr-chart-legend-color`
 (default `var(--lr-color-text)`), `--lr-chart-tooltip-bg` (default `var(--lr-color-surface)`),
@@ -284,7 +313,10 @@ regardless of options), `chartjs-plugin-zoom` (lazy-imported *additionally* only
 later becomes — `true`; never fetched for a chart that keeps `zoom` unset/false, since the plugin
 has a hard dependency on `hammerjs`), and `chartjs-plugin-datalabels` only when `data-labels` or
 `stack-totals` is enabled. Each load is memoized once per page via `chart-loader.ts`, registering
-only the tree-shaken controller/element/scale subset actually used.
+only the tree-shaken controller/element/scale subset actually used. A failed zoom or data-label
+peer is not a failed chart: the canvas, legend, and accessible alternative remain usable; the
+requested enhancement is disabled and a localized static `feature-warning` is visibly rendered and
+announced. In particular, unavailable data labels do not remove generated table totals.
 
 ```html
 <lr-chart type="line" x-label="Day" y-label="kWh" legend></lr-chart>
@@ -333,7 +365,7 @@ only the tree-shaken controller/element/scale subset actually used.
   off-screen, property changes that would otherwise trigger a Chart.js redraw are skipped (and a
   single redraw fires once it re-enters the viewport). Independently, `updated()` only reaches
   Chart.js when at least one of `type`, `labels`, `datasets`, `description`, `grid`, `indexAxis`,
-  `label`, `legend`, `legendPosition`, `min`, `max`, `plugins`, the internal resolved auto legend
+  `label`, `hiddenDatasets`, `legend`, `legendPosition`, `min`, `max`, `plugins`, the internal resolved auto legend
   position, `valueFormatter`, `area`, `height`, `xLabel`, `yLabel`, `y2Label`, `beginAtZero`,
   `horizontal`, `stacked`, any `without*` control, `dataLabels`, `stackTotals`, `config`, the parsed
   slotted config, `zoom`, `locale`, `strings`, or the internal loading state actually changed in

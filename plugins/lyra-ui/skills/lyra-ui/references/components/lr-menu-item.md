@@ -190,9 +190,10 @@ internal shadow-DOM button; `<lr-menu>` is the sole owner of this element's `tab
 same normal, checkbox, and submenu behavior as pointer activation; it is a no-op while `disabled`
 or `loading`. `select(): void` fires `lr-menu-item-select` (also a no-op while `disabled` or
 `loading`). `<lr-menu>` calls `select()` from its Enter/Space keydown handling of the roving-focused
-item. For `type="checkbox"`, either activation path toggles `checked` and fires
-`lr-menu-item-change` first. On a submenu parent it opens the submenu instead and fires neither
-event — see below.
+item. For `type="checkbox"`, either activation path first emits a cancelable
+`lr-menu-item-change` with the proposed next `checked` value; the value commits only if no listener
+prevents that event, while `lr-menu-item-select` and ordinary parent-menu closing still follow.
+On a submenu parent it opens the submenu instead and fires neither event — see below.
 
 `openSubmenu(focus: 'first' | 'last' | 'none' = 'first'): Promise<void>` and
 `closeSubmenu(): Promise<void>` drive the assigned/generated panel and resolve after its matching
@@ -222,10 +223,11 @@ both remain authoritative.
 called with no second argument, so `event.detail` is `null`, not `undefined`; fires on click, or
 when the parent `<lr-menu>`'s own Enter/Space keydown handling calls `select()` on the currently
 roving-focused item; never fired by a submenu parent, which is a disclosure rather than an action),
-`lr-menu-item-change` (`detail: { value, checked }` — fired when a
-`type="checkbox"` item is activated and its `checked` state toggled, in addition to — never instead
-of — `lr-menu-item-select`; never fired for `type="normal"`, and never fired by a submenu parent,
-whose activation opens the panel instead of toggling `checked`),
+`lr-menu-item-change` (cancelable; `detail: { value, checked }` carries the proposed next value
+when a `type="checkbox"` item is activated. `preventDefault()` retains the current checked state,
+but does not suppress the usual `lr-menu-item-select` or parent-menu close. It is never fired for
+`type="normal"` or by a submenu parent, whose activation opens the panel instead of toggling
+`checked`),
 `lr-menu-item-state-change` (`detail: { disabled, hidden }` — emitted when either navigability
 state changes so the parent menu can repair its roving-tabindex state immediately)
 

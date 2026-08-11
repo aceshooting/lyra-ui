@@ -8,7 +8,7 @@
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 22 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 22 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -89,7 +89,20 @@ own main landmark. Multiple Page instances therefore never share a global `#main
 `--lr-page-subheader-height` (`0px`). The six Web Awesome spellings remain accepted as aliases:
 `--aside-width`, `--banner-height`, `--header-height`, `--main-width`, `--menu-width`, and
 `--subheader-height`. Set either spelling on the Page itself; the prefixed name is Lyra's canonical
-form.
+form. The following interaction and overlay paints are inherited inline fallbacks, so an element or
+ancestor may retheme only the named state: `--lr-page-skip-to-content-hover-bg` (default
+`var(--lr-color-brand-quiet)`), `--lr-page-skip-to-content-hover-color` (default
+`var(--lr-color-brand)`), `--lr-page-skip-to-content-active-bg` (default `color-mix(in oklab,
+var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`),
+`--lr-page-skip-to-content-active-color` (default `var(--lr-color-brand)`),
+`--lr-page-navigation-toggle-hover-bg` (default `var(--lr-color-brand-quiet)`),
+`--lr-page-navigation-toggle-hover-color` (default `var(--lr-color-brand)`),
+`--lr-page-navigation-toggle-active-bg` (default `color-mix(in oklab, var(--lr-color-brand-quiet),
+var(--lr-color-mix-partner) var(--lr-color-mix-active))`),
+`--lr-page-navigation-toggle-active-color` (default `var(--lr-color-brand)`),
+`--lr-page-navigation-backdrop-bg` (default `var(--lr-color-overlay)`),
+`--lr-page-navigation-drawer-bg` (default `var(--lr-color-surface-overlay)`), and
+`--lr-page-navigation-drawer-shadow` (default `var(--lr-shadow-l)`).
 
 `disable-sticky` is a whitespace-token attribute, not a comma-separated value. Accepted tokens are
 `banner`, `header`, `subheader`, `menu`, and `aside`; each only disables that region. Sticky offsets

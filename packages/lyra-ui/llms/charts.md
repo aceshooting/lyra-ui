@@ -224,7 +224,8 @@ another application-owned presentation.
 **CSS parts:** `base`, `plot` (the fixed-height canvas/overlay region), `canvas`, `legend` (the
 wrapping DOM legend), `legend-item` (a dataset-visibility button), `legend-item-hidden` (added to
 that button while its dataset is hidden), `legend-swatch`,
-`reset-zoom-button`, `description`, `data-table`, `data-truncation` (the bounded-alternative
+`reset-zoom-button`, `description`, `notices` (wrapper for nonfatal feature warnings and
+bounded-alternative truncation notices), `data-table`, `data-truncation` (the bounded-alternative
 notice), `feature-warning` (a nonfatal missing optional-feature warning), `center` (the
 chart-area-centered wrapper for the `center` slot), `error` (neutral visible message rendered in
 place of `canvas` when the optional `chart.js` peer dependency fails to load; the failure transition
@@ -599,7 +600,7 @@ complete `hiddenDatasets` snapshot).
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
-`reset-zoom-button`, `description`, `data-table`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
+`reset-zoom-button`, `description`, `notices`, `data-table`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink — see
 `llms/components/lr-chart.md`).
@@ -681,7 +682,7 @@ labels are regenerated from the rebinned sample range.
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
-`reset-zoom-button`, `description`, `data-table`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
+`reset-zoom-button`, `description`, `notices`, `data-table`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink —
 inherited from `LyraChart`, unaffected by the binning logic).

@@ -34,6 +34,7 @@ import type { LyraToolResultViewEventMap } from './components/agent-tools/tool-r
 import type { LyraToolSelectDialogEventMap } from './components/agent-tools/tool-select-dialog/tool-select-dialog.class.js';
 import type { LyraToolTimelineEventMap } from './components/agent-tools/tool-timeline/tool-timeline.class.js';
 import type { LyraTraceTreeEventMap } from './components/agent-tools/trace-tree/trace-tree.class.js';
+import type { LyraBoxPlotEventMap } from './components/charts/chart/box-plot.class.js';
 import type { LyraChartEventMap } from './components/charts/chart/chart.class.js';
 import type { LyraLiteChartEventMap } from './components/charts/chart/lite-chart.class.js';
 import type { LyraAgentWorkspaceEventMap } from './components/conversation/agent-workspace/agent-workspace.class.js';
@@ -416,6 +417,18 @@ export type LyraAttachmentsAddEvent = LyraPromptInputEventMap['lr-attachments-ad
 export type LyraAudioRequestEvent =
   | LyraAttachmentTriggerEventMap['lr-audio-request']
   | LyraPromptInputEventMap['lr-audio-request'];
+
+/**
+ * `lr-before-legend-visibility-change` — dispatched by 2 components: `<lr-box-plot>`,
+ * `<lr-chart>`.
+ *
+ * A union of 2 component entries, so `event.detail` here exposes only what all of them share. For
+ * one component's exact detail, index its own map — e.g.
+ * `LyraBoxPlotEventMap['lr-before-legend-visibility-change']`.
+ */
+export type LyraBeforeLegendVisibilityChangeEvent =
+  | LyraBoxPlotEventMap['lr-before-legend-visibility-change']
+  | LyraChartEventMap['lr-before-legend-visibility-change'];
 
 /**
  * `lr-before-page-change` — dispatched by `<lr-pagination>`.
@@ -1449,6 +1462,17 @@ export type LyraLazyChangeEvent =
 export type LyraLazyLoadEvent =
   | LyraTreeEventMap['lr-lazy-load']
   | LyraTreeItemEventMap['lr-lazy-load'];
+
+/**
+ * `lr-legend-visibility-change` — dispatched by 2 components: `<lr-box-plot>`, `<lr-chart>`.
+ *
+ * A union of 2 component entries, so `event.detail` here exposes only what all of them share. For
+ * one component's exact detail, index its own map — e.g.
+ * `LyraBoxPlotEventMap['lr-legend-visibility-change']`.
+ */
+export type LyraLegendVisibilityChangeEvent =
+  | LyraBoxPlotEventMap['lr-legend-visibility-change']
+  | LyraChartEventMap['lr-legend-visibility-change'];
 
 /**
  * `lr-level` — dispatched by `<lr-push-to-talk>`.
@@ -3071,6 +3095,7 @@ export interface LyraGlobalEventMap {
   'lr-attachment-retry': LyraAttachmentRetryEvent;
   'lr-attachments-add': LyraAttachmentsAddEvent;
   'lr-audio-request': LyraAudioRequestEvent;
+  'lr-before-legend-visibility-change': LyraBeforeLegendVisibilityChangeEvent;
   'lr-before-page-change': LyraBeforePageChangeEvent;
   'lr-blur': LyraBlurEvent;
   'lr-branch-change': LyraBranchChangeEvent;
@@ -3173,6 +3198,7 @@ export interface LyraGlobalEventMap {
   'lr-layout-change': LyraLayoutChangeEvent;
   'lr-lazy-change': LyraLazyChangeEvent;
   'lr-lazy-load': LyraLazyLoadEvent;
+  'lr-legend-visibility-change': LyraLegendVisibilityChangeEvent;
   'lr-level': LyraLevelEvent;
   'lr-lightbox-close': LyraLightboxCloseEvent;
   'lr-line-click': LyraLineClickEvent;

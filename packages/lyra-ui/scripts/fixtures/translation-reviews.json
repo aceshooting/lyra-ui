@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "source": {
     "path": "src/internal/localization.ts#DEFAULT_STRINGS",
-    "keyCount": 1237,
-    "sha256": "sha256:9724ed797773a1540e5b737a4b016dea78a9431bfe5ee54763e250036e1a2386"
+    "keyCount": 1241,
+    "sha256": "sha256:6d857431e5c1c80e3e49cf5ef801de3f4564ce82d2ac33666d924b6670f58047"
   },
   "upstreamLocaleBreadth": {
     "webAwesome": {
@@ -167,12 +167,12 @@
       "locale": "fa",
       "direction": "rtl",
       "source": {
-        "keyCount": 1237,
-        "sha256": "sha256:9724ed797773a1540e5b737a4b016dea78a9431bfe5ee54763e250036e1a2386"
+        "keyCount": 1241,
+        "sha256": "sha256:6d857431e5c1c80e3e49cf5ef801de3f4564ce82d2ac33666d924b6670f58047"
       },
       "catalog": {
-        "keyCount": 1237,
-        "sha256": "sha256:d188250884ea148ea162fe139211c410f536e1755652df611cd332c1188e4f6c"
+        "keyCount": 1241,
+        "sha256": "sha256:d6cd07e8f6c35216fce6bd168124cb00511fc25f018ec28c0e44c30334f2bfdc"
       },
       "translator": {
         "status": "complete-original",
@@ -183,8 +183,8 @@
       "reviewer": {
         "status": "approved",
         "role": "independent localization reviewer",
-        "reviewedAt": "2026-08-10",
-        "evidence": "An AI-assisted independent repository review inspected the original 1,232 English/Persian message pairs in source order, identified and re-reviewed 621 semantic, grammar, register, and orthography corrections, and verified every placeholder and plural shape plus all 42 original exact-English allowlist rationales. A second independent review verified the two added Carousel announcement messages, their placeholder order and RTL punctuation, both new allowlist rationales, the exact 1,234-key catalog hash, and strict Chromium/Firefox/WebKit behavior; no upstream translated text was consulted. This records code-and-language reviews and does not claim human or native-speaker identity. An AI-assisted independent follow-up review checked the updated retrievalCompareOverlap message for Persian RTL grammar, {left}/{right}/{percent} placement, punctuation, catalog order, and the current source/catalog snapshots; it does not claim native-speaker review."
+        "reviewedAt": "2026-08-11",
+        "evidence": "An AI-assisted independent repository review inspected the original 1,232 English/Persian message pairs in source order, identified and re-reviewed 621 semantic, grammar, register, and orthography corrections, and verified every placeholder and plural shape plus all 42 original exact-English allowlist rationales. A second independent review verified the two added Carousel announcement messages, their placeholder order and RTL punctuation, both new allowlist rationales, the exact 1,234-key catalog hash, and strict Chromium/Firefox/WebKit behavior; no upstream translated text was consulted. This records code-and-language reviews and does not claim human or native-speaker identity. An AI-assisted independent follow-up review checked the updated retrievalCompareOverlap message for Persian RTL grammar, {left}/{right}/{percent} placement, punctuation, catalog order, and the current source/catalog snapshots; it does not claim native-speaker review. A further AI-assisted independent review checked the four chart sampling and optional-feature-warning messages for Persian terminology, RTL grammar, catalog order, and the current 1,241-key source/catalog snapshots; it does not claim native-speaker review."
       },
       "englishIdenticalAllowlist": [
         {
@@ -369,12 +369,12 @@
       "locale": "he",
       "direction": "rtl",
       "source": {
-        "keyCount": 1237,
-        "sha256": "sha256:9724ed797773a1540e5b737a4b016dea78a9431bfe5ee54763e250036e1a2386"
+        "keyCount": 1241,
+        "sha256": "sha256:6d857431e5c1c80e3e49cf5ef801de3f4564ce82d2ac33666d924b6670f58047"
       },
       "catalog": {
-        "keyCount": 1237,
-        "sha256": "sha256:38f03627f60f580e9e112921d7587c4239aae6a309b6c1b03b5abe6a378678a4"
+        "keyCount": 1241,
+        "sha256": "sha256:7fc766c048260e88fa391ffda72742bfeb5020c12b3a86aae17ef21af70b1efb"
       },
       "translator": {
         "status": "complete-original",
@@ -385,8 +385,8 @@
       "reviewer": {
         "status": "approved",
         "role": "independent localization reviewer",
-        "reviewedAt": "2026-08-10",
-        "evidence": "An AI-assisted independent repository review checked the original 1,232 Hebrew messages in DEFAULT_STRINGS order for meaning, fluent UI grammar and register, RTL wording, plural categories, placeholder preservation, punctuation, technical terminology, and all 57 original English-identical rationales. A second independent review verified the two added Carousel announcement messages, their placeholder order and RTL punctuation, both new allowlist rationales, the exact 1,234-key catalog hash, and strict Chromium/Firefox/WebKit behavior. This records code-and-language reviews and does not claim human or native-speaker identity. An AI-assisted independent follow-up review checked the updated retrievalCompareOverlap message for Hebrew RTL grammar, {left}/{right}/{percent} placement, punctuation, catalog order, and the current source/catalog snapshots; it does not claim native-speaker review."
+        "reviewedAt": "2026-08-11",
+        "evidence": "An AI-assisted independent repository review checked the original 1,232 Hebrew messages in DEFAULT_STRINGS order for meaning, fluent UI grammar and register, RTL wording, plural categories, placeholder preservation, punctuation, technical terminology, and all 57 original English-identical rationales. A second independent review verified the two added Carousel announcement messages, their placeholder order and RTL punctuation, both new allowlist rationales, the exact 1,234-key catalog hash, and strict Chromium/Firefox/WebKit behavior. This records code-and-language reviews and does not claim human or native-speaker identity. An AI-assisted independent follow-up review checked the updated retrievalCompareOverlap message for Hebrew RTL grammar, {left}/{right}/{percent} placement, punctuation, catalog order, and the current source/catalog snapshots; it does not claim native-speaker review. A further AI-assisted independent review checked the four chart sampling and optional-feature-warning messages for Hebrew terminology, RTL grammar, catalog order, and the current 1,241-key source/catalog snapshots; it does not claim native-speaker review."
       },
       "englishIdenticalAllowlist": [
         {

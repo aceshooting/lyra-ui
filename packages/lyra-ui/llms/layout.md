@@ -1285,7 +1285,13 @@ while not disabled; handled by the parent `<lr-reorder-list>`, which performs th
 wrapper).
 
 **Themeable custom properties:** `--lr-reorder-item-gap` (default `var(--lr-space-xs)`) — gap
-between the move buttons and the row content.
+between the move buttons and the row content. The move-button interaction paints are independent,
+inherited inline fallbacks: `--lr-reorder-item-move-button-hover-bg` (default
+`var(--lr-color-brand-quiet)`), `--lr-reorder-item-move-button-hover-color` (default
+`var(--lr-color-brand)`), `--lr-reorder-item-move-button-active-bg` (default `color-mix(in oklab,
+var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`), and
+`--lr-reorder-item-move-button-active-color` (default `var(--lr-color-brand)`). Set them on an item
+or any ancestor to retheme only the hover or pressed move affordance.
 
 ---
 
@@ -1369,9 +1375,9 @@ repainting every other element that read them.
 `--lr-segmented-active-bg` (default `color-mix(in oklab, transparent,
 var(--lr-color-mix-partner) var(--lr-color-mix-active))`) and
 `--lr-segmented-active-color` (default
-`var(--lr-segmented-hover-color, var(--lr-color-text))`) style a pressed unchecked segment.
-They use the same inline-fallback inheritance, leaving checked and merely hovered siblings
-independent.
+`var(--lr-segmented-hover-color, var(--lr-color-text))`) style a pressed segment that is neither
+checked nor disabled. They use the same inline-fallback inheritance, leaving checked and merely
+hovered siblings independent.
 
 Otherwise shared tokens — `--lr-color-border`/`-surface`/`-text`/
 `-text-quiet`, `--lr-radius`, `--lr-font-weight-semibold`, `--lr-shadow-xs`,
@@ -1971,7 +1977,11 @@ in the overlay presentation).
 `--lr-responsive-panel-sheet-max-block-size` (default `85dvh`, falling back to `85vh` where `dvh`
 isn't supported — the maximum height of a `variant="bottom-sheet"` overlay panel, so a long sheet
 stops short of the top of the viewport instead of covering it; it has no effect on
-`variant="fullscreen"` or on the inline presentation), plus shared tokens (`--lr-color-border`, `--lr-color-surface`,
+`variant="fullscreen"` or on the inline presentation),
+`--lr-responsive-panel-overlay-panel-bg` (default `var(--lr-color-surface-overlay)`), and
+`--lr-responsive-panel-overlay-panel-shadow` (default `var(--lr-shadow-l)`). The latter two are
+inherited inline fallbacks for `[part="panel"]` only while the effective presentation is overlay;
+they do not affect inline panels. Plus shared tokens (`--lr-color-border`, `--lr-color-surface`,
 `--lr-space-*`, `--lr-radius`, `--lr-shadow`).
 
 **Optional peer deps:** none.
@@ -2228,9 +2238,10 @@ internal shadow-DOM button; `<lr-menu>` is the sole owner of this element's `tab
 same normal, checkbox, and submenu behavior as pointer activation; it is a no-op while `disabled`
 or `loading`. `select(): void` fires `lr-menu-item-select` (also a no-op while `disabled` or
 `loading`). `<lr-menu>` calls `select()` from its Enter/Space keydown handling of the roving-focused
-item. For `type="checkbox"`, either activation path toggles `checked` and fires
-`lr-menu-item-change` first. On a submenu parent it opens the submenu instead and fires neither
-event — see below.
+item. For `type="checkbox"`, either activation path first emits a cancelable
+`lr-menu-item-change` with the proposed next `checked` value; the value commits only if no listener
+prevents that event, while `lr-menu-item-select` and ordinary parent-menu closing still follow.
+On a submenu parent it opens the submenu instead and fires neither event — see below.
 
 `openSubmenu(focus: 'first' | 'last' | 'none' = 'first'): Promise<void>` and
 `closeSubmenu(): Promise<void>` drive the assigned/generated panel and resolve after its matching
@@ -2260,10 +2271,11 @@ both remain authoritative.
 called with no second argument, so `event.detail` is `null`, not `undefined`; fires on click, or
 when the parent `<lr-menu>`'s own Enter/Space keydown handling calls `select()` on the currently
 roving-focused item; never fired by a submenu parent, which is a disclosure rather than an action),
-`lr-menu-item-change` (`detail: { value, checked }` — fired when a
-`type="checkbox"` item is activated and its `checked` state toggled, in addition to — never instead
-of — `lr-menu-item-select`; never fired for `type="normal"`, and never fired by a submenu parent,
-whose activation opens the panel instead of toggling `checked`),
+`lr-menu-item-change` (cancelable; `detail: { value, checked }` carries the proposed next value
+when a `type="checkbox"` item is activated. `preventDefault()` retains the current checked state,
+but does not suppress the usual `lr-menu-item-select` or parent-menu close. It is never fired for
+`type="normal"` or by a submenu parent, whose activation opens the panel instead of toggling
+`checked`),
 `lr-menu-item-state-change` (`detail: { disabled, hidden }` — emitted when either navigability
 state changes so the parent menu can repair its roving-tabindex state immediately)
 
@@ -3296,7 +3308,20 @@ own main landmark. Multiple Page instances therefore never share a global `#main
 `--lr-page-subheader-height` (`0px`). The six Web Awesome spellings remain accepted as aliases:
 `--aside-width`, `--banner-height`, `--header-height`, `--main-width`, `--menu-width`, and
 `--subheader-height`. Set either spelling on the Page itself; the prefixed name is Lyra's canonical
-form.
+form. The following interaction and overlay paints are inherited inline fallbacks, so an element or
+ancestor may retheme only the named state: `--lr-page-skip-to-content-hover-bg` (default
+`var(--lr-color-brand-quiet)`), `--lr-page-skip-to-content-hover-color` (default
+`var(--lr-color-brand)`), `--lr-page-skip-to-content-active-bg` (default `color-mix(in oklab,
+var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`),
+`--lr-page-skip-to-content-active-color` (default `var(--lr-color-brand)`),
+`--lr-page-navigation-toggle-hover-bg` (default `var(--lr-color-brand-quiet)`),
+`--lr-page-navigation-toggle-hover-color` (default `var(--lr-color-brand)`),
+`--lr-page-navigation-toggle-active-bg` (default `color-mix(in oklab, var(--lr-color-brand-quiet),
+var(--lr-color-mix-partner) var(--lr-color-mix-active))`),
+`--lr-page-navigation-toggle-active-color` (default `var(--lr-color-brand)`),
+`--lr-page-navigation-backdrop-bg` (default `var(--lr-color-overlay)`),
+`--lr-page-navigation-drawer-bg` (default `var(--lr-color-surface-overlay)`), and
+`--lr-page-navigation-drawer-shadow` (default `var(--lr-shadow-l)`).
 
 `disable-sticky` is a whitespace-token attribute, not a comma-separated value. Accepted tokens are
 `banner`, `header`, `subheader`, `menu`, and `aside`; each only disables that region. Sticky offsets

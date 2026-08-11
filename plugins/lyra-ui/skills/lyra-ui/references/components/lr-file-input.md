@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 22 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 22 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -147,12 +147,15 @@ the library uses, not a copy of it, so `--lr-form-control-required-content`,
 `--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
 here exactly as they do on `lr-input`. See `llms/shared.md` → "The required-field marker".
 
-**Themeable custom properties:** `--lr-file-input-compact-padding` (default `var(--lr-space-s)`) —
+**Themeable custom properties:** `--lr-file-input-gap` (default `var(--lr-space-xs)`) — gap between
+the dropzone's slotted children; `--lr-file-input-radius` (default `var(--lr-radius)`) — corner
+radius of `[part='base']`; `--lr-file-input-compact-padding` (default `var(--lr-space-s)`) —
 `[part='base']`'s padding while `compact`; `--lr-file-input-compact-gap` (default
 `var(--lr-space-2xs)`) — the gap between the dropzone's slotted children while `compact`; and
 `--lr-file-input-compact-font-size` (default `var(--lr-font-size-sm)`) — the label's font size while
 `compact`. `--lr-file-input-font-size` (default `var(--lr-form-control-font-size)`) controls the
-dropzone text size. The three compact properties apply only while `compact` is set, so they are the way to tune a dense dropzone
+dropzone text size. The compact gap falls back to `--lr-file-input-gap` when its compact-specific
+property is unset. The compact properties apply only while `compact` is set, so they are the way to tune a dense dropzone
 without re-pointing shared spacing tokens for everything else on the page. The drag accept/reject
 highlight on `[part='base'][data-drag-state='accept'|'reject']` is independently overridable too:
 `--lr-file-input-accept-border-color` (default `var(--lr-color-success)`) and
@@ -195,9 +198,10 @@ an extension-only `accept` list.
 - Paste-from-clipboard **is** supported and on by default: a `paste` event on the dropzone reads
   `e.clipboardData.files` and routes it through the same accept/reject classification as a drop.
   Set `paste="false"` (or `.paste = false`) to opt out.
-- Dragged folders are traversed recursively in `multiple` mode and every nested file is added. In
-  single-file mode a folder is reported as `rejected[].reason === 'directory'` (paired with a
-  synthetic zero-byte `File` carrying the folder name).
+- Dragged folders are traversed recursively in `multiple` mode with a 10,000-entry budget. An
+  over-budget, cancelled, or superseded traversal rejects the complete drop and emits no partial
+  `lr-files` result. In single-file mode a folder is reported as `rejected[].reason === 'directory'`
+  (paired with a synthetic zero-byte `File` carrying the folder name).
 - `maxFileSize` fails safe rather than open: `0` (the default) or `Infinity` mean "no limit", but a
   `NaN`/negative value — an unparsable `max-file-size` attribute, or a config that hasn't loaded
   yet — falls back to a 25 MB cap (exported as `DEFAULT_MAX_FILE_SIZE_BYTES`) instead of disabling

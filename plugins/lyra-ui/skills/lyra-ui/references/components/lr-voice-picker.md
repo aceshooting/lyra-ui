@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -135,10 +135,14 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 
 - `--lr-voice-picker-preview-active-border` — Active preview border. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-preview-active-color` — Active preview icon. Default: `var(--lr-color-brand)`.
+- `--lr-voice-picker-open-border-color` — Open trigger border color. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-option-active-bg` — Active option fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-voice-picker-option-selected-border` — Selected option border. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-option-selected-color` — Selected option text. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-option-selected-bg` — Selected option fill. Default: `transparent`.
 - `--lr-voice-picker-option-selected-font-weight` — Selected option label weight. Default: `var(--lr-font-weight-semibold)`.
+- `--lr-voice-picker-option-synthetic-border-style` — Synthetic stale-value row border style. Default: `dashed`.
+- `--lr-voice-picker-option-synthetic-border-color` — Synthetic stale-value row border color. Default: `var(--lr-color-border)`.
+- `--lr-voice-picker-option-synthetic-font-style` — Synthetic stale-value option-label font style. Default: `italic`.
 - `--lr-voice-picker-preview-hover-bg` — Preview hover fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-voice-picker-preview-hover-color` — Preview hover icon. Default: `var(--lr-color-brand)`.

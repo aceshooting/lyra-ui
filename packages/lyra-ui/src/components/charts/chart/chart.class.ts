@@ -37,7 +37,7 @@ export type { LyraChartLegendVisibilityChangeDetail } from './chart-legend-visib
 import { sampleChartTableIndexes } from './chart-table-sampling.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_liteChartMarkSummary, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_resetZoom } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_liteChartMarkSummary, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_resetZoom } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -438,6 +438,7 @@ function labelText(value: unknown): string {
  * @csspart center - The chart-area-centered overlay wrapper for the `center` slot.
  * @csspart error - Static visible error shown instead of `canvas` when the optional `chart.js`
  *   peer dependency is not installed; its transition is announced through a shared light-DOM alert.
+ * @csspart notices - Wrapper for nonfatal feature warnings and generated-data truncation notices.
  * @csspart data-truncation - Explanation shown when the generated accessible alternative samples
  *   a data set larger than its 1,000-record ceiling.
  * @csspart feature-warning - Static nonfatal warning when a requested optional feature peer is
@@ -512,12 +513,15 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     chartAxisTotal: LYRA_DEFAULT_chartAxisTotal,
     chartCategory: LYRA_DEFAULT_chartCategory,
     chartData: LYRA_DEFAULT_chartData,
+    chartDataLabelsUnavailable: LYRA_DEFAULT_chartDataLabelsUnavailable,
+    chartDataSampled: LYRA_DEFAULT_chartDataSampled,
     chartMissingLibrary: LYRA_DEFAULT_chartMissingLibrary,
     chartPointLabel: LYRA_DEFAULT_chartPointLabel,
     chartPrimaryAxis: LYRA_DEFAULT_chartPrimaryAxis,
     chartSecondaryAxis: LYRA_DEFAULT_chartSecondaryAxis,
     chartSeriesLabel: LYRA_DEFAULT_chartSeriesLabel,
     chartSeriesNoData: LYRA_DEFAULT_chartSeriesNoData,
+    chartStackTotalsUnavailable: LYRA_DEFAULT_chartStackTotalsUnavailable,
     chartSummary: LYRA_DEFAULT_chartSummary,
     chartSummaryEmpty: LYRA_DEFAULT_chartSummaryEmpty,
     chartSummarySeparator: LYRA_DEFAULT_chartSummarySeparator,
@@ -535,6 +539,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     chartTypeRadar: LYRA_DEFAULT_chartTypeRadar,
     chartTypeScatter: LYRA_DEFAULT_chartTypeScatter,
     chartValueLabel: LYRA_DEFAULT_chartValueLabel,
+    chartZoomUnavailable: LYRA_DEFAULT_chartZoomUnavailable,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
     liteChartMarkSummary: LYRA_DEFAULT_liteChartMarkSummary,

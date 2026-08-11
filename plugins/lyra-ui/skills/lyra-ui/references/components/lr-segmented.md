@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -82,13 +82,20 @@ when a label is a single character and the track ends up taller than its nominal
 thumb lifted a hair off its own track) style the checked segment's pill;
 `--lr-segmented-hover-color` (default `var(--lr-color-text)`) styles a hovered segment that is
 neither checked nor disabled, independently of the four above — so recoloring the checked pill never
-bleeds onto hover. All five are inline `var()` fallbacks at the
+bleeds onto hover. These five existing state hooks are inline `var()` fallbacks at the
 point of use rather than `:host` declarations, so each can be set on the element *or on any
 ancestor*; unset, each falls back to the token its rule used before. They exist because
 `::part(segment)[aria-checked='true']` is invalid CSS — Shadow Parts forbids an attribute selector
 after `::part()` — which previously left hijacking the library-wide
 `--lr-color-surface`/`--lr-color-text` tokens as the only way to restyle a selected segment,
 repainting every other element that read them.
+
+`--lr-segmented-active-bg` (default `color-mix(in oklab, transparent,
+var(--lr-color-mix-partner) var(--lr-color-mix-active))`) and
+`--lr-segmented-active-color` (default
+`var(--lr-segmented-hover-color, var(--lr-color-text))`) style a pressed segment that is neither
+checked nor disabled. They use the same inline-fallback inheritance, leaving checked and merely
+hovered siblings independent.
 
 Otherwise shared tokens — `--lr-color-border`/`-surface`/`-text`/
 `-text-quiet`, `--lr-radius`, `--lr-font-weight-semibold`, `--lr-shadow-xs`,

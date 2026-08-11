@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 12 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`, `lr-scatter-chart` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -27,7 +27,7 @@ Everything else is inherited verbatim from `lr-chart`; each name below has the s
 and behavior there. **See `llms/components/lr-chart.md` for the details, code example, and gotchas
 of every entry in these lists.**
 
-**Properties:** `description`, `grid`, `indexAxis` (`index-axis`), `label`, `legendPosition`
+**Properties:** `description`, `grid`, `indexAxis` (`index-axis`), `label`, `hiddenDatasets`, `legendPosition`
 (`legend-position`), `max`, `min`, `plugins`, `stacked`, `withoutAnimation` (`without-animation`),
 `withoutLegend` (`without-legend`), `withoutTooltip` (`without-tooltip`), `xLabel` (`x-label`),
 `yLabel` (`y-label`), plus additive `labels`, `datasets`, `legend`, `valueFormatter`, `area`, `zoom`,
@@ -41,12 +41,14 @@ locked to this tag's value.
 `refreshTheme()`.
 
 **Events:** `lr-zoom` (`detail: { zoomed: boolean }`), `lr-point-click` (`detail: { datasetIndex,
-index, label, value }`).
+index, label, value }`), `lr-before-legend-visibility-change` (cancelable), and
+`lr-legend-visibility-change` (commit; both legend events carry `datasetIndex`, `visible`, and the
+complete `hiddenDatasets` snapshot).
 
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
-`reset-zoom-button`, `description`, `data-table`, `center`, `error` (neutral visible message
+`reset-zoom-button`, `description`, `notices`, `data-table`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink — see
 `llms/components/lr-chart.md`).

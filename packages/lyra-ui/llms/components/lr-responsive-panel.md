@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -69,7 +69,11 @@ in the overlay presentation).
 `--lr-responsive-panel-sheet-max-block-size` (default `85dvh`, falling back to `85vh` where `dvh`
 isn't supported — the maximum height of a `variant="bottom-sheet"` overlay panel, so a long sheet
 stops short of the top of the viewport instead of covering it; it has no effect on
-`variant="fullscreen"` or on the inline presentation), plus shared tokens (`--lr-color-border`, `--lr-color-surface`,
+`variant="fullscreen"` or on the inline presentation),
+`--lr-responsive-panel-overlay-panel-bg` (default `var(--lr-color-surface-overlay)`), and
+`--lr-responsive-panel-overlay-panel-shadow` (default `var(--lr-shadow-l)`). The latter two are
+inherited inline fallbacks for `[part="panel"]` only while the effective presentation is overlay;
+they do not affect inline panels. Plus shared tokens (`--lr-color-border`, `--lr-color-surface`,
 `--lr-space-*`, `--lr-radius`, `--lr-shadow`).
 
 **Optional peer deps:** none.

@@ -43,6 +43,7 @@ const coreRawBudget = {
   reviewedBaselineBytes: 3_700_000,
   stableRootRegistrationAllowanceBytes: 200_000,
   reviewedRemediationAllowanceBytes: 35_000,
+  batchFourRemediationAllowanceBytes: 10_000,
 };
 
 const bundleEntries = {
@@ -117,13 +118,17 @@ const bundleEntries = {
     // leak. Combined with the unchanged 200,000 B root-registration allowance, the new ceiling
     // leaves ~2.8% headroom over the measured bundle.
     //
-    // The root fixture now measures 3,931,759 B (3839.6 KiB) across the same 268 registrations,
-    // with no eager optional peer. The 35,000 B allowance leaves 3,241 B of headroom for that
-    // measured implementation growth without relaxing any granular consumer budget.
+    // The root fixture measured 3,931,759 B (3839.6 KiB) across the same 268 registrations,
+    // with no eager optional peer. Batch 4's bounded data alternatives, nonfatal feature
+    // warnings, transcript hardening, and layout/accessibility repairs raise the exact packed
+    // measurement to 3849.1 KiB without introducing a peer or registration. The named 10,000 B
+    // Batch 4 allowance leaves roughly 3.5 KiB of headroom for that reviewed implementation
+    // growth without relaxing any granular consumer budget.
     maxRawBytes:
       coreRawBudget.reviewedBaselineBytes +
       coreRawBudget.stableRootRegistrationAllowanceBytes +
-      coreRawBudget.reviewedRemediationAllowanceBytes,
+      coreRawBudget.reviewedRemediationAllowanceBytes +
+      coreRawBudget.batchFourRemediationAllowanceBytes,
   },
   // The other half of the registration split, and the reason the `core` budget above could move to
   // `all.js` without losing coverage: a bare `import '@aceshooting/lyra-ui'` must still collapse to

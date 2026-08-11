@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -158,7 +158,13 @@ so it isn't clipped by the container's own `overflow: auto`). `[part="base"]` al
 mouse-hover outline — a subtler preview of that same `:focus-visible` ring, shown because the part
 always carries `tabindex="0"` and is a real keyboard-navigable target — tinted via
 `--lr-virtual-list-hover-outline-color` (default `var(--lr-color-border-strong)`); set it to
-`transparent` to opt out of the hover treatment entirely.
+`transparent` to opt out of the hover treatment entirely. Its remaining longhands are independently
+themeable with `--lr-virtual-list-hover-outline-width` (default
+`var(--lr-border-width-thin)`), `--lr-virtual-list-hover-outline-style` (default `solid`), and
+`--lr-virtual-list-hover-outline-offset` (default
+`calc(-1 * var(--lr-border-width-thin))`). All four hover-outline hooks are inline fallbacks and
+there is intentionally no pressed state: the list viewport is a scroll surface rather than an
+activation target.
 
 **Optional peer deps:** none.
 

@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -89,7 +89,12 @@ rendered when the step has one, additionally to — never instead of — `step-i
 (the completed-checkmark glyph, shown for `completed` steps instead of `step-index`), `step-label`
 (the step's label text).
 
-**Themeable custom properties:** `--lr-stepper-current-color` (default `var(--lr-color-text)`) —
+**Themeable custom properties:** `--lr-stepper-hover-bg` (default
+`var(--lr-color-brand-quiet)`) and `--lr-stepper-hover-color` (default
+`var(--lr-color-text)`) style a hovered non-disabled step. `--lr-stepper-active-bg` (default
+`color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner)
+var(--lr-color-mix-active))`) and `--lr-stepper-active-color` (default `var(--lr-color-text)`)
+style a pressed non-disabled step. `--lr-stepper-current-color` (default `var(--lr-color-text)`) —
 text color of the `current` step. `--lr-stepper-current-font-weight` (default
 `var(--lr-font-weight-semibold)`) — font weight of the `current` step's label.
 `--lr-stepper-error-color` (default `var(--lr-color-danger)`) —

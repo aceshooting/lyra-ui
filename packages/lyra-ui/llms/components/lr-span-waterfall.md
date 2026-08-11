@@ -27,10 +27,18 @@ tokensIn?: number; tokensOut?: number; costText?: string; detail?: string }`, ex
 wall-clock timestamps; `endMs` is absent while the span is still running. `costText` is preformatted
 by the host (e.g. `"$0.0012"`) and rendered verbatim, never parsed or summed. One flat array powers
 both this component (timeline projection via `startMs`/`endMs`) and `lr-trace-tree` (hierarchy
-projection via `parentId`) — never two shapes. `activeSpanId: string | null = null`
+projection via `parentId`) — never two shapes. Foreign runtime `kind` and `status` values render
+as `'other'` and `'pending'` rather than throwing, although hosts should continue to use the
+documented literal sets. `activeSpanId: string | null = null`
 (attribute `active-span-id`), `viewStartMs: number | null = null` (attribute `view-start-ms`) and
 `viewEndMs: number | null = null` (attribute `view-end-ms`) — override the auto-computed time
 window, `hideAxis: boolean = false` (attribute `hide-axis`), and `label: string = ''`.
+
+The granular `@aceshooting/lyra-ui/components/agent-tools/trace-tree/trace-tree.js` entry also
+type-exports `LyraSpanKind` and `LyraSpanStatus`, and exports
+`normalizeLyraSpanKind(value)` / `normalizeLyraSpanStatus(value)` for normalizing provider data
+before assigning `spans`. These helpers are intentionally granular-only rather than root-barrel
+exports.
 
 **Events:** `lr-span-select` — `detail: { id: string }`, a bar/row was activated (click, Enter,
 Space).

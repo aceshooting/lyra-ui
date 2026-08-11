@@ -8,7 +8,7 @@
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -179,9 +179,23 @@ first, with the Lyra/token values as fallbacks. `--lr-tab-group-vertical-nav-max
 (default `var(--lr-size-12rem)`) caps a `start`/`end` nav's logical inline size while still allowing
 it to shrink in a constrained allocation. Its inline fallback means it can be set on the group or
 an ancestor; long single-line tab labels ellipsize within the cap rather than expanding the group or
-starving the panel. Otherwise shared tokens —
-`--lr-space-xs/-s/-m`, `--lr-color-border/-text-quiet/-text/-brand`, `--lr-transition-fast`,
-`--lr-radius`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
+starving the panel.
+
+`--lr-tab-group-active-bg` (default `color-mix(in oklab, transparent,
+var(--lr-color-mix-partner) var(--lr-color-mix-active))`) and
+`--lr-tab-group-active-color` (default
+`var(--lr-tab-group-hover-color, var(--lr-color-text))`) style a pressed, non-disabled tab.
+The overflowing row's controls have their own hooks:
+`--lr-tab-group-scroll-button-hover-color` (default `var(--lr-color-text)`),
+`--lr-tab-group-scroll-button-active-bg` (default `color-mix(in oklab, transparent,
+var(--lr-color-mix-partner) var(--lr-color-mix-active))`), and
+`--lr-tab-group-scroll-button-active-color` (default `var(--lr-color-text)`). Each is an
+inline fallback, so a wrapper can retheme the interaction state without affecting ordinary tabs,
+selection, or the other control state.
+
+Otherwise shared tokens — `--lr-space-xs/-s/-m`,
+`--lr-color-border/-text-quiet/-text/-brand`, `--lr-transition-fast`, `--lr-radius`,
+`--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
 **Optional peer deps:** none.
 

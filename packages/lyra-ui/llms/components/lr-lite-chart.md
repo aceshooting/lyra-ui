@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -29,8 +29,9 @@ passthrough). Not a subclass of `LyraChart`.
   (number|null)[]; color?: string }`; `color` accepts a valid CSS `color`, while invalid values,
   declaration-breaking input, and `url()` paint servers fall back to the built-in palette
 - `legend: boolean = false`
-- `height: string = '280px'` — accepts a valid CSS `height`; invalid values, declaration-breaking
-  input, and `url()` leave the stylesheet's `--lr-chart-height` default/consumer override in control
+- `height: string = '280px'` — accepts a valid CSS `height` as a private fallback. A consumer-set
+  `--lr-chart-height` always wins; invalid values, declaration-breaking input, and `url()` remove
+  the fallback and leave the public token/default in control.
 - `xLabel: string = ''` (attribute `x-label`)
 - `yLabel: string = ''` (attribute `y-label`)
 - `beginAtZero: boolean = true` (attribute `begin-at-zero`)
@@ -51,9 +52,12 @@ passthrough). Not a subclass of `LyraChart`.
   whole-plot-to-host-width behavior, unchanged. `'scroll'` gives bars a fixed `barWidth` instead: plot
   content width becomes `categoryCount * barWidth` (can exceed the host's measured width), and
   `[part='base']` becomes horizontally `overflow-x: auto` so the user scrolls to see every bar at a
-  legible fixed width instead of them compressing as category count grows. Bar type only.
+  legible fixed width instead of them compressing as category count grows. The plot content width
+  is capped at 1,000,000px, so hostile category counts or widths cannot produce
+  unbounded geometry. Bar type only.
 - `barWidth: number = 32` (attribute `bar-width`, px) — each bar's fixed width in `layout="scroll"`
-  mode; ignored in the default `'fit'` mode.
+  mode; ignored in the default `'fit'` mode. An excessive value is reduced as needed by the
+  1,000,000px scroll-content ceiling.
 - `maxLabels?: number` (attribute `max-labels`, type Number) — decimates which category axis labels
   actually render *text* when `labels.length > maxLabels` (bars themselves are never decimated, only
   their axis `<text>` labels): always shows the first and last label, and roughly evenly distributes
@@ -64,7 +68,9 @@ passthrough). Not a subclass of `LyraChart`.
   per-category x-origin formula (`plotX + i * slot`) used by both bars and their axis labels, so a
   consumer can pixel-align this chart's bars with a sibling `<lr-heatmap>` calendar's week columns
   (see that component's own `columnX`) by supplying the same coordinate function to both. Unset (the
-  default) is the original formula, unchanged.
+  default) is the original formula, unchanged. The callback runs once per rendered category per
+  render and its finite result is shared by that category's bars and label; a non-finite result
+  falls back to the normal slot position.
 - `pointText?: (label: string, value: number, datasetIndex: number) => string` (attribute: false) —
   overrides the per-bar/per-point native SVG `<title>` text (mirrors `lr-heatmap`'s `cellText`).
   The same text is written to `aria-label`, because WebKit accessibility APIs do not consistently
@@ -100,7 +106,8 @@ passthrough). Not a subclass of `LyraChart`.
   forbids an attribute selector after `::part()` — so they silently never match; the outline is
   painted inside the shadow root and exposed through that token instead.
 - `minBarHeight?: number` (attribute `min-bar-height`) — optional minimum visible bar height for
-  small non-zero values
+  small non-zero values; finite input is capped at 1,000,000px before derived SVG geometry is
+  calculated
 - `accessibleLabel?: string` (attribute `accessible-label`) — SVG accessible-name override; a host
   `aria-label` wins
 - `appendData(label, values, maxPoints?)` — appends one aligned category and optionally trims the
@@ -121,17 +128,21 @@ are complete localized templates and format values with `effectiveLocale`.
 **Performance:** `render()` recomputes the grid/marks on every update rather than memoizing against a
 content signature — `datasets`/`labels` can hold callbacks (`tickFormat`, `barX`) or arbitrary,
 possibly circular or BigInt-bearing application data that a fingerprint can't serialize safely, so a
-fresh, small SVG render is cheaper and more correct than a lossy cache.
+fresh, small SVG render is cheaper and more correct than a lossy cache. The shared sampling path
+keeps that render bounded to 1,000 category×series marks/keyboard records, retaining endpoints
+instead of materializing an unbounded hidden DOM or SVG tree.
 
-**Slots:** none.
+**Slots:** `data-table` — optional consumer-provided complete, paginated, or virtualized accessible
+data alternative.
 
 **CSS parts:** `base`, `grid-line`, `axis-label`, `axis-title`, `bar` and `point` (each carries
 `data-selected` when its category index is in `selectedIndex`, with explicit pressed state on every
 mark), `line`, `legend`, `legend-item`, `legend-swatch`, `legend-text` (extra per-item text after
 the series label, rendered only when `legendText` is set), `live-region` (the current mark
-announcement for keyboard users), `data-list` (a visually hidden list of all plotted data points —
-single-series only), `data-table` (a visually hidden category×series data table, rendered instead
-of `data-list` when there is more than one dataset).
+announcement for keyboard users), `data-list` (a visually hidden sampled list of plotted data
+points — single-series only), `data-table` (a visually hidden sampled category×series data table,
+rendered instead of `data-list` when there is more than one dataset), and `data-truncation` (the
+visible/announced sampling notice).
 
 **Screen-reader data alternative:** a single dataset renders the flat `data-list` (one `<li>` per
 plotted point, matching the roving-tabindex mark order). More than one dataset instead renders a
@@ -142,9 +153,14 @@ user hears the values grouped by series rather than one flattened N×M sequence.
 Finite table cells use `tableCellFormatter` when supplied and otherwise use the component's
 effective locale. A stacked multi-series bar chart with `tableTotals` adds a localized total
 column; null/non-finite inputs are skipped, while an all-missing category leaves the total cell
-blank instead of reporting a misleading zero.
+blank instead of reporting a misleading zero. Built-in SVG marks, keyboard targets, and this data
+alternative share one endpoint-preserving sample of at most 1,000 category×series records. When
+sampling occurs, a localized `data-truncation` notice is shown and announced; provide
+`slot="data-table"` for a complete paginated, virtualized, or application-owned alternative, which
+suppresses the generated sample and notice.
 
-**Themeable custom properties:** `--lr-chart-height` (same host-level property as `lr-chart`);
+**Themeable custom properties:** `--lr-chart-height` (same public host-level property and precedence
+as `lr-chart`; it always wins over the `height` property's private fallback);
 `--lr-chart-grid-color`, `--lr-chart-tick-color`, `--lr-chart-legend-color` — same token
 *names* as `lr-chart`, so a host already theming `lr-chart` themes this for free;
 `--lr-chart-color-1` … `--lr-chart-color-8` (each defaulting to the matching

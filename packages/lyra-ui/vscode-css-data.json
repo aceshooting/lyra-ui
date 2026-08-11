@@ -2119,7 +2119,7 @@
       "name": "--lr-chart-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-size-280px)`) — The plot region's `block-size` and the host's minimum block size. A visible data table or wrapping DOM legend grows the host in normal flow instead of overlapping following content. Set on the host from `height`."
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-size-280px)`) — The plot region's `block-size` and the host's minimum block size. A visible data table or wrapping DOM legend grows the host in normal flow instead of overlapping following content. `height` supplies a private fallback; this public token always wins when a consumer sets it.\n\n**`<lr-box-plot>`, `<lr-lite-chart>`** (default: `var(--lr-size-280px)`) — Consumer-owned chart height. The `height` property supplies only a private fallback, so this public token always wins when set."
       }
     },
     {
@@ -4559,6 +4559,20 @@
       }
     },
     {
+      "name": "--lr-file-input-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-file-input>`** (default: `var(--lr-space-xs)`) — Gap between the dropzone's slotted children. While `compact`, this is the fallback when `--lr-file-input-compact-gap` is unset."
+      }
+    },
+    {
+      "name": "--lr-file-input-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-file-input>`** (default: `var(--lr-radius)`) — Corner radius of `[part=\"base\"]`."
+      }
+    },
+    {
       "name": "--lr-file-input-reject-bg",
       "description": {
         "kind": "markdown",
@@ -6666,6 +6680,55 @@
       }
     },
     {
+      "name": "--lr-page-navigation-backdrop-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** (default: `var(--lr-color-overlay)`) — Background of the open mobile navigation backdrop."
+      }
+    },
+    {
+      "name": "--lr-page-navigation-drawer-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** (default: `var(--lr-color-surface-overlay)`) — Background of the mobile navigation drawer."
+      }
+    },
+    {
+      "name": "--lr-page-navigation-drawer-shadow",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** (default: `var(--lr-shadow-l)`) — Shadow of the mobile navigation drawer."
+      }
+    },
+    {
+      "name": "--lr-page-navigation-toggle-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** (default: `color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) — Background of a pressed default or slotted navigation toggle."
+      }
+    },
+    {
+      "name": "--lr-page-navigation-toggle-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** (default: `var(--lr-color-brand)`) — Text color of a pressed default or slotted navigation toggle."
+      }
+    },
+    {
+      "name": "--lr-page-navigation-toggle-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** (default: `var(--lr-color-brand-quiet)`) — Background of a hovered default or slotted navigation toggle."
+      }
+    },
+    {
+      "name": "--lr-page-navigation-toggle-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** (default: `var(--lr-color-brand)`) — Text color of a hovered default or slotted navigation toggle."
+      }
+    },
+    {
       "name": "--lr-page-rail-current-bg",
       "description": {
         "kind": "markdown",
@@ -6680,10 +6743,38 @@
       }
     },
     {
+      "name": "--lr-page-skip-to-content-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** (default: `color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) — Background of the pressed skip link."
+      }
+    },
+    {
+      "name": "--lr-page-skip-to-content-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** (default: `var(--lr-color-brand)`) — Text color of the pressed skip link."
+      }
+    },
+    {
+      "name": "--lr-page-skip-to-content-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** (default: `var(--lr-color-brand-quiet)`) — Background of the hovered skip link."
+      }
+    },
+    {
+      "name": "--lr-page-skip-to-content-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page>`** (default: `var(--lr-color-brand)`) — Text color of the hovered skip link."
+      }
+    },
+    {
       "name": "--lr-page-subheader-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-page>`** (default: `0px`) — Minimum subheader height and sticky offset."
+        "value": "**`<lr-page>`** (default: `0px`) — Minimum subheader height and sticky offset. Interaction-state properties below are resolved as inline fallbacks, so setting one on the Page or any ancestor themes only its named target without replacing shared design tokens."
       }
     },
     {
@@ -7754,7 +7845,35 @@
       "name": "--lr-reorder-item-gap",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-reorder-item>`** (default: `var(--lr-space-xs)`) — Gap between the move buttons and content."
+        "value": "**`<lr-reorder-item>`** (default: `var(--lr-space-xs)`) — Gap between the move buttons and content. Move-button state properties are resolved as inline fallbacks, so setting one on an item or any ancestor themes only the requested hover or pressed state without replacing shared brand tokens."
+      }
+    },
+    {
+      "name": "--lr-reorder-item-move-button-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-reorder-item>`** (default: `color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) — Background of a pressed move button."
+      }
+    },
+    {
+      "name": "--lr-reorder-item-move-button-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-reorder-item>`** (default: `var(--lr-color-brand)`) — Text color of a pressed move button."
+      }
+    },
+    {
+      "name": "--lr-reorder-item-move-button-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-reorder-item>`** (default: `var(--lr-color-brand-quiet)`) — Background of a hovered move button."
+      }
+    },
+    {
+      "name": "--lr-reorder-item-move-button-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-reorder-item>`** (default: `var(--lr-color-brand)`) — Text color of a hovered move button."
       }
     },
     {
@@ -7769,6 +7888,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-responsive-panel>`** (default: `var(--lr-color-overlay)`) — The overlay presentation's scrim color, applied to `[part=\"backdrop\"]`."
+      }
+    },
+    {
+      "name": "--lr-responsive-panel-overlay-panel-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-responsive-panel>`** (default: `var(--lr-color-surface-overlay)`) — Background of `[part=\"panel\"]` in the overlay presentation."
+      }
+    },
+    {
+      "name": "--lr-responsive-panel-overlay-panel-shadow",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-responsive-panel>`** (default: `var(--lr-shadow-l)`) — Shadow of `[part=\"panel\"]` in the overlay presentation."
       }
     },
     {
@@ -8003,6 +8136,20 @@
       }
     },
     {
+      "name": "--lr-segmented-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-segmented>`** (default: `color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))`) — Background of a pressed segment that is neither checked nor disabled."
+      }
+    },
+    {
+      "name": "--lr-segmented-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-segmented>`** (default: `var(--lr-segmented-hover-color, var(--lr-color-text))`) — Text color of a pressed segment that is neither checked nor disabled. Its default follows `--lr-segmented-hover-color` to preserve the established hover/pressed relationship; set this property to theme the pressed text independently."
+      }
+    },
+    {
       "name": "--lr-segmented-font-size",
       "description": {
         "kind": "markdown",
@@ -8231,6 +8378,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-selection-toolbar>`** — Computed logical inline anchor position."
+      }
+    },
+    {
+      "name": "--lr-selection-toolbar-placement-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-selection-toolbar>`** (default: `var(--lr-space-s)`) — Non-negative distance between the selection and toolbar, and between the toolbar and viewport during collision avoidance. Unitless pixel values and `px`, `rem`, and `em` values are resolved live; invalid values fall back to the default and negative values clamp to `0`."
       }
     },
     {
@@ -9354,6 +9508,20 @@
       }
     },
     {
+      "name": "--lr-stepper-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stepper>`** (default: `color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) — Background of a pressed, non-disabled step."
+      }
+    },
+    {
+      "name": "--lr-stepper-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stepper>`** (default: `var(--lr-color-text)`) — Text color of a pressed, non-disabled step."
+      }
+    },
+    {
       "name": "--lr-stepper-current-color",
       "description": {
         "kind": "markdown",
@@ -9389,17 +9557,31 @@
       }
     },
     {
+      "name": "--lr-stepper-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stepper>`** (default: `var(--lr-color-brand-quiet)`) — Background of a hovered, non-disabled step."
+      }
+    },
+    {
+      "name": "--lr-stepper-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stepper>`** (default: `var(--lr-color-text)`) — Text color of a hovered, non-disabled step."
+      }
+    },
+    {
       "name": "--lr-stream-status-dot-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-stream-status>`** (default: `var(--lr-color-text-quiet)`) — `indicator` dot color. Swapped by the reflected `phase`: `var(--lr-color-brand)` for `connecting`/`streaming`, `var(--lr-color-warning)` for `stalled`."
+        "value": "**`<lr-stream-status>`** (default: `var(--lr-color-text-quiet)`) — `indicator` dot color. Its unset default is swapped by the reflected `phase`: `var(--lr-color-brand)` for `connecting`/`streaming`, `var(--lr-color-warning)` for `stalled`. Set it on the element or any ancestor; an element value wins."
       }
     },
     {
       "name": "--lr-stream-status-dot-opacity",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-stream-status>`** (default: `0.35`) — `indicator` dot opacity. Swapped by the reflected `phase`: `0.6` for `connecting`, `1` for `streaming` and `stalled`."
+        "value": "**`<lr-stream-status>`** (default: `0.35`) — `indicator` dot opacity. Its unset default is swapped by the reflected `phase`: `0.6` for `connecting`, `1` for `streaming` and `stalled`. Set it on the element or any ancestor; an element value wins."
       }
     },
     {
@@ -9620,10 +9802,24 @@
       }
     },
     {
+      "name": "--lr-tab-group-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tab-group>`** (default: `color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))`) — Background of a pressed, non-disabled tab."
+      }
+    },
+    {
+      "name": "--lr-tab-group-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tab-group>`** (default: `var(--lr-tab-group-hover-color, var(--lr-color-text))`) — Text color of a pressed, non-disabled tab."
+      }
+    },
+    {
       "name": "--lr-tab-group-hover-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tab-group>`** (default: `var(--lr-color-text)`) — Text color of a hovered, non-disabled tab. Independent of the selected-state props above."
+        "value": "**`<lr-tab-group>`** (default: `var(--lr-color-text)`) — Text color of a hovered, non-disabled tab. Independent of the selected-state props above. Pressed-tab and scroll-control hooks use inline `var()` fallbacks rather than a `:host` declaration, so they inherit from the group or any ancestor without retheming the other states."
       }
     },
     {
@@ -9631,6 +9827,27 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-tab-group>`** (default: `var(--lr-color-brand)`) — Color of the selected tab's underline, themeable independently of its text color."
+      }
+    },
+    {
+      "name": "--lr-tab-group-scroll-button-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tab-group>`** (default: `color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))`) — Background of a pressed overflow scroll control."
+      }
+    },
+    {
+      "name": "--lr-tab-group-scroll-button-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tab-group>`** (default: `var(--lr-color-text)`) — Text color of a pressed overflow scroll control."
+      }
+    },
+    {
+      "name": "--lr-tab-group-scroll-button-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tab-group>`** (default: `var(--lr-color-text)`) — Text color of a hovered overflow scroll control."
       }
     },
     {
@@ -13232,6 +13449,34 @@
       }
     },
     {
+      "name": "--lr-virtual-list-hover-outline-offset",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-virtual-list>`** (default: `calc(-1 * var(--lr-border-width-thin))`) — Inward offset of the mouse-hover preview on `[part=\"base\"]`, keeping the outline inside its own scrollport so it is not clipped at the edge."
+      }
+    },
+    {
+      "name": "--lr-virtual-list-hover-outline-style",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-virtual-list>`** (default: `solid`) — Outline style of the mouse-hover preview on `[part=\"base\"]`."
+      }
+    },
+    {
+      "name": "--lr-virtual-list-hover-outline-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-virtual-list>`** (default: `var(--lr-border-width-thin)`) — Outline width of the mouse-hover preview on `[part=\"base\"]`."
+      }
+    },
+    {
+      "name": "--lr-voice-picker-open-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-voice-picker>`** (default: `var(--lr-color-brand)`) — Open trigger border color."
+      }
+    },
+    {
       "name": "--lr-voice-picker-option-active-bg",
       "description": {
         "kind": "markdown",
@@ -13264,6 +13509,27 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-voice-picker>`** (default: `var(--lr-font-weight-semibold)`) — Selected option label weight."
+      }
+    },
+    {
+      "name": "--lr-voice-picker-option-synthetic-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-voice-picker>`** (default: `var(--lr-color-border)`) — Border color of a synthetic stale-value option row."
+      }
+    },
+    {
+      "name": "--lr-voice-picker-option-synthetic-border-style",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-voice-picker>`** (default: `dashed`) — Border style of a synthetic stale-value option row."
+      }
+    },
+    {
+      "name": "--lr-voice-picker-option-synthetic-font-style",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-voice-picker>`** (default: `italic`) — Font style of a synthetic stale-value option label."
       }
     },
     {
@@ -13320,6 +13586,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-widget>`** (default: `var(--lr-color-brand-quiet)`) — Background of the pressed (`aria-pressed=\"true\"`) view toggle. Declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor recolors only the active toggle without hijacking the library-wide `--lr-color-brand-quiet` token."
+      }
+    },
+    {
+      "name": "--lr-widget-view-toggle-active-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-widget>`** (default: `transparent`) — Border color of the pressed view toggle. Like the active background and text hooks, it is an inline inherited fallback."
       }
     },
     {

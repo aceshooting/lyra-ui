@@ -70,7 +70,10 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
   instance can highlight, e.g. `{ json: jsonGrammar }` (import from `shiki/langs/<name>.mjs`). Empty
   (the default) never highlights at all — every `language` renders the plain-text fallback.
   Replacing the map while connected starts a new loading generation; an older map that settles
-  later cannot clear the current map's loading state or replace its highlighted output.
+  later cannot clear the current map's loading state or replace its highlighted output. For a
+  TypeScript annotation, use `import type { ShikiLanguageInput } from
+  '@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js'`; the type-only
+  granular import emits no registration side effect.
 
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
 resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
