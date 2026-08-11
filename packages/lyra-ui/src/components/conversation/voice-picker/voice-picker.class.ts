@@ -206,7 +206,9 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     value: { attribute: false, noAccessor: true },
     defaultValue: {
       attribute: 'value',
-      reflect: true,
+      // The accessor owns reflection so an explicit empty default can remove
+      // the attribute. Lit's generic reflection would recreate `value=""`.
+      reflect: false,
       useDefault: true,
       noAccessor: true,
     },

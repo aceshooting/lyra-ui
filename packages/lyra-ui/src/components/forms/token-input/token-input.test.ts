@@ -284,7 +284,10 @@ it('forwards the native draft selection and range-editing APIs without emitting 
   el.selectionDirection = null;
   expect(el.selectionStart).to.equal(0);
   expect(el.selectionEnd).to.equal(0);
-  expect(el.selectionDirection).to.equal('none');
+  // Native inputs may normalize a collapsed selection's `none` direction to
+  // a concrete direction. The public contract is that the nullish write is
+  // forwarded without throwing, not that the browser preserves its spelling.
+  expect(['none', 'forward', 'backward']).to.include(el.selectionDirection);
 
   el.setSelectionRange(0, 5);
   el.setRangeText('delta');
