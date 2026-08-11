@@ -442,6 +442,50 @@ describe('playback controls', () => {
     expect((await eventPromise).detail).to.deep.equal({ rate: 2 });
   });
 
+  it('updates the duration and forces a final time notification when native seeking completes', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: 90, configurable: true });
+    Object.defineProperty(media, 'currentTime', { value: 12, writable: true, configurable: true });
+
+    media.dispatchEvent(new Event('durationchange'));
+    await el.updateComplete;
+    const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
+    expect(timeline.getAttribute('aria-valuemax')).to.equal('90');
+
+    const times: number[] = [];
+    el.addEventListener('lr-time-change', (event) => times.push(event.detail.currentTime));
+    media.dispatchEvent(new Event('timeupdate'));
+    media.currentTime = 13;
+    media.dispatchEvent(new Event('timeupdate'));
+    media.dispatchEvent(new Event('seeked'));
+
+    expect(times).to.deep.equal([12, 13]);
+  });
+
+  it('keeps an open-ended cue current after native playback advances past its start', async () => {
+    const cues: LyraAvCue[] = [{ id: 'open-ended', start: 10, text: 'Open-ended cue' }];
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .cues=${cues}></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'currentTime', { value: 60, writable: true, configurable: true });
+    const change = oneEvent(el, 'lr-cue-change');
+    media.dispatchEvent(new Event('timeupdate'));
+
+    expect((await change).detail).to.deep.equal({ id: 'open-ended' });
+    await el.updateComplete;
+    expect(cueRows(el)[0]?.getAttribute('aria-current')).to.equal('true');
+  });
+
+  it('fails closed to the current rate when rates receives a non-array runtime value', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    el.rates = null as unknown as number[];
+    await el.updateComplete;
+
+    const select = el.shadowRoot!.querySelector('[part="rate-select"]') as HTMLSelectElement;
+    expect([...select.options].map((option) => option.value)).to.deep.equal(['1']);
+    expect(select.value).to.equal('1');
+  });
+
   it('rate-select reflects the actual playbackRate even when it is not one of the offered rates (regression)', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .rates=${[1, 1.5, 2]}></lr-av-player>`)) as LyraAvPlayer;
     el.playbackRate = 1.75;

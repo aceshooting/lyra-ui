@@ -7,9 +7,10 @@ import type { LyraHighlight } from '../document-viewer/anchors.js';
 const SAMPLE_ICS = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//lyra-ui//test//EN', 'BEGIN:VEVENT', 'UID:event-1@example.test', 'DTSTAMP:20260701T090000Z', 'DTSTART:20260714T140000Z', 'DTEND:20260714T150000Z', 'SUMMARY:Quarterly planning', 'LOCATION:Room 204', 'DESCRIPTION:Review roadmap and budget.', 'END:VEVENT', 'END:VCALENDAR', ''].join('\r\n');
 const TWO_EVENTS = SAMPLE_ICS.replace('END:VCALENDAR', ['BEGIN:VEVENT', 'UID:event-2@example.test', 'DTSTAMP:20260701T090000Z', 'DTSTART:20260715T100000Z', 'DTEND:20260715T110000Z', 'SUMMARY:Design review', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n'));
 const EMPTY_ICS = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//lyra-ui//test//EN', 'END:VCALENDAR', ''].join('\r\n');
+const SPARSE_ICS = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//lyra-ui//test//EN', 'BEGIN:VEVENT', 'DTSTAMP:20260701T090000Z', 'DTSTART:20260714T140000Z', 'END:VEVENT', 'END:VCALENDAR', ''].join('\r\n');
 
 function response(body: string, ok = true): Response { return { ok, status: ok ? 200 : 404, statusText: ok ? 'OK' : 'Not Found', text: () => Promise.resolve(body) } as Response; }
-function stubFetch(body: string): () => void { const original = window.fetch; window.fetch = (() => Promise.resolve(response(body))) as typeof window.fetch; return () => { window.fetch = original; }; }
+function stubFetch(body: string, ok = true): () => void { const original = window.fetch; window.fetch = (() => Promise.resolve(response(body, ok))) as typeof window.fetch; return () => { window.fetch = original; }; }
 async function loaded(body: string): Promise<{ el: LyraCalendarViewer; restore: () => void }> { const restore = stubFetch(body); const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer src="https://example.test/calendar.ics"></lr-calendar-viewer>`); await waitUntil(() => el.shadowRoot!.querySelector('[part="event"]') !== null || el.shadowRoot!.querySelector('[part="error"]') !== null); return { el, restore }; }
 
 describe('lr-calendar-viewer', () => {
@@ -34,6 +35,40 @@ describe('lr-calendar-viewer', () => {
         new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(
           new Date('2026-07-14T14:00:00Z'),
         ),
+      );
+    } finally { restore(); }
+  });
+  it('renders sparse valid events with a localizable fallback summary and no empty optional chrome', async () => {
+    const restore = stubFetch(SPARSE_ICS);
+    try {
+      const el = await fixture<LyraCalendarViewer>(html`
+        <lr-calendar-viewer
+          src="https://example.test/sparse.ics"
+          .strings=${{ calendarViewerNoSummary: 'Untitled calendar event' }}
+        ></lr-calendar-viewer>
+      `);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="event"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="event-summary"]')!.textContent).to.equal(
+        'Untitled calendar event',
+      );
+      expect(el.shadowRoot!.querySelectorAll('[part="event-location"]')).to.have.lengthOf(0);
+      expect(el.shadowRoot!.querySelectorAll('[part="event-description"]')).to.have.lengthOf(0);
+    } finally { restore(); }
+  });
+  it('uses its localized failed-load state when the calendar response is not OK', async () => {
+    const restore = stubFetch('', false);
+    try {
+      const el = await fixture<LyraCalendarViewer>(html`
+        <lr-calendar-viewer
+          .strings=${{ documentPreviewFailedToLoad: 'Calendar could not be loaded.' }}
+        ></lr-calendar-viewer>
+      `);
+      const failure = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/missing.ics';
+      await failure;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
+        'Calendar could not be loaded.',
       );
     } finally { restore(); }
   });
