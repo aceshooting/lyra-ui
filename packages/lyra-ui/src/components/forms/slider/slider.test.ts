@@ -1662,6 +1662,24 @@ it('restores declared min-value/max-value defaults on form.reset()', async () =>
   expect(el.maxValue).to.equal(80);
 });
 
+it('re-defaults removed min-value/max-value attributes to the range defaults on form.reset()', async () => {
+  const form = (await fixture(html`
+    <form><lr-slider name="price" range min="0" max="100" min-value="20" max-value="80"></lr-slider></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-slider') as LyraSlider;
+
+  el.removeAttribute('min-value');
+  el.removeAttribute('max-value');
+  await elementUpdated(el);
+  el.minValue = 30;
+  el.maxValue = 40;
+
+  form.reset();
+  await elementUpdated(el);
+  expect(el.minValue).to.equal(0);
+  expect(el.maxValue).to.equal(50);
+});
+
 it('applies fractional range defaults on the final step grid before and after reset', async () => {
   const form = (await fixture(html`
     <form>
@@ -1948,6 +1966,17 @@ it('uses valueFormatter for the tooltip text when one is supplied', async () => 
   `)) as LyraSlider;
   const tooltip = el.shadowRoot!.querySelector('[part~="tooltip"]') as HTMLElement;
   expect(tooltip.textContent!.trim()).to.equal('Warm');
+});
+
+it('keeps a numeric tooltip when valueFormatter intentionally omits aria-valuetext', async () => {
+  const el = (await fixture(html`
+    <lr-slider with-tooltip min="0" max="100" value="42" .valueFormatter=${() => null}></lr-slider>
+  `)) as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  const tooltip = el.shadowRoot!.querySelector('[part~="tooltip__content"]') as HTMLElement;
+
+  expect(thumb.hasAttribute('aria-valuetext')).to.equal(false);
+  expect(tooltip.textContent!.trim()).to.equal('42');
 });
 
 it('transitions the tooltip with motion tokens and stops under prefers-reduced-motion', async () => {

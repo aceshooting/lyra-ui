@@ -1027,6 +1027,25 @@ it('caps rendered rows at maxRender and shows an overflow indicator', async () =
   expect(el.shadowRoot!.querySelector('[part="option-overflow"]')!.textContent).to.contain('+7 more');
 });
 
+it('keeps a create action in a capped filtered list and reports only hidden option rows as overflow', async () => {
+  const el = (await fixture(html`
+    <lr-combobox allow-create max-render="1">
+      <lr-option value="a">Apple</lr-option>
+      <lr-option value="b">Banana</lr-option>
+      <lr-option value="c">Cherry</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  // An application-owned filter can keep contextual options visible while the
+  // entered value is still new and therefore eligible for creation.
+  el.filter = () => true;
+
+  await typeQuery(el, 'Dragonfruit');
+
+  expect(el.shadowRoot!.querySelectorAll('[part="option"]')).to.have.length(2);
+  expect(el.shadowRoot!.querySelector('[data-create]')?.textContent).to.contain('Dragonfruit');
+  expect(el.shadowRoot!.querySelector('[part="option-overflow"]')!.textContent).to.contain('+2 more');
+});
+
 it('formats the option-overflow count with the effective locale', async () => {
   const el = (await fixture(html`<lr-combobox lang="ar-EG" max-render="3"></lr-combobox>`)) as LyraCombobox;
   for (let i = 0; i < 10; i++) {
@@ -4196,6 +4215,23 @@ describe('formStateRestoreCallback (autofill/bfcache restore)', () => {
       await el.updateComplete;
       expect(el.value, `state: ${state}`).to.equal('');
     }
+  });
+
+  it('keeps a restored selection when a later live-selected option is slotted', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.formStateRestoreCallback(JSON.stringify(['a']), 'restore');
+    await el.updateComplete;
+
+    const later = document.createElement('lr-option');
+    later.value = 'z';
+    later.textContent = 'Zucchini';
+    later.selected = true;
+    el.append(later);
+    await aTimeout(0);
+    await el.updateComplete;
+
+    expect(el.value).to.equal('a');
+    expect(later.selected).to.equal(false);
   });
 });
 
