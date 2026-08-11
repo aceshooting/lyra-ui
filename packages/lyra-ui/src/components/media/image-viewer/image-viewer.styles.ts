@@ -161,9 +161,9 @@ export const styles = css`
     --lr-image-viewer-highlight-fill: var(--lr-image-viewer-highlight-neutral-bg, color-mix(in srgb, var(--lr-color-text) 12%, transparent));
   }
   [part='highlight']:where([data-active]) {
-    border-width: var(--lr-border-width-thick);
-    outline: var(--lr-focus-ring-width) solid var(--lr-image-viewer-highlight-active-color, var(--lr-color-brand));
-    outline-offset: var(--lr-focus-ring-offset);
+    border-width: var(--lr-image-viewer-highlight-active-border-width, var(--lr-border-width-thick));
+    outline: var(--lr-image-viewer-highlight-active-outline-width, var(--lr-focus-ring-width)) solid var(--lr-image-viewer-highlight-active-color, var(--lr-color-brand));
+    outline-offset: var(--lr-image-viewer-highlight-active-outline-offset, var(--lr-focus-ring-offset));
   }
   /* Was filter: brightness(), which multiplies every channel -- so it lightened a dark highlight,
      did nothing at all to a white one, and (filter applying to the whole subtree) dragged

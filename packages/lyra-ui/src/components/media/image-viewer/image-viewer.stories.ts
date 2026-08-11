@@ -84,13 +84,13 @@ export const ThemedActiveStates: Story = {
     docs: {
       description: {
         story:
-          '`--lr-image-viewer-annotate-active-bg`/`--lr-image-viewer-annotate-active-border` retint the pressed annotation toggle and `--lr-image-viewer-highlight-active-color` retints the outline on the highlight matching `active-highlight-id` — independently of the per-tone highlight borders. None is declared on `:host`, so a value set on any ancestor is never shadowed. The toggle carries its own glyph in `--lr-color-text`, so keep 4.5:1 against the background you choose.',
+          '`--lr-image-viewer-annotate-active-bg`/`--lr-image-viewer-annotate-active-border` retint the pressed annotation toggle. `--lr-image-viewer-highlight-active-color`, `--lr-image-viewer-highlight-active-border-width`, `--lr-image-viewer-highlight-active-outline-width`, and `--lr-image-viewer-highlight-active-outline-offset` tune the active highlight independently of its tone. None is declared on `:host`, so a value set on any ancestor is never shadowed. The toggle carries its own glyph in `--lr-color-text`, so keep 4.5:1 against the background you choose.',
       },
     },
   },
   render: () => html`
     <lr-image-viewer
-      style="--lr-image-viewer-annotate-active-bg: ${storyColor('warningQuiet')}; --lr-image-viewer-annotate-active-border: ${storyColor('warning')}; --lr-image-viewer-highlight-active-color: ${storyColor('success')};"
+      style="--lr-image-viewer-annotate-active-bg: ${storyColor('warningQuiet')}; --lr-image-viewer-annotate-active-border: ${storyColor('warning')}; --lr-image-viewer-highlight-active-color: ${storyColor('success')}; --lr-image-viewer-highlight-active-border-width: var(--lr-border-width-thin); --lr-image-viewer-highlight-active-outline-width: var(--lr-border-width-thick); --lr-image-viewer-highlight-active-outline-offset: var(--lr-border-width-thick);"
       src=${SRC}
       name="Mountain river"
       annotatable

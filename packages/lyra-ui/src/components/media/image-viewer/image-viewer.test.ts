@@ -778,6 +778,16 @@ describe('active-state cssprop escape hatches', () => {
     expect(getComputedStyle(box).outlineColor).to.equal('rgb(0, 51, 102)');
   });
 
+  it('inherits the active-highlight border and outline dimensions from an ancestor', async () => {
+    const { box } = await withActiveHighlight(
+      '--lr-image-viewer-highlight-active-border-width: 7px; --lr-image-viewer-highlight-active-outline-width: 5px; --lr-image-viewer-highlight-active-outline-offset: 9px',
+    );
+    const chrome = getComputedStyle(box);
+    expect(chrome.borderTopWidth).to.equal('7px');
+    expect(chrome.outlineWidth).to.equal('5px');
+    expect(chrome.outlineOffset).to.equal('9px');
+  });
+
   it('--lr-image-viewer-highlight-success-border retints one highlight tone without changing global tokens', async () => {
     const regions: LyraHighlight[] = [{
       id: 'success',
@@ -803,6 +813,15 @@ describe('active-state cssprop escape hatches', () => {
     const { el: elH, box } = await withActiveHighlight();
     expect(getComputedStyle(box).outlineColor).to.equal(
       resolvedInShadow(elH, 'outline: 1px solid var(--lr-color-brand)', 'outline-color'),
+    );
+    expect(getComputedStyle(box).borderTopWidth).to.equal(
+      resolvedInShadow(elH, 'border-top: var(--lr-border-width-thick) solid transparent', 'border-top-width'),
+    );
+    expect(getComputedStyle(box).outlineWidth).to.equal(
+      resolvedInShadow(elH, 'outline: var(--lr-focus-ring-width) solid transparent', 'outline-width'),
+    );
+    expect(getComputedStyle(box).outlineOffset).to.equal(
+      resolvedInShadow(elH, 'outline-offset: var(--lr-focus-ring-offset)', 'outline-offset'),
     );
   });
 
