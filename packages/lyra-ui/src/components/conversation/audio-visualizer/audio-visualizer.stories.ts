@@ -25,6 +25,23 @@ export const Speaking: Story = {
   render: () => html`<lr-audio-visualizer state="speaking"></lr-audio-visualizer>`,
 };
 
+export const AmbientDuration: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The time-only `--lr-audio-visualizer-ambient-duration` token retimes a signal-less pulse or sweep without changing the library-wide ambient duration.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-audio-visualizer
+      state="thinking"
+      style="--lr-audio-visualizer-ambient-duration: 900ms"
+    ></lr-audio-visualizer>
+  `,
+};
+
 export const WaveformWithLevel: Story = {
   render: () => html`<lr-audio-visualizer variant="waveform" level="0.6" state="speaking"></lr-audio-visualizer>`,
 };

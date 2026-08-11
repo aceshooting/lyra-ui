@@ -17,6 +17,19 @@ export type AudioVisualizerState = 'idle' | 'listening' | 'thinking' | 'speaking
 
 const WAVEFORM_SAMPLES = 64;
 const AMBIENT_REDUCED_MOTION_INTERVAL_MS = 500; // ~2 Hz snapshot cadence
+const DEFAULT_AMBIENT_DURATION_MS = 1800; // mirrors --lr-duration-ambient's default
+
+/** Parses the time-only custom property used to phase ambient canvas motion. CSS custom properties
+ * keep their raw token sequence until their consuming declaration is evaluated, so deliberately
+ * reject compound transition values (such as `1.8s ease-in-out`) rather than accepting a prefix. */
+function parseAmbientDuration(value: string): number | undefined {
+  const match = /^\+?(?:(?:\d+\.?\d*)|(?:\.\d+))(?:e[+-]?\d+)?(ms|s)$/i.exec(value.trim());
+  if (!match) return undefined;
+  const unit = match[1]!.toLowerCase();
+  const numeric = Number(value.trim().slice(0, -unit.length));
+  const milliseconds = finiteNumber(numeric * (unit === 's' ? 1000 : 1), 0);
+  return milliseconds > 0 ? milliseconds : undefined;
+}
 
 interface OwnedAnimationFrame {
   owner: Window;
@@ -50,6 +63,8 @@ interface OwnedAnimationFrame {
  * @cssprop [--lr-audio-visualizer-quiet-color=var(--lr-color-brand-quiet)] - Inactive/idle color.
  * @cssprop [--lr-audio-visualizer-height=var(--lr-size-3rem)] - The host's block size, which the
  *   canvas fills at 100%.
+ * @cssprop [--lr-audio-visualizer-ambient-duration=var(--lr-duration-ambient)] - Time-only
+ *   duration of one signal-less ambient pulse or sweep cycle.
  * @status stable
  * @since 4.0.0
  */
@@ -96,6 +111,8 @@ export class LyraAudioVisualizer extends LyraElement {
   private hostSize?: { width: number; height: number };
   /** Token colors resolved once per theme change so `draw()` never calls `getComputedStyle` per frame. */
   private resolvedColors?: { active: string; quiet: string };
+  /** Time-only ambient cycle duration resolved once per theme scope, avoiding a style read per frame. */
+  private ambientDurationMs?: number;
 
   private audioCtx?: AudioContext;
   private analyser?: AnalyserNode;
@@ -174,7 +191,10 @@ export class LyraAudioVisualizer extends LyraElement {
       this.motionChangeListener = listener;
       query.addEventListener('change', listener);
     }
-    this.resolvedColors = undefined; // a reconnect may land under a different theme scope
+    // A reconnect may land under a different theme scope, so neither canvas colors nor the ambient
+    // cycle duration can safely survive it.
+    this.resolvedColors = undefined;
+    this.ambientDurationMs = undefined;
     this.syncAnalyser();
     this.visible = true; // a reconnect may land at a different scroll position than last observed
     const IntersectionObserverCtor = owner.IntersectionObserver;
@@ -259,6 +279,7 @@ export class LyraAudioVisualizer extends LyraElement {
   /** Redraws canvas content after an upstream token or theme change. */
   refreshTheme(): void {
     this.resolvedColors = undefined;
+    this.ambientDurationMs = undefined;
     this.scheduleDraw();
   }
 
@@ -427,17 +448,17 @@ export class LyraAudioVisualizer extends LyraElement {
    *  collapses to a flat mid-height pattern (never a frozen mid-sweep frame). */
   private ambientAmplitudes(nowMs: number, reduced: boolean): number[] {
     const n = this.variant === 'waveform' ? WAVEFORM_SAMPLES : this.effectiveBarCount;
-    const t = nowMs / 1000;
+    const phase = reduced ? 0 : finiteNumber(nowMs, 0) / this.resolveAmbientDuration();
     switch (this.state) {
       case 'listening':
       case 'speaking': {
-        const pulse = reduced ? 0.3 : 0.25 + 0.15 * Math.sin(t * 2 * Math.PI * 0.5);
+        const pulse = reduced ? 0.3 : 0.25 + 0.15 * Math.sin(phase * 2 * Math.PI);
         return new Array(n).fill(pulse);
       }
       case 'thinking': {
         if (reduced) return new Array(n).fill(0.3);
         return Array.from({ length: n }, (_, i) => {
-          const pos = (t * 0.6) % 1;
+          const pos = phase % 1;
           const dist = Math.abs(i / (n - 1 || 1) - pos);
           return 0.15 + 0.35 * Math.max(0, 1 - dist * 4);
         });
@@ -445,6 +466,18 @@ export class LyraAudioVisualizer extends LyraElement {
       default:
         return new Array(n).fill(0.08);
     }
+  }
+
+  /** Resolves the time-only ambient duration once per theme scope, alongside the cached colors.
+   * `getComputedStyle` returns custom-property text, so only complete `ms`/`s` values can become
+   * a cycle duration; malformed, zero, negative, or non-finite values retain the shared default. */
+  private resolveAmbientDuration(): number {
+    if (this.ambientDurationMs !== undefined) return this.ambientDurationMs;
+    const value = this.ownerDocument.defaultView
+      ?.getComputedStyle(this)
+      .getPropertyValue('--lr-audio-visualizer-ambient-duration') ?? '';
+    this.ambientDurationMs = parseAmbientDuration(value) ?? DEFAULT_AMBIENT_DURATION_MS;
+    return this.ambientDurationMs;
   }
 
   private currentAmplitudes(nowMs: number): number[] {

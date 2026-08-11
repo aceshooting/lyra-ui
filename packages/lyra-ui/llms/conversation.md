@@ -1824,7 +1824,10 @@ itself carries `role="img"` and the accessible name).
 **Themeable custom properties:** `--lr-audio-visualizer-color` (default `var(--lr-color-brand)` —
 active bar/waveform color), `--lr-audio-visualizer-quiet-color` (default
 `var(--lr-color-brand-quiet)` — inactive/idle color), and `--lr-audio-visualizer-height` (default
-`var(--lr-size-3rem)` — the host's block size).
+`var(--lr-size-3rem)` — the host's block size). `--lr-audio-visualizer-ambient-duration` (default
+`var(--lr-duration-ambient)`) is the time-only `ms`/`s` duration of one signal-less ambient pulse
+or sweep. It retimes this visualizer alone; compound transition values and invalid values fall back
+to the shared duration, while reduced-motion ambient output remains static.
 
 ## `lr-branch-picker`
 

@@ -7,6 +7,7 @@ export const styles = css`
     block-size: var(--lr-audio-visualizer-height, var(--lr-size-3rem));
     --lr-audio-visualizer-color: var(--lr-color-brand);
     --lr-audio-visualizer-quiet-color: var(--lr-color-brand-quiet);
+    --lr-audio-visualizer-ambient-duration: var(--lr-duration-ambient);
   }
   [part='base'] {
     inline-size: 100%;

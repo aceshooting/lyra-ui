@@ -187,6 +187,94 @@ describe('ambient (no stream, no level) amplitude patterns', () => {
   });
 });
 
+describe('ambient duration token', () => {
+  it('retimes the non-reduced ambient cycle from time-only millisecond and second values', async () => {
+    const milliseconds = (await fixture(html`
+      <lr-audio-visualizer
+        state="listening"
+        style="--lr-audio-visualizer-ambient-duration: 800ms"
+      ></lr-audio-visualizer>
+    `)) as LyraAudioVisualizer;
+    const seconds = (await fixture(html`
+      <lr-audio-visualizer
+        state="listening"
+        style="--lr-audio-visualizer-ambient-duration: 1.2s"
+      ></lr-audio-visualizer>
+    `)) as LyraAudioVisualizer;
+
+    expect(ambientAmplitudes(milliseconds, 200, false)[0]).to.be.closeTo(0.4, 0.000_001);
+    expect(ambientAmplitudes(seconds, 300, false)[0]).to.be.closeTo(0.4, 0.000_001);
+    expect((milliseconds as unknown as { ambientDurationMs?: number }).ambientDurationMs).to.equal(800);
+    expect((seconds as unknown as { ambientDurationMs?: number }).ambientDurationMs).to.equal(1200);
+  });
+
+  it('falls back to the shared time-only ambient duration for a compound or invalid token', async () => {
+    for (const value of ['1.2s ease-in-out', '0ms', '-1s', 'not-a-time']) {
+      const el = (await fixture(html`
+        <lr-audio-visualizer
+          state="listening"
+          style="--lr-audio-visualizer-ambient-duration: ${value}"
+        ></lr-audio-visualizer>
+      `)) as LyraAudioVisualizer;
+
+      expect(ambientAmplitudes(el, 450, false)[0]).to.be.closeTo(0.4, 0.000_001);
+      expect((el as unknown as { ambientDurationMs?: number }).ambientDurationMs).to.equal(1800);
+    }
+  });
+
+  it('re-resolves a cached duration after a theme refresh while keeping reduced-motion ambient output static', async () => {
+    const el = (await fixture(html`
+      <lr-audio-visualizer
+        state="listening"
+        style="--lr-audio-visualizer-ambient-duration: 800ms"
+      ></lr-audio-visualizer>
+    `)) as LyraAudioVisualizer;
+    const priv = el as unknown as { ambientDurationMs?: number };
+
+    const before = ambientAmplitudes(el, 200, false);
+    const reducedBefore = ambientAmplitudes(el, 0, true);
+    expect(priv.ambientDurationMs).to.equal(800);
+
+    el.style.setProperty('--lr-audio-visualizer-ambient-duration', '1.2s');
+    el.refreshTheme();
+    expect(priv.ambientDurationMs).to.be.undefined;
+
+    const after = ambientAmplitudes(el, 200, false);
+    const reducedAfter = ambientAmplitudes(el, 900, true);
+    expect(after).to.not.deep.equal(before);
+    expect(priv.ambientDurationMs).to.equal(1200);
+    expect(reducedAfter).to.deep.equal(reducedBefore);
+  });
+
+  it('drops a cached duration on reconnect so a new theme scope takes effect', async () => {
+    const firstScope = document.createElement('div');
+    const secondScope = document.createElement('div');
+    firstScope.style.setProperty('--lr-theme-duration-slow', '800ms');
+    secondScope.style.setProperty('--lr-theme-duration-slow', '1.2s');
+    document.body.append(firstScope, secondScope);
+    const el = document.createElement('lr-audio-visualizer') as LyraAudioVisualizer;
+    el.state = 'listening';
+    const priv = el as unknown as { ambientDurationMs?: number };
+
+    try {
+      firstScope.append(el);
+      await el.updateComplete;
+      expect(ambientAmplitudes(el, 200, false)[0]).to.be.closeTo(0.4, 0.000_001);
+      expect(priv.ambientDurationMs).to.equal(800);
+
+      el.remove();
+      secondScope.append(el);
+      expect(priv.ambientDurationMs).to.be.undefined;
+      expect(ambientAmplitudes(el, 300, false)[0]).to.be.closeTo(0.4, 0.000_001);
+      expect(priv.ambientDurationMs).to.equal(1200);
+    } finally {
+      el.remove();
+      firstScope.remove();
+      secondScope.remove();
+    }
+  });
+});
+
 describe('level-driven amplitude', () => {
   it('a numeric level produces a uniform amplitude array scaled by gain, independent of state', async () => {
     const el = (await fixture(
@@ -414,24 +502,31 @@ describe('media-query change handlers', () => {
     expect(frameHandle(el)).to.not.be.undefined;
   });
 
-  it('refreshes the theme (clears cached colors) when an ancestor theme attribute mutates', async () => {
+  it('refreshes cached colors and ambient duration when a theme input mutates', async () => {
     const el = (await fixture(html`
       <lr-audio-visualizer
-        style="color: var(--visualizer-probe); --visualizer-probe: rgb(1, 2, 3); --lr-audio-visualizer-color: currentColor;"
+        style="color: var(--visualizer-probe); --visualizer-probe: rgb(1, 2, 3); --lr-audio-visualizer-color: currentColor; --lr-theme-duration-slow: 800ms;"
       ></lr-audio-visualizer>
     `)) as LyraAudioVisualizer;
     await settleRaf(el);
     const priv = el as unknown as {
       resolvedColors?: { active: string; quiet: string };
+      ambientDurationMs?: number;
       resolveColors: () => { active: string; quiet: string };
     };
     priv.resolvedColors = priv.resolveColors();
     expect(priv.resolvedColors.active).to.equal('rgb(1, 2, 3)');
+    ambientAmplitudes(el, 0, false);
+    expect(priv.ambientDurationMs).to.equal(800);
     el.style.setProperty('--visualizer-probe', 'rgb(4, 5, 6)');
+    el.style.setProperty('--lr-theme-duration-slow', '1.2s');
     el.setAttribute('data-theme', 'dark');
     await aTimeout(0); // let the ThemeWatcher's coalesced microtask run
     expect(priv.resolvedColors).to.be.undefined; // refreshTheme() reset the cache
+    expect(priv.ambientDurationMs).to.be.undefined;
     expect(priv.resolveColors().active).to.equal('rgb(4, 5, 6)');
+    ambientAmplitudes(el, 0, false);
+    expect(priv.ambientDurationMs).to.equal(1200);
   });
 });
 
