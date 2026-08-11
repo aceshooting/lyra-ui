@@ -444,6 +444,40 @@ it('exposes a cancellable controlled legend proposal before committing an observ
   }
 });
 
+it('keeps a controlled hidden dataset hidden when its show proposal is canceled', async () => {
+  const el = (await fixture(html`<lr-chart
+    type="bar"
+    legend
+    .hiddenDatasets=${[0]}
+    .labels=${['A']}
+    .datasets=${[{ label: 'Revenue', data: [1] }]}
+  ></lr-chart>`)) as LyraChart;
+  await waitUntil(() => (el as any).chart != null);
+  const chart = (el as any).chart;
+  const button = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
+  const proposed: unknown[] = [];
+  let commits = 0;
+  const veto = (event: Event) => {
+    proposed.push((event as CustomEvent).detail);
+    event.preventDefault();
+  };
+  el.addEventListener('lr-before-legend-visibility-change', veto);
+  el.addEventListener('lr-legend-visibility-change', () => commits++);
+
+  try {
+    button.click();
+    await el.updateComplete;
+
+    expect(proposed).to.deep.equal([{ datasetIndex: 0, visible: true, hiddenDatasets: [] }]);
+    expect(commits).to.equal(0);
+    expect(el.hiddenDatasets).to.deep.equal([0]);
+    expect(chart.isDatasetVisible(0)).to.be.false;
+    expect(button.getAttribute('aria-pressed')).to.equal('false');
+  } finally {
+    el.removeEventListener('lr-before-legend-visibility-change', veto);
+  }
+});
+
 it('does not preserve configured hidden state as a legend override when replacement data makes it visible', async () => {
   const el = (await fixture(html`<lr-chart type="bar" legend></lr-chart>`)) as LyraChart;
   el.config = {
@@ -1346,6 +1380,41 @@ it('keeps the core chart usable and renders a localized warning when an optional
   expect((el as any).buildConfig().options.plugins.zoom).to.equal(undefined);
 });
 
+it('keeps the core chart usable and announces localized data-label and stack-total warnings when their peer is unavailable', async () => {
+  const mod = await import('chart.js');
+  const el = document.createElement('lr-chart') as LyraChart;
+  el.type = 'bar';
+  el.stacked = true;
+  el.dataLabels = true;
+  el.stackTotals = true;
+  el.labels = ['A'];
+  el.datasets = [{ label: 'Revenue', data: [1] }];
+  el.strings = {
+    chartDataLabelsUnavailable: 'Data labels add-on unavailable; chart remains usable.',
+    chartStackTotalsUnavailable: 'Stack totals add-on unavailable; chart remains usable.',
+  };
+  (el as any).loadLibrary = () => Promise.resolve(mod);
+  (el as any).loadDataLabelsFeature = () => Promise.resolve({ kind: 'feature-unavailable', mod });
+  const wrapper = await fixture(html`<div></div>`);
+  wrapper.append(el);
+  await waitUntil(() => (el as any).chart != null, 'core chart never initialized');
+  await waitUntil(
+    () => el.shadowRoot?.querySelectorAll('[part="feature-warning"]').length === 2,
+    'optional data-label warnings never rendered',
+  );
+
+  const warningTexts = [...el.shadowRoot!.querySelectorAll('[part="feature-warning"]')].map(
+    (warning) => warning.textContent?.trim(),
+  );
+  expect(warningTexts).to.deep.equal([
+    'Data labels add-on unavailable; chart remains usable.',
+    'Stack totals add-on unavailable; chart remains usable.',
+  ]);
+  expect((el as any).chart != null).to.equal(true);
+  expect(el.shadowRoot!.querySelectorAll('canvas')).to.have.length(1);
+  expect(announcementTexts(document, 'assertive')).to.deep.equal(warningTexts);
+});
+
 it('renders the reset-zoom-button part and emits `lr-zoom` once `onZoomComplete` fires, then again on `resetZoom()`', async () => {
   const el = (await fixture(html`<lr-chart zoom></lr-chart>`)) as LyraChart;
   el.type = 'line';
@@ -1466,6 +1535,15 @@ it('uses `height` as a private fallback without overwriting the public --lr-char
   expect(el.style.getPropertyValue('--lr-chart-height').trim()).to.equal('420px');
   expect(el.style.getPropertyValue('--_lr-chart-height').trim()).to.equal('640px');
   expect(getComputedStyle(el).height).to.equal('420px');
+
+  el.height = '12rem;position:fixed';
+  await el.updateComplete;
+  expect(el.style.getPropertyValue('--lr-chart-height').trim()).to.equal('420px');
+  expect(el.style.getPropertyValue('--_lr-chart-height').trim()).to.equal('');
+  expect(getComputedStyle(el).height).to.equal('420px');
+
+  el.style.removeProperty('--lr-chart-height');
+  expect(getComputedStyle(el).height).to.equal('280px');
 });
 
 it('gives [part=reset-zoom-button] a token-driven :focus-visible outline, like every other interactive control', () => {

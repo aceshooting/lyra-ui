@@ -249,6 +249,41 @@ it('uses the shared cancellable legend visibility contract instead of private Ch
   expect(commits).to.equal(1);
 });
 
+it('keeps a controlled hidden box series hidden when its show proposal is canceled', async () => {
+  const el = (await fixture(html`<lr-box-plot
+    legend
+    .hiddenDatasets=${[0]}
+    .labels=${['A']}
+    .boxes=${[
+      { label: 'Range', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] },
+    ]}
+  ></lr-box-plot>`)) as LyraBoxPlot;
+  await waitUntil(() => (el as any).chart != null);
+  const chart = (el as any).chart;
+  const button = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
+  const proposed: unknown[] = [];
+  let commits = 0;
+  const veto = (event: Event) => {
+    proposed.push((event as CustomEvent).detail);
+    event.preventDefault();
+  };
+  el.addEventListener('lr-before-legend-visibility-change', veto);
+  el.addEventListener('lr-legend-visibility-change', () => commits++);
+
+  try {
+    button.click();
+    await el.updateComplete;
+
+    expect(proposed).to.deep.equal([{ datasetIndex: 0, visible: true, hiddenDatasets: [] }]);
+    expect(commits).to.equal(0);
+    expect(el.hiddenDatasets).to.deep.equal([0]);
+    expect(chart.isDatasetVisible(0)).to.be.false;
+    expect(button.getAttribute('aria-pressed')).to.equal('false');
+  } finally {
+    el.removeEventListener('lr-before-legend-visibility-change', veto);
+  }
+});
+
 it('renders a newly-added box series as pressed in the DOM legend on its first update', async () => {
   const el = (await fixture(html`<lr-box-plot legend></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A'];
@@ -300,6 +335,15 @@ it('uses height as a private fallback without overwriting the public --lr-chart-
   expect(el.style.getPropertyValue('--lr-chart-height').trim()).to.equal('420px');
   expect(el.style.getPropertyValue('--_lr-chart-height').trim()).to.equal('640px');
   expect(getComputedStyle(el).height).to.equal('420px');
+
+  el.height = '12rem;position:fixed';
+  await el.updateComplete;
+  expect(el.style.getPropertyValue('--lr-chart-height').trim()).to.equal('420px');
+  expect(el.style.getPropertyValue('--_lr-chart-height').trim()).to.equal('');
+  expect(getComputedStyle(el).height).to.equal('420px');
+
+  el.style.removeProperty('--lr-chart-height');
+  expect(getComputedStyle(el).height).to.equal('280px');
 });
 
 it('is accessible', async () => {
