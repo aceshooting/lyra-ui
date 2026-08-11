@@ -2543,9 +2543,9 @@ onto `[min, max]`). Form-associated (`static formAssociated = true`, via `Elemen
 ancestor `<fieldset disabled>` disables both handles and every preset button through an internal
 `effectiveDisabled` getter, the same way it would a native `<input>`, without ever mutating the
 consumer-facing `disabled` property/attribute itself.
-The `base` part is an accessible `role="group"`: a host `aria-label` or native external `<label for>`
-names the two-handle aggregate, while `startLabel` and `endLabel` continue to name the individual
-sliders.
+The `base` part is an accessible `role="group"`: a non-empty host `aria-label` names the two-handle
+aggregate. A native external `<label for>` remains available through `labels`, but it does not cross
+into the shadow-root group. `startLabel` and `endLabel` continue to name the individual sliders.
 
 **Properties:**
 
@@ -2632,7 +2632,7 @@ autofill or back/forward restore.
 `presets`, `preset-button`
 
 **Themeable custom properties:** mostly shared tokens — `--lr-color-border`, `--lr-color-brand`,
-`--lr-color-surface`, `--lr-shadow` (track/handles), `--lr-opacity-disabled` (`:host(:disabled)`
+`--lr-color-surface`, `--lr-shadow-s` (handles), `--lr-opacity-disabled` (`:host(:disabled)`
 dimming, including ancestor-fieldset disablement), plus (for `presets`) `--lr-color-text`,
 `--lr-color-on-brand` (the active preset
 button's text), `--lr-radius`, `--lr-space-xs/-s`, `--lr-transition-fast`,

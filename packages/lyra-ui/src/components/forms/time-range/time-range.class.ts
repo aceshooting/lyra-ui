@@ -151,8 +151,9 @@ export interface LyraTimeRangeEventMap {
  * Deliberately no label/hint/error chrome -- `startLabel`/`endLabel` here are per-handle
  * accessible-name overrides, not visible label text, the same carve-out `<lr-slider>` states for
  * its own single-handle `label`; a labeled-field consumer wraps this element in their own layout.
- * The `base` around both handles is still an accessible `role="group"`, named by a host
- * `aria-label` or native external `<label for>` while the two handles retain their individual names.
+ * The `base` around both handles is still an accessible `role="group"`, named by a non-empty host
+ * `aria-label`; native external `<label for>` associations remain available through `labels` but do
+ * not cross into the shadow-root group. The two handles retain their individual names.
  *
  * @customElement lr-time-range
  * @event input - Native event fired continuously while a user moves either handle.

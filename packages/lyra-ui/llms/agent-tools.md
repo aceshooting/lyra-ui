@@ -1054,14 +1054,15 @@ A small bordered card shell. Purely visual, with no state of its own beyond slot
 - `compact: boolean = false` (reflected) — tighter header/body padding for dense contexts (a card
   rendered as a row in a transcript or result list), same convention as `<lr-agent-run>`'s own
   `compact`. Purely a density knob: the border and background stay, so use `frame="plain"`
-  instead to drop the chrome entirely.
+  instead to drop the chrome entirely. When both are set, plain leaves compact padding and gaps
+  intact.
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`), the same property `<lr-agent-run>`/`<lr-card>` carry. `'card'`
   (the default) keeps the bordered, filled box. `'plain'` removes the border, background, and corner
   radius, so a card nested inside a host frame that already draws a border (e.g.
-  `<lr-tool-result-view>`'s own chrome) doesn't double it. `plain` wins over `compact` when both are
-  set (nothing left to tighten). The exported alias `ResultCardAppearance` is retained as a name for
-  the same union.
+  `<lr-tool-result-view>`'s own chrome) doesn't double it. Plain controls only the chrome; compact
+  padding and gaps still apply when both are set. The exported alias `ResultCardAppearance` is
+  retained as a name for the same union.
 
 **Events:** none.
 

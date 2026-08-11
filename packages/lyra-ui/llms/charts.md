@@ -265,11 +265,11 @@ resolved to concrete colors/CSS-pixel numbers on every draw; `rem` uses the live
 - `--line-border-width` → `--lr-border-width-medium`; `--point-radius` → `--lr-space-2xs`
 
 **Optional peer deps:** `chart.js` (mandatory peer, lazy-imported on every `connectedCallback()`
-regardless of `zoom`), `chartjs-plugin-zoom` (lazy-imported *additionally* only when `zoom` is — or
+regardless of options), `chartjs-plugin-zoom` (lazy-imported *additionally* only when `zoom` is — or
 later becomes — `true`; never fetched for a chart that keeps `zoom` unset/false, since the plugin
-has a hard dependency on `hammerjs`). Both loads are memoized once per page via `chart-loader.ts`
-(`loadChartJs()` / `loadChartJsWithZoom()`), registering only the tree-shaken controller/element/scale
-subset actually used.
+has a hard dependency on `hammerjs`), and `chartjs-plugin-datalabels` only when `data-labels` or
+`stack-totals` is enabled. Each load is memoized once per page via `chart-loader.ts`, registering
+only the tree-shaken controller/element/scale subset actually used.
 
 ```html
 <lr-chart type="line" x-label="Day" y-label="kWh" legend></lr-chart>
@@ -650,7 +650,8 @@ mirrored `--border-color-1`,
 `--border-radius`, `--border-width`, `--grid-border-width`, `--grid-color`,
 `--line-border-width`, and `--point-radius` hooks listed on the core chart.
 
-**Optional peer deps:** the same `chart.js` (+ `chartjs-plugin-zoom` when `zoom` is set) peers.
+**Optional peer deps:** the same `chart.js` peer, plus `chartjs-plugin-zoom` when `zoom` is set and
+`chartjs-plugin-datalabels` when `data-labels` or `stack-totals` is set.
 
 All of the above behave exactly as documented in `llms/components/lr-chart.md` — read that file for
 their semantics, defaults, and gotchas.

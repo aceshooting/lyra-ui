@@ -70,14 +70,15 @@ export class LyraResultCard extends StripHostTitleAttribute(LyraResultCardBase) 
   /** Tighter header/body padding for dense contexts (a card rendered as a row in a transcript or
    *  result list) -- same convention as `lr-agent-run`'s `compact`. Defaults to `false`, i.e. the
    *  full card padding. Purely a density knob: the border and background stay, so use
-   *  `frame="plain"` instead to drop the chrome entirely. */
+   *  `frame="plain"` instead to drop the chrome entirely. `frame="plain"` leaves compact padding
+   *  and gaps intact when both are set. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Visual chrome, in the library's shared container-frame vocabulary (the same `frame` property
    *  `<lr-agent-run>` carries). `'card'` (the default) keeps the bordered, filled box. `'plain'`
    *  removes the border, background, and corner radius, so a card nested inside a host container
    *  that already draws a border (e.g. `<lr-tool-result-view>`'s own chrome) doesn't double it.
-   *  `plain` wins over `compact` when both are set (nothing left to tighten). */
+   *  `plain` controls chrome only: compact padding and gaps still apply when both are set. */
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
   // See `<lr-widget>`'s identical `hasActionsSlot` -- a `[part]` wrapper
@@ -120,4 +121,3 @@ declare global {
     'lr-result-card': LyraResultCard;
   }
 }
-

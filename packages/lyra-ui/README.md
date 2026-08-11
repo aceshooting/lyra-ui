@@ -47,7 +47,9 @@ npm install @aceshooting/lyra-ui
 #   adapter with loadLibphonenumberAdapter(); it is never imported by lyra-ui
 #   and international E.164 input works without it
 # optional peer: d3-force, d3-drag, d3-zoom, d3-selection, only needed for <lr-graph>
-# optional peer: chart.js, chartjs-plugin-zoom, only needed for the <lr-*-chart>/<lr-histogram> family
+# optional peer: chart.js, only needed for the <lr-*-chart>/<lr-histogram> family
+# optional peer: chartjs-plugin-zoom, only when that family's zoom feature is enabled
+# optional peer: chartjs-plugin-datalabels, only when data-labels or stack-totals is enabled
 # optional peer: @sgratzl/chartjs-chart-boxplot, only needed for <lr-box-plot>
 # optional peers: mammoth and dompurify, only needed for <lr-docx-viewer>
 #   — Mammoth converts DOCX files to semantic HTML instead of pixel-exact Word page layout.
@@ -1062,7 +1064,7 @@ API details.
 
 | Component | Mirrors | Notes |
 |-----------|---------|-------|
-| `<lr-chart>` | `wa-chart` | Core Chart.js wrapper (`Series`-based, plus raw `config` passthrough) with bounded `appendData()` streaming and `exportData('csv'|'png')` — needs the optional peer deps `chart.js`, `chartjs-plugin-zoom` |
+| `<lr-chart>` | `wa-chart` | Core Chart.js wrapper (`Series`-based, plus raw `config` passthrough) with bounded `appendData()` streaming and `exportData('csv'|'png')` — needs `chart.js`, plus `chartjs-plugin-zoom` when `zoom` is enabled and `chartjs-plugin-datalabels` when `data-labels`/`stack-totals` is enabled |
 | `<lr-bar-chart>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-doughnut-chart>`, `<lr-scatter-chart>`, `<lr-bubble-chart>`, `<lr-radar-chart>`, `<lr-polar-area-chart>` | `wa-bar-chart` / `wa-line-chart` / `wa-pie-chart` / `wa-doughnut-chart` / `wa-scatter-chart` / `wa-bubble-chart` / `wa-radar-chart` / `wa-polar-area-chart` | Typed `<lr-chart>` subclasses with `type` locked — same optional peer deps as `<lr-chart>` |
 | `<lr-box-plot>` | — (extra) | Box-and-whisker chart from precomputed five-number summaries — needs `chart.js`, `chartjs-plugin-zoom`, and `@sgratzl/chartjs-chart-boxplot` |
 | `<lr-histogram>` | — (extra) | Bins raw values (`binValues()`) and renders a bar chart — same optional peer deps as `<lr-chart>` |
