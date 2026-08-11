@@ -294,24 +294,32 @@ it('exposes its scroll surface as the keyboard focus target', async () => {
   expect((el.shadowRoot!.activeElement) === (base)).to.equal(true);
 });
 
-it('contains long speaker and transcript text in a 320px allocation', async () => {
-  const container = document.createElement('div');
-  container.style.inlineSize = '320px';
-  const el = (await fixture(
-    html`<lr-transcript-feed
-      style="inline-size:100%; block-size:120px"
-      .entries=${[
-        {
-          id: '1',
-          speaker: 'AnExtremelyLongSpeakerNameWithoutNaturalBreaks',
-          text: 'AnExtremelyLongTranscriptEntryWithoutNaturalBreaks',
-        },
-      ]}
-    ></lr-transcript-feed>`,
-    { parentNode: container },
-  )) as LyraTranscriptFeed;
+it('contains long final and interim captions in an exact 320px RTL allocation', async () => {
+  const long = 'AnExtremelyLongTranscriptEntryWithoutNaturalBreaks'.repeat(8);
+  const container = (await fixture(html`
+    <div dir="rtl" style="inline-size:320px;block-size:120px">
+      <lr-transcript-feed
+        follow="false"
+        style="inline-size:100%;block-size:100%"
+        show-timestamps
+        .entries=${[
+          { id: 'final', speaker: long, text: long, timestamp: Date.now() - 20_000 },
+          { id: 'interim', speaker: long, text: long, timestamp: Date.now() - 10_000, interim: true },
+        ]}
+      ></lr-transcript-feed>
+    </div>
+  `)) as HTMLDivElement;
+  const el = container.querySelector('lr-transcript-feed') as LyraTranscriptFeed;
+  await el.updateComplete;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(Math.round(container.getBoundingClientRect().width)).to.equal(320);
+  expect(container.scrollWidth).to.be.at.most(container.clientWidth + 1);
   expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
+  for (const entry of entryEls(el)) {
+    expect(entry.scrollWidth).to.be.at.most(entry.clientWidth + 1);
+  }
+  expect(el.shadowRoot!.querySelector('[part="interim-area"]') != null).to.equal(true);
+  expect(el.shadowRoot!.querySelector('[part="jump-button"]') != null).to.equal(true);
 });
 
 it('is accessible with a mix of final and interim entries', async () => {

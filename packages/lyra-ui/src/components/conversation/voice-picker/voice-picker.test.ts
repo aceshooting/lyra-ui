@@ -41,6 +41,21 @@ function listbox(el: LyraVoicePicker): HTMLElement {
   return el.shadowRoot!.querySelector('[part="listbox"]') as HTMLElement;
 }
 
+function syntheticRow(el: LyraVoicePicker): HTMLElement {
+  const row = Array.from(rows(el)).find((candidate) => candidate.hasAttribute('data-synthetic'));
+  if (!row) throw new Error('Expected a synthetic stale-value row.');
+  return row;
+}
+
+function resolvedColor(el: LyraVoicePicker, value: string): string {
+  const probe = document.createElement('span');
+  probe.style.color = value;
+  el.shadowRoot!.append(probe);
+  const color = getComputedStyle(probe).color;
+  probe.remove();
+  return color;
+}
+
 /** Polls until `read()` satisfies `until`, or throws once `timeoutMs` elapses -- same idiom as
  *  internal/positioner.test.ts's/lr-menu's identical helper, for waiting out place()'s async
  *  computePosition. */
@@ -85,6 +100,56 @@ it('renders a free-text input when catalog is empty/undefined or allow-custom is
     html`<lr-voice-picker allow-custom .catalog=${CATALOG}></lr-voice-picker>`
   )) as LyraVoicePicker;
   expect(input(el2) != null).to.equal(true);
+});
+
+it('keeps both picker modes inside an exact 320px RTL allocation with long unbroken content', async () => {
+  const long = 'VoiceIdentifierWithoutNaturalBreaks'.repeat(12);
+  const catalog = [{ id: long, label: long, language: long, description: long }];
+  const container = (await fixture(html`
+    <div dir="rtl" style="display:grid;gap:var(--lr-space-s);inline-size:320px">
+      <lr-voice-picker
+        provider=${long}
+        label=${long}
+        hint=${long}
+        error-text=${long}
+        value=${long}
+        .catalog=${catalog}
+      ></lr-voice-picker>
+      <lr-voice-picker
+        allow-custom
+        provider=${long}
+        label=${long}
+        hint=${long}
+        error-text=${long}
+        value=${long}
+        .catalog=${catalog}
+      ></lr-voice-picker>
+    </div>
+  `)) as HTMLDivElement;
+  const [dropdown, custom] = Array.from(container.querySelectorAll('lr-voice-picker')) as LyraVoicePicker[];
+  dropdown.open = true;
+  custom.click();
+  await Promise.all([dropdown.updateComplete, custom.updateComplete]);
+
+  expect(Math.round(container.getBoundingClientRect().width)).to.equal(320);
+  expect(rows(dropdown).length).to.equal(1);
+  expect(rows(custom).length).to.equal(1);
+  expect(input(custom).value).to.equal(long);
+  // The fixed listboxes are independently viewport-clamped popovers, so this allocation check
+  // deliberately measures only the inline field chrome rather than treating an owned popup as
+  // parent overflow.
+  for (const [picker, control] of [
+    [dropdown, trigger(dropdown)],
+    [custom, custom.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement],
+  ] as const) {
+    expect(Math.round(picker.getBoundingClientRect().width)).to.equal(320);
+    expect(control.scrollWidth).to.be.at.most(control.clientWidth + 1);
+    for (const part of picker.shadowRoot!.querySelectorAll<HTMLElement>(
+      '[part="form-control-label"], [part="hint"], [part="error"]',
+    )) {
+      expect(part.scrollWidth).to.be.at.most(part.clientWidth + 1);
+    }
+  }
 });
 
 it('forwards selection and range editing in free-text mode while synchronizing form state', async () => {
@@ -167,8 +232,93 @@ it('a value not present in catalog renders as a synthetic stale row with the not
   )) as LyraVoicePicker;
   el.open = true;
   await el.updateComplete;
-  const stale = [...rows(el)].find((r) => r.dataset.value === 'retired-voice')!;
+  const stale = syntheticRow(el);
   expect(stale.querySelector('[part="option-badge"]')!.textContent).to.equal('not in catalog');
+});
+
+describe('open and synthetic stale-row theme cssprops', () => {
+  it('inherits independent open and synthetic stale-row longhands from an ancestor', async () => {
+    const wrapper = (await fixture(html`
+      <div
+        style="
+          --lr-voice-picker-open-border-color: rgb(1, 2, 3);
+          --lr-voice-picker-option-synthetic-border-style: dotted;
+          --lr-voice-picker-option-synthetic-border-color: rgb(4, 5, 6);
+          --lr-voice-picker-option-synthetic-font-style: normal;
+        "
+      >
+        <lr-voice-picker value="retired-voice" .catalog=${CATALOG}></lr-voice-picker>
+      </div>
+    `)) as HTMLDivElement;
+    const el = wrapper.querySelector('lr-voice-picker') as LyraVoicePicker;
+    el.open = true;
+    await el.updateComplete;
+    const stale = syntheticRow(el);
+    const label = stale.querySelector('[part="option-label"]') as HTMLElement;
+
+    expect(getComputedStyle(trigger(el)).borderTopColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(stale).borderTopStyle).to.equal('dotted');
+    expect(getComputedStyle(stale).borderTopColor).to.equal('rgb(4, 5, 6)');
+    expect(getComputedStyle(label).fontStyle).to.equal('normal');
+  });
+
+  it('retains the existing shared-token fallback values when no hooks are set', async () => {
+    const el = (await fixture(html`
+      <lr-voice-picker value="retired-voice" .catalog=${CATALOG}></lr-voice-picker>
+    `)) as LyraVoicePicker;
+    el.open = true;
+    await el.updateComplete;
+    const stale = syntheticRow(el);
+    const label = stale.querySelector('[part="option-label"]') as HTMLElement;
+
+    expect(getComputedStyle(trigger(el)).borderTopColor).to.equal(
+      resolvedColor(el, 'var(--lr-color-brand)'),
+    );
+    expect(getComputedStyle(stale).borderTopStyle).to.equal('dashed');
+    expect(getComputedStyle(stale).borderTopColor).to.equal(
+      resolvedColor(el, 'var(--lr-color-border)'),
+    );
+    expect(getComputedStyle(label).fontStyle).to.equal('italic');
+  });
+
+  it('keeps one picker instance’s hooks from changing a sibling instance', async () => {
+    const wrapper = (await fixture(html`
+      <div>
+        <lr-voice-picker
+          style="
+            --lr-voice-picker-open-border-color: rgb(1, 2, 3);
+            --lr-voice-picker-option-synthetic-border-style: dotted;
+            --lr-voice-picker-option-synthetic-border-color: rgb(4, 5, 6);
+            --lr-voice-picker-option-synthetic-font-style: normal;
+          "
+          value="retired-voice"
+          .catalog=${CATALOG}
+        ></lr-voice-picker>
+        <lr-voice-picker value="retired-voice" .catalog=${CATALOG}></lr-voice-picker>
+      </div>
+    `)) as HTMLDivElement;
+    const [themed, defaulted] = Array.from(wrapper.querySelectorAll('lr-voice-picker')) as LyraVoicePicker[];
+    themed.open = true;
+    defaulted.open = true;
+    await Promise.all([themed.updateComplete, defaulted.updateComplete]);
+    const themedStale = syntheticRow(themed);
+    const defaultedStale = syntheticRow(defaulted);
+    const themedLabel = themedStale.querySelector('[part="option-label"]') as HTMLElement;
+    const defaultedLabel = defaultedStale.querySelector('[part="option-label"]') as HTMLElement;
+
+    expect(getComputedStyle(trigger(themed)).borderTopColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(themedStale).borderTopStyle).to.equal('dotted');
+    expect(getComputedStyle(themedStale).borderTopColor).to.equal('rgb(4, 5, 6)');
+    expect(getComputedStyle(themedLabel).fontStyle).to.equal('normal');
+    expect(getComputedStyle(trigger(defaulted)).borderTopColor).to.equal(
+      resolvedColor(defaulted, 'var(--lr-color-brand)'),
+    );
+    expect(getComputedStyle(defaultedStale).borderTopStyle).to.equal('dashed');
+    expect(getComputedStyle(defaultedStale).borderTopColor).to.equal(
+      resolvedColor(defaulted, 'var(--lr-color-border)'),
+    );
+    expect(getComputedStyle(defaultedLabel).fontStyle).to.equal('italic');
+  });
 });
 
 // -- Selection / lr-change ---------------------------------------------

@@ -37,6 +37,21 @@ const dashboard: WidgetNode = {
     },
   ],
 };
+const narrowUnbrokenWidgetText = 'WidgetPayloadWithoutNaturalBreaks'.repeat(10);
+const narrowRtlTree: WidgetNode = {
+  type: 'row',
+  props: { gap: 'm' },
+  children: [
+    narrowUnbrokenWidgetText,
+    {
+      type: 'stat',
+      props: {
+        label: narrowUnbrokenWidgetText,
+        value: narrowUnbrokenWidgetText,
+      },
+    },
+  ],
+};
 
 const unsafeTree: WidgetNode = {
   type: "row",
@@ -200,11 +215,12 @@ export const ControlledDocumentBinding: Story = {
 };
 
 export const Narrow320: Story = {
+  name: 'Narrow RTL (320px, long content)',
   render: () =>
-    html`<div style="max-width:320px">
+    html`<div dir="rtl" style="inline-size:320px;max-inline-size:100%">
       <lr-widget-renderer
         style="display:block"
-        .tree=${dashboard}
+        .tree=${narrowRtlTree}
       ></lr-widget-renderer>
     </div>`,
 };

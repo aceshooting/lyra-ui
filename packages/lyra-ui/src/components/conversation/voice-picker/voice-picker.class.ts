@@ -151,12 +151,19 @@ export interface LyraVoicePickerEventMap {
  * @csspart error - The error message.
  * @cssprop [--lr-voice-picker-preview-active-border=var(--lr-color-brand)] - Active preview border.
  * @cssprop [--lr-voice-picker-preview-active-color=var(--lr-color-brand)] - Active preview icon.
+ * @cssprop [--lr-voice-picker-open-border-color=var(--lr-color-brand)] - Open trigger border color.
  * @cssprop [--lr-voice-picker-option-active-bg=var(--lr-color-brand-quiet)] - Active option fill.
  * @cssprop [--lr-voice-picker-option-selected-border=var(--lr-color-brand)] - Selected option border.
  * @cssprop [--lr-voice-picker-option-selected-color=var(--lr-color-brand)] - Selected option text.
  * @cssprop [--lr-voice-picker-option-selected-bg=transparent] - Selected option fill.
  * @cssprop [--lr-voice-picker-option-selected-font-weight=var(--lr-font-weight-semibold)] -
  *   Selected option label weight.
+ * @cssprop [--lr-voice-picker-option-synthetic-border-style=dashed] - Border style of a synthetic
+ *   stale-value option row.
+ * @cssprop [--lr-voice-picker-option-synthetic-border-color=var(--lr-color-border)] - Border color
+ *   of a synthetic stale-value option row.
+ * @cssprop [--lr-voice-picker-option-synthetic-font-style=italic] - Font style of a synthetic
+ *   stale-value option label.
  * @cssprop [--lr-voice-picker-preview-hover-bg=var(--lr-color-brand-quiet)] - Preview hover fill.
  * @cssprop [--lr-voice-picker-preview-hover-color=var(--lr-color-brand)] - Preview hover icon.
  * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to

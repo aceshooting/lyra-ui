@@ -28,6 +28,15 @@ const catalog: LyraVoiceCatalogEntry[] = [
     previewUrl: 'https://example.com/nova.mp3',
   },
 ];
+const narrowUnbrokenVoiceText = 'VoiceIdentifierWithoutNaturalBreaks'.repeat(8);
+const narrowRtlCatalog: LyraVoiceCatalogEntry[] = [
+  {
+    id: narrowUnbrokenVoiceText,
+    label: narrowUnbrokenVoiceText,
+    language: narrowUnbrokenVoiceText,
+    description: narrowUnbrokenVoiceText,
+  },
+];
 
 /** A fixed catalog with `allow-custom` unset renders a plain closed dropdown, plus a standalone
  *  preview toggle beside the trigger for voices that carry a `previewUrl`. */
@@ -107,12 +116,56 @@ export const Sizes: Story = {
   `,
 };
 
-/** A narrow 320px allocation — the control row still fits the trigger/combobox and the preview
- *  toggle without overflowing. */
+/** Exact 320px RTL allocation with long unbroken caller content in both the catalog dropdown and
+ * free-text combobox modes. */
 export const Narrow320: Story = {
+  name: 'Narrow RTL (320px, both modes)',
   render: () => html`
-    <div style="max-inline-size: 320px; border: 1px dashed var(--lr-color-border); padding: 8px;">
-      <lr-voice-picker label="Voice" .catalog=${catalog}></lr-voice-picker>
+    <div
+      dir="rtl"
+      style="display:grid;gap:var(--lr-space-s);inline-size:320px;max-inline-size:100%;outline:1px dashed var(--lr-color-border);"
+    >
+      <lr-voice-picker
+        provider=${narrowUnbrokenVoiceText}
+        label=${narrowUnbrokenVoiceText}
+        hint=${narrowUnbrokenVoiceText}
+        error-text=${narrowUnbrokenVoiceText}
+        value=${narrowUnbrokenVoiceText}
+        .catalog=${narrowRtlCatalog}
+      ></lr-voice-picker>
+      <lr-voice-picker
+        allow-custom
+        provider=${narrowUnbrokenVoiceText}
+        label=${narrowUnbrokenVoiceText}
+        hint=${narrowUnbrokenVoiceText}
+        error-text=${narrowUnbrokenVoiceText}
+        value=${narrowUnbrokenVoiceText}
+        .catalog=${narrowRtlCatalog}
+      ></lr-voice-picker>
+    </div>
+  `,
+};
+
+/** Component-scoped state hooks inherit from the wrapper and independently retheme the open
+ *  trigger plus the synthetic stale-value row. */
+export const ThemeableStateHooks: Story = {
+  render: () => html`
+    <div
+      style="
+        display: grid;
+        max-inline-size: var(--lr-size-24rem);
+        --lr-voice-picker-open-border-color: var(--lr-color-success);
+        --lr-voice-picker-option-synthetic-border-style: dotted;
+        --lr-voice-picker-option-synthetic-border-color: var(--lr-color-warning);
+        --lr-voice-picker-option-synthetic-font-style: normal;
+      "
+    >
+      <lr-voice-picker
+        provider="elevenlabs"
+        value="retired-voice"
+        .catalog=${catalog}
+        .open=${true}
+      ></lr-voice-picker>
     </div>
   `,
 };

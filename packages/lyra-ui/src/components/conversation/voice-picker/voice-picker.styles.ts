@@ -6,6 +6,7 @@ export const styles = css`
     position: relative;
     display: inline-block;
     inline-size: 100%;
+    min-inline-size: 0;
     max-inline-size: var(--lr-size-24rem);
   }
   :host(:disabled) {
@@ -15,6 +16,7 @@ export const styles = css`
   [part='form-control-label'] {
     display: block;
     margin-block-end: var(--lr-space-xs);
+    overflow-wrap: anywhere;
     font-size: var(--lr-font-size-md-sm);
     font-weight: var(--lr-font-weight-semibold);
   }
@@ -71,7 +73,7 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   :host([open]) [part='trigger'] {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-voice-picker-open-border-color, var(--lr-color-brand));
   }
   :host(:disabled) [part='trigger'],
   :host(:disabled) [part='combobox'] {
@@ -271,11 +273,11 @@ export const styles = css`
     white-space: nowrap;
   }
   [part='option'][data-synthetic] {
-    border-style: dashed;
-    border-color: var(--lr-color-border);
+    border-style: var(--lr-voice-picker-option-synthetic-border-style, dashed);
+    border-color: var(--lr-voice-picker-option-synthetic-border-color, var(--lr-color-border));
   }
   [part='option'][data-synthetic] [part='option-label'] {
-    font-style: italic;
+    font-style: var(--lr-voice-picker-option-synthetic-font-style, italic);
   }
   [part='option-badge'] {
     flex: 0 0 auto;
@@ -319,6 +321,7 @@ export const styles = css`
 
   [part='hint'] {
     margin-block-start: var(--lr-space-xs);
+    overflow-wrap: anywhere;
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }
@@ -327,6 +330,7 @@ export const styles = css`
   }
   [part='error'] {
     margin-block-start: var(--lr-space-xs);
+    overflow-wrap: anywhere;
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-danger);
   }

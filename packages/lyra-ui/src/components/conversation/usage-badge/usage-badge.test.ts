@@ -294,26 +294,45 @@ it('is accessible with every segment set and the tooltip open', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('contains long localized rows and cost text in a 320px allocation', async () => {
-  const container = document.createElement('div');
-  container.style.inlineSize = '320px';
-  const el = (await fixture(
-    html`<lr-usage-badge
-      style="inline-size:100%"
-      tokens-in="1204"
-      cost-text="AnExtremelyLongCostValueWithoutNaturalBreaks"
-      .strings=${{
-        usageBadgeTokensInLabel: 'AnExtremelyLongLocalizedInputLabelWithoutNaturalBreaks',
-      }}
-    ></lr-usage-badge>`,
-    { parentNode: container },
-  )) as LyraUsageBadge;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  base.dispatchEvent(new Event('focus'));
-  await el.updateComplete;
-  const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
-  expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
-  expect(tooltip.scrollWidth).to.be.at.most(tooltip.clientWidth + 1);
+it('contains all badge states with long localized content in an exact 320px RTL allocation', async () => {
+  const long = 'AnExtremelyLongCostValueWithoutNaturalBreaks'.repeat(5);
+  const container = (await fixture(html`
+    <div dir="rtl" style="display:grid;gap:var(--lr-space-s);inline-size:320px">
+      <lr-usage-badge
+        style="inline-size:100%"
+        tokens-in="1204"
+        tokens-out="386"
+        cost-text=${long}
+        latency-ms="2350"
+        .strings=${{
+          usageBadgeTokensInLabel: long,
+          usageBadgeTokensOutLabel: long,
+          usageBadgeCostLabel: long,
+          usageBadgeLatencyLabel: long,
+        }}
+      ></lr-usage-badge>
+      <lr-usage-badge
+        compact
+        style="inline-size:100%"
+        tokens-in="1204"
+        tokens-out="386"
+        cost-text=${long}
+        latency-ms="2350"
+      ></lr-usage-badge>
+    </div>
+  `)) as HTMLDivElement;
+  const badges = Array.from(container.querySelectorAll('lr-usage-badge')) as LyraUsageBadge[];
+  expect(Math.round(container.getBoundingClientRect().width)).to.equal(320);
+  expect(container.scrollWidth).to.be.at.most(container.clientWidth + 1);
+
+  for (const el of badges) {
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(new Event('focus'));
+    await el.updateComplete;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+    expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
+    expect(tooltip.scrollWidth).to.be.at.most(tooltip.clientWidth + 1);
+  }
 });
 
 it('keeps hover/focus rules low-specificity for consumer part overrides', () => {

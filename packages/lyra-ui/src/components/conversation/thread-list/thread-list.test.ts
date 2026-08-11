@@ -204,6 +204,38 @@ describe('data mode', () => {
     expect(renderedGroupLabels(el)).to.deep.equal(['Pinned', 'Today', 'Yesterday']);
   });
 
+  it('contains long data rows inside an exact 320px RTL flex allocation', async () => {
+    const long = 'ConversationIdentifierWithoutNaturalBreaks'.repeat(12);
+    const container = (await fixture(html`
+      <div dir="rtl" style="display:flex;inline-size:320px;block-size:260px">
+        <lr-thread-list
+          searchable
+          show-archived
+          active-id="rtl-active"
+          .threads=${[
+            { id: 'rtl-active', title: long, excerpt: long, pinned: true, timestamp: now },
+            { id: 'rtl-archived', title: long, excerpt: long, archived: true, timestamp: now },
+          ]}
+          .rowActions=${['pin', 'archive', 'delete']}
+        ></lr-thread-list>
+      </div>
+    `)) as HTMLDivElement;
+    const el = container.querySelector('lr-thread-list') as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    await nextFrame();
+    await waitUntil(() => dataRows(el).length > 0, 'the constrained RTL virtual rows were not mounted', {
+      timeout: 3000,
+    });
+
+    expect(Math.round(container.getBoundingClientRect().width)).to.equal(320);
+    expect(container.scrollWidth).to.be.at.most(container.clientWidth + 1);
+    for (const row of dataRows(el)) {
+      const wrapper = row.parentElement as HTMLElement;
+      expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth + 1);
+    }
+  });
+
   it('includes archived threads in a trailing Archived group when showArchived is set', async () => {
     const el = (await fixture(
       html`<lr-thread-list style="block-size:400px" .threads=${threads} show-archived></lr-thread-list>`

@@ -15,6 +15,22 @@ const entries: LyraTranscriptEntry[] = [
   { id: '2', speaker: 'Agent', text: 'Let me check that for you.', timestamp: Date.now() - 15000 },
   { id: '3', speaker: 'Agent', text: 'Tomorrow will be sunny with a high of 22°C.', timestamp: Date.now() - 10000 },
 ];
+const narrowUnbrokenTranscriptText = 'TranscriptIdentifierWithoutNaturalBreaks'.repeat(6);
+const narrowRtlEntries: LyraTranscriptEntry[] = [
+  {
+    id: 'rtl-final',
+    speaker: narrowUnbrokenTranscriptText,
+    text: narrowUnbrokenTranscriptText,
+    timestamp: Date.now() - 20_000,
+  },
+  {
+    id: 'rtl-interim',
+    speaker: narrowUnbrokenTranscriptText,
+    text: narrowUnbrokenTranscriptText,
+    timestamp: Date.now() - 10_000,
+    interim: true,
+  },
+];
 
 export const Default: Story = {
   render: () => html`
@@ -108,10 +124,16 @@ export const Empty: Story = {
   `,
 };
 
+/** Exact 320px RTL allocation with final/interim captions, timestamps, and the public
+ * `follow="false"` jump-to-latest state under long unbroken caller content. */
 export const Narrow320: Story = {
+  name: 'Narrow RTL (320px, long content)',
   render: () => html`
-    <div style="max-inline-size: 320px; block-size: 200px; border: 1px dashed var(--lr-color-border);">
-      <lr-transcript-feed .entries=${entries} show-timestamps></lr-transcript-feed>
+    <div
+      dir="rtl"
+      style="inline-size:320px;max-inline-size:100%;block-size:200px;outline:1px dashed var(--lr-color-border);"
+    >
+      <lr-transcript-feed follow="false" .entries=${narrowRtlEntries} show-timestamps></lr-transcript-feed>
     </div>
   `,
 };

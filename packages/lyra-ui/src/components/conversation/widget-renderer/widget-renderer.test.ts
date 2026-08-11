@@ -273,18 +273,29 @@ describe("lr-widget-renderer", () => {
     ).to.include("hello world");
   });
 
-  it("wraps long row text so it can shrink without overflowing its allocation", async () => {
-    const el = (await fixture(html`
-      <lr-widget-renderer
-        style="display:block; inline-size:320px"
-      ></lr-widget-renderer>
-    `)) as LyraWidgetRenderer;
-    el.tree = { type: "row", children: ["x".repeat(500)] };
+  it("wraps long built-in and mapped row content inside an exact 320px RTL allocation", async () => {
+    const container = (await fixture(html`
+      <div dir="rtl" style="inline-size:320px">
+        <lr-widget-renderer style="display:block;inline-size:100%"></lr-widget-renderer>
+      </div>
+    `)) as HTMLDivElement;
+    const el = container.querySelector("lr-widget-renderer") as LyraWidgetRenderer;
+    const long = "WidgetPayloadWithoutNaturalBreaks".repeat(16);
+    el.tree = {
+      type: "row",
+      props: { gap: "m" },
+      children: [long, { type: "stat", props: { label: long, value: long } }],
+    };
     await el.updateComplete;
     const row = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
     const text = row.querySelector(".widget-text") as HTMLElement;
+    const stat = row.querySelector("lr-stat") as HTMLElement & { updateComplete: Promise<unknown> };
+    await stat.updateComplete;
+    expect(Math.round(container.getBoundingClientRect().width)).to.equal(320);
+    expect(container.scrollWidth).to.be.at.most(container.clientWidth + 1);
+    expect(row.scrollWidth).to.be.at.most(row.clientWidth + 1);
     expect(text != null).to.equal(true);
-    expect(text.scrollWidth).to.be.at.most(row.clientWidth);
+    expect(text.scrollWidth).to.be.at.most(text.clientWidth + 1);
   });
 
   it("a custom per-instance registry overrides the default one", async () => {

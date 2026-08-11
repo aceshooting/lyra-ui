@@ -40,6 +40,23 @@ const threads: ChatThread[] = [
   { id: '5', title: 'Old Q1 planning thread', timestamp: daysAgo(45) },
   { id: '6', title: 'Archived spike', archived: true, timestamp: daysAgo(10) },
 ];
+const narrowUnbrokenThreadText = 'ConversationIdentifierWithoutNaturalBreaks'.repeat(6);
+const narrowRtlThreads: ChatThread[] = [
+  {
+    id: 'rtl-active',
+    title: narrowUnbrokenThreadText,
+    excerpt: narrowUnbrokenThreadText,
+    pinned: true,
+    timestamp: hoursAgo(1),
+  },
+  {
+    id: 'rtl-archived',
+    title: narrowUnbrokenThreadText,
+    excerpt: narrowUnbrokenThreadText,
+    archived: true,
+    timestamp: daysAgo(1),
+  },
+];
 const boundaryThreads: ChatThread[] = Array.from({ length: 40 }, (_, index) => ({
   id: `boundary-${index}`,
   title: `Virtualized conversation ${index + 1}`,
@@ -192,10 +209,22 @@ export const Empty: Story = {
     </div>`,
 };
 
+/** Exact 320px RTL stress allocation: searchable data mode, active/pinned and archived rows, and
+ * all built-in row actions keep long unbroken content inside the sidebar rather than widening it. */
 export const Narrow320px: Story = {
+  name: 'Narrow RTL (320px, long content)',
   render: () =>
-    html`<div style="max-width:320px;block-size:300px;border:1px dashed var(--lr-color-border);">
-      <lr-thread-list searchable .threads=${threads} .rowActions=${['pin', 'archive', 'delete']}></lr-thread-list>
+    html`<div
+      dir="rtl"
+      style="display:flex;inline-size:320px;max-inline-size:100%;block-size:300px;outline:1px dashed var(--lr-color-border);"
+    >
+      <lr-thread-list
+        searchable
+        show-archived
+        active-id="rtl-active"
+        .threads=${narrowRtlThreads}
+        .rowActions=${['pin', 'archive', 'delete']}
+      ></lr-thread-list>
     </div>`,
 };
 

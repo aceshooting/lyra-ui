@@ -59,10 +59,35 @@ export const InChatMessage: Story = {
 };
 
 export const Narrow320: Story = {
-  name: 'Narrow (320px)',
+  name: 'Narrow RTL (320px, long content)',
   render: () => html`
-    <div style="inline-size: 320px; max-inline-size: 100%;">
-      <lr-usage-badge tokens-in="1204" tokens-out="386" cost-text="$0.012" latency-ms="2350"></lr-usage-badge>
+    <div dir="rtl" style="display:grid;gap:var(--lr-space-s);inline-size:320px;max-inline-size:100%;">
+      <lr-usage-badge
+        style="inline-size:100%"
+        tokens-in="1204"
+        tokens-out="386"
+        cost-text="AnExtremelyLongCostValueWithoutNaturalBreaks"
+        latency-ms="2350"
+        .strings=${{
+          usageBadgeTokensInLabel: 'AnExtremelyLongLocalizedInputLabelWithoutNaturalBreaks',
+          usageBadgeTokensOutLabel: 'AnExtremelyLongLocalizedOutputLabelWithoutNaturalBreaks',
+        }}
+      ></lr-usage-badge>
+      <lr-usage-badge
+        compact
+        style="inline-size:100%"
+        tokens-in="1204"
+        tokens-out="386"
+        cost-text="AnExtremelyLongCostValueWithoutNaturalBreaks"
+        latency-ms="2350"
+      ></lr-usage-badge>
     </div>
   `,
+  play: async ({ canvasElement }) => {
+    const badge = canvasElement.querySelector<HTMLElement & { updateComplete: Promise<unknown> }>('lr-usage-badge');
+    if (!badge) return;
+    await badge.updateComplete;
+    badge.shadowRoot?.querySelector<HTMLElement>('[part="base"]')?.focus();
+    await badge.updateComplete;
+  },
 };
