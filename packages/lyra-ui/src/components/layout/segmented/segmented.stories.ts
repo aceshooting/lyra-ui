@@ -199,17 +199,16 @@ export const Events: Story = {
   `,
 };
 
-/** The checked pill's background, text color, weight and shadow are individually themeable, and so
- *  is the hover treatment of an *unchecked* segment — separately. Before these hooks the only way
- *  to recolor the selection was to hijack library-wide `--lr-color-surface`/`--lr-color-text`, which
- *  repainted hovered-unselected segments with the very same values. */
+/** The checked pill's background, text color, weight and shadow are individually themeable, as are
+ *  the hover and pressed treatments of an *unchecked* segment. This keeps selection, hover, and
+ *  press paint independently configurable from an ancestor. */
 export const ThemedSelection: Story = {
   name: 'Themed selection (cssprops)',
   parameters: {
     docs: {
       description: {
         story:
-          'Set `--lr-segmented-selected-bg`, `--lr-segmented-selected-color`, `--lr-segmented-selected-font-weight` and `--lr-segmented-selected-shadow` on the element or any ancestor — none of them are declared on `:host`, so an ancestor value is never shadowed. `--lr-segmented-hover-color` themes the hovered, unchecked segment independently (hover the two unselected pills to compare).',
+          'Set `--lr-segmented-selected-bg`, `--lr-segmented-selected-color`, `--lr-segmented-selected-font-weight`, `--lr-segmented-selected-shadow`, `--lr-segmented-hover-color`, `--lr-segmented-active-bg`, and `--lr-segmented-active-color` on the element or any ancestor. The pressed text normally follows `--lr-segmented-hover-color`; this story makes it distinct so press either unchecked pill to compare.',
       },
     },
   },
@@ -219,7 +218,9 @@ export const ThemedSelection: Story = {
         'onBrand',
       )}; --lr-segmented-selected-shadow: none; --lr-segmented-selected-font-weight: 700; --lr-segmented-hover-color: ${storyColor(
         'brand',
-      )};"
+      )}; --lr-segmented-active-bg: ${storyColor('warningQuiet')}; --lr-segmented-active-color: ${
+        storyColor('warning')
+      };"
     >
       <lr-segmented
         label="View"

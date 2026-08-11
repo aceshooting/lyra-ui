@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent, aTimeout } from "@open-wc/testing";
 import "./virtual-list.js";
 import { MAX_OVERSCAN_ROWS, type LyraVirtualList } from "./virtual-list.js";
 import { styles } from "./virtual-list.styles.js";
+import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 /** Waits two animation frames -- enough for the component's rAF-coalesced
  *  scroll handler *and* a queued ResizeObserver callback to have run. */
@@ -15,6 +16,21 @@ const numberKey = (item: unknown) => item as number;
 const stringKey = (item: unknown) => item as string;
 const renderText = (item: unknown, index: number) =>
   html`item ${item}#${index}`;
+
+/** Resolves a declaration against the component's inherited token layer, rather than the test
+ * document's light DOM where those tokens are intentionally absent. */
+function resolvedInShadow(
+  el: LyraVirtualList,
+  declaration: string,
+  property: string
+): string {
+  const probe = document.createElement("span");
+  probe.setAttribute("style", declaration);
+  el.shadowRoot!.appendChild(probe);
+  const value = getComputedStyle(probe).getPropertyValue(property);
+  probe.remove();
+  return value;
+}
 
 it("does not schedule a Lit update from the initial container measurement", async () => {
   const globalWarnings = (globalThis as { litIssuedWarnings?: Set<string> })
@@ -1058,34 +1074,112 @@ it('gives the always-focusable [part="base"] scroll region a :hover state, match
   expect(css).to.match(/\[part='base'\]:hover\s*\{[^}]+\}/);
 });
 
-it("themes the hover outline color via --lr-virtual-list-hover-outline-color, falling back to --lr-color-border-strong", () => {
+it("routes each hover outline longhand through a scoped custom property with the existing defaults", () => {
   const css = styles.cssText.replace(/\s+/g, " ");
   const rule = css.match(/\[part='base'\]:hover\s*\{([^}]+)\}/)?.[1] ?? "";
-  expect(rule).to.match(
-    /outline:[^;]*var\(--lr-virtual-list-hover-outline-color,\s*var\(--lr-color-border-strong\)\)/
+  expect(rule).to.include(
+    "outline-width: var(--lr-virtual-list-hover-outline-width, var(--lr-border-width-thin))"
+  );
+  expect(rule).to.include(
+    "outline-style: var(--lr-virtual-list-hover-outline-style, solid)"
+  );
+  expect(rule).to.include(
+    "outline-color: var(--lr-virtual-list-hover-outline-color, var(--lr-color-border-strong))"
+  );
+  expect(rule).to.include(
+    "outline-offset: var(--lr-virtual-list-hover-outline-offset, calc(-1 * var(--lr-border-width-thin)))"
   );
 });
 
-it('cascades --lr-virtual-list-hover-outline-color onto [part="base"]', async () => {
-  const el = (await fixture(
-    html`<lr-virtual-list
-      style="--lr-virtual-list-height:200px"
-      .items=${[1, 2, 3]}
-      .renderItem=${renderText}
-      .keyFunction=${numberKey}
-    ></lr-virtual-list>`
-  )) as LyraVirtualList;
-  await el.updateComplete;
-  el.style.setProperty(
-    "--lr-virtual-list-hover-outline-color",
-    "rgb(12, 34, 56)"
-  );
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  expect(
-    getComputedStyle(base)
-      .getPropertyValue("--lr-virtual-list-hover-outline-color")
-      .trim()
-  ).to.equal("rgb(12, 34, 56)");
+describe("hover-outline cssprops", () => {
+  async function themed(style = ""): Promise<{
+    el: LyraVirtualList;
+    base: HTMLElement;
+  }> {
+    const wrapper = (await fixture(
+      html`<div style=${style}>
+        <lr-virtual-list
+          style="--lr-virtual-list-height:200px"
+          .items=${[1, 2, 3]}
+          .renderItem=${renderText}
+          .keyFunction=${numberKey}
+        ></lr-virtual-list>
+      </div>`
+    )) as HTMLElement;
+    const el = wrapper.querySelector("lr-virtual-list") as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+    return {
+      el,
+      base: el.shadowRoot!.querySelector('[part="base"]') as HTMLElement,
+    };
+  }
+
+  function pointerPosition(target: HTMLElement): [number, number] {
+    target.scrollIntoView();
+    const rect = target.getBoundingClientRect();
+    return [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
+  }
+
+  it("keeps the pre-hook hover outline when each scoped property is unset", async () => {
+    const { el, base } = await themed();
+    const expectedWidth = resolvedInShadow(
+      el,
+      "outline-width: var(--lr-border-width-thin)",
+      "outline-width"
+    );
+    const expectedColor = resolvedInShadow(
+      el,
+      "outline-color: var(--lr-color-border-strong)",
+      "outline-color"
+    );
+    const expectedOffset = resolvedInShadow(
+      el,
+      "outline-offset: calc(-1 * var(--lr-border-width-thin))",
+      "outline-offset"
+    );
+
+    try {
+      await sendMouse({ type: "move", position: pointerPosition(base) });
+      const hovered = getComputedStyle(base);
+      expect(hovered.outlineWidth).to.equal(expectedWidth);
+      expect(hovered.outlineStyle).to.equal("solid");
+      expect(hovered.outlineColor).to.equal(expectedColor);
+      expect(hovered.outlineOffset).to.equal(expectedOffset);
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it("inherits independent hover outline longhands and keeps that preview unchanged while pressed", async () => {
+    const { base } = await themed(
+      "--lr-virtual-list-hover-outline-width: 3px;" +
+        "--lr-virtual-list-hover-outline-style: dashed;" +
+        "--lr-virtual-list-hover-outline-color: rgb(12, 34, 56);" +
+        "--lr-virtual-list-hover-outline-offset: -2px;"
+    );
+
+    try {
+      await sendMouse({ type: "move", position: pointerPosition(base) });
+      const hovered = getComputedStyle(base);
+      expect(hovered.outlineWidth).to.equal("3px");
+      expect(hovered.outlineStyle).to.equal("dashed");
+      expect(hovered.outlineColor).to.equal("rgb(12, 34, 56)");
+      expect(hovered.outlineOffset).to.equal("-2px");
+
+      await sendMouse({ type: "down" });
+      const pressed = getComputedStyle(base);
+      expect(pressed.outlineWidth).to.equal("3px");
+      expect(pressed.outlineStyle).to.equal("dashed");
+      expect(pressed.outlineColor).to.equal("rgb(12, 34, 56)");
+      expect(pressed.outlineOffset).to.equal("-2px");
+    } finally {
+      await resetMouse();
+    }
+  });
 });
 
 it('does not rebuild the offsets array on a pure scroll-position update in row-height="auto" mode', async () => {

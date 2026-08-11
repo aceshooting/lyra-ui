@@ -234,9 +234,16 @@ export interface LyraVirtualListEventMap {
  * @cssprop [--lr-virtual-list-height=var(--lr-size-24rem)] - The scroll viewport's height. A
  *   virtualized list needs a bounded scroll extent, so this ships a default rather than
  *   collapsing to zero when a caller does not size the host.
+ * @cssprop [--lr-virtual-list-hover-outline-width=var(--lr-border-width-thin)] - Outline width of
+ *   the mouse-hover preview on `[part="base"]`.
+ * @cssprop [--lr-virtual-list-hover-outline-style=solid] - Outline style of the mouse-hover preview
+ *   on `[part="base"]`.
  * @cssprop [--lr-virtual-list-hover-outline-color=var(--lr-color-border-strong)] - Outline color of
  *   the mouse-hover preview on `[part="base"]` (a subtler, always-focusable-target preview of its
  *   own `:focus-visible` ring). Set to `transparent` to opt out of the hover treatment entirely.
+ * @cssprop [--lr-virtual-list-hover-outline-offset=calc(-1 * var(--lr-border-width-thin))] -
+ *   Inward offset of the mouse-hover preview on `[part="base"]`, keeping the outline inside its
+ *   own scrollport so it is not clipped at the edge.
  * @status stable
  * @since 4.0.0
  */

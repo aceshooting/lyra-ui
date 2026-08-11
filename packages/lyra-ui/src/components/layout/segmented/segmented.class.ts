@@ -82,6 +82,12 @@ export interface LyraSegmentedEventMap {
  * @cssprop [--lr-segmented-hover-color=var(--lr-color-text)] - Text color of a hovered segment that
  *   is neither checked nor disabled. Independent of the selected-state props above — recoloring the
  *   checked pill leaves this untouched.
+ * @cssprop [--lr-segmented-active-bg=color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
+ *   Background of a pressed segment that is neither checked nor disabled.
+ * @cssprop [--lr-segmented-active-color=var(--lr-segmented-hover-color, var(--lr-color-text))] -
+ *   Text color of a pressed segment that is neither checked nor disabled. Its default follows
+ *   `--lr-segmented-hover-color` to preserve the established hover/pressed relationship; set this
+ *   property to theme the pressed text independently.
  * @cssprop [--lr-segmented-segment-padding=var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)] -
  *   Each segment's padding, taken from the `size` tier's shared control padding.
  * @cssprop [--lr-segmented-font-size=var(--lr-form-control-font-size)] - Each segment's font size,

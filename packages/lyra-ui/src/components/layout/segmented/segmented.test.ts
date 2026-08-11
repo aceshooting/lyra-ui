@@ -5,6 +5,7 @@ import type { LyraSegmented } from "./segmented.js";
 import { styles } from "./segmented.styles.js";
 import "../../forms/select/select.js";
 import type { LyraSelect } from "../../forms/select/select.js";
+import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 const items = () => [
   { value: "day", label: "Day" },
@@ -659,6 +660,94 @@ describe("selected-state cssprops", () => {
   it("is accessible with the selected-state props themed", async () => {
     const el = await themed(overrides);
     await expect(el).to.be.accessible();
+  });
+});
+
+describe("active-state cssprops", () => {
+  async function themed(style = ""): Promise<LyraSegmented> {
+    const wrapper = (await fixture(
+      html`<div style=${style}>
+        <lr-segmented .items=${items()} value="week"></lr-segmented>
+      </div>`
+    )) as HTMLElement;
+    const el = wrapper.querySelector("lr-segmented") as LyraSegmented;
+    await el.updateComplete;
+    return el;
+  }
+
+  function pointerPosition(target: HTMLElement): [number, number] {
+    target.scrollIntoView();
+    const rect = target.getBoundingClientRect();
+    return [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
+  }
+
+  it("keeps the pre-hook active treatment when its props are unset", async () => {
+    const el = await themed();
+    const target = segmentButtons(el)[0]!;
+    const expectedBackground = resolvedInShadow(
+      el,
+      "background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))",
+      "background-color"
+    );
+    const expectedColor = resolvedInShadow(
+      el,
+      "color: var(--lr-segmented-hover-color, var(--lr-color-text))",
+      "color"
+    );
+
+    try {
+      await sendMouse({ type: "move", position: pointerPosition(target) });
+      expect(getComputedStyle(target).backgroundColor).to.equal("rgba(0, 0, 0, 0)");
+      expect(getComputedStyle(target).color).to.equal(expectedColor);
+
+      await sendMouse({ type: "down" });
+      expect(getComputedStyle(target).backgroundColor).to.equal(expectedBackground);
+      expect(getComputedStyle(target).color).to.equal(expectedColor);
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it("inherits active paint from an ancestor without recoloring hover or the checked segment", async () => {
+    const el = await themed(
+      "--lr-segmented-active-bg: rgb(12, 34, 56);" +
+        "--lr-segmented-active-color: rgb(78, 90, 123);"
+    );
+    const [target, checked] = segmentButtons(el);
+    const expectedHoverColor = resolvedInShadow(
+      el,
+      "color: var(--lr-segmented-hover-color, var(--lr-color-text))",
+      "color"
+    );
+    const expectedCheckedBackground = resolvedInShadow(
+      el,
+      "background: var(--lr-color-surface)",
+      "background-color"
+    );
+    const expectedCheckedColor = resolvedInShadow(
+      el,
+      "color: var(--lr-color-text)",
+      "color"
+    );
+
+    try {
+      await sendMouse({ type: "move", position: pointerPosition(target!) });
+      expect(getComputedStyle(target!).backgroundColor).to.equal("rgba(0, 0, 0, 0)");
+      expect(getComputedStyle(target!).color).to.equal(expectedHoverColor);
+
+      await sendMouse({ type: "down" });
+      expect(getComputedStyle(target!).backgroundColor).to.equal("rgb(12, 34, 56)");
+      expect(getComputedStyle(target!).color).to.equal("rgb(78, 90, 123)");
+      expect(getComputedStyle(checked!).backgroundColor).to.equal(
+        expectedCheckedBackground
+      );
+      expect(getComputedStyle(checked!).color).to.equal(expectedCheckedColor);
+    } finally {
+      await resetMouse();
+    }
   });
 });
 

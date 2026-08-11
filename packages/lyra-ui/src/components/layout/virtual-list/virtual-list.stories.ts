@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './virtual-list.js';
 import type { LyraVirtualList } from './virtual-list.js';
+import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 interface DemoMessage {
   id: string;
@@ -106,6 +107,35 @@ export const Empty: Story = {
       .renderItem=${renderMessage}
       .keyFunction=${keyFunction}
     ></lr-virtual-list>
+  `,
+};
+
+/** The hover preview's width, style, color, and inward offset can be themed separately without
+ *  changing the focus ring or adding a pressed state to the scrollport. */
+export const ThemedHoverOutline: Story = {
+  name: 'Themed hover outline (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Hover the scroll region to see `--lr-virtual-list-hover-outline-width`, `--lr-virtual-list-hover-outline-style`, `--lr-virtual-list-hover-outline-color`, and `--lr-virtual-list-hover-outline-offset` inherited from its ancestor. Pressing the scrollport intentionally keeps the same hover preview: it is a scroll region, not an action.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="max-inline-size: 32rem; --lr-virtual-list-hover-outline-width: var(--lr-border-width-thick); --lr-virtual-list-hover-outline-style: dashed; --lr-virtual-list-hover-outline-color: ${storyColor(
+        'warning',
+      )}; --lr-virtual-list-hover-outline-offset: calc(-1 * var(--lr-border-width-thick));"
+    >
+      <lr-virtual-list
+        aria-label="Themed hover outline"
+        style="--lr-virtual-list-height: 12rem;"
+        .items=${messages.slice(0, 24)}
+        .renderItem=${renderMessage}
+        .keyFunction=${keyFunction}
+      ></lr-virtual-list>
+    </div>
   `,
 };
 

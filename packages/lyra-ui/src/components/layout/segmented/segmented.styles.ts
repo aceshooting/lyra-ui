@@ -107,12 +107,18 @@ export const styles = css`
   :where([part="segment"]):active:where(
       :not([aria-disabled="true"]):not([aria-checked="true"])
     ) {
-    background: color-mix(
-      in oklab,
-      transparent,
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-segmented-active-bg,
+      color-mix(
+        in oklab,
+        transparent,
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
-    color: var(--lr-segmented-hover-color, var(--lr-color-text));
+    color: var(
+      --lr-segmented-active-color,
+      var(--lr-segmented-hover-color, var(--lr-color-text))
+    );
   }
   [part="segment"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

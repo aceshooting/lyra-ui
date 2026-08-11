@@ -40,9 +40,19 @@ export const styles = css`
      :active matches the ancestors of whatever was pressed, so clicking any row (or a row action
      inside one) would flash this outline around the entire list. */
   [part='base']:hover {
-    outline: var(--lr-border-width-thin) solid
-      var(--lr-virtual-list-hover-outline-color, var(--lr-color-border-strong));
-    outline-offset: calc(-1 * var(--lr-border-width-thin));
+    outline-width: var(
+      --lr-virtual-list-hover-outline-width,
+      var(--lr-border-width-thin)
+    );
+    outline-style: var(--lr-virtual-list-hover-outline-style, solid);
+    outline-color: var(
+      --lr-virtual-list-hover-outline-color,
+      var(--lr-color-border-strong)
+    );
+    outline-offset: var(
+      --lr-virtual-list-hover-outline-offset,
+      calc(-1 * var(--lr-border-width-thin))
+    );
   }
   [part='spacer'] {
     position: relative;
