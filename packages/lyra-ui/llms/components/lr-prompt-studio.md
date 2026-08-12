@@ -16,13 +16,14 @@
 ## `lr-prompt-studio`
 
 Prompt-development workbench for ordered role messages, `{{variable}}` substitution, saved
-versions, resolved preview, and save/run intents. Message and variable edits update the component's
-current arrays before emitting their complete next state; persistence and execution remain
-host-owned.
+versions, resolved preview, and save/run intents. Message and variable edits emit a cancelable
+`lr-change` proposal carrying their complete next state before updating the component's current
+arrays; persistence and execution remain host-owned.
 
 **Properties:** `messages: PromptStudioMessage[] = []` and
-`variables: PromptStudioVariable[] = []` are property-only editor state: user edits update the
-current arrays before `lr-change` is emitted, while the host remains responsible for persistence.
+`variables: PromptStudioVariable[] = []` are property-only editor state: user edits emit a
+cancelable `lr-change` before updating the current arrays, while the host remains responsible for
+persistence.
 `versions: PromptStudioVersion[] = []` is a property-only host-controlled input;
 `selectedVersionId: string = ''` (attribute `selected-version-id`); `label: string = ''`;
 `running: boolean = false`, `disabled: boolean = false`, and `reorderable: boolean = false`
@@ -40,11 +41,13 @@ PromptStudioMessage[]; variables?: PromptStudioVariable[]; createdAt?: string }`
 `PromptStudioState = { messages, variables }`; `PromptStudioWrap = 'hard' | 'soft' | 'off'`; and
 `PromptStudioMessageReorderDetail = { messages, messageId, fromIndex, toIndex }`.
 
-**Events:** `lr-change`, `lr-run`, `lr-save` (all carry complete messages/variables);
-`lr-version-select` (`{ version }`); and cancelable `lr-message-reorder`
-(`{ messages, messageId, fromIndex, toIndex }`) before an accepted move updates the component and
-emits `lr-change`. Prevent `lr-message-reorder` to keep the current order; the listener may persist
-`detail.messages` and assign it back when ready. Plus `focus` and `blur` (no detail), re-dispatched
+**Events:** cancelable `lr-change` (`{ messages, variables }`, the complete proposed next state,
+fired before it is applied — prevent it to keep the current state unchanged), `lr-run`, `lr-save`
+(both carry complete messages/variables); `lr-version-select` (`{ version }`); and cancelable
+`lr-message-reorder` (`{ messages, messageId, fromIndex, toIndex }`) before an accepted move
+updates the component and emits `lr-change`. Prevent `lr-message-reorder` to keep the current
+order; the listener may persist `detail.messages` and assign it back when ready. Plus `focus` and
+`blur` (no detail), re-dispatched
 from the host — bubbling and composed — whenever a message textarea or a variable input gains or
 loses focus. They exist because the native `focus`/`blur` events neither bubble nor cross the shadow
 boundary, so without the re-dispatch an

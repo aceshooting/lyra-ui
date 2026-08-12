@@ -39,7 +39,9 @@ export interface WidgetView {
 export interface LyraWidgetEventMap {
   "lr-collapse-request": CustomEvent<{ collapsed: boolean }>;
   "lr-collapse-change": CustomEvent<{ collapsed: boolean }>;
+  "lr-fullscreen-request": CustomEvent<{ fullscreen: boolean }>;
   "lr-fullscreen-change": CustomEvent<{ fullscreen: boolean }>;
+  "lr-view-request": CustomEvent<{ viewId: string }>;
   "lr-view-change": CustomEvent<{ viewId: string }>;
 }
 /**
@@ -73,8 +75,17 @@ export interface LyraWidgetEventMap {
  * @event lr-collapse-change - Non-cancelable post-commit notification from the built-in collapse
  *   toggle. Not fired when a consumer sets `collapsed` directly. `detail: { collapsed }` (the new
  *   `collapsed` state).
- * @event lr-fullscreen-change - `detail: { fullscreen }` (the new `fullscreen` state).
- * @event lr-view-change - Fired when the active view changes via a header toggle click.
+ * @event lr-fullscreen-request - A cancelable proposed `fullscreen` state from the fullscreen
+ *   toggle, Escape, or a backdrop click. Call `preventDefault()` to leave `fullscreen` unchanged.
+ *   Not fired when a consumer sets `fullscreen` directly. `detail: { fullscreen }`.
+ * @event lr-fullscreen-change - Non-cancelable post-commit notification, fired after the
+ *   fullscreen toggle, Escape, or a backdrop click accepts the change. Not fired when a consumer
+ *   sets `fullscreen` directly. `detail: { fullscreen }` (the new `fullscreen` state).
+ * @event lr-view-request - A cancelable proposed `activeView` from a header view-toggle click.
+ *   Call `preventDefault()` to leave `activeView` unchanged. Not fired when a consumer sets
+ *   `activeView` directly. `detail: { viewId }`.
+ * @event lr-view-change - Non-cancelable post-commit notification, fired after a header
+ *   view-toggle click accepts the change. Not fired when a consumer sets `activeView` directly.
  *   `detail: { viewId }` (the new view's `id`).
  * @csspart base - The panel root (dialog role + backdrop when fullscreen).
  * @csspart header - The header row containing the title, actions, and toggle buttons.
@@ -445,6 +456,8 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
 
   private setActiveView = (id: string): void => {
     if (id === this.activeView) return;
+    const request = this.emit("lr-view-request", { viewId: id }, { cancelable: true });
+    if (request.defaultPrevented) return;
     this.activeView = id;
     this.emit("lr-view-change", { viewId: id });
   };
@@ -467,16 +480,27 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     this.requestCollapse(!this.collapsed);
   };
 
+  /** Emits the cancelable lr-fullscreen-request proposal before touching the persisted property,
+   *  while retaining lr-fullscreen-change as the existing post-commit notification. Returns
+   *  whether the change was accepted, mirroring requestCollapse() above. */
+  private requestFullscreenChange(next: boolean): boolean {
+    const request = this.emit("lr-fullscreen-request", { fullscreen: next }, { cancelable: true });
+    if (request.defaultPrevented) return false;
+    this.fullscreen = next;
+    this.emit("lr-fullscreen-change", { fullscreen: next });
+    return true;
+  }
+
   private toggleFullscreen = (e: MouseEvent): void => {
-    if (!this.fullscreen) this.explicitTrigger = e.currentTarget as HTMLElement;
-    this.fullscreen = !this.fullscreen;
-    this.emit("lr-fullscreen-change", { fullscreen: this.fullscreen });
+    const next = !this.fullscreen;
+    const trigger = e.currentTarget as HTMLElement;
+    if (!this.requestFullscreenChange(next)) return;
+    if (next) this.explicitTrigger = trigger;
   };
 
   private dismissFullscreen = (): void => {
     if (!this.fullscreen) return;
-    this.fullscreen = false;
-    this.emit("lr-fullscreen-change", { fullscreen: false });
+    this.requestFullscreenChange(false);
   };
 
   private onBackdropClick = (): void => {

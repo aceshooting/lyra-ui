@@ -118,6 +118,39 @@ describe('document preview integration', () => {
   });
 });
 
+describe('document viewer close', () => {
+  it('stops the document-viewer-owned lr-close event from leaking past the attachment chip as a raw event', async () => {
+    // <lr-document-viewer>'s own `lr-close` is a plain `this.emit()` (bubbles + composed), so it
+    // reaches the chip's shadow-internal `@lr-close` listener and then keeps bubbling right past
+    // the chip host unless that listener stops it -- the chip only consumes it to flip
+    // `previewOpen` back to closed and documents no `lr-close` event of its own, so a leaked
+    // instance would reach an ancestor under an event name this component never advertises.
+    const file = makeFile('notes.txt', 'text/plain', 12);
+    const wrapper = await fixture(html`<div><lr-attachment-chip .file=${file}></lr-attachment-chip></div>`);
+    const el = wrapper.querySelector('lr-attachment-chip') as LyraAttachmentChip;
+    (el.shadowRoot!.querySelector('[part="preview-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const viewer = el.shadowRoot!.querySelector('lr-document-viewer') as HTMLElement & { open: boolean };
+    expect(viewer.open).to.be.true;
+
+    let leaked = 0;
+    wrapper.addEventListener('lr-close', () => leaked++);
+
+    // Drive the nested dialog through its real public close() (the same path a genuine
+    // Escape/backdrop/close-button dismissal takes) rather than faking a bare `lr-dialog-close`
+    // event -- close() synchronously settles the dialog's own `open` state before document-viewer
+    // re-renders, so the viewer emits exactly one real `lr-close`, matching an actual dismissal.
+    const dialog = viewer.shadowRoot!.querySelector('lr-dialog') as HTMLElement & {
+      close: (reason?: string) => Promise<void>;
+    };
+    void dialog.close('escape');
+    await el.updateComplete;
+
+    expect(leaked, "the document viewer's own lr-close must not leak past the attachment chip").to.equal(0);
+    expect(viewer.open).to.be.false;
+  });
+});
+
 describe('previewable', () => {
   it('renders the preview button by default (previewable=true) when a preview src is available', async () => {
     const el = (await fixture(html`

@@ -49,6 +49,11 @@ and event listeners survive every breakpoint crossing.
 number` returns the element's finite, viewport-clamped vertical intersection in CSS pixels (`0` for
 `null`, invalid geometry, or no intersection).
 
+**Events:** `lr-nav-toggle` (cancelable; `detail: { open }` is the `navOpen` state proposed by
+`showNavigation()`/`hideNavigation()`/`toggleNavigation()` or a built-in dismissal — backdrop
+click, Escape, or the default/custom navigation-toggle control, all of which route through those
+same methods. Call `preventDefault()` to leave `navOpen` unchanged.)
+
 The default mobile toggle is a native button with localized open/close names and explicit
 `aria-expanded="true|false"` plus `aria-controls` pointing to this Page's unique drawer. Opening
 uses Lyra's shared modal overlay stack for inerting, scroll lock, Escape/backdrop dismissal, focus

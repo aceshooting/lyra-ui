@@ -61,7 +61,9 @@ type PromptStudioMessageMovePart = 'move-message-up' | 'move-message-down';
  * keyboard-operable move controls; every proposed move is cancelable before the editor state changes.
  *
  * @customElement lr-prompt-studio
- * @event lr-change - Messages or variables changed. Carries their complete next state.
+ * @event lr-change - A cancelable proposal that messages or variables are about to change.
+ *   Carries their complete next state. Prevent it to keep the current state unchanged, the same
+ *   veto point `lr-message-reorder` already offers for reordering.
  * @event lr-message-reorder - A cancelable request to reorder messages. Carries the proposed
  *   complete message order and the moved message's id and indexes. Prevent it to persist or reject
  *   the proposed order yourself, then assign `messages` when the host is ready to render it.
@@ -177,9 +179,16 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   }
 
   private emitChange(messages = this.messages, variables = this.variables): void {
+    // The proposal is a snapshot, mirroring requestMessageMove()'s identical cancelable-veto
+    // pattern below: a listener may hold, persist, or alter its own copy without mutating the
+    // component's accepted next state behind the veto point.
+    const proposal: PromptStudioState = {
+      messages: messages.map((message) => ({ ...message })),
+      variables: variables.map((variable) => ({ ...variable })),
+    };
+    if (this.emit('lr-change', proposal, { cancelable: true }).defaultPrevented) return;
     this.messages = messages;
     this.variables = variables;
-    this.emit('lr-change', this.state());
   }
 
   private updateMessage(id: string, patch: Partial<PromptStudioMessage>): void {

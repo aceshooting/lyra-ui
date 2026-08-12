@@ -420,6 +420,40 @@ describe("views", () => {
     expect(el.activeView).to.equal("table");
   });
 
+  it("emits a cancelable lr-view-request before lr-view-change, vetoing the switch when prevented", async () => {
+    const el = (await fixture(html`
+      <lr-widget
+        label="Usage"
+        .views=${[
+          { id: "chart", label: "Chart" },
+          { id: "table", label: "Table" },
+        ]}
+      >
+        <div slot="view-chart">chart content</div>
+        <div slot="view-table">table content</div>
+      </lr-widget>
+    `)) as LyraWidget;
+    await el.updateComplete;
+    const order: string[] = [];
+    el.addEventListener("lr-view-request", (e) => {
+      order.push("lr-view-request");
+      expect((e as CustomEvent).cancelable).to.equal(true);
+      expect((e as CustomEvent).detail).to.deep.equal({ viewId: "table" });
+      expect(el.activeView, "activeView must still be chart while the request is pending").to.equal("chart");
+      e.preventDefault();
+    });
+    el.addEventListener("lr-view-change", () => order.push("lr-view-change"));
+
+    const toggles = [
+      ...el.shadowRoot!.querySelectorAll('[part="view-toggle"]'),
+    ] as HTMLButtonElement[];
+    toggles[1]!.click();
+    await el.updateComplete;
+
+    expect(order).to.deep.equal(["lr-view-request"]);
+    expect(el.activeView).to.equal("chart");
+  });
+
   it("repairs an invalid controlled active view without emitting a user view change", async () => {
     const el = (await fixture(html`
       <lr-widget
@@ -1064,6 +1098,31 @@ it("toggles fullscreen on fullscreen-button click, locking scroll and adding a b
   expect(el.fullscreen).to.be.false;
   expect(document.documentElement.style.overflow).to.equal("");
   expect(el.shadowRoot!.querySelector('[part="backdrop"]')).to.not.exist;
+});
+
+it("emits a cancelable lr-fullscreen-request before lr-fullscreen-change, vetoing the toggle when prevented", async () => {
+  const el = (await fixture(
+    html`<lr-widget label="x" expandable>content</lr-widget>`
+  )) as LyraWidget;
+  const order: string[] = [];
+  el.addEventListener("lr-fullscreen-request", (e) => {
+    order.push("lr-fullscreen-request");
+    expect((e as CustomEvent).cancelable).to.equal(true);
+    expect((e as CustomEvent).detail).to.deep.equal({ fullscreen: true });
+    expect(el.fullscreen, "fullscreen must still be false while the request is pending").to.equal(false);
+    e.preventDefault();
+  });
+  el.addEventListener("lr-fullscreen-change", () => order.push("lr-fullscreen-change"));
+
+  (
+    el.shadowRoot!.querySelector(
+      '[part="fullscreen-button"]'
+    ) as HTMLButtonElement
+  ).click();
+  await el.updateComplete;
+
+  expect(order).to.deep.equal(["lr-fullscreen-request"]);
+  expect(el.fullscreen).to.equal(false);
 });
 
 it("reflects the fullscreen-button aria-pressed and aria-label with the fullscreen state", async () => {

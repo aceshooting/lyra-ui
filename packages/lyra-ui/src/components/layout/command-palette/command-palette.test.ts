@@ -857,3 +857,29 @@ it("does not schedule a Lit update from the initial row-pitch measurement", asyn
   );
   expect(scheduled, JSON.stringify(scheduled)).to.have.length(0);
 });
+
+it("emits a cancelable lr-open before mutating open, and skips the mutation when it is vetoed", async () => {
+  const el = (await fixture(html`<lr-command-palette></lr-command-palette>`)) as LyraCommandPalette;
+  const seen: boolean[] = [];
+  el.addEventListener("lr-open", (event) => {
+    seen.push(el.open);
+    event.preventDefault();
+  });
+  el.openPalette();
+  expect(seen, "open must still be false while lr-open is being dispatched").to.deep.equal([false]);
+  expect(el.open, "a defaultPrevented lr-open must not open the palette").to.be.false;
+});
+
+it("emits a cancelable lr-close before mutating open, and skips the mutation when it is vetoed", async () => {
+  const el = (await fixture(html`<lr-command-palette></lr-command-palette>`)) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+  const seen: boolean[] = [];
+  el.addEventListener("lr-close", (event) => {
+    seen.push(el.open);
+    event.preventDefault();
+  });
+  el.close();
+  expect(seen, "open must still be true while lr-close is being dispatched").to.deep.equal([true]);
+  expect(el.open, "a defaultPrevented lr-close must not close the palette").to.be.true;
+});

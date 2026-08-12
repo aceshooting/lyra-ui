@@ -384,6 +384,27 @@ it('does not revive a stale suggestion session after disable and re-enable', asy
   expect(popover.open).to.be.false;
 });
 
+it('stops the popover-owned lr-mention-close event from leaking past the prompt input as a raw event', async () => {
+  // <lr-mention-popover>'s own lr-mention-close (bubbles + composed, emitted from its updated()
+  // whenever `open` transitions true -> false, e.g. Escape) reaches the prompt input's
+  // shadow-internal listener and, unless that listener stops it, keeps bubbling right past the
+  // prompt input host -- lr-prompt-input never re-declares or re-emits lr-mention-close itself,
+  // so an ancestor listening for it would otherwise see the popover's raw event under an
+  // undocumented name.
+  const wrapper = await fixture(html`<div>
+    <lr-prompt-input .mentionItems=${[{ id: 'ada', label: 'Ada' }]}></lr-prompt-input>
+  </div>`);
+  const el = wrapper.querySelector('lr-prompt-input') as LyraPromptInput;
+  const popover = el.shadowRoot!.querySelector('lr-mention-popover') as LyraMentionPopover;
+
+  let leaked = 0;
+  wrapper.addEventListener('lr-mention-close', () => leaked++);
+
+  popover.dispatchEvent(new CustomEvent('lr-mention-close', { bubbles: true, composed: true }));
+
+  expect(leaked, 'the popover-owned lr-mention-close must not leak past the prompt input').to.equal(0);
+});
+
 it('forwards composer submit and stop events from its own host', async () => {
   const el = (await fixture(html`<lr-prompt-input value="Question"></lr-prompt-input>`)) as LyraPromptInput;
   const composer = el.shadowRoot!.querySelector('lr-chat-composer')!;

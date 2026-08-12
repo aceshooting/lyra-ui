@@ -214,6 +214,16 @@ it('emits lr-tool-call-chip-select with { name, callId } on click', async () => 
   expect(ev.composed).to.be.true;
 });
 
+it('forwards a host click() to the internal base button', async () => {
+  const el = (await fixture(
+    html`<lr-tool-call-chip name="web_search" call-id="call-42"></lr-tool-call-chip>`,
+  )) as LyraToolCallChip;
+
+  setTimeout(() => el.click());
+  const ev = await oneEvent(el, 'lr-tool-call-chip-select');
+  expect(ev.detail).to.deep.equal({ name: 'web_search', callId: 'call-42' });
+});
+
 it('also emits the deprecated lr-tool-chip-select alias during its compatibility window', async () => {
   const el = (await fixture(
     html`<lr-tool-call-chip name="web_search" call-id="call-42"></lr-tool-call-chip>`,

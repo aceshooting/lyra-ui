@@ -463,6 +463,26 @@ it('honors a prevented message reorder without mutating state or emitting lr-cha
   expect(original.map((message) => message.id)).to.deep.equal(['system', 'user', 'assistant']);
 });
 
+it('emits a cancelable lr-change before mutating state, honoring a prevented edit', async () => {
+  const original = messages.map((message) => ({ ...message }));
+  const el = (await fixture(html`<lr-prompt-studio .messages=${original}></lr-prompt-studio>`)) as LyraPromptStudio;
+  let changeCount = 0;
+  el.addEventListener('lr-change', (event) => {
+    changeCount++;
+    expect(event.cancelable).to.be.true;
+    expect(el.messages, 'messages must still be the pre-edit array while lr-change is pending').to.equal(original);
+    event.preventDefault();
+  });
+
+  const textarea = el.shadowRoot!.querySelector('textarea')!;
+  textarea.value = 'Changed';
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+
+  expect(changeCount).to.equal(1);
+  expect(el.messages).to.equal(original);
+  expect(el.messages[0]!.content).to.equal(original[0]!.content);
+});
+
 it('supports native keyboard activation and keeps focus with the moved message action', async () => {
   const el = (await fixture(html`<lr-prompt-studio reorderable .messages=${reorderMessages}></lr-prompt-studio>`)) as LyraPromptStudio;
   const moveDown = el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="move-message-down"]')[0]!;

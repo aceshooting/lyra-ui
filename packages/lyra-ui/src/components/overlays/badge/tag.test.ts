@@ -74,6 +74,20 @@ describe('withRemove', () => {
     expect((removeButton(el)) === (null)).to.equal(true);
   });
 
+  it('forwards a host click() to the internal remove button', async () => {
+    const el = (await fixture(html`<lr-tag with-remove>Removable</lr-tag>`)) as LyraTag;
+    const removed = oneEvent(el, 'lr-remove');
+    el.click();
+    await removed;
+    expect(el.isConnected).to.be.false;
+  });
+
+  it('leaves a host click() a no-op when there is no remove button to forward to', async () => {
+    const el = (await fixture(html`<lr-tag>Plain</lr-tag>`)) as LyraTag;
+    expect(() => el.click()).to.not.throw();
+    expect(el.isConnected).to.be.true;
+  });
+
   it('names the remove button with the tag label, localized', async () => {
     const el = (await fixture(html`<lr-tag with-remove>Removable</lr-tag>`)) as LyraTag;
     expect(removeButton(el)?.getAttribute('aria-label')).to.equal('Remove Removable');

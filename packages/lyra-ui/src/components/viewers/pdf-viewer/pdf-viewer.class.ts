@@ -23,7 +23,7 @@ import {
   buildQuoteAnchor,
   type TextQuoteScope,
 } from '../../../internal/text-quote.js';
-import type { LyraHighlightLayer, HighlightLayerItem } from '../highlight-layer/highlight-layer.class.js';
+import type { LyraHighlightLayer, HighlightLayerItem, LyraHighlightLayerEventMap } from '../highlight-layer/highlight-layer.class.js';
 import type { LyraAnchor } from '../document-viewer/anchors.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import {
@@ -1298,6 +1298,21 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     }
   }
 
+  /** `<lr-highlight-layer>`'s own `lr-highlight-activate` (bubbles + composed by default -- see
+   *  `LyraElement.emit()`) fires directly on it for a click that lands squarely on its own
+   *  rect-target (rare -- the text layer sitting on top normally intercepts a direct pointer click
+   *  first, see `onPageClick`'s class-doc rationale) and for Enter/Space keyboard activation, which
+   *  reaches the layer's own roving-tabindex rects directly since z-stacking doesn't affect tab
+   *  order. Left unstopped, that raw event keeps bubbling right past this viewer under the very same
+   *  public event name `onPageClick` above also emits -- reaching any consumer listening on
+   *  `<lr-pdf-viewer>` as an undocumented duplicate. Stop it here and re-emit the viewer's own single
+   *  copy instead, so exactly one `lr-highlight-activate` -- always originating from the viewer
+   *  itself -- reaches consumers regardless of activation path. */
+  private onHighlightLayerActivate = (event: LyraHighlightLayerEventMap['lr-highlight-activate']): void => {
+    event.stopPropagation();
+    this.emit('lr-highlight-activate', event.detail);
+  };
+
   // -- rendering --------------------------------------------------------------------------------------------
 
   private renderToolbar(): TemplateResult {
@@ -1458,6 +1473,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       <lr-highlight-layer
         ${ref(this.highlightLayerRef(number))}
         style="position:absolute; inset-block-start:var(--lr-space-m); inset-inline-start:50%; transform:translateX(${highlightTransform});"
+        @lr-highlight-activate=${this.onHighlightLayerActivate}
       ></lr-highlight-layer>
       <div part="text-layer" ${ref(this.textLayerContainerRef(number))}></div>
     </div>`;

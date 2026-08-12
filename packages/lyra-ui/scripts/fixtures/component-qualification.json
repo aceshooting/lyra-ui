@@ -85,7 +85,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 636,
+              "line": 673,
               "test": "is accessible with populated and expanded content",
               "target": "accordion",
               "state": "populated"
@@ -99,7 +99,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 322,
+              "line": 359,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -110,7 +110,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 529,
+              "line": 566,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -121,7 +121,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 1049,
+              "line": 1086,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -132,7 +132,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 1015,
+              "line": 1052,
               "kind": "320px allocation test signal"
             }
           ]
@@ -263,28 +263,28 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 636,
+              "line": 673,
               "test": "is accessible with populated and expanded content",
               "target": "accordion",
               "state": "populated"
             },
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 760,
+              "line": 797,
               "test": "keeps a slotted label decorative while its text names the sole trigger",
               "target": "item",
               "state": "populated"
             },
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 797,
+              "line": 834,
               "test": "keeps a legacy summary control decorative while its text names and activates the trigger",
               "target": "item",
               "state": "populated"
             },
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 1082,
+              "line": 1119,
               "test": "localizes the fallback label and is accessible in its own populated expanded state",
               "target": "item",
               "state": "populated"
@@ -298,7 +298,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 322,
+              "line": 359,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -309,7 +309,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 529,
+              "line": 566,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -320,7 +320,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 1049,
+              "line": 1086,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -331,7 +331,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 1015,
+              "line": 1052,
               "kind": "320px allocation test signal"
             }
           ]
@@ -2669,7 +2669,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "keyboard",
           "rtl",
           "narrowAllocation",
           "visual",
@@ -2684,14 +2683,14 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-chip/attachment-chip.test.ts",
-              "line": 987,
+              "line": 1020,
               "test": "is accessible in a populated uploading state with numeric progress",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/attachment-chip/attachment-chip.test.ts",
-              "line": 1001,
+              "line": 1034,
               "test": "is accessible in a populated error state with a retry button",
               "target": "el",
               "state": "populated"
@@ -2701,9 +2700,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/media/attachment-chip/attachment-chip.test.ts",
+              "line": 140,
+              "kind": "component keyboard assertion signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -2717,7 +2721,7 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-chip/attachment-chip.test.ts",
-              "line": 382,
+              "line": 415,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -2803,7 +2807,6 @@
         }
       },
       "knownLimitations": [
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "No component-local rendered RTL assertion is recorded.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
@@ -3750,7 +3753,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/badge/tag.test.ts",
-              "line": 335,
+              "line": 349,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -3761,7 +3764,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/badge/tag.test.ts",
-              "line": 280,
+              "line": 294,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -12763,7 +12766,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 322,
+              "line": 359,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -12774,7 +12777,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 529,
+              "line": 566,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -12785,7 +12788,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 1049,
+              "line": 1086,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -12796,7 +12799,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 1015,
+              "line": 1052,
               "kind": "320px allocation test signal"
             }
           ]
@@ -13452,21 +13455,21 @@
           "evidence": [
             {
               "file": "src/components/layout/dock-panel/dock-panel.test.ts",
-              "line": 751,
+              "line": 776,
               "test": "is accessible in its default state (no collapsible, resizable handle only)",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/dock-panel/dock-panel.test.ts",
-              "line": 757,
+              "line": 782,
               "test": "is accessible when collapsible and populated with content",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/dock-panel/dock-panel.test.ts",
-              "line": 763,
+              "line": 788,
               "test": "is accessible while collapsed",
               "target": "el",
               "state": "populated"
@@ -29283,28 +29286,28 @@
           "evidence": [
             {
               "file": "src/components/layout/page/page.test.ts",
-              "line": 205,
+              "line": 225,
               "test": "keeps slotted skip content and toggle glyph controls decorative while preserving the outer actions",
               "target": "page",
               "state": "populated"
             },
             {
               "file": "src/components/layout/page/page.test.ts",
-              "line": 806,
+              "line": 826,
               "test": "is accessible in populated desktop, mobile-closed, and mobile-open states",
               "target": "page",
               "state": "populated"
             },
             {
               "file": "src/components/layout/page/page.test.ts",
-              "line": 806,
+              "line": 826,
               "test": "is accessible in populated desktop, mobile-closed, and mobile-open states",
               "target": "page",
               "state": "populated"
             },
             {
               "file": "src/components/layout/page/page.test.ts",
-              "line": 806,
+              "line": 826,
               "test": "is accessible in populated desktop, mobile-closed, and mobile-open states",
               "target": "page",
               "state": "populated"
@@ -29318,7 +29321,7 @@
           "evidence": [
             {
               "file": "src/components/layout/page/page.test.ts",
-              "line": 560,
+              "line": 580,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -29329,7 +29332,7 @@
           "evidence": [
             {
               "file": "src/components/layout/page/page.test.ts",
-              "line": 655,
+              "line": 675,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -29340,7 +29343,7 @@
           "evidence": [
             {
               "file": "src/components/layout/page/page.test.ts",
-              "line": 698,
+              "line": 718,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -30207,21 +30210,21 @@
             },
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
-              "line": 1650,
+              "line": 1692,
               "test": "is accessible with highlights present",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
-              "line": 2213,
+              "line": 2255,
               "test": "is accessible with an active search match painted",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
-              "line": 2676,
+              "line": 2718,
               "test": "is accessible with pages, text runs, and search matches rendered",
               "target": "el",
               "state": "populated"
@@ -30235,7 +30238,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
-              "line": 1349,
+              "line": 626,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -30246,7 +30249,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
-              "line": 2504,
+              "line": 2546,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -30263,7 +30266,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
-              "line": 2457,
+              "line": 2499,
               "kind": "320px allocation test signal"
             }
           ]
@@ -32325,7 +32328,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.test.ts",
-              "line": 605,
+              "line": 626,
               "test": "is accessible with its composed controls populated",
               "target": "el",
               "state": "populated"
@@ -42898,7 +42901,7 @@
             },
             {
               "file": "src/components/overlays/badge/tag.test.ts",
-              "line": 285,
+              "line": 299,
               "test": "is accessible while removable",
               "target": "el",
               "state": "populated"
@@ -42912,7 +42915,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/badge/tag.test.ts",
-              "line": 335,
+              "line": 349,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -42923,7 +42926,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/badge/tag.test.ts",
-              "line": 280,
+              "line": 294,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -45496,7 +45499,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-call-chip/tool-call-chip.test.ts",
-              "line": 471,
+              "line": 481,
               "test": "is accessible in a populated state with category, duration, and an open detail tooltip",
               "target": "el",
               "state": "populated"
@@ -48843,28 +48846,28 @@
             },
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 525,
+              "line": 559,
               "test": "is accessible with an icon-only view toggle (ariaLabel supplies the accessible name)",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 1228,
+              "line": 1287,
               "test": "is accessible in both default and fullscreen-expandable states",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 1228,
+              "line": 1287,
               "test": "is accessible in both default and fullscreen-expandable states",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 1956,
+              "line": 2015,
               "test": "is accessible with the active-state props themed",
               "target": "el",
               "state": "populated"
@@ -48878,7 +48881,7 @@
           "evidence": [
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 1135,
+              "line": 1194,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -48889,7 +48892,7 @@
           "evidence": [
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 1378,
+              "line": 1437,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -48900,7 +48903,7 @@
           "evidence": [
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 1672,
+              "line": 1731,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -48911,7 +48914,7 @@
           "evidence": [
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 594,
+              "line": 628,
               "kind": "320px allocation test signal"
             }
           ]

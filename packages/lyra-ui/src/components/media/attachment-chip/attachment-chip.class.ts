@@ -408,7 +408,12 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     });
   };
 
-  private onViewerClose = (): void => {
+  private onViewerClose = (event: Event): void => {
+    // <lr-document-viewer>'s own `lr-close` is a plain `this.emit()` (bubbles + composed) --
+    // consumed here to close the transient preview, but never re-emitted under any name of this
+    // component's own, so left unstopped it would keep bubbling past the chip and reach an
+    // ancestor under an event name this component documents nothing about.
+    event.stopPropagation();
     this.previewOpen = false;
   };
 

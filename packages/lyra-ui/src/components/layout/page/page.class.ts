@@ -56,6 +56,10 @@ function navigationIcon(): SVGTemplateResult {
   `;
 }
 
+export interface LyraPageEventMap {
+  'lr-nav-toggle': CustomEvent<{ open: boolean }>;
+}
+
 /**
  * `<lr-page>` — a semantic application/page shell that derives its mobile or desktop presentation
  * from its own allocated inline size. A single static navigation subtree participates in the
@@ -98,6 +102,10 @@ function navigationIcon(): SVGTemplateResult {
  * @slot skip-to-content - Replaces the localized skip-link text as inert visual content; its
  *   descriptive text names the outer skip link.
  * @slot subheader - A secondary header row.
+ * @event lr-nav-toggle - A cancelable proposed `navOpen` state from `showNavigation()`,
+ *   `hideNavigation()`, `toggleNavigation()`, or a built-in dismissal (backdrop click, Escape, the
+ *   default navigation-toggle button). Call `preventDefault()` to leave `navOpen` unchanged.
+ *   `detail: { open }`.
  * @csspart aside - Wrapper for the `aside` slot and the complementary landmark.
  * @csspart banner - Wrapper for the `banner` slot.
  * @csspart base - Compatibility name for the root Page wrapper; use `page`.
@@ -157,7 +165,7 @@ function navigationIcon(): SVGTemplateResult {
  * @status stable
  * @since 8.0.0
  */
-export class LyraPage extends LyraElement {
+export class LyraPage extends LyraElement<LyraPageEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -478,20 +486,29 @@ export class LyraPage extends LyraElement {
     this.mainElement?.scrollIntoView({ block: 'start' });
   };
 
+  /** Emits the cancelable lr-nav-toggle proposal before touching navOpen; a defaultPrevented
+   *  request leaves it unchanged. Shared by every mutation path -- showNavigation(),
+   *  hideNavigation(), toggleNavigation(), and the built-in drawer dismissals that call them. */
+  private requestNavOpen(next: boolean): void {
+    if (this.navOpen === next) return;
+    if (this.emit('lr-nav-toggle', { open: next }, { cancelable: true }).defaultPrevented) return;
+    this.navOpen = next;
+  }
+
   /** Open mobile navigation. Desktop navigation is already visible, but the state is retained so
    * an open drawer can move through desktop and back without replacing its content. */
   showNavigation(): void {
-    this.navOpen = true;
+    this.requestNavOpen(true);
   }
 
   /** Close mobile navigation. */
   hideNavigation(): void {
-    this.navOpen = false;
+    this.requestNavOpen(false);
   }
 
   /** Toggle mobile navigation. */
   toggleNavigation(): void {
-    this.navOpen = !this.navOpen;
+    this.requestNavOpen(!this.navOpen);
   }
 
   /** Number of vertically visible CSS pixels for `element`, clamped to the current viewport. */

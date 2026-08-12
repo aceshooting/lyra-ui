@@ -589,6 +589,48 @@ describe('lr-pdf-viewer', () => {
       expect(activated).to.be.false;
     } finally { restore(); }
   });
+
+  it('stops the highlight-layer-owned lr-highlight-activate event from leaking past the viewer as a raw duplicate (keyboard activation)', async () => {
+    const wrapper = await fixture(html`<div><lr-pdf-viewer></lr-pdf-viewer></div>`);
+    const el = wrapper.querySelector('lr-pdf-viewer') as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.highlights = [{ id: 'cite-1', anchor: { kind: 'page', page: 1 } }];
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await aTimeout(50);
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+      const layerEl = list.shadowRoot!.querySelector('lr-highlight-layer') as unknown as
+        HTMLElement & { updateComplete: Promise<boolean> };
+      await layerEl.updateComplete;
+      // Keyboard activation reaches <lr-highlight-layer>'s own roving-tabindex rect-target directly
+      // (see the class doc on onPageClick) -- unlike a pointer click, it never touches onPageClick's
+      // own manual hit-test at all, isolating exactly the child's own bubbling emit.
+      const target = layerEl.shadowRoot!.querySelector('[part="rect-target"]') as HTMLElement;
+      expect(target !== null, 'the highlight rect-target must have rendered').to.be.true;
+
+      let receivedCount = 0;
+      let receivedDetail: unknown;
+      let leakedFromLayer = false;
+      el.addEventListener('lr-highlight-activate', (event: Event) => {
+        receivedCount++;
+        receivedDetail = (event as CustomEvent).detail;
+        // <lr-highlight-layer>'s own emit() dispatches with itself as the event's target -- if the
+        // raw, unstopped child event is what's still arriving here, the layer is still on its
+        // composedPath; the viewer's own freshly re-emitted event never has the layer on its path.
+        leakedFromLayer = (event as CustomEvent).composedPath().includes(layerEl);
+      });
+
+      target.focus();
+      target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true }));
+      await aTimeout(10);
+
+      expect(receivedCount, 'exactly one lr-highlight-activate should reach the viewer').to.equal(1);
+      expect(receivedDetail).to.deep.equal({ id: 'cite-1' });
+      expect(leakedFromLayer, 'the raw <lr-highlight-layer> event must not keep bubbling past the viewer unstopped').to.be.false;
+    } finally { restore(); }
+  });
 });
 
 it('validates maxHeight before assigning the base custom property', async () => {

@@ -313,7 +313,11 @@ export type {
   SplitPanelSnapFunctionParams,
 } from './components/layout/split-panel/split-panel.class.js';
 export { LyraPage } from './components/layout/page/page.class.js';
-export type { PageNavigationPlacement, PageView } from './components/layout/page/page.class.js';
+export type {
+  LyraPageEventMap,
+  PageNavigationPlacement,
+  PageView,
+} from './components/layout/page/page.class.js';
 export { LyraTimeRange } from './components/forms/time-range/time-range.class.js';
 export type {
   TimeRangeHandle,

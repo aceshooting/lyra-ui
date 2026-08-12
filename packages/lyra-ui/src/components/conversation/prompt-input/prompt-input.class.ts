@@ -535,7 +535,8 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
         .query=${this.activeSuggestion?.query ?? ''}
         .open=${!this.disabled && this.activeSuggestion !== null}
         @lr-mention-select=${this.onSuggestionSelect}
-        @lr-mention-close=${() => {
+        @lr-mention-close=${(event: Event) => {
+          event.stopPropagation();
           this.activeSuggestion = null;
         }}
       ></lr-mention-popover>

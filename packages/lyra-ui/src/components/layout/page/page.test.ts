@@ -183,6 +183,26 @@ it('showNavigation(), hideNavigation(), and toggleNavigation() keep navOpen and 
   expect(page.navOpen).to.be.false;
 });
 
+it('emits a cancelable lr-nav-toggle before mutating navOpen, honoring a prevented request', async () => {
+  const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
+  const order: Array<{ type: string; open: boolean; navOpenAtDispatch: boolean }> = [];
+  page.addEventListener('lr-nav-toggle', (event) => {
+    const detail = (event as CustomEvent<{ open: boolean }>).detail;
+    order.push({ type: event.type, open: detail.open, navOpenAtDispatch: page.navOpen });
+    expect(event.cancelable).to.be.true;
+  });
+
+  page.showNavigation();
+  expect(order).to.deep.equal([{ type: 'lr-nav-toggle', open: true, navOpenAtDispatch: false }]);
+  expect(page.navOpen).to.be.true;
+
+  order.length = 0;
+  page.addEventListener('lr-nav-toggle', (event) => event.preventDefault(), { once: true });
+  page.hideNavigation();
+  expect(order).to.deep.equal([{ type: 'lr-nav-toggle', open: false, navOpenAtDispatch: true }]);
+  expect(page.navOpen, 'a defaultPrevented lr-nav-toggle must not mutate navOpen').to.be.true;
+});
+
 it('gives the default toggle an exact controls/expanded contract and supports its icon slot', async () => {
   const page = (await fixture(html`
     <lr-page style="inline-size:320px"><span slot="navigation-toggle-icon">Menu</span></lr-page>

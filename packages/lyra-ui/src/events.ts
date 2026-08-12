@@ -117,6 +117,7 @@ import type { LyraDrilldownPanelEventMap } from './components/layout/drilldown-p
 import type { LyraFilterBarEventMap } from './components/layout/filter-bar/filter-bar.class.js';
 import type { LyraMenuItemEventMap } from './components/layout/menu/menu-item.class.js';
 import type { LyraMenuEventMap } from './components/layout/menu/menu.class.js';
+import type { LyraPageEventMap } from './components/layout/page/page.class.js';
 import type { LyraReorderItemEventMap } from './components/layout/reorder-list/reorder-item.class.js';
 import type { LyraReorderListEventMap } from './components/layout/reorder-list/reorder-list.class.js';
 import type { LyraResponsivePanelEventMap } from './components/layout/responsive-panel/responsive-panel.class.js';
@@ -705,11 +706,15 @@ export type LyraCollapseChangeEvent =
   | LyraWidgetEventMap['lr-collapse-change'];
 
 /**
- * `lr-collapse-request` — dispatched by `<lr-widget>`.
+ * `lr-collapse-request` — dispatched by 2 components: `<lr-dock-panel>`, `<lr-widget>`.
  *
- * Detail type: `LyraWidgetEventMap['lr-collapse-request']`.
+ * A union of 2 component entries, so `event.detail` here exposes only what all of them share. For
+ * one component's exact detail, index its own map — e.g.
+ * `LyraDockPanelEventMap['lr-collapse-request']`.
  */
-export type LyraCollapseRequestEvent = LyraWidgetEventMap['lr-collapse-request'];
+export type LyraCollapseRequestEvent =
+  | LyraDockPanelEventMap['lr-collapse-request']
+  | LyraWidgetEventMap['lr-collapse-request'];
 
 /**
  * `lr-collapse-toggle` — dispatched by `<lr-chat-message>`.
@@ -1218,6 +1223,13 @@ export type LyraFrameSelectEvent = LyraStackTraceEventMap['lr-frame-select'];
  * Detail type: `LyraWidgetEventMap['lr-fullscreen-change']`.
  */
 export type LyraFullscreenChangeEvent = LyraWidgetEventMap['lr-fullscreen-change'];
+
+/**
+ * `lr-fullscreen-request` — dispatched by `<lr-widget>`.
+ *
+ * Detail type: `LyraWidgetEventMap['lr-fullscreen-request']`.
+ */
+export type LyraFullscreenRequestEvent = LyraWidgetEventMap['lr-fullscreen-request'];
 
 /**
  * `lr-group-toggle` — dispatched by `<lr-thread-list>`.
@@ -1750,6 +1762,13 @@ export type LyraMutationEvent = LyraMutationObserverEventMap['lr-mutation'];
  * Detail type: `LyraRealtimeSessionEventMap['lr-mute-change']`.
  */
 export type LyraMuteChangeEvent = LyraRealtimeSessionEventMap['lr-mute-change'];
+
+/**
+ * `lr-nav-toggle` — dispatched by `<lr-page>`.
+ *
+ * Detail type: `LyraPageEventMap['lr-nav-toggle']`.
+ */
+export type LyraNavToggleEvent = LyraPageEventMap['lr-nav-toggle'];
 
 /**
  * `lr-node-add` — dispatched by `<lr-flow-canvas>`.
@@ -2987,6 +3006,13 @@ export type LyraViewChangeEvent =
   | LyraWidgetEventMap['lr-view-change'];
 
 /**
+ * `lr-view-request` — dispatched by `<lr-widget>`.
+ *
+ * Detail type: `LyraWidgetEventMap['lr-view-request']`.
+ */
+export type LyraViewRequestEvent = LyraWidgetEventMap['lr-view-request'];
+
+/**
  * `lr-viewport-change` — dispatched by 2 components: `<lr-flow-canvas>`, `<lr-graph>`.
  *
  * A union of 2 component entries, so `event.detail` here exposes only what all of them share. For
@@ -3198,6 +3224,7 @@ export interface LyraGlobalEventMap {
   'lr-forget': LyraForgetEvent;
   'lr-frame-select': LyraFrameSelectEvent;
   'lr-fullscreen-change': LyraFullscreenChangeEvent;
+  'lr-fullscreen-request': LyraFullscreenRequestEvent;
   'lr-group-toggle': LyraGroupToggleEvent;
   'lr-hide': LyraHideEvent;
   'lr-highlight-activate': LyraHighlightActivateEvent;
@@ -3254,6 +3281,7 @@ export interface LyraGlobalEventMap {
   'lr-move-request': LyraMoveRequestEvent;
   'lr-mutation': LyraMutationEvent;
   'lr-mute-change': LyraMuteChangeEvent;
+  'lr-nav-toggle': LyraNavToggleEvent;
   'lr-node-add': LyraNodeAddEvent;
   'lr-node-click': LyraNodeClickEvent;
   'lr-node-enter': LyraNodeEnterEvent;
@@ -3390,6 +3418,7 @@ export interface LyraGlobalEventMap {
   'lr-version-select': LyraVersionSelectEvent;
   'lr-video-change': LyraVideoChangeEvent;
   'lr-view-change': LyraViewChangeEvent;
+  'lr-view-request': LyraViewRequestEvent;
   'lr-viewport-change': LyraViewportChangeEvent;
   'lr-visibility-change': LyraVisibilityChangeEvent;
   'lr-visible-range-changed': LyraVisibleRangeChangedEvent;

@@ -27,6 +27,7 @@ export interface DockPanelCollapseChangeDetail {
 
 export interface LyraDockPanelEventMap {
   "lr-resize": CustomEvent<DockPanelResizeDetail>;
+  "lr-collapse-request": CustomEvent<DockPanelCollapseChangeDetail>;
   "lr-collapse-change": CustomEvent<DockPanelCollapseChangeDetail>;
 }
 
@@ -145,8 +146,12 @@ interface DragState {
  * @slot - The panel's own content.
  * @event lr-resize - `detail: { extent }` (a `px` CSS length string), fired on every drag step,
  *   drag release, and keyboard step.
- * @event lr-collapse-change - `detail: { collapsed }`, fired whenever the collapse toggle changes
- *   `collapsed`.
+ * @event lr-collapse-request - A cancelable proposed `collapsed` state from the built-in collapse
+ *   toggle. Call `preventDefault()` to keep `collapsed` unchanged. Not fired when a consumer sets
+ *   `collapsed` directly. `detail: { collapsed }`.
+ * @event lr-collapse-change - Non-cancelable post-commit notification from the built-in collapse
+ *   toggle. Not fired when a consumer sets `collapsed` directly. `detail: { collapsed }` (the new
+ *   `collapsed` state).
  * @csspart base - The panel root.
  * @csspart content - The wrapper around the default slot; hidden while `collapsed`.
  * @csspart handle - The draggable resize handle on the panel's inner edge. Only rendered when
@@ -411,10 +416,11 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   };
 
   private toggleCollapsed = (): void => {
-    this.collapsed = !this.collapsed;
-    this.emit("lr-collapse-change", {
-      collapsed: this.collapsed,
-    });
+    const next = !this.collapsed;
+    const request = this.emit("lr-collapse-request", { collapsed: next }, { cancelable: true });
+    if (request.defaultPrevented) return;
+    this.collapsed = next;
+    this.emit("lr-collapse-change", { collapsed: next });
   };
 
   /** Rotation (deg) for the collapse-toggle's chevron: it points toward the

@@ -621,6 +621,31 @@ it("toggles collapsed via the collapse-toggle button and emits lr-collapse-chang
   expect(el.shadowRoot!.querySelector('[part="handle"]')).to.equal(null);
 });
 
+it("emits a cancelable lr-collapse-request before lr-collapse-change, vetoing the mutation when prevented", async () => {
+  const el = await dockedFixture('extent="280px" collapsible');
+  await elementUpdated(el);
+  const toggle = el.shadowRoot!.querySelector(
+    '[part="collapse-toggle"]'
+  ) as HTMLElement;
+
+  const order: string[] = [];
+  el.addEventListener("lr-collapse-request", (e) => {
+    order.push("lr-collapse-request");
+    expect((e as CustomEvent).cancelable).to.equal(true);
+    expect(el.collapsed, "collapsed must still be false while the request is pending").to.equal(false);
+    e.preventDefault();
+  });
+  el.addEventListener("lr-collapse-change", () => order.push("lr-collapse-change"));
+
+  toggle.click();
+  await elementUpdated(el);
+
+  expect(order, "a prevented request must veto the mutation and skip lr-collapse-change").to.deep.equal([
+    "lr-collapse-request",
+  ]);
+  expect(el.collapsed).to.equal(false);
+});
+
 it("preserves the last expanded extent across a collapse/expand round trip", async () => {
   const el = await dockedFixture('extent="280px" collapsible');
   await elementUpdated(el);

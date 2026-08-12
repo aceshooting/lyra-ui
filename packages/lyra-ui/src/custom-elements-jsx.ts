@@ -158,7 +158,7 @@ import type { LyraDropdownItem, LyraDropdownItemEventMap } from './components/la
 import type { LyraMenuItem, LyraMenuItemEventMap } from './components/layout/menu/menu-item.class.js';
 import type { LyraMenuLabel } from './components/layout/menu/menu-label.class.js';
 import type { LyraMenu, LyraMenuEventMap } from './components/layout/menu/menu.class.js';
-import type { LyraPage } from './components/layout/page/page.class.js';
+import type { LyraPage, LyraPageEventMap } from './components/layout/page/page.class.js';
 import type { LyraReorderItem, LyraReorderItemEventMap } from './components/layout/reorder-list/reorder-item.class.js';
 import type { LyraReorderList, LyraReorderListEventMap } from './components/layout/reorder-list/reorder-list.class.js';
 import type { LyraResponsivePanel, LyraResponsivePanelEventMap } from './components/layout/responsive-panel/responsive-panel.class.js';
@@ -3049,6 +3049,7 @@ export type LyraDockPanelReactProps = LyraReactElementProps<
   | 'strings',
   LyraDockPanelEventMap,
   | 'lr-collapse-change'
+  | 'lr-collapse-request'
   | 'lr-resize',
   | '--lr-dock-panel-collapsed-size',
   {
@@ -6101,8 +6102,8 @@ export type LyraPageReactProps = LyraReactElementProps<
   | 'navOpen'
   | 'strings'
   | 'view',
-  {},
-never,
+  LyraPageEventMap,
+  | 'lr-nav-toggle',
   | '--aside-width'
   | '--banner-height'
   | '--header-height'
@@ -9858,7 +9859,9 @@ export type LyraWidgetReactProps = LyraReactElementProps<
   | 'lr-collapse-change'
   | 'lr-collapse-request'
   | 'lr-fullscreen-change'
-  | 'lr-view-change',
+  | 'lr-fullscreen-request'
+  | 'lr-view-change'
+  | 'lr-view-request',
   | '--lr-widget-backdrop-inset'
   | '--lr-widget-fullscreen-inset'
   | '--lr-widget-overlay-color'

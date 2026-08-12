@@ -7,7 +7,7 @@ import {
   type SVGTemplateResult,
   type PropertyValues,
 } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { place } from '../../../internal/positioner.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -386,6 +386,14 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     // so existing `lr-tool-chip-select` listeners keep working.
     this.emit('lr-tool-chip-select', detail);
   };
+
+  @query('[part="base"]') private baseEl?: HTMLButtonElement;
+
+  /** Forwards host activation to the internal base button, mirroring `<lr-button>`'s `click()`
+   *  override. */
+  override click(): void {
+    this.baseEl?.click();
+  }
 
   private get effectiveStatus(): ToolCallStatus {
     return STATUS_VALUES.has(this.status) ? this.status : 'pending';

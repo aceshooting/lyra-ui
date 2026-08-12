@@ -58,10 +58,16 @@ position) survives the transition.
 built-in collapse toggle. Call `preventDefault()` to leave `collapsed` and any persisted state
 unchanged. It is not emitted when a consumer assigns `collapsed` directly), `lr-collapse-change`
 (non-cancelable; `detail: { collapsed }` is the accepted built-in-toggle state. It is not emitted
-when a consumer assigns `collapsed` directly), `lr-fullscreen-change` (`detail: { fullscreen }` —
-also fired when fullscreen is exited via Escape or a backdrop click, not just the toggle button),
-`lr-view-change` (`detail: { viewId }`, the new active view's `id` — fired when it changes via a
-header view-toggle click, not when a consumer sets `activeView` directly)
+when a consumer assigns `collapsed` directly), `lr-fullscreen-request` (cancelable; `detail: {
+fullscreen }` is the state proposed by the fullscreen toggle, Escape, or a backdrop click. Call
+`preventDefault()` to leave `fullscreen` unchanged. Not emitted when a consumer assigns
+`fullscreen` directly), `lr-fullscreen-change` (non-cancelable; `detail: { fullscreen }` is the
+accepted state — also fired when fullscreen is exited via Escape or a backdrop click, not just the
+toggle button. Not emitted when a consumer assigns `fullscreen` directly), `lr-view-request`
+(cancelable; `detail: { viewId }` is the view proposed by a header view-toggle click. Call
+`preventDefault()` to leave `activeView` unchanged. Not emitted when a consumer assigns
+`activeView` directly), `lr-view-change` (non-cancelable; `detail: { viewId }`, the accepted
+active view's `id`. Not emitted when a consumer sets `activeView` directly)
 
 **Slots:** default (the panel body, rendered only while `views` is empty), `icon` (optional leading
 icon in the title row), `label` (rich label content, overrides the `label` attribute), `sublabel`

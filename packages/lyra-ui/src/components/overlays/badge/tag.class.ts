@@ -1,5 +1,5 @@
 import { html, nothing, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import {
   composedParentElement,
   isAccessibilitySubtreeExcluded,
@@ -230,6 +230,15 @@ export class LyraTag extends LyraBadge<LyraTagEventMap> {
     const event = this.emit('lr-remove', undefined, { cancelable: true });
     if (!event.defaultPrevented) this.remove();
   };
+
+  // Only ever present while `withRemove` -- see renderTrailing() below.
+  @query('[part~="remove-button"]') private removeButtonEl?: HTMLButtonElement;
+
+  /** Forwards host activation to the remove button, mirroring `<lr-button>`'s `click()` override.
+   *  A no-op while `withRemove` is unset: there is no internal control to forward to. */
+  override click(): void {
+    this.removeButtonEl?.click();
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);

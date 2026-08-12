@@ -381,10 +381,16 @@ position) survives the transition.
 built-in collapse toggle. Call `preventDefault()` to leave `collapsed` and any persisted state
 unchanged. It is not emitted when a consumer assigns `collapsed` directly), `lr-collapse-change`
 (non-cancelable; `detail: { collapsed }` is the accepted built-in-toggle state. It is not emitted
-when a consumer assigns `collapsed` directly), `lr-fullscreen-change` (`detail: { fullscreen }` —
-also fired when fullscreen is exited via Escape or a backdrop click, not just the toggle button),
-`lr-view-change` (`detail: { viewId }`, the new active view's `id` — fired when it changes via a
-header view-toggle click, not when a consumer sets `activeView` directly)
+when a consumer assigns `collapsed` directly), `lr-fullscreen-request` (cancelable; `detail: {
+fullscreen }` is the state proposed by the fullscreen toggle, Escape, or a backdrop click. Call
+`preventDefault()` to leave `fullscreen` unchanged. Not emitted when a consumer assigns
+`fullscreen` directly), `lr-fullscreen-change` (non-cancelable; `detail: { fullscreen }` is the
+accepted state — also fired when fullscreen is exited via Escape or a backdrop click, not just the
+toggle button. Not emitted when a consumer assigns `fullscreen` directly), `lr-view-request`
+(cancelable; `detail: { viewId }` is the view proposed by a header view-toggle click. Call
+`preventDefault()` to leave `activeView` unchanged. Not emitted when a consumer assigns
+`activeView` directly), `lr-view-change` (non-cancelable; `detail: { viewId }`, the accepted
+active view's `id`. Not emitted when a consumer sets `activeView` directly)
 
 **Slots:** default (the panel body, rendered only while `views` is empty), `icon` (optional leading
 icon in the title row), `label` (rich label content, overrides the `label` attribute), `sublabel`
@@ -2583,8 +2589,11 @@ unit for free.
 **Events:**
 - `lr-resize` — `detail: { extent }` (a `px` CSS length string), fired on every drag step, drag
   release, and keyboard step.
-- `lr-collapse-change` — `detail: { collapsed }`, fired whenever the collapse toggle flips
-  `collapsed`.
+- `lr-collapse-request` (cancelable; `detail: { collapsed }` is the state proposed by the built-in
+  collapse toggle. Call `preventDefault()` to leave `collapsed` unchanged. Not fired when a
+  consumer assigns `collapsed` directly), `lr-collapse-change` (non-cancelable; `detail: {
+  collapsed }` is the accepted built-in-toggle state. Not fired when a consumer assigns `collapsed`
+  directly).
 
 **Slots:** default — the panel's own content.
 
@@ -2800,8 +2809,10 @@ dismissal, ref-counted document scroll lock).
 cycling) at the ends; the active row is scrolled into view. Enter selects. Hovering a non-disabled
 row also makes it active.
 
-**Events:** `lr-open`, `lr-close` (both `detail: undefined`), `lr-select` (`detail: { command }`,
-fired before the command's own `onSelect` runs and before the palette closes).
+**Events:** `lr-open`, `lr-close` (both `detail: undefined`, cancelable — fired before the
+mutation, `preventDefault()` keeps the palette in its current open state), `lr-select`
+(`detail: { command }`, fired before the command's own `onSelect` runs and before the palette
+closes).
 
 **Slots:** none.
 
@@ -3291,6 +3302,11 @@ and event listeners survive every breakpoint crossing.
 `toggleNavigation(): void` update `navOpen`. `visiblePixelsInViewport(element: HTMLElement | null):
 number` returns the element's finite, viewport-clamped vertical intersection in CSS pixels (`0` for
 `null`, invalid geometry, or no intersection).
+
+**Events:** `lr-nav-toggle` (cancelable; `detail: { open }` is the `navOpen` state proposed by
+`showNavigation()`/`hideNavigation()`/`toggleNavigation()` or a built-in dismissal — backdrop
+click, Escape, or the default/custom navigation-toggle control, all of which route through those
+same methods. Call `preventDefault()` to leave `navOpen` unchanged.)
 
 The default mobile toggle is a native button with localized open/close names and explicit
 `aria-expanded="true|false"` plus `aria-controls` pointing to this Page's unique drawer. Opening

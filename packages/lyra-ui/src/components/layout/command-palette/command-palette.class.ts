@@ -67,8 +67,10 @@ export interface LyraCommandPaletteEventMap {
  * Tab, Escape dismissal, and document scroll-locking for as long as the palette is open.
  * @customElement lr-command-palette
  * @event lr-select - A command was chosen; detail is `{ command }`.
- * @event lr-open - The palette opened.
- * @event lr-close - The palette closed.
+ * @event lr-open - Emitted before the palette opens. Cancelable: `preventDefault()` keeps it
+ * closed.
+ * @event lr-close - Emitted before the palette closes. Cancelable: `preventDefault()` keeps it
+ * open.
  * @csspart backdrop - Modal backdrop.
  * @csspart dialog - Palette dialog.
  * @csspart search - The search row wrapping the leading icon and the `input`.
@@ -373,18 +375,18 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
 
   openPalette(): void {
     if (this.open) return;
+    if (this.emit("lr-open", undefined, { cancelable: true }).defaultPrevented) return;
     this.open = true;
     this.queryText = "";
     this.listScrollTop = 0;
     const rows = this.filtered;
     this.setActiveIndex(rows, this.seekEnabled(rows, 0, 1));
-    this.emit("lr-open");
   }
 
   close(): void {
     if (!this.open) return;
+    if (this.emit("lr-close", undefined, { cancelable: true }).defaultPrevented) return;
     this.open = false;
-    this.emit("lr-close");
   }
 
   registerCommand(command: LyraCommand): () => void {

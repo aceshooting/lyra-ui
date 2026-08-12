@@ -1071,6 +1071,11 @@ describe('lr-terminal', () => {
     el.write('a\nb\nc');
     el.highlights = [{ id: 'h1', anchor: { kind: 'line-range', start: 2, end: 2 } }];
     await el.updateComplete;
+    // Matches the copy/download/jump-to-latest hover tests above: the virtual list's own
+    // initial visible-range/row-measurement events are still settling right after write(), and
+    // an early getBoundingClientRect() races that settling -- the row can shift under the
+    // pointer between this capture and sendMouse's round trip, landing the hover on nothing.
+    await aTimeout(100);
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
     const line = (): HTMLElement => list.shadowRoot!.querySelector('[data-line-number="2"]') as HTMLElement;
     line().scrollIntoView({ block: 'center' });

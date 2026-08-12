@@ -422,6 +422,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
   #handlePanelShow = (event: Event): void => {
     const panel = this.#directPanel(event);
     if (!panel || event.defaultPrevented) return;
+    event.stopPropagation();
     if (this.#performingTransitions.get(panel) === 'expand') return;
     const before = this.emit('lr-expand', { item: panel }, { cancelable: true });
     if (before.defaultPrevented) {
@@ -438,6 +439,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
   #handlePanelHide = (event: Event): void => {
     const panel = this.#directPanel(event);
     if (!panel || event.defaultPrevented) return;
+    event.stopPropagation();
     if (this.#performingTransitions.get(panel) === 'collapse') return;
     // Legacy Details panels do not expose the item's internal activation request, so retain the
     // historical single-mode guard for them. Group-owned sibling/collapseAll changes carry the
@@ -455,14 +457,18 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
 
   #handlePanelAfterShow = (event: Event): void => {
     const panel = this.#directPanel(event);
-    if (!panel || this.#pendingTransitions.get(panel) !== 'expand' || !this.#isExpanded(panel)) return;
+    if (!panel) return;
+    event.stopPropagation();
+    if (this.#pendingTransitions.get(panel) !== 'expand' || !this.#isExpanded(panel)) return;
     this.#pendingTransitions.delete(panel);
     this.emit('lr-after-expand', { item: panel });
   };
 
   #handlePanelAfterHide = (event: Event): void => {
     const panel = this.#directPanel(event);
-    if (!panel || this.#pendingTransitions.get(panel) !== 'collapse' || this.#isExpanded(panel)) return;
+    if (!panel) return;
+    event.stopPropagation();
+    if (this.#pendingTransitions.get(panel) !== 'collapse' || this.#isExpanded(panel)) return;
     this.#pendingTransitions.delete(panel);
     this.emit('lr-after-collapse', { item: panel });
   };

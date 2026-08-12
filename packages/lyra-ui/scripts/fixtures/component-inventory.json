@@ -26236,13 +26236,13 @@
           {
             "name": "lr-close",
             "type": "CustomEvent<undefined>",
-            "cancelable": "never",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-open",
             "type": "CustomEvent<undefined>",
-            "cancelable": "never",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -36084,6 +36084,12 @@
             "name": "lr-collapse-change",
             "type": "CustomEvent<DockPanelCollapseChangeDetail>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-collapse-request",
+            "type": "CustomEvent<DockPanelCollapseChangeDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -74210,7 +74216,14 @@
             "deprecated": null
           }
         ],
-        "events": [],
+        "events": [
+          {
+            "name": "lr-nav-toggle",
+            "type": "CustomEvent<{ open: boolean }>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          }
+        ],
         "parts": [
           {
             "name": "aside",
@@ -83474,7 +83487,7 @@
           {
             "name": "lr-change",
             "type": "CustomEvent<PromptStudioState>",
-            "cancelable": "never",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -106032,7 +106045,17 @@
           }
         ],
         "cssStates": [],
-        "methods": [],
+        "methods": [
+          {
+            "name": "click",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          }
+        ],
         "form": {
           "associated": false,
           "properties": [],
@@ -106040,7 +106063,9 @@
         },
         "native": {
           "forwardedEvents": [],
-          "delegatedMethods": []
+          "delegatedMethods": [
+            "click"
+          ]
         }
       }
     },
@@ -113753,7 +113778,17 @@
           }
         ],
         "cssStates": [],
-        "methods": [],
+        "methods": [
+          {
+            "name": "click",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          }
+        ],
         "form": {
           "associated": false,
           "properties": [
@@ -113763,7 +113798,9 @@
         },
         "native": {
           "forwardedEvents": [],
-          "delegatedMethods": []
+          "delegatedMethods": [
+            "click"
+          ]
         }
       }
     },
@@ -121445,9 +121482,21 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-fullscreen-request",
+            "type": "CustomEvent<{ fullscreen: boolean }>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-view-change",
             "type": "CustomEvent<{ viewId: string }>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-view-request",
+            "type": "CustomEvent<{ viewId: string }>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           }
         ],

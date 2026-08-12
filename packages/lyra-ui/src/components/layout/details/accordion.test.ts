@@ -237,6 +237,43 @@ describe('<lr-accordion>', () => {
     expect(collapsedIds.sort()).to.deep.equal(['disabled-open', 'method-item']);
   });
 
+  it('stops the panel-owned lr-show/lr-hide/lr-after-show/lr-after-hide events from also leaking past the accordion as raw events', async () => {
+    // <lr-accordion-item> extends <lr-details> and is a light-DOM (slotted) child, so its own
+    // public lr-show/lr-hide/lr-after-show/lr-after-hide (bubbles + composed) reach the
+    // accordion's shadow-internal [part="base"] listener and then keep bubbling right past the
+    // accordion host unless that listener stops them -- the same policy already applied to
+    // lr-accordion-item-trigger/lr-accordion-item-state-change above. An ancestor listening for
+    // the panel's raw events would otherwise see both them and the accordion's own semantically
+    // equivalent lr-expand/lr-collapse/lr-after-expand/lr-after-collapse -- a double delivery of
+    // the same signal.
+    const { accordion, items } = await renderAccordion();
+    const ancestor = accordion.parentElement!;
+    const leaked: string[] = [];
+    for (const type of ['lr-show', 'lr-hide', 'lr-after-show', 'lr-after-hide']) {
+      ancestor.addEventListener(type, () => leaked.push(type));
+    }
+    const wrapperLifecycle: string[] = [];
+    for (const type of ['lr-expand', 'lr-after-expand', 'lr-collapse', 'lr-after-collapse']) {
+      accordion.addEventListener(type, () => wrapperLifecycle.push(type));
+    }
+
+    const afterExpand = oneEvent(accordion, 'lr-after-expand');
+    buttonFor(items[0]!).click();
+    await afterExpand;
+
+    const afterCollapse = oneEvent(accordion, 'lr-after-collapse');
+    buttonFor(items[0]!).click();
+    await afterCollapse;
+
+    expect(leaked, 'panel-level show/hide events must not leak past the accordion boundary').to.deep.equal([]);
+    expect(wrapperLifecycle).to.deep.equal([
+      'lr-expand',
+      'lr-after-expand',
+      'lr-collapse',
+      'lr-after-collapse',
+    ]);
+  });
+
   it('reconciles excess initially expanded items when entering a single mode', async () => {
     const accordion = (await fixture(html`<lr-accordion mode="single-collapsible">
       <lr-accordion-item label="One" expanded>One</lr-accordion-item>

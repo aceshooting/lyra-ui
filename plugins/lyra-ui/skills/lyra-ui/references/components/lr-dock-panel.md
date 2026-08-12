@@ -65,8 +65,11 @@ unit for free.
 **Events:**
 - `lr-resize` — `detail: { extent }` (a `px` CSS length string), fired on every drag step, drag
   release, and keyboard step.
-- `lr-collapse-change` — `detail: { collapsed }`, fired whenever the collapse toggle flips
-  `collapsed`.
+- `lr-collapse-request` (cancelable; `detail: { collapsed }` is the state proposed by the built-in
+  collapse toggle. Call `preventDefault()` to leave `collapsed` unchanged. Not fired when a
+  consumer assigns `collapsed` directly), `lr-collapse-change` (non-cancelable; `detail: {
+  collapsed }` is the accepted built-in-toggle state. Not fired when a consumer assigns `collapsed`
+  directly).
 
 **Slots:** default — the panel's own content.
 
