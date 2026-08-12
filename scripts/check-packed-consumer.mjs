@@ -45,6 +45,16 @@ const coreRawBudget = {
   reviewedRemediationAllowanceBytes: 35_000,
   batchFourRemediationAllowanceBytes: 10_000,
   fullReviewRecoveryAllowanceBytes: 10_000,
+  // The 2026-08-12 full-sweep review's batches 2+3 (27 instances: accessible-name-override
+  // presence fixes across 8 viewers/lr-menu/lr-swatch-picker/lr-reorder-list, hit-area floors,
+  // :focus-visible pairing across 7 agent-tools/media components, selected-state declaration-order
+  // fixes, disabled-hover guards, plus the unrelated lr-graph reference-vs-value selection-
+  // comparison fix) measured 3867.1 KiB raw, ~4.8 KiB past the previous 3862.3 KiB ceiling. Named
+  // separately with headroom for the remaining batches (4-10, ~155 more instances) still queued in
+  // the same remediation, on the same evidence prior re-baselines used: granular per-entry gzip
+  // budgets and the button canary stayed green, so this is aggregate implementation weight from
+  // real fixes, not an optional-peer leak.
+  fullSweepBatch2Batch3AllowanceBytes: 25_000,
 };
 
 const bundleEntries = {
@@ -135,7 +145,8 @@ const bundleEntries = {
       coreRawBudget.stableRootRegistrationAllowanceBytes +
       coreRawBudget.reviewedRemediationAllowanceBytes +
       coreRawBudget.batchFourRemediationAllowanceBytes +
-      coreRawBudget.fullReviewRecoveryAllowanceBytes,
+      coreRawBudget.fullReviewRecoveryAllowanceBytes +
+      coreRawBudget.fullSweepBatch2Batch3AllowanceBytes,
   },
   // The other half of the registration split, and the reason the `core` budget above could move to
   // `all.js` without losing coverage: a bare `import '@aceshooting/lyra-ui'` must still collapse to

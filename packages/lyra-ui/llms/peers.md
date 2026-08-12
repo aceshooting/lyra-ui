@@ -43,14 +43,14 @@ changes the component library version without installing a supported SheetJS rel
 | `epubjs` | `^0.3.93` | `lr-ebook-viewer` |
 | `ical.js` | `^2.2.1` | `lr-calendar-viewer` |
 | `jszip` | `^3.10.1` | `lr-archive-viewer` |
-| `katex` | `^0.18.3` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-evaluation-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-widget-renderer` |
+| `katex` | `^0.18.4` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-evaluation-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-widget-renderer` |
 | `libphonenumber-js` | `>=1.11.0 <2` | `lr-phone-input` |
 | `mammoth` | `^1.12.1` | `lr-docx-viewer` |
 | `maplibre-gl` | `>=5 <7` | `lr-geojson-view`, `lr-map` |
 | `marked` | `^18.0.9` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-evaluation-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-widget-renderer` |
 | `papaparse` | `^5.5.4` | `lr-csv-viewer`, `lr-dataset-viewer` |
 | `pdfjs-dist` | `^6.2.108` | `lr-pdf-viewer` |
-| `postal-mime` | `^2.7.6` | `lr-email-viewer` |
+| `postal-mime` | `^3.0.0` | `lr-email-viewer` |
 | `qrcode` | `^1.5.4` | `lr-qr-code` |
 | `react` | `>=19 <20` | type-only `@aceshooting/lyra-ui/custom-elements-jsx` entry (no runtime import) |
 | `shiki` | `^4.4.3` | `lr-agent-workspace`, `lr-code-block`, `lr-code-block-core`, `lr-dashboard-grid`, `lr-diff-view`, `lr-document-compare`, `lr-eval-result`, `lr-evaluation-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-widget-renderer` |
