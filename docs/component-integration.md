@@ -3403,6 +3403,6 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 26.4 KiB (26998 bytes; bundle SHA-256 `e8b1a95ff65402c9d0840c24554b960a86b655aa28a138fb35729fd46ef9670c`)
+- Standalone gzip: 26.4 KiB (27055 bytes; bundle SHA-256 `6e065626a141e4ef41b86cf029eb928aed6d7ee525772e5fab73114064569c3a`)
 
 </details>

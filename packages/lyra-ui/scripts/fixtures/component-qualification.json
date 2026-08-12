@@ -49734,7 +49734,7 @@
           "evidence": [
             {
               "file": "src/components/media/zoomable-frame/zoomable-frame.class.ts",
-              "line": 409,
+              "line": 446,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
