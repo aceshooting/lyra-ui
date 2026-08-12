@@ -3,11 +3,6 @@ import { property } from 'lit/decorators.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './button-group.styles.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export type ButtonGroupOrientation = 'horizontal' | 'vertical';
 
@@ -25,16 +20,6 @@ export type ButtonGroupOrientation = 'horizontal' | 'vertical';
  * @since 4.0.0
  */
 export class LyraButtonGroup extends LyraElement {
-  // GENERATED DEFAULT-STRING SLICE: START
-  /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
-  };
-  // GENERATED DEFAULT-STRING SLICE: END
-
   static override styles = [LyraElement.styles, styles];
 
   @property({ reflect: true }) orientation: ButtonGroupOrientation = 'horizontal';

@@ -50,6 +50,23 @@ export const GroupedBySource: Story = {
   render: () => html`<lr-retrieval-results grouping="source" .chunks=${chunks}></lr-retrieval-results>`,
 };
 
+/**
+ * `grouping="custom"` buckets rows under whatever key `groupBy` returns — a relevance tier here —
+ * with `groupLabel` rendering the header and `groupOrder` pinning the sequence. The built-in
+ * dedup/sort/virtualization pipeline is unchanged; only the bucketing key is host-supplied.
+ */
+export const GroupedByRelevanceTier: Story = {
+  render: () => html`
+    <lr-retrieval-results
+      grouping="custom"
+      .chunks=${chunks}
+      .groupBy=${(chunk: RetrievalChunk) => (chunk.score >= 0.75 ? 'high' : chunk.score >= 0.4 ? 'medium' : 'low')}
+      .groupLabel=${(id: string, grouped: RetrievalChunk[]) => `${id} relevance (${grouped.length})`}
+      .groupOrder=${['high', 'medium', 'low']}
+    ></lr-retrieval-results>
+  `,
+};
+
 export const NotSelectable: Story = {
   render: () => html`<lr-retrieval-results .selectable=${false} .chunks=${chunks}></lr-retrieval-results>`,
 };

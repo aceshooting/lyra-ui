@@ -73,9 +73,10 @@ export interface LyraEntityDossierEventMap
  * Supporting chunks (`lr-chunk-inspector`), and Provenance (`lr-provenance-panel`). Pure layout —
  * it never fetches, ranks, or mutates graph/document state, and never re-renders what any of those
  * five composed components already render themselves; every one of their own events (`
- * lr-entity-activate`, `lr-node-expand`, `lr-chunk-open`, `lr-expand`, `lr-toggle`, `lr-tab-show`)
- * bubbles through unmodified (`composed: true` crosses this component's own shadow boundary with no
- * re-dispatch needed).
+ * lr-entity-activate`, `lr-node-expand`, `lr-chunk-open`, `lr-expand`, `lr-toggle`, `lr-tab-show`,
+ * plus the provenance panel's own conduit set — `lr-entity-open`, `lr-drill`,
+ * `lr-relation-activate`) bubbles through unmodified (`composed: true` crosses this component's own
+ * shadow boundary with no re-dispatch needed).
  *
  * `chunks`/`thresholds` (the "supporting chunks" tab) and `provenance` (the "Provenance" tab) are
  * deliberately separate inputs even though `lr-provenance-panel` can itself also show a chunks
@@ -106,6 +107,12 @@ export interface LyraEntityDossierEventMap
  *   `detail: { id, expanded }`.
  * @event lr-toggle - Surfaced unchanged from the embedded provenance panel.
  *   `detail: { section, expanded }`.
+ * @event lr-entity-open - Surfaced unchanged from an entity chip inside the embedded provenance
+ *   panel. `detail: { id }`.
+ * @event lr-drill - Surfaced unchanged from a community card inside the embedded provenance panel.
+ *   `detail: { id }`.
+ * @event lr-relation-activate - Surfaced unchanged from a relationship path strip inside the
+ *   embedded provenance panel. `detail: { relation, sourceId, targetId }`.
  * @event lr-tab-show - Surfaced unchanged from the embedded tabs.
  *   `detail: { tabId }`.
  * @csspart base - The root wrapper, or the empty state's wrapper when `entity` is `null`.

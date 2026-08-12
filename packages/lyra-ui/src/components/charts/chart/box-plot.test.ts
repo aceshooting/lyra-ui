@@ -364,7 +364,7 @@ it('forwards a host aria-label to the canvas and keeps the chart role on that se
 
   const canvas = el.shadowRoot!.querySelector('canvas')!;
   expect(canvas.getAttribute('aria-label')).to.equal('Latency distributions');
-  expect(canvas.getAttribute('role')).to.equal('img');
+  expect(canvas.getAttribute('role')).to.equal('application');
   expect(el.getAttribute('role')).to.equal(null);
   expect(el.shadowRoot!.querySelectorAll('[role]')).to.have.length(1);
 });
@@ -1194,4 +1194,159 @@ it('drops rendered datasets when the series count shrinks', async () => {
   el.boxes = [{ label: 'One', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
   expect((el as any).chart.data.datasets.length, 'removed series are not left behind').to.equal(1);
+});
+
+describe('per-box interactivity', () => {
+  const twoSeries = () => [
+    {
+      label: 'Latency',
+      data: [
+        { min: 1, q1: 2, median: 3, q3: 4, max: 5 },
+        { min: 2, q1: 3, median: 4, q3: 5, max: 6 },
+      ],
+    },
+    {
+      label: 'Throughput',
+      data: [
+        { min: 10, q1: 20, median: 30, q3: 40, max: 50 },
+        { min: 11, q1: 21, median: 31, q3: 41, max: 51 },
+      ],
+    },
+  ];
+
+  it('exposes the canvas as a keyboard-navigable surface', async () => {
+    const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+    el.labels = ['A', 'B'];
+    el.boxes = twoSeries();
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    expect(canvas.getAttribute('tabindex')).to.equal('0');
+    expect(canvas.getAttribute('role')).to.equal('application');
+  });
+
+  it('announces the focused box summary and walks boxes with Arrow/Home/End', async () => {
+    const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+    el.labels = ['A', 'B'];
+    el.boxes = twoSeries();
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    expect(politeTexts(), 'mounting must not announce an initial box').to.deep.equal([]);
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    canvas.focus();
+    await el.updateComplete;
+    const first = politeTexts().at(-1) ?? '';
+    expect(first).to.contain('Latency');
+    expect(first).to.contain('A');
+    expect(first, 'the five-number summary is the whole point of a box').to.contain('3');
+
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    expect(politeTexts().at(-1)).to.not.equal(first);
+
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    await el.updateComplete;
+    expect(politeTexts().at(-1)).to.contain('Throughput');
+
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+    await el.updateComplete;
+    expect(politeTexts().at(-1)).to.equal(first);
+  });
+
+  it('emits lr-point-click carrying the five-number summary on keyboard activation', async () => {
+    const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+    el.labels = ['A', 'B'];
+    el.boxes = twoSeries();
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    canvas.focus();
+    await el.updateComplete;
+
+    const details: unknown[] = [];
+    el.addEventListener('lr-point-click', (event) => details.push((event as CustomEvent).detail));
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(details).to.deep.equal([
+      {
+        datasetIndex: 0,
+        index: 0,
+        label: 'A',
+        value: { min: 1, q1: 2, median: 3, q3: 4, max: 5 },
+      },
+    ]);
+
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+    expect((details[1] as { index: number }).index).to.equal(1);
+  });
+
+  it('emits lr-point-click from the wired pointer handler and stays silent on a miss', async () => {
+    const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+    el.labels = ['A', 'B'];
+    el.boxes = twoSeries();
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    const chart = (el as any).chart;
+    const original = chart.getElementsAtEventForMode;
+    // Stub the mode-specific lookup rather than synthesizing real canvas hit-testing geometry.
+    chart.getElementsAtEventForMode = (
+      _event: unknown,
+      mode: string,
+      options: unknown,
+      useFinalPosition: unknown,
+    ) => {
+      expect(mode).to.equal('nearest');
+      expect(options).to.deep.equal({ intersect: true });
+      expect(useFinalPosition).to.equal(true);
+      return [{ datasetIndex: 1, index: 1 }];
+    };
+    try {
+      const onClick = (el as any).buildConfig().options.onClick;
+      const details: unknown[] = [];
+      el.addEventListener('lr-point-click', (event) => details.push((event as CustomEvent).detail));
+      onClick({}, [], chart);
+      expect(details).to.deep.equal([
+        {
+          datasetIndex: 1,
+          index: 1,
+          label: 'B',
+          value: { min: 11, q1: 21, median: 31, q3: 41, max: 51 },
+        },
+      ]);
+
+      chart.getElementsAtEventForMode = () => [];
+      onClick({}, [], chart);
+      expect(details).to.have.lengthOf(1);
+    } finally {
+      chart.getElementsAtEventForMode = original;
+    }
+  });
+
+  it('keeps the keyboard cursor inside the data after the box count shrinks', async () => {
+    const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+    el.labels = ['A', 'B'];
+    el.boxes = twoSeries();
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    canvas.focus();
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    await el.updateComplete;
+
+    el.boxes = [{ label: 'Latency', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+    el.labels = ['A'];
+    await el.updateComplete;
+
+    const details: unknown[] = [];
+    el.addEventListener('lr-point-click', (event) => details.push((event as CustomEvent).detail));
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(details).to.deep.equal([
+      { datasetIndex: 0, index: 0, label: 'A', value: { min: 1, q1: 2, median: 3, q3: 4, max: 5 } },
+    ]);
+  });
 });

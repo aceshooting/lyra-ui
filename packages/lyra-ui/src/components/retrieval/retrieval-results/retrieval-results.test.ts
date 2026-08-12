@@ -237,6 +237,115 @@ describe('grouping', () => {
     expect(items.map((c) => c.id)).to.deep.equal(['c2', 'c1', 'c3']);
   });
 
+  describe('custom', () => {
+    const tiered: RetrievalChunk[] = [
+      { id: 'hi', text: 'hi', score: 0.9, source: { id: 's1', name: 'A' } },
+      { id: 'lo', text: 'lo', score: 0.1, source: { id: 's2', name: 'B' } },
+      { id: 'mid', text: 'mid', score: 0.5, source: { id: 's1', name: 'A' } },
+    ];
+    const tierOf = (chunk: RetrievalChunk): string => (chunk.score >= 0.75 ? 'high' : chunk.score >= 0.4 ? 'medium' : 'low');
+
+    it('buckets by a host-supplied groupBy key, labelling each group through groupLabel', async () => {
+      const el = (await fixture(html`<lr-retrieval-results grouping="custom"></lr-retrieval-results>`)) as LyraRetrievalResults;
+      el.groupBy = tierOf;
+      el.groupLabel = (id, groupChunks) => `${id} (${groupChunks.length})`;
+      el.chunks = tiered;
+      await el.updateComplete;
+
+      const groups = vlist(el).groups as { key: string | number; label?: string; startIndex: number }[];
+      expect(groups.map((g) => g.key), 'first-seen order follows the sorted rows').to.deep.equal([
+        'high',
+        'medium',
+        'low',
+      ]);
+      expect(groups.map((g) => g.label)).to.deep.equal(['high (1)', 'medium (1)', 'low (1)']);
+      expect(groups.map((g) => g.startIndex)).to.deep.equal([0, 1, 2]);
+      expect((vlist(el).items as RetrievalChunk[]).map((c) => c.id)).to.deep.equal(['hi', 'mid', 'lo']);
+    });
+
+    it('shows the group id verbatim when groupLabel is left unset', async () => {
+      const el = (await fixture(html`<lr-retrieval-results grouping="custom"></lr-retrieval-results>`)) as LyraRetrievalResults;
+      el.groupBy = tierOf;
+      el.chunks = tiered;
+      await el.updateComplete;
+      expect((vlist(el).groups as { label?: string }[]).map((g) => g.label)).to.deep.equal(['high', 'medium', 'low']);
+    });
+
+    it('honours an explicit groupOrder array, keeping unlisted ids in first-seen order', async () => {
+      const el = (await fixture(html`<lr-retrieval-results grouping="custom"></lr-retrieval-results>`)) as LyraRetrievalResults;
+      el.groupBy = tierOf;
+      el.groupOrder = ['low'];
+      el.chunks = tiered;
+      await el.updateComplete;
+      const groups = vlist(el).groups as { key: string | number; startIndex: number }[];
+      expect(groups.map((g) => g.key)).to.deep.equal(['low', 'high', 'medium']);
+      expect(groups.map((g) => g.startIndex)).to.deep.equal([0, 1, 2]);
+      expect((vlist(el).items as RetrievalChunk[]).map((c) => c.id)).to.deep.equal(['lo', 'hi', 'mid']);
+    });
+
+    it('honours a groupOrder comparator', async () => {
+      const el = (await fixture(html`<lr-retrieval-results grouping="custom"></lr-retrieval-results>`)) as LyraRetrievalResults;
+      el.groupBy = tierOf;
+      el.groupOrder = (a, b) => a.localeCompare(b);
+      el.chunks = tiered;
+      await el.updateComplete;
+      expect((vlist(el).groups as { key: string | number }[]).map((g) => g.key)).to.deep.equal([
+        'high',
+        'low',
+        'medium',
+      ]);
+    });
+
+    it('degrades to a flat, ungrouped list when groupBy is left unset', async () => {
+      const el = (await fixture(html`<lr-retrieval-results grouping="custom"></lr-retrieval-results>`)) as LyraRetrievalResults;
+      el.chunks = tiered;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelectorAll('lr-virtual-list').length, 'a short flat list is not virtualized').to.equal(
+        0,
+      );
+      expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(3);
+    });
+
+    it('recomputes the memoized pipeline when a grouping callback is reassigned', async () => {
+      const el = (await fixture(html`<lr-retrieval-results grouping="custom"></lr-retrieval-results>`)) as LyraRetrievalResults;
+      el.groupBy = tierOf;
+      el.chunks = tiered;
+      await el.updateComplete;
+      expect((vlist(el).groups as { key: string | number }[]).map((g) => g.key)).to.deep.equal([
+        'high',
+        'medium',
+        'low',
+      ]);
+
+      el.groupBy = (chunk) => chunk.source.id;
+      await el.updateComplete;
+      expect((vlist(el).groups as { key: string | number }[]).map((g) => g.key)).to.deep.equal(['s1', 's2']);
+
+      el.groupLabel = (id) => `src:${id}`;
+      await el.updateComplete;
+      expect((vlist(el).groups as { label?: string }[]).map((g) => g.label)).to.deep.equal(['src:s1', 'src:s2']);
+    });
+
+    it('leaves grouping="none" and grouping="source" behaviour unchanged when the callbacks are unset', async () => {
+      const flat = (await fixture(html`<lr-retrieval-results></lr-retrieval-results>`)) as LyraRetrievalResults;
+      flat.chunks = tiered;
+      await flat.updateComplete;
+      expect(flat.grouping).to.equal('none');
+      expect(flat.groupBy).to.equal(undefined);
+      expect(flat.groupLabel).to.equal(undefined);
+      expect(flat.groupOrder).to.equal(undefined);
+      expect(flat.shadowRoot!.querySelectorAll('lr-virtual-list').length).to.equal(0);
+      expect(flat.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(3);
+
+      const bySource = (await fixture(
+        html`<lr-retrieval-results grouping="source"></lr-retrieval-results>`,
+      )) as LyraRetrievalResults;
+      bySource.chunks = tiered;
+      await bySource.updateComplete;
+      expect((vlist(bySource).groups as { key: string | number }[]).map((g) => g.key)).to.deep.equal(['s1', 's2']);
+    });
+  });
+
   it('falls back to the untitled-source label when a group has no source name', async () => {
     const el = (await fixture(
       html`<lr-retrieval-results grouping="source"></lr-retrieval-results>`,
@@ -245,6 +354,48 @@ describe('grouping', () => {
     await el.updateComplete;
     const groups = vlist(el).groups as { label?: string }[];
     expect(groups[0]!.label).to.equal('Untitled source');
+  });
+
+  // The dedup-build + sort + group pipeline (`processedChunks`) is memoized on an instance field,
+  // refreshed only when `chunks`/`dedupe`/`sort`/`grouping` change (see `willUpdate()`). This
+  // exercises the full pipeline together -- a duplicate id that resolves to a *different* source
+  // than its lower-scoring twin, so the dedup winner's own source (not the loser's) must be the one
+  // that determines its group bucket -- then proves an unrelated `selectedIds`-only update leaves
+  // the memoized output untouched, and a genuine `chunks` change still correctly invalidates and
+  // recomputes it.
+  it('memoizes the deduped/sorted/grouped output, refreshing only when chunks/dedupe/sort/grouping actually change', async () => {
+    const el = (await fixture(
+      html`<lr-retrieval-results grouping="source"></lr-retrieval-results>`,
+    )) as LyraRetrievalResults;
+    el.chunks = [
+      { id: 'a1', text: 'a1-lo', score: 0.4, source: { id: 's1', name: 'Source A' } },
+      { id: 'a1', text: 'a1-hi', score: 0.9, source: { id: 's2', name: 'Source B' } }, // dup id, higher score, different source
+      { id: 'a2', text: 'a2', score: 0.3, source: { id: 's1', name: 'Source A' } },
+      { id: 'a3', text: 'a3', score: 0.5, source: { id: 's2', name: 'Source B' } },
+    ];
+    await el.updateComplete;
+    const list = vlist(el);
+    const itemsOf = () => (vlist(el).items as RetrievalChunk[]);
+    const groupsOf = () => (vlist(el).groups as { key: string | number; label?: string; startIndex: number }[]);
+
+    expect(itemsOf().map((c) => c.id)).to.deep.equal(['a1', 'a3', 'a2']);
+    expect(itemsOf().find((c) => c.id === 'a1')!.text, 'kept the higher-scoring duplicate').to.equal('a1-hi');
+    expect(groupsOf().map((g) => g.key), 'the winning duplicate\'s own source drives its group, not the loser\'s').to.deep.equal(['s2', 's1']);
+    expect(groupsOf()[0]!.startIndex).to.equal(0);
+    expect(groupsOf()[1]!.startIndex).to.equal(2);
+    expect(list).to.exist;
+
+    // Unrelated update (selectedIds only): the memoized dedup/sort/group output must be unchanged.
+    el.selectedIds = ['a3'];
+    await el.updateComplete;
+    expect(itemsOf().map((c) => c.id)).to.deep.equal(['a1', 'a3', 'a2']);
+    expect(groupsOf().map((g) => g.key)).to.deep.equal(['s2', 's1']);
+
+    // A genuine `chunks` change must still invalidate the cache and be reflected.
+    el.chunks = [{ id: 'b1', text: 'b1', score: 0.1, source: { id: 's3', name: 'Source C' } }];
+    await el.updateComplete;
+    expect(itemsOf().map((c) => c.id)).to.deep.equal(['b1']);
+    expect(groupsOf().map((g) => g.key)).to.deep.equal(['s3']);
   });
 });
 

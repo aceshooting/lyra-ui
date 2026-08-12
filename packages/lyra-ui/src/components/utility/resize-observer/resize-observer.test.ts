@@ -2,6 +2,23 @@ import { aTimeout, expect, fixture, html } from '@open-wc/testing';
 import './resize-observer.js';
 import type { LyraResizeObserver } from './resize-observer.class.js';
 
+// A wrapper component whose own shadow root puts a forwarding `<slot>` directly inside
+// `<lr-resize-observer>` -- the one composition where the internal slot's own `slotchange` never
+// fires (its assigned node stays the same forwarding `<slot>` element) even though the FLATTENED
+// target set that `slottedElementTargets()` reads has changed completely.
+class ResizeObserverForwardWrapper extends HTMLElement {
+  constructor() {
+    super();
+    const root = this.attachShadow({ mode: 'open' });
+    const observer = document.createElement('lr-resize-observer');
+    observer.append(document.createElement('slot'));
+    root.append(observer);
+  }
+}
+if (!customElements.get('resize-observer-forward-wrapper')) {
+  customElements.define('resize-observer-forward-wrapper', ResizeObserverForwardWrapper);
+}
+
 describe('<lr-resize-observer>', () => {
   it('observes slotted elements without adding layout', async () => {
     const el = await fixture<LyraResizeObserver>(html`<lr-resize-observer><button>Resize me</button></lr-resize-observer>`);
@@ -48,6 +65,50 @@ describe('<lr-resize-observer>', () => {
     parent.append(el);
     await aTimeout(0);
     expect((el as unknown as { observer?: ResizeObserver }).observer, 'observer should be re-armed on reconnect').to.exist;
+  });
+
+  it('re-observes through a forwarding slot exactly once, driven solely by the internal <slot>', async () => {
+    // The one composition that could plausibly need extra wiring: the forwarding `<slot>` is a
+    // light-DOM child of <lr-resize-observer> living in the WRAPPER's shadow tree, so swapping the
+    // wrapper's own light-DOM children changes the FLATTENED target set without changing the
+    // internal slot's directly-assigned node (still that same forwarding `<slot>` element).
+    // Verified in Chromium, Firefox and WebKit: the internal slot's own `slotchange` fires anyway,
+    // so its `@slotchange` template binding is sufficient on its own -- matching the minimal
+    // pattern <lr-mutation-observer>/<lr-intersection-observer> already use. The observer count
+    // below is the load-bearing half of this assertion: a redundant *host-level* `slotchange`
+    // listener would also fire here (slotchange bubbles within the wrapper's shadow tree, and
+    // <lr-resize-observer> is the forwarding slot's parent in it), tearing down and rebuilding the
+    // ResizeObserver twice for one slot change.
+    const recorded: Element[][] = [];
+    const originalObserver = window.ResizeObserver;
+    class RecordingResizeObserver implements ResizeObserver {
+      private readonly targets: Element[] = [];
+      constructor() { recorded.push(this.targets); }
+      observe(target: Element): void { this.targets.push(target); }
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+    window.ResizeObserver = RecordingResizeObserver as unknown as typeof ResizeObserver;
+    try {
+      const wrapper = await fixture<HTMLElement>(
+        html`<resize-observer-forward-wrapper><button id="first">First</button></resize-observer-forward-wrapper>`,
+      );
+      const observer = wrapper.shadowRoot!.querySelector('lr-resize-observer') as LyraResizeObserver;
+      await observer.updateComplete;
+      await aTimeout(0);
+      expect(recorded.at(-1)?.map((node) => node.id)).to.deep.equal(['first']);
+      const observersBefore = recorded.length;
+
+      wrapper.replaceChildren(Object.assign(document.createElement('button'), { id: 'second' }));
+      await observer.updateComplete;
+      await aTimeout(0);
+
+      // The freshly observed target must be the NEW flattened element, not the detached old one.
+      expect(recorded.at(-1)?.map((node) => node.id)).to.deep.equal(['second']);
+      expect(recorded.length - observersBefore, 'one slot change re-arms observation once').to.equal(1);
+    } finally {
+      window.ResizeObserver = originalObserver;
+    }
   });
 
   it('uses the adopted owner constructor and rejects stale callbacks across disconnect/reconnect', async () => {

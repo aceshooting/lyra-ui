@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -171,7 +171,17 @@ selected `[part='bar']` and `[part='point']` marks whose category index is in `s
 `--lr-lite-chart-selected-outline-width` (default `var(--lr-size-2px)`) — that stroke's width.
 Unlike `lr-chart` (canvas-rendered, needs `getComputedStyle`-based re-theming on every draw), this
 is plain SVG/DOM and reads these via native CSS `var()` — no JS-side resolution step, and no
-`refreshTheme()` method needed (there's nothing to go stale).
+`refreshTheme()` method needed (there's nothing to go stale). `--lr-chart-pattern-step`
+(default `var(--lr-space-2xs)`) sizes the forced-colors legend texture, exactly as on `lr-chart`.
+
+**Forced colors:** under `forced-colors: active` the `--lr-color-chart-*` ramp behind
+`--lr-chart-color-1..8` is remapped onto the small repeating system-color cycle the platform
+exposes, so series 1/4/7 (and 2/5/8, 3/6) would otherwise paint identically. `lr-lite-chart` then
+encodes each series a second way, using the same eight-way vocabulary as `lr-chart`: `[part='bar']`
+takes a per-series SVG texture fill, `[part='line']` takes a per-series `stroke-dasharray`, and
+`[part='legend-swatch']` carries a `data-encoding` attribute selecting the matching CSS texture.
+Nothing is opt-in, the encodings exist only while the media query matches, and no author color is
+substituted.
 
 **Optional peer deps:** none. This is the point of the component.
 

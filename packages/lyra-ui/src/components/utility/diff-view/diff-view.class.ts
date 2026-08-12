@@ -19,7 +19,7 @@ import {
 import { styles } from './diff-view.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyDiff, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_details, LYRA_DEFAULT_diffViewHiddenLines, LYRA_DEFAULT_diffViewNewLabel, LYRA_DEFAULT_diffViewOldLabel, LYRA_DEFAULT_diffViewTooLarge, LYRA_DEFAULT_open, LYRA_DEFAULT_remove } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyDiff, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_diffViewHiddenLines, LYRA_DEFAULT_diffViewNewLabel, LYRA_DEFAULT_diffViewOldLabel, LYRA_DEFAULT_diffViewTooLarge } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -90,18 +90,14 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
     copied: LYRA_DEFAULT_copied,
     copy: LYRA_DEFAULT_copy,
     copyDiff: LYRA_DEFAULT_copyDiff,
     copyFailed: LYRA_DEFAULT_copyFailed,
-    details: LYRA_DEFAULT_details,
     diffViewHiddenLines: LYRA_DEFAULT_diffViewHiddenLines,
     diffViewNewLabel: LYRA_DEFAULT_diffViewNewLabel,
     diffViewOldLabel: LYRA_DEFAULT_diffViewOldLabel,
     diffViewTooLarge: LYRA_DEFAULT_diffViewTooLarge,
-    open: LYRA_DEFAULT_open,
-    remove: LYRA_DEFAULT_remove,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

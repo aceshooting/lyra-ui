@@ -45,7 +45,7 @@ import {
 } from '../../../internal/native-event-relay.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chooseDate, LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_dateInputFutureDisabled, LYRA_DEFAULT_dateInputInvalid, LYRA_DEFAULT_dateInputMaxMessage, LYRA_DEFAULT_dateInputMinMessage, LYRA_DEFAULT_dateInputPastDisabled, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_openCalendar, LYRA_DEFAULT_restore, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chooseDate, LYRA_DEFAULT_clear, LYRA_DEFAULT_date, LYRA_DEFAULT_dateInputFutureDisabled, LYRA_DEFAULT_dateInputInvalid, LYRA_DEFAULT_dateInputMaxMessage, LYRA_DEFAULT_dateInputMinMessage, LYRA_DEFAULT_dateInputPastDisabled, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_openCalendar } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -287,19 +287,14 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     ...super.defaultStrings,
     chooseDate: LYRA_DEFAULT_chooseDate,
     clear: LYRA_DEFAULT_clear,
-    collapse: LYRA_DEFAULT_collapse,
     date: LYRA_DEFAULT_date,
     dateInputFutureDisabled: LYRA_DEFAULT_dateInputFutureDisabled,
     dateInputInvalid: LYRA_DEFAULT_dateInputInvalid,
     dateInputMaxMessage: LYRA_DEFAULT_dateInputMaxMessage,
     dateInputMinMessage: LYRA_DEFAULT_dateInputMinMessage,
     dateInputPastDisabled: LYRA_DEFAULT_dateInputPastDisabled,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
-    open: LYRA_DEFAULT_open,
     openCalendar: LYRA_DEFAULT_openCalendar,
-    restore: LYRA_DEFAULT_restore,
-    search: LYRA_DEFAULT_search,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

@@ -30,6 +30,15 @@ selected value is submitted under `name` and `required` requires at least one se
 `small`/`medium`/`large`. It scales the group's label type size and the gaps around and between its
 options, and propagates the group tier to every owned `<lr-checkbox>`, including children added
 later. Group size is the authoritative aggregate setting.
+
+**Migration note — `size` is authoritative here, unlike upstream.** Web Awesome's checkbox group
+applies its `size` to the items only *when the attribute is present*, so an unset group leaves each
+child's own `size` alone. `<lr-checkbox-group>` instead has a real `'m'` default and re-asserts the
+group tier on connect, on every slot change, and again whenever a child's `size` attribute is
+mutated afterwards — so `<lr-checkbox-group><lr-checkbox size="s">…` renders at the group's tier,
+not `s`. Markup that relied on per-child sizes should split the odd option out of the group, or size
+the whole group.
+
 **Slots:** default checkboxes, `label`, `hint`, `error`.
 **Events:** a user toggle emits exactly one group-owned `input`, then `change`, then `lr-change`;
 all three carry `{ value: string[] }`. The owned child's corresponding events are consumed at the
@@ -48,6 +57,11 @@ option children, and falls back to an empty selection for malformed state. Resto
 rather than a no-op under a `<label>`-driven or programmatic click.
 **CSS parts:** `form-control`, `form-control-label`, `options` / `form-control-input`, `hint`,
 `error`.
+**Disabled chrome.** A disabled group — its own `disabled` or an ancestor `<fieldset disabled>` —
+dims `form-control-label`, `hint` and `error` to `--lr-opacity-disabled`. The dimming is keyed off
+the UA-computed `:disabled` state (so the fieldset cascade reaches it) and is deliberately applied
+to those three parts rather than the host: each owned `<lr-checkbox>` already dims itself, and a
+host-level opacity would compound with it.
 **The required marker.** `required` with a non-empty group `label` paints the library's shared
 marker on `[part="form-control-label"]` — here the `<legend>` of the group's fieldset. It is the
 one `::after` rule described under "The required-field marker" above, not a copy of it, so

@@ -55,6 +55,20 @@ const coreRawBudget = {
   // budgets and the button canary stayed green, so this is aggregate implementation weight from
   // real fixes, not an optional-peer leak.
   fullSweepBatch2Batch3AllowanceBytes: 25_000,
+  // The same 2026-08-12 full-sweep review's remaining batches (6, 7, 8, 9a-9d and the batch-10
+  // integration pass -- 90 further confirmed instances) measured 3917.6 KiB raw, ~30.9 KiB past the
+  // 3886.7 KiB ceiling the batch-2+3 term established. Unlike the earlier terms this one is not
+  // only CSS/JSDoc weight: those batches added real opt-in capability -- per-box lr-box-plot
+  // keyboard/pointer interactivity plus the shared chart forced-colors encoding module it shares
+  // with lr-lite-chart, lr-xml-viewer host-supplied highlights, lr-context-meter's legend,
+  // lr-node-palette reordering, lr-retrieval-results custom grouping, lr-terminal compact/frame
+  // chrome, and host focus/blur/click forwarding across five media components. Audited on the same
+  // evidence prior re-baselines used: every granular per-entry gzip budget and the `button` canary
+  // stayed green, and check-side-effects/the peer-inclusive exclusion graphs still externalize all
+  // 29 optional peers, so this is aggregate implementation weight from reviewed fixes rather than a
+  // dependency leak. This remediation is complete, so the term is sized for the measurement rather
+  // than for further batches.
+  fullSweepBatch6Batch10AllowanceBytes: 40_000,
 };
 
 const bundleEntries = {
@@ -146,7 +160,8 @@ const bundleEntries = {
       coreRawBudget.reviewedRemediationAllowanceBytes +
       coreRawBudget.batchFourRemediationAllowanceBytes +
       coreRawBudget.fullReviewRecoveryAllowanceBytes +
-      coreRawBudget.fullSweepBatch2Batch3AllowanceBytes,
+      coreRawBudget.fullSweepBatch2Batch3AllowanceBytes +
+      coreRawBudget.fullSweepBatch6Batch10AllowanceBytes,
   },
   // The other half of the registration split, and the reason the `core` budget above could move to
   // `all.js` without losing coverage: a bare `import '@aceshooting/lyra-ui'` must still collapse to

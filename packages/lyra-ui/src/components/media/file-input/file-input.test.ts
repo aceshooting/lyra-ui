@@ -2295,3 +2295,41 @@ it('removeFile() guards against a stale/out-of-range index and against disabled 
   privateEl.removeFile(0);
   expect(el.files.length, 'disabled must block removeFile even when called directly').to.equal(1);
 });
+
+it('scales the whole dropzone with size, leaving the default tier byte-identical', async () => {
+  const read = (el: LyraFileInput, selector: string) =>
+    getComputedStyle(el.shadowRoot!.querySelector(selector) as HTMLElement);
+
+  const medium = (await fixture(html`
+    <lr-file-input label="Files" hint="Any format"></lr-file-input>
+  `)) as LyraFileInput;
+  const large = (await fixture(html`
+    <lr-file-input size="xl" label="Files" hint="Any format"></lr-file-input>
+  `)) as LyraFileInput;
+
+  // The "m" tier IS the pre-existing rendering: 0.875rem dropzone text, 1.25rem icon, 1rem padding,
+  // 0.8125rem hint.
+  expect(read(medium, '[part="base"]').fontSize).to.equal('14px');
+  expect(read(medium, '[part="base"]').paddingTop).to.equal('16px');
+  expect(read(medium, '[part="dropzone-icon"]').fontSize).to.equal('20px');
+  expect(read(medium, '[part="hint"]').fontSize).to.equal('13px');
+
+  const biggerFont = (selector: string) =>
+    parseFloat(read(large, selector).fontSize) > parseFloat(read(medium, selector).fontSize);
+  expect(biggerFont('[part="base"]'), 'dropzone text scales').to.equal(true);
+  expect(biggerFont('.dropzone-content'), 'dropzone content text scales').to.equal(true);
+  expect(biggerFont('[part="dropzone-icon"]'), 'dropzone icon scales').to.equal(true);
+  expect(biggerFont('[part="hint"]'), 'hint text scales').to.equal(true);
+  expect(
+    parseFloat(read(large, '[part="base"]').paddingTop),
+    'dropzone padding scales',
+  ).to.be.greaterThan(parseFloat(read(medium, '[part="base"]').paddingTop));
+
+  const small = (await fixture(html`
+    <lr-file-input size="s" label="Files" hint="Any format"></lr-file-input>
+  `)) as LyraFileInput;
+  expect(
+    parseFloat(read(small, '[part="base"]').fontSize),
+    'the small tier shrinks the dropzone text',
+  ).to.be.lessThan(parseFloat(read(medium, '[part="base"]').fontSize));
+});

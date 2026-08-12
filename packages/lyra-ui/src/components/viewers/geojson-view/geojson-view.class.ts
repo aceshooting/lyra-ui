@@ -23,7 +23,7 @@ import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_geojsonViewFeatureCount, LYRA_DEFAULT_geojsonViewInvalid, LYRA_DEFAULT_geojsonViewLabel, LYRA_DEFAULT_geojsonViewMissingMapLibrary, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_open, LYRA_DEFAULT_remove } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_geojsonViewFeatureCount, LYRA_DEFAULT_geojsonViewInvalid, LYRA_DEFAULT_geojsonViewLabel, LYRA_DEFAULT_geojsonViewMissingMapLibrary, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -297,9 +297,6 @@ export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
     anchorJumped: LYRA_DEFAULT_anchorJumped,
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
-    close: LYRA_DEFAULT_close,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
     documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
     documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
@@ -308,10 +305,7 @@ export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
     geojsonViewInvalid: LYRA_DEFAULT_geojsonViewInvalid,
     geojsonViewLabel: LYRA_DEFAULT_geojsonViewLabel,
     geojsonViewMissingMapLibrary: LYRA_DEFAULT_geojsonViewMissingMapLibrary,
-    loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
-    open: LYRA_DEFAULT_open,
-    remove: LYRA_DEFAULT_remove,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

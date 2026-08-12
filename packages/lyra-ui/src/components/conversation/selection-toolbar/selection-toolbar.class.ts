@@ -46,7 +46,16 @@ const DEFAULT_PLACEMENT_GAP_PX = 8;
  * Controlled action refreshes preserve a focused action by id, otherwise move to the nearest
  * survivor, or focus the toolbar when no actions remain, without overriding newer focus moves.
  *
+ * The four built-in actions are the shipped set; `actions` reorders or subsets them. Anything
+ * beyond them -- "translate", "define", "search web" -- goes in the `actions` slot, which renders
+ * after the built-ins inside the same `role="toolbar"` element and joins the same roving-tabindex
+ * group (Home/End/Arrow, RTL-mirrored), so a fifth action does not mean reimplementing the
+ * positioning, keyboard, and dismissal behavior from scratch. A slotted action carries its own
+ * accessible name and click handling; this component only manages its tab stop.
+ *
  * @customElement lr-selection-toolbar
+ * @slot actions - Extra actions rendered after the built-in ask/quote/cite/copy buttons, inside
+ *   the same `role="toolbar"` element and roving-tabindex group.
  * @event lr-selection-action - An action was chosen. `detail: { action, text, anchor }`.
  * @event lr-dismiss - The toolbar was dismissed with Escape.
  * @event lr-copy-error - Clipboard writing failed. `detail: { error }`.
@@ -249,9 +258,33 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     );
   }
 
+  /** Every stop in the `role="toolbar"` roving group, in rendered order: the built-in actions
+   *  first, then whatever a consumer slotted into `actions`. Slotted stops live in the host's
+   *  light DOM (not `renderRoot`), so every containment check below has to accept both. */
   private actionButtons(): HTMLElement[] {
-    return [...this.renderRoot.querySelectorAll<HTMLElement>('lr-button[data-action]')];
+    const builtIn = [...this.renderRoot.querySelectorAll<HTMLElement>('lr-button[data-action]')];
+    return [...builtIn, ...this.slottedActions()];
   }
+
+  private slottedActions(): HTMLElement[] {
+    const slot = this.renderRoot.querySelector<HTMLSlotElement>('slot[name="actions"]');
+    if (!slot) return [];
+    return slot
+      .assignedElements({ flatten: true })
+      .filter((element): element is HTMLElement => element instanceof HTMLElement);
+  }
+
+  /** Whether `button` is still one of this toolbar's own stops -- rendered inside the shadow root,
+   *  or slotted as a light-DOM child of the host. */
+  private ownsActionButton(button: HTMLElement): boolean {
+    return this.renderRoot.contains(button) || this.slottedActions().includes(button);
+  }
+
+  private onActionsSlotChange = (): void => {
+    // A consumer adding or removing a slotted action changes the stop count without changing any
+    // reactive property, so nothing else would re-derive the roving tab stops.
+    void this.syncRovingStops();
+  };
 
   private async syncRovingStops(
     preferredIndex = this.activeActionIndex,
@@ -271,14 +304,18 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
         (button) =>
           !button.isConnected
           || button.ownerDocument !== this.ownerDocument
-          || !this.renderRoot.contains(button),
+          || !this.ownsActionButton(button),
       )
     ) return undefined;
     if (buttons.length === 0) return undefined;
     this.activeActionIndex = Math.min(Math.max(0, preferredIndex), buttons.length - 1);
     buttons.forEach((button, index) => {
+      const stop = index === this.activeActionIndex ? 0 : -1;
+      // A built-in `<lr-button>` owns its real control inside its own shadow root; a slotted
+      // action is whatever the consumer supplied, so its own tabIndex is the stop.
       const inner = button.shadowRoot?.querySelector<HTMLElement>('[part~="base"]');
-      if (inner) inner.tabIndex = index === this.activeActionIndex ? 0 : -1;
+      if (inner) inner.tabIndex = stop;
+      else button.tabIndex = stop;
     });
     return buttons[this.activeActionIndex];
   }
@@ -310,7 +347,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
         || !this.isCurrentLifecycle(generation, owner)
         || !button.isConnected
         || button.ownerDocument !== this.ownerDocument
-        || !this.renderRoot.contains(button)
+        || !this.ownsActionButton(button)
       ) return;
       button.focus();
     });
@@ -465,7 +502,10 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
         size="xs"
         appearance="plain"
         @click=${() => void this.activate(action)}
-      >${this.localize(ACTION_KEYS[action])}</lr-button>`)}</div>`;
+      >${this.localize(ACTION_KEYS[action])}</lr-button>`)}<slot
+        name="actions"
+        @slotchange=${this.onActionsSlotChange}
+      ></slot></div>`;
   }
 }
 

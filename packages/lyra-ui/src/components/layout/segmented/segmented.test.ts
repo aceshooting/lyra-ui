@@ -314,7 +314,9 @@ describe("item icon", () => {
     const el = (await fixture(
       html`<lr-segmented .items=${items} value="a"></lr-segmented>`
     )) as LyraSegmented;
-    expect(el.shadowRoot!.querySelector('[part="segment-icon"]')).to.not.exist;
+    expect(
+      el.shadowRoot!.querySelectorAll('[part="segment-icon"]').length
+    ).to.equal(0);
   });
 
   it("renders item.icon before the label when set", async () => {

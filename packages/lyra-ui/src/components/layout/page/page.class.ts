@@ -8,7 +8,7 @@ import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-m
 import { styles } from './page.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_closeNavigation, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_openNavigation, LYRA_DEFAULT_skipToContent } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_closeNavigation, LYRA_DEFAULT_navigation, LYRA_DEFAULT_openNavigation, LYRA_DEFAULT_skipToContent } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -171,10 +171,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     closeNavigation: LYRA_DEFAULT_closeNavigation,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     navigation: LYRA_DEFAULT_navigation,
-    open: LYRA_DEFAULT_open,
     openNavigation: LYRA_DEFAULT_openNavigation,
     skipToContent: LYRA_DEFAULT_skipToContent,
   };

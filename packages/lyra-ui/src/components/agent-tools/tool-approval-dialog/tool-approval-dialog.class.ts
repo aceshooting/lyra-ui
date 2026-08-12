@@ -12,7 +12,7 @@ import { activeElementIn } from '../../../internal/active-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_approve, LYRA_DEFAULT_cancel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_edit, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_invalidJson, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_toolApprovalArgsLabel, LYRA_DEFAULT_toolApprovalGenericTool, LYRA_DEFAULT_toolApprovalHeading } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_approve, LYRA_DEFAULT_cancel, LYRA_DEFAULT_deny, LYRA_DEFAULT_edit, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_invalidJson, LYRA_DEFAULT_toolApprovalArgsLabel, LYRA_DEFAULT_toolApprovalGenericTool, LYRA_DEFAULT_toolApprovalHeading } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -177,14 +177,10 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     ...super.defaultStrings,
     approve: LYRA_DEFAULT_approve,
     cancel: LYRA_DEFAULT_cancel,
-    collapse: LYRA_DEFAULT_collapse,
     deny: LYRA_DEFAULT_deny,
-    details: LYRA_DEFAULT_details,
     edit: LYRA_DEFAULT_edit,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     invalidJson: LYRA_DEFAULT_invalidJson,
-    open: LYRA_DEFAULT_open,
-    restore: LYRA_DEFAULT_restore,
     toolApprovalArgsLabel: LYRA_DEFAULT_toolApprovalArgsLabel,
     toolApprovalGenericTool: LYRA_DEFAULT_toolApprovalGenericTool,
     toolApprovalHeading: LYRA_DEFAULT_toolApprovalHeading,

@@ -7,11 +7,6 @@ import {
   type OverlayHandle,
 } from "../../../internal/overlay-manager.js";
 import { styles } from "./responsive-panel.styles.js";
-// GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6, [role="heading"]';
 
@@ -144,14 +139,6 @@ export function resolveEffectiveMode(
  * @since 4.0.0
  */
 export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap> {
-  // GENERATED DEFAULT-STRING SLICE: START
-  /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    open: LYRA_DEFAULT_open,
-  };
-  // GENERATED DEFAULT-STRING SLICE: END
-
   static override styles = [LyraElement.styles, styles];
 
   /** Whether the panel is open. In the inline presentation this just means visible/mounted; in

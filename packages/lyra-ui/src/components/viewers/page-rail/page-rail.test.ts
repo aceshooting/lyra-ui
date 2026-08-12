@@ -1095,6 +1095,27 @@ describe('lr-page-rail part reachability through the embedded virtual list', () 
     }
   });
 
+  it('lays the heat cluster out as a plain centered in-flow row, carrying no inert inset offset', async () => {
+    const { vlistRoot } = await rail({ highlights: heatHighlights('danger', 'success') });
+    const cluster = vlistRoot.querySelector('[part~="heat"]') as HTMLElement;
+    const page = vlistRoot.querySelector('[part~="page"]') as HTMLElement;
+    const clusterStyle = getComputedStyle(cluster);
+
+    // The cluster is the third stacked child of the column-flex, center-aligned page button, so it
+    // is positioned entirely by that flow. An inset declaration on a `position: static` box is
+    // silently inert -- it survives every gate and every stylesheet-text check while doing
+    // nothing -- so assert the box actually carries none rather than trusting the rule text.
+    expect(clusterStyle.position).to.equal('static');
+    expect(clusterStyle.insetInlineEnd).to.equal('auto');
+    expect(clusterStyle.insetInlineStart).to.equal('auto');
+
+    // ...and that the flow really does centre it, in both directions, which is what the inert
+    // trailing-edge nudge would have broken had anyone "fixed" it by adding `position: relative`.
+    const pageBox = page.getBoundingClientRect();
+    const clusterBox = cluster.getBoundingClientRect();
+    expect(Math.abs((clusterBox.left - pageBox.left) - (pageBox.right - clusterBox.right))).to.be.lessThan(1);
+  });
+
   it('themes each heat-dot tone from its own cssprop, defaulting to the shared tone token', async () => {
     const cases: Array<[LyraHighlightTone, string]> = [
       ['accent', '--lr-page-rail-heat-accent-color'],

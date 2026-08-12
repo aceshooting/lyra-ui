@@ -73,7 +73,11 @@ export type FlowControlsAppearance = LyraFrame;
  * inputs.
  *
  * @customElement lr-flow-controls
- * @slot - Extra host buttons appended to the cluster, styled by the same group.
+ * @slot - Extra host buttons appended to the cluster. A slotted `<button>` picks up the same
+ *   treatment as the built-in controls through a `::slotted(button)` rule — the shared
+ *   `--lr-icon-button-size` hit-area floor, the chrome-less transparent box, and the same
+ *   hover/press/disabled/focus-visible affordances. Only the slotted element itself is styled, not
+ *   the consumer's markup inside it.
  * @csspart base - The `role="group"` wrapper. Drops its floating-surface chrome (border,
  *   background, shadow, padding, radius) under `frame="plain"`.
  * @csspart zoom-in - Zoom-in button.

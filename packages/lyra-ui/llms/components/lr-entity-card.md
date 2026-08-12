@@ -27,7 +27,7 @@ itself — `lr-entity-activate` is a request a host routes into `lr-graph`'s own
   additions, so a graph node adapts into a `LyraEntity` with no mapping table; `null` renders the
   empty state
 - `types: NodeTypeStyle[] = []` (attribute: false) — the same `lr-graph.nodeTypes`/
-  `lr-graph-legend.types` entry shape, resolving `entity.type` to a label/color/shape for the badge
+  `lr-graph-legend.types` entry shape, resolving `entity.type` to a label/color for the badge
 - `communityLabel: string = ''` (attribute `community-label`) — override text for the community chip
 - `showFocusButton: boolean = true` (attribute `show-focus-button`)
 - `compact: boolean = false` (reflected) — tighter root padding and row gap for dense contexts (a

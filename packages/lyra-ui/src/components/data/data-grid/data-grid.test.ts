@@ -5078,6 +5078,263 @@ it("ignores a header drop whose payload names an unknown source column", async (
   expect(element.columnOrder).to.deep.equal([]);
 });
 
+it("treats pinning's 'start'/'end' spelling as an alias of the RTL-relative 'left'/'right' spelling", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="Pin aliases"
+      pinnable
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  element.pinColumn("name", "start");
+  element.pinColumn("score", "end");
+  await element.updateComplete;
+
+  // getColumnPin() echoes back exactly what was set -- 'start'/'end' round-trip unchanged, just
+  // like 'left'/'right' already do.
+  expect(element.getColumnPin("name")).to.equal("start");
+  expect(element.getColumnPin("score")).to.equal("end");
+
+  // ...but rendering normalizes 'start' onto the same edge as the existing 'left' spelling, and
+  // 'end' onto the same edge as 'right' -- both attributes and layout stay driven by the existing
+  // 'left'/'right'-keyed CSS.
+  const nameHeader = header(element, "name");
+  const scoreHeader = header(element, "score");
+  expect(nameHeader.dataset.pin).to.equal("left");
+  expect(scoreHeader.dataset.pin).to.equal("right");
+  expect(getComputedStyle(nameHeader).position).to.equal("sticky");
+  expect(getComputedStyle(scoreHeader).position).to.equal("sticky");
+
+  // A 'start'-pinned column sorts to the front exactly like a 'left'-pinned one would -- 'score' is
+  // declared last but jumps ahead of the unpinned 'team' column once pinned 'start'.
+  const ids = [
+    ...element.shadowRoot!.querySelectorAll<HTMLElement>('[part~="header-cell"]'),
+  ].map((cell) => cell.dataset.columnId);
+  expect(ids[0]).to.equal("name");
+  expect(ids.at(-1)).to.equal("score");
+});
+
+it("round-trips 'start'/'end' pinning through setState/getState", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="Pin state"
+      pinnable
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  element.setState({ pinning: { name: "start", score: "end" } });
+  await element.updateComplete;
+  expect(element.getColumnPin("name")).to.equal("start");
+  expect(element.getColumnPin("score")).to.equal("end");
+  expect(element.getState().pinning).to.deep.equal({
+    name: "start",
+    score: "end",
+  });
+});
+
+it('keys a "left"-pinned column to inset-inline-start, which resolves to the physical right edge under dir="rtl" -- "left" is RTL-relative, not physical', async () => {
+  const ltr = await dataGrid(html`
+    <lr-data-grid
+      label="LTR pin"
+      pinnable
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  ltr.pinColumn("name", "left");
+  await ltr.updateComplete;
+  const ltrCell = header(ltr, "name");
+  expect(getComputedStyle(ltrCell).left).to.not.equal("auto");
+  expect(getComputedStyle(ltrCell).right).to.equal("auto");
+
+  const rtl = await dataGrid(html`
+    <lr-data-grid
+      dir="rtl"
+      label="RTL pin"
+      pinnable
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  rtl.pinColumn("name", "left");
+  await rtl.updateComplete;
+  const rtlCell = header(rtl, "name");
+  expect(getComputedStyle(rtlCell).right).to.not.equal("auto");
+  expect(getComputedStyle(rtlCell).left).to.equal("auto");
+
+  // 'start' is a spelling alias for the same RTL-relative edge -- identical resolved physical side
+  // as 'left' under the same direction.
+  rtl.pinColumn("name", "start");
+  await rtl.updateComplete;
+  expect(getComputedStyle(rtlCell).right).to.not.equal("auto");
+  expect(getComputedStyle(rtlCell).left).to.equal("auto");
+});
+
+it("mirrors the pager first/previous/next/last icons under dir=\"rtl\" via chevronIcon(), not a static glyph", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="Pager glyphs"
+      paginate
+      page-size="1"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const firstIcon = element.shadowRoot!.querySelector(
+    '[part="first-icon"]'
+  ) as HTMLElement;
+  const previousIcon = element.shadowRoot!.querySelector(
+    '[part="previous-icon"]'
+  ) as HTMLElement;
+  const nextIcon = element.shadowRoot!.querySelector(
+    '[part="next-icon"]'
+  ) as HTMLElement;
+  const lastIcon = element.shadowRoot!.querySelector(
+    '[part="last-icon"]'
+  ) as HTMLElement;
+
+  // Every glyph is a real chevronIcon() SVG now, not literal «/‹/›/» text.
+  expect(firstIcon.querySelectorAll("svg").length).to.equal(2);
+  expect(lastIcon.querySelectorAll("svg").length).to.equal(2);
+  expect(previousIcon.querySelectorAll("svg").length).to.equal(1);
+  expect(nextIcon.querySelectorAll("svg").length).to.equal(1);
+  expect(firstIcon.textContent?.trim()).to.equal("");
+  expect(previousIcon.textContent?.trim()).to.equal("");
+
+  // first/previous mirror each other, next/last mirror each other, and the two pairs are rotated
+  // opposite of one another in LTR.
+  const firstTransform = getComputedStyle(firstIcon).transform;
+  const previousTransform = getComputedStyle(previousIcon).transform;
+  const nextTransform = getComputedStyle(nextIcon).transform;
+  const lastTransform = getComputedStyle(lastIcon).transform;
+  expect(firstTransform).to.equal(previousTransform);
+  expect(nextTransform).to.equal(lastTransform);
+  expect(firstTransform).to.not.equal(nextTransform);
+
+  const rtl = await dataGrid(html`
+    <lr-data-grid
+      dir="rtl"
+      label="Pager glyphs RTL"
+      paginate
+      page-size="1"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const rtlFirstIcon = rtl.shadowRoot!.querySelector(
+    '[part="first-icon"]'
+  ) as HTMLElement;
+  const rtlNextIcon = rtl.shadowRoot!.querySelector(
+    '[part="next-icon"]'
+  ) as HTMLElement;
+
+  // Under RTL the two pairs swap rotations relative to their LTR selves.
+  expect(getComputedStyle(rtlFirstIcon).transform).to.equal(nextTransform);
+  expect(getComputedStyle(rtlNextIcon).transform).to.equal(firstTransform);
+});
+
+it("keys the narrow-toolbar layout to the container's max-inline-size, not physical max-width", async () => {
+  const narrowWrapper = await fixture<HTMLDivElement>(html`
+    <div style="inline-size: 300px">
+      <lr-data-grid
+        label="Narrow"
+        with-search
+        .columns=${columns}
+        .data=${rows}
+      ></lr-data-grid>
+    </div>
+  `);
+  const narrow = narrowWrapper.querySelector(
+    "lr-data-grid"
+  ) as LyraDataGrid<Person>;
+  await narrow.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  const narrowToolbar = narrow.shadowRoot!.querySelector(
+    '[part="toolbar"]'
+  ) as HTMLElement;
+  const narrowSearch = narrow.shadowRoot!.querySelector(
+    '[part="search"]'
+  ) as HTMLElement;
+  expect(getComputedStyle(narrowToolbar).flexDirection).to.equal("column");
+  expect(getComputedStyle(narrowSearch).inlineSize).to.not.equal("auto");
+
+  const wideWrapper = await fixture<HTMLDivElement>(html`
+    <div style="inline-size: 600px">
+      <lr-data-grid
+        label="Wide"
+        with-search
+        .columns=${columns}
+        .data=${rows}
+      ></lr-data-grid>
+    </div>
+  `);
+  const wide = wideWrapper.querySelector("lr-data-grid") as LyraDataGrid<Person>;
+  await wide.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  const wideToolbar = wide.shadowRoot!.querySelector(
+    '[part="toolbar"]'
+  ) as HTMLElement;
+  expect(getComputedStyle(wideToolbar).flexDirection).to.not.equal("column");
+});
+
+it("wires the size density ladder into rendered row/header height", async () => {
+  const medium = await dataGrid(html`
+    <lr-data-grid label="Medium" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const small = await dataGrid(html`
+    <lr-data-grid
+      label="Small"
+      size="s"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const large = await dataGrid(html`
+    <lr-data-grid
+      label="Large"
+      size="l"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+
+  const rowHeight = (element: LyraDataGrid<Person>): number =>
+    (
+      element.shadowRoot!.querySelector('[part~="row"]') as HTMLElement
+    ).getBoundingClientRect().height;
+  const headerHeight = (element: LyraDataGrid<Person>): number =>
+    (
+      element.shadowRoot!.querySelector('[part="header"]') as HTMLElement
+    ).getBoundingClientRect().height;
+
+  expect(rowHeight(small)).to.be.lessThan(rowHeight(medium));
+  expect(rowHeight(large)).to.be.greaterThan(rowHeight(medium));
+  expect(headerHeight(small)).to.be.lessThan(headerHeight(medium));
+  expect(headerHeight(large)).to.be.greaterThan(headerHeight(medium));
+
+  // The legacy "small"/"large" aliases wire in the same density as "s"/"l".
+  const smallAlias = await dataGrid(html`
+    <lr-data-grid
+      label="Small alias"
+      size="small"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const largeAlias = await dataGrid(html`
+    <lr-data-grid
+      label="Large alias"
+      size="large"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  expect(rowHeight(smallAlias)).to.equal(rowHeight(small));
+  expect(rowHeight(largeAlias)).to.equal(rowHeight(large));
+});
+
 describe("data-grid processing helpers", () => {
   const locale = "en";
 
@@ -5387,5 +5644,34 @@ describe("data-grid processing helpers", () => {
         {}
       )
     ).to.equal(`Text\r\n'=cmd()`);
+  });
+
+  it("escapes every unsafe leading character, including whitespace and fullwidth formula sigils", () => {
+    // The bare ASCII sigils are only half the attack surface: a spreadsheet strips leading
+    // whitespace before parsing, and fullwidth sigils are normalized to their ASCII twins during
+    // import -- so both reach the formula parser exactly as `=`/`+`/`-`/`@` would.
+    const cols: DataGridColumn<{ v: unknown }>[] = [{ field: "v", label: "V" }];
+    const serialize = (v: unknown) =>
+      rowsAsDelimited([{ v }], cols, { includeHeaders: false });
+
+    // Prefix-only: none of these contain the delimiter, a quote, CR or LF, so no quoting follows.
+    for (const value of ["\tcmd", "＝SUM(A1:A2)", "＋1", "－1+2", "＠cmd"]) {
+      expect(serialize(value), `leading ${JSON.stringify(value)}`).to.equal(
+        `'${value}`
+      );
+    }
+    // A leading CR/LF is guarded first, then the field still needs quoting because it now
+    // contains a bare CR/LF.
+    expect(serialize("\rcmd")).to.equal('"\'\rcmd"');
+    expect(serialize("\ncmd")).to.equal('"\'\ncmd"');
+
+    // Opting out still opts out, and a real number column is still never text-prefixed.
+    expect(
+      rowsAsDelimited([{ v: "＝SUM(A1:A2)" }], cols, {
+        includeHeaders: false,
+        escapeFormulas: false,
+      })
+    ).to.equal("＝SUM(A1:A2)");
+    expect(serialize(-5)).to.equal("-5");
   });
 });

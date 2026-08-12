@@ -2,6 +2,7 @@ import { expect, oneEvent, waitUntil } from '@open-wc/testing';
 import './emoji-picker.js';
 import type { LyraEmojiPicker, EmojiPickerGroup } from './emoji-picker.js';
 import { styles } from './emoji-picker.styles.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 const groups: EmojiPickerGroup[] = [
   {
@@ -491,6 +492,10 @@ describe('keyboard navigation', () => {
 
 it('localizes the search label, grid label, and empty-state message via .strings', async () => {
   const el = await connectEmojiPicker();
+  // The deliberate `[]` opt-out, which is what renders the ordinary empty state. Leaving `groups`
+  // unset would instead land on the peer-load-failure surface, since this helper's default loader
+  // resolves `null`.
+  el.groups = [];
   el.strings = {
     emojiPickerSearchLabel: 'Filtrer les emoji',
     emojiPickerGridLabel: 'Emoji disponibles',
@@ -1243,4 +1248,73 @@ it('reflects aria-required and aria-invalid as true on the grid once required is
   input.dispatchEvent(new FocusEvent('blur'));
   await el.updateComplete;
   expect(grid.getAttribute('aria-invalid')).to.equal('true');
+});
+
+describe('optional-peer load failure', () => {
+  const emptyText = (el: LyraEmojiPicker) =>
+    (el.shadowRoot!.querySelector('[part="empty"]') as HTMLElement | null)?.textContent?.trim() ??
+    null;
+  const errorEl = (el: LyraEmojiPicker) =>
+    el.shadowRoot!.querySelector('[part="load-error"]') as HTMLElement | null;
+
+  it('renders a distinct failure surface when the optional peer never loads', async () => {
+    const el = await connectEmojiPicker(() => Promise.resolve(null));
+    await waitUntil(() => errorEl(el) !== null, 'load-error surface never rendered');
+    expect((errorEl(el)!.textContent ?? '').trim().length > 0).to.equal(true);
+    // The plain "no matches" state must not be what a failed install looks like.
+    expect(emptyText(el) === null).to.equal(true);
+  });
+
+  it('announces the failure through the shared light-DOM assertive sink', async () => {
+    const el = await connectEmojiPicker(() => Promise.resolve(null));
+    await waitUntil(() => errorEl(el) !== null, 'load-error surface never rendered');
+    const sink = document.querySelector(
+      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+    ) as HTMLElement | null;
+    expect(sink === null, 'assertive sink must exist in the light DOM').to.equal(false);
+    const announced = Array.from(sink!.children, (child) => (child.textContent ?? '').trim());
+    expect(announced.includes(errorEl(el)!.textContent!.trim())).to.equal(true);
+  });
+
+  it('keeps a deliberate groups = [] opt-out on the ordinary empty state, not the error one', async () => {
+    const el = await connectEmojiPicker(() => Promise.resolve(null));
+    el.groups = [];
+    await el.updateComplete;
+    expect(errorEl(el) === null).to.equal(true);
+    expect((emptyText(el) ?? '').length > 0).to.equal(true);
+  });
+
+  it('keeps a genuine zero-match search on the ordinary empty state', async () => {
+    const el = await connectEmojiPicker(() => Promise.resolve(groups));
+    await waitUntil(() => el.groups.length > 0, 'groups never loaded');
+    const search = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
+    search.value = 'zzzznothing';
+    search.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(errorEl(el) === null).to.equal(true);
+    expect((emptyText(el) ?? '').length > 0).to.equal(true);
+  });
+
+  it('clears the error state as soon as a consumer supplies groups afterwards', async () => {
+    const el = await connectEmojiPicker(() => Promise.resolve(null));
+    await waitUntil(() => errorEl(el) !== null, 'load-error surface never rendered');
+    el.groups = groups;
+    await el.updateComplete;
+    expect(errorEl(el) === null).to.equal(true);
+    expect(el.shadowRoot!.querySelectorAll('[part~="emoji"]').length > 0).to.equal(true);
+  });
+
+  it('localizes the failure message through registerLyraLocale', async () => {
+    const el = await connectEmojiPicker(() => Promise.resolve(null));
+    el.strings = { emojiPickerLoadError: 'MARKER-LOAD-ERROR' };
+    await waitUntil(() => errorEl(el) !== null, 'load-error surface never rendered');
+    await el.updateComplete;
+    expect(errorEl(el)!.textContent!.trim()).to.equal('MARKER-LOAD-ERROR');
+  });
+
+  it('unset-regression: a picker whose peer loads normally shows no error surface', async () => {
+    const el = await connectEmojiPicker(() => Promise.resolve(groups));
+    await waitUntil(() => el.groups.length > 0, 'groups never loaded');
+    expect(errorEl(el) === null).to.equal(true);
+  });
 });

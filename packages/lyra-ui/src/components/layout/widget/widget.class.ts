@@ -13,12 +13,13 @@ import {
   writePersistedState,
 } from "../../../internal/persisted-state.js";
 import { nextId } from "../../../internal/a11y.js";
+import { observeScrollOverflow } from "../../../internal/scroll-overflow.js";
 import { chevronIcon, closeIcon, expandIcon } from "../../../internal/icons.js";
 import { styles } from "./widget.styles.js";
 import { sanitizeCssInset } from "../../../internal/safe-css.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_widgetCollapse, LYRA_DEFAULT_widgetExitFullscreen, LYRA_DEFAULT_widgetExpand, LYRA_DEFAULT_widgetExpandToFullscreen, LYRA_DEFAULT_widgetFullscreenPanel, LYRA_DEFAULT_widgetViewGroup } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_widgetCollapse, LYRA_DEFAULT_widgetExitFullscreen, LYRA_DEFAULT_widgetExpand, LYRA_DEFAULT_widgetExpandToFullscreen, LYRA_DEFAULT_widgetFullscreenPanel, LYRA_DEFAULT_widgetViewGroup } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -133,9 +134,6 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
     widgetCollapse: LYRA_DEFAULT_widgetCollapse,
     widgetExitFullscreen: LYRA_DEFAULT_widgetExitFullscreen,
     widgetExpand: LYRA_DEFAULT_widgetExpand,
@@ -146,6 +144,16 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+
+  constructor() {
+    super();
+    // Two independent observers: either header row can overflow on its own, and each one gates its
+    // own edge fade -- the same measurement-gated affordance lr-segmented/lr-stepper/lr-tab-group
+    // already use for their scrolling control rows. Without it a narrow widget clips the row with
+    // no visual hint that more actions or view toggles exist off-screen.
+    observeScrollOverflow(this, () => this.renderRoot.querySelector('[part="actions"]'));
+    observeScrollOverflow(this, () => this.renderRoot.querySelector('[part="view-toggles"]'));
+  }
 
   @property() label = "";
   /** Overrides the fullscreen dialog's accessible name, taking precedence over both `label` and a

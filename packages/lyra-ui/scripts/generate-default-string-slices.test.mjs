@@ -66,8 +66,20 @@ try {
     "export { SAMPLE_KEYS } from './sample-keys.js';\nexport class LyraSampleExport extends LyraElement {}\n",
   );
   const first = await generateDefaultStringSlices({ packageDir: fixture, write: true });
-  assert.equal(first.rewrittenFileCount, 2);
+  // Only `sample.class.ts` gets a slice. `sample-export.class.ts` re-exports the key map but never
+  // calls localize() itself, so it needs no messages of its own -- it used to receive a slice purely
+  // because helper modules were literal-walked unconditionally. `sample.class.ts` still resolves
+  // `cancel` through that same re-export chain, because its own
+  // `this.localize(SAMPLE_KEYS.cancel)` is a dynamic key and dynamic keys are exactly what keeps
+  // the broad walk switched on for this graph.
+  assert.equal(first.rewrittenFileCount, 1);
   assert.equal(first.usedKeyCount, 2);
+  const reExportOnly = await readFile(path.join(component, 'sample-export.class.ts'), 'utf8');
+  assert.doesNotMatch(
+    reExportOnly,
+    /LYRA_DEFAULT_/,
+    'a class that only re-exports a key map, never localizing, carries no default-string slice',
+  );
   const authored = await readFile(path.join(component, 'sample.class.ts'), 'utf8');
   assert.match(authored, /Concurrent authored prose must survive byte-for-byte/);
   const generated = await readFile(path.join(internal, 'default-strings.generated.ts'), 'utf8');
@@ -109,7 +121,12 @@ export { type RuntimeExportShape, RUNTIME_EXPORT_KEYS } from './runtime-export.j
 
 export class LyraGraphSample extends LyraElement {
   render() {
-    return this.localize('direct');
+    // The dynamic key is what this fixture needs to probe module-graph EDGES at all: only a key
+    // that cannot be read off the call expression keeps the broad literal walk of helper modules
+    // switched on, and that walk is how a traversed edge makes itself observable here. With a
+    // purely literal key the helpers' own literals are (correctly) ignored, and this test could no
+    // longer distinguish a traversed runtime edge from a skipped type-only one.
+    return this.localize('direct') + this.localize(RUNTIME_IMPORT_KEYS.label);
   }
 }
 `,
@@ -152,6 +169,233 @@ export class LyraGraphSample extends LyraElement {
   assert.doesNotMatch(generated, /LYRA_DEFAULT_typeOnly/);
 } finally {
   await rm(graphFixture, { recursive: true, force: true });
+}
+
+// reachableCatalogKeys() must only treat a literal as a localize() key when it is the actual
+// argument of a this.localize(...)/resolveLyraString(...) call -- never merely a string literal
+// that textually collides with a catalog key name (a type-union member, an object-literal tag, a
+// Lit `changed.has('propName')` check, ...). The ternary-operand pattern this repo actually uses
+// (`this.localize(expanded ? 'a' : 'b')`) and a direct resolveLyraString(...) call must still be
+// detected.
+const falsePositiveCatalog = `
+type Key = 'copy' | 'loading' | 'open' | 'search' | 'remove' | 'date' | 'jsonCollapseLabel' | 'jsonExpandLabel' | 'directResolve';
+const DEFAULT_STRINGS: Record<Key, string> = {
+  copy: 'Copy',
+  loading: 'Loading',
+  open: 'Open',
+  search: 'Search',
+  remove: 'Remove',
+  date: 'Date',
+  jsonCollapseLabel: 'Collapse',
+  jsonExpandLabel: 'Expand',
+  directResolve: 'Direct resolve',
+};
+`;
+const falsePositiveFixture = await mkdtemp(path.join(tmpdir(), 'lyra-default-slice-false-positive-'));
+try {
+  const internal = path.join(falsePositiveFixture, 'src', 'internal');
+  const component = path.join(falsePositiveFixture, 'src', 'components', 'utility', 'false-positive-sample');
+  await mkdir(internal, { recursive: true });
+  await mkdir(component, { recursive: true });
+  await writeFile(path.join(internal, 'localization.ts'), falsePositiveCatalog);
+  await writeFile(
+    path.join(component, 'false-positive-sample.class.ts'),
+    `import { LyraElement } from '../../../internal/lyra-element.js';
+import { resolveLyraString } from '../../../internal/localization-runtime.js';
+
+// A union member that textually collides with a catalog key name (copy-button.class.ts's
+// LyraCopyButtonTooltip does this for 'copy').
+export type LyraFalsePositiveSampleTooltip = 'full' | 'copy' | 'none';
+
+// A discriminated-union tag colliding with a catalog key name (icon.class.ts's IconFetchState
+// does this for 'loading').
+interface FetchState {
+  kind: 'idle' | 'loading' | 'done';
+}
+
+export class LyraFalsePositiveSample extends LyraElement {
+  private fetchState: FetchState = { kind: 'loading' };
+
+  // Lit changed.has()/changed.get() property checks colliding with catalog key names
+  // (export-button.class.ts's 'loading'/'open', json-viewer.class.ts's 'search',
+  // relative-time.class.ts's 'date').
+  protected override updated(changed: Map<string, unknown>): void {
+    if (changed.has('loading') || changed.get('open') || changed.has('search') || changed.has('date')) {
+      // no-op: exercising the collision, not a real localize() argument
+    }
+  }
+
+  // A diff-line-type discriminator colliding with a catalog key name (diff-view.class.ts's
+  // op.type === 'remove').
+  private marker(op: { type: 'add' | 'remove' }): string {
+    return op.type === 'remove' ? '-' : '+';
+  }
+
+  render() {
+    const expanded = true;
+    const direct = resolveLyraString(this, 'directResolve', this.strings, undefined, undefined, undefined);
+    return direct + this.localize(expanded ? 'jsonCollapseLabel' : 'jsonExpandLabel', undefined, { label: 'x' });
+  }
+}
+`,
+  );
+  const result = await generateDefaultStringSlices({ packageDir: falsePositiveFixture, write: true });
+  const generated = await readFile(path.join(internal, 'default-strings.generated.ts'), 'utf8');
+  assert.doesNotMatch(generated, /LYRA_DEFAULT_copy\b/, 'a type-union member must not be treated as a localize() key');
+  assert.doesNotMatch(generated, /LYRA_DEFAULT_loading\b/, 'a discriminated-union tag must not be treated as a localize() key');
+  assert.doesNotMatch(generated, /LYRA_DEFAULT_open\b/, 'a changed.get() literal must not be treated as a localize() key');
+  assert.doesNotMatch(generated, /LYRA_DEFAULT_search\b/, 'a changed.has() literal must not be treated as a localize() key');
+  assert.doesNotMatch(generated, /LYRA_DEFAULT_remove\b/, 'a diff-line-type discriminator must not be treated as a localize() key');
+  assert.doesNotMatch(generated, /LYRA_DEFAULT_date\b/, 'a changed.has() literal must not be treated as a localize() key');
+  assert.match(generated, /LYRA_DEFAULT_directResolve/, 'a real resolveLyraString(...) call must still be detected');
+  assert.match(generated, /LYRA_DEFAULT_jsonCollapseLabel/, 'a ternary operand of this.localize(...) must still be detected');
+  assert.match(generated, /LYRA_DEFAULT_jsonExpandLabel/, 'a ternary operand of this.localize(...) must still be detected');
+  assert.equal(result.usedKeyCount, 3, 'only the 3 real localize()/resolveLyraString() keys must be reachable');
+} finally {
+  await rm(falsePositiveFixture, { recursive: true, force: true });
+}
+
+
+// A helper module reached through the import graph must NOT leak literals that merely collide with
+// catalog key names (internal/a11y.ts -> accessibility-visibility.ts's `visibility === 'collapse'`,
+// `localName !== 'details'`, `hasAttribute('open')` did exactly this for lr-typing-indicator, which
+// only ever localizes `thinking`). The broad literal walk is reserved for the one shape that
+// genuinely hides its key from the call expression -- a dynamic argument like
+// `this.localize(FILE_SIZE_UNIT_KEYS[unit])` -- and must still work there.
+const helperCatalog = `
+type Key = 'collapse' | 'details' | 'open' | 'thinking' | 'byteUnitKb' | 'byteUnitMb';
+const DEFAULT_STRINGS: Record<Key, string> = {
+  collapse: 'Collapse',
+  details: 'Details',
+  open: 'Open',
+  thinking: 'Thinking',
+  byteUnitKb: 'KB',
+  byteUnitMb: 'MB',
+};
+`;
+const helperFixture = await mkdtemp(path.join(tmpdir(), 'lyra-default-slice-helper-'));
+try {
+  const internal = path.join(helperFixture, 'src', 'internal');
+  const staticOnly = path.join(helperFixture, 'src', 'components', 'utility', 'static-key-sample');
+  const dynamicOnly = path.join(helperFixture, 'src', 'components', 'utility', 'dynamic-key-sample');
+  await mkdir(internal, { recursive: true });
+  await mkdir(staticOnly, { recursive: true });
+  await mkdir(dynamicOnly, { recursive: true });
+  await writeFile(path.join(internal, 'localization.ts'), helperCatalog);
+
+  // A pure a11y-style helper with incidental literals and no localize() call of its own.
+  await writeFile(
+    path.join(internal, 'visibility-helper.ts'),
+    `export function isHidden(visibility: string): boolean {
+  return visibility === 'hidden' || visibility === 'collapse';
+}
+export function isOpenDetails(el: Element): boolean {
+  return el.localName === 'details' && el.hasAttribute('open');
+}
+`,
+  );
+  // A real runtime key map, consumed only through a dynamic subscript.
+  await writeFile(
+    path.join(internal, 'byte-units.ts'),
+    `export const BYTE_UNIT_KEYS: Record<string, string> = { kb: 'byteUnitKb', mb: 'byteUnitMb' };
+`,
+  );
+
+  await writeFile(
+    path.join(staticOnly, 'static-key-sample.class.ts'),
+    `import { LyraElement } from '../../../internal/lyra-element.js';
+import { isHidden, isOpenDetails } from '../../../internal/visibility-helper.js';
+
+export class LyraStaticKeySample extends LyraElement {
+  render() {
+    void isHidden('visible');
+    void isOpenDetails(this);
+    return this.localize('thinking');
+  }
+}
+`,
+  );
+  await writeFile(
+    path.join(dynamicOnly, 'dynamic-key-sample.class.ts'),
+    `import { LyraElement } from '../../../internal/lyra-element.js';
+import { BYTE_UNIT_KEYS } from '../../../internal/byte-units.js';
+
+export class LyraDynamicKeySample extends LyraElement {
+  render() {
+    const unit = 'kb';
+    return this.localize(BYTE_UNIT_KEYS[unit]!);
+  }
+}
+`,
+  );
+
+  await generateDefaultStringSlices({ packageDir: helperFixture, write: true });
+  const staticSlice = await readFile(path.join(staticOnly, 'static-key-sample.class.ts'), 'utf8');
+  const dynamicSlice = await readFile(path.join(dynamicOnly, 'dynamic-key-sample.class.ts'), 'utf8');
+
+  for (const phantom of ['collapse', 'details', 'open']) {
+    assert.doesNotMatch(
+      staticSlice,
+      new RegExp(`LYRA_DEFAULT_${phantom}\\b`),
+      `a helper module's incidental '${phantom}' literal must not become a reachable key`,
+    );
+  }
+  assert.match(staticSlice, /LYRA_DEFAULT_thinking\b/, 'the one real localize() key is still detected');
+
+  // The dynamic-subscript case still pulls the whole key map in, from the helper that declares it.
+  assert.match(dynamicSlice, /LYRA_DEFAULT_byteUnitKb\b/, 'a dynamic localize() key map is still reachable');
+  assert.match(dynamicSlice, /LYRA_DEFAULT_byteUnitMb\b/, 'a dynamic localize() key map is still reachable');
+} finally {
+  await rm(helperFixture, { recursive: true, force: true });
+}
+
+
+// A key map feeding a dynamic localize() call very often lives in the CLASS FILE itself rather
+// than a helper module (lr-citation-badge's STATUS_MESSAGE_KEY -> this.localize(key)). Restricting
+// the broad literal walk to helper modules silently dropped every one of those messages, which
+// renders the raw key name to the user.
+const rootMapCatalog = `
+type Key = 'statusHigh' | 'statusLow' | 'plainLabel';
+const DEFAULT_STRINGS: Record<Key, string> = {
+  statusHigh: 'High confidence',
+  statusLow: 'Low confidence',
+  plainLabel: 'Plain',
+};
+`;
+const rootMapFixture = await mkdtemp(path.join(tmpdir(), 'lyra-default-slice-root-map-'));
+try {
+  const internal = path.join(rootMapFixture, 'src', 'internal');
+  const component = path.join(rootMapFixture, 'src', 'components', 'utility', 'root-map-sample');
+  await mkdir(internal, { recursive: true });
+  await mkdir(component, { recursive: true });
+  await writeFile(path.join(internal, 'localization.ts'), rootMapCatalog);
+  await writeFile(
+    path.join(component, 'root-map-sample.class.ts'),
+    `import { LyraElement } from '../../../internal/lyra-element.js';
+
+// Module-level key map in the CLASS file, consumed only through a dynamic subscript.
+const STATUS_MESSAGE_KEY: Record<string, string | null> = {
+  none: null,
+  high: 'statusHigh',
+  low: 'statusLow',
+};
+
+export class LyraRootMapSample extends LyraElement {
+  status = 'high';
+  render() {
+    const key = STATUS_MESSAGE_KEY[this.status];
+    return (key ? this.localize(key) : '') + this.localize('plainLabel');
+  }
+}
+`,
+  );
+  await generateDefaultStringSlices({ packageDir: rootMapFixture, write: true });
+  const slice = await readFile(path.join(component, 'root-map-sample.class.ts'), 'utf8');
+  assert.match(slice, /LYRA_DEFAULT_statusHigh\b/, 'a key map in the class file must be reachable through its dynamic call');
+  assert.match(slice, /LYRA_DEFAULT_statusLow\b/, 'a key map in the class file must be reachable through its dynamic call');
+  assert.match(slice, /LYRA_DEFAULT_plainLabel\b/, 'the literal key alongside it is still detected');
+} finally {
+  await rm(rootMapFixture, { recursive: true, force: true });
 }
 
 console.log('per-component default-string slice generator tests passed.');

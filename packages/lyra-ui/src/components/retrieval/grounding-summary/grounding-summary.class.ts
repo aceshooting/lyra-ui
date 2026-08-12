@@ -129,10 +129,15 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   }
 
   private renderEvidenceItem = (citation: Citation, index: number): TemplateResult => {
+    // The offsets are locale-formatted before interpolation, the same way every other number in
+    // this component (and the adjacent citation badge's own index) is: interpolating raw JS numbers
+    // into a translated sentence renders Latin digits with English grouping inside an otherwise
+    // localized string.
+    const numberFormat = getNumberFormat(this.effectiveLocale);
     const spanText = citation.span
       ? this.localize('groundingSummaryEvidenceSpan', undefined, {
-          start: citation.span.start,
-          end: citation.span.end,
+          start: numberFormat.format(finiteCount(citation.span.start)),
+          end: numberFormat.format(finiteCount(citation.span.end)),
         })
       : '';
     return html`

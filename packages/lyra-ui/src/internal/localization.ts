@@ -459,6 +459,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   temperature: 'Temperature',
   play: 'Play',
   playbackPosition: 'Playback position',
+  playbackStepPosition: 'Step {index} of {total}',
   videoPlayerLabel: 'Video player',
   videoMute: 'Mute',
   videoUnmute: 'Unmute',
@@ -607,6 +608,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   schemaPropertiesMustBeFlat: 'Schema properties must be a flat object.',
   valueMustBeSerializable: 'Value must be JSON-serializable.',
   valueInvalid: 'The value is invalid.',
+  phoneInputLabel: 'Phone',
   phoneInputIncomplete: 'This phone number is incomplete.',
   otpInputIncomplete: 'Enter all {total} characters.',
   otpInputLabel: 'Verification code',
@@ -726,6 +728,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   emojiPickerSearchLabel: 'Search emoji',
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'No emoji found',
+  emojiPickerLoadError: 'Could not load emoji.',
   // Emojibase's canonical group headings (group ids 0-9), used for the emoji set
   // `<lr-emoji-picker>` auto-loads from `emoji-picker-element-data`. A consumer-supplied `groups`
   // array carries its own already-authored `label` and never routes through these.

@@ -135,6 +135,43 @@ export const ThemedTokensAndRefresh: Story = {
 };
 
 /**
+ * Individual boxes are addressable. Focus the plot and walk it with Arrow/Home/End, then press
+ * Enter or Space — or click a box — to emit `lr-point-click` with that box's five-number summary.
+ * Each keyboard move announces the box through the shared light-DOM polite live region.
+ */
+export const PerBoxInteractivity: Story = {
+  render: () => {
+    const boxes: BoxPlotSeries[] = [
+      {
+        label: 'Production',
+        data: [
+          { min: 100, q1: 180, median: 240, q3: 330, max: 510 },
+          { min: 120, q1: 200, median: 280, q3: 370, max: 560 },
+        ],
+      },
+      {
+        label: 'Candidate',
+        data: [
+          { min: 90, q1: 150, median: 210, q3: 300, max: 480 },
+          { min: 95, q1: 160, median: 220, q3: 310, max: 495 },
+        ],
+      },
+    ];
+    return html`
+      <lr-box-plot
+        height="16rem"
+        style="inline-size: 26rem; max-inline-size: 100%;"
+        legend
+        y-label="Latency (ms)"
+        .labels=${['Week 1', 'Week 2']}
+        .boxes=${boxes}
+        @lr-point-click=${(event: CustomEvent) => console.info('Box activated', event.detail)}
+      ></lr-box-plot>
+    `;
+  },
+};
+
+/**
  * Supplying the accessibility-table slot replaces the generated table. Use it for a complete,
  * paginated, or virtualized alternative when the built-in 1,000-record sample is insufficient.
  */

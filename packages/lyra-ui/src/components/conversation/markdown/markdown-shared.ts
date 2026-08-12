@@ -27,6 +27,7 @@ import { scopeFromElement, resolveTextQuote } from '../../../internal/text-quote
 import { supportsCustomHighlights, type HighlightHandle } from '../../../internal/text-highlights.js';
 import type { LyraAnchor, LyraHighlight, LyraHighlightTone } from '../../viewers/document-viewer/anchors.js';
 import { normalizeShikiLanguage, SHIKI_THEMES, type ShikiHighlighter } from '../code-block/shiki-types.js';
+import { resolveIsDarkTheme, watchDarkTheme } from '../code-block/shiki-dark-theme.js';
 import type { ShikiTransformer } from '../code-block/shiki-types.js';
 import {
   loadMarkdownDeps,
@@ -1025,6 +1026,11 @@ export interface MarkdownContentOptions {
   /** The host's own `aria-label`, forwarded to the element that actually owns `role="document"` --
    *  a host `aria-label` doesn't reach shadow internals on its own. */
   hostAriaLabel: string | null;
+  /** Whether the host's *resolved* `--lr-color-*` palette is a dark scheme. Shiki's dual-theme
+   *  output carries its light colors as plain inline `color`/`background-color` and its dark ones
+   *  in `--shiki-dark`/`--shiki-dark-bg`; the stylesheet's `[data-dark-theme='true']` rule is what
+   *  swaps them, so without this flag every highlighted block paints light on a dark page. */
+  isDarkTheme: boolean;
   onClick: (e: MouseEvent) => void;
   /** `DocumentAnchorTarget`'s `renderAnchorLiveRegion()` output. */
   liveRegion: unknown;
@@ -1048,10 +1054,29 @@ export function renderMarkdownContent(options: MarkdownContentOptions): Template
         aria-label=${options.hostAriaLabel || nothing}
         ?data-fallback=${isFallback}
         ?data-unsanitized=${!options.sanitize}
+        data-dark-theme=${options.isDarkTheme ? 'true' : nothing}
         @click=${options.onClick}
       >
         ${isFallback ? options.content : unsafeHTML(options.renderedHtml)}
       </div>
       ${options.liveRegion}
     `;
+}
+
+
+/**
+ * Starts (and immediately applies) the resolved-theme watch both markdown variants need so
+ * Shiki's dual-theme output can be switched to its dark half. Returns the teardown; call it from
+ * `disconnectedCallback()`/`adoptedCallback()`.
+ *
+ * Keyed on the component's own resolved `--lr-color-text`/`--lr-color-surface` rather than the
+ * OS-level `prefers-color-scheme` query directly, so a consumer who sets `--lr-theme-color-*`
+ * explicitly gets the dark palette too -- identical to `<lr-code-block>`'s own handling.
+ */
+export function watchMarkdownDarkTheme(
+  host: HTMLElement,
+  apply: (isDarkTheme: boolean) => void,
+): () => void {
+  apply(resolveIsDarkTheme(host));
+  return watchDarkTheme(host, () => apply(resolveIsDarkTheme(host)));
 }

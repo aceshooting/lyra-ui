@@ -10,7 +10,7 @@ import type { LyraVariant } from '../../../internal/variants.js';
 import { styles } from './context-meter.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_contextMeterLabeledSummary, LYRA_DEFAULT_contextMeterSegmentLabel, LYRA_DEFAULT_contextMeterUsed, LYRA_DEFAULT_contextMeterUsedOfTotal, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_contextMeterLabeledSummary, LYRA_DEFAULT_contextMeterSegmentLabel, LYRA_DEFAULT_contextMeterUsed, LYRA_DEFAULT_contextMeterUsedOfTotal } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -70,7 +70,14 @@ function formatCount(n: number, locale: string): string {
  * @csspart semantic - The visually-hidden meter/group carrying aggregate range semantics.
  * @csspart segment-list - The visually-hidden list exposing the segment breakdown.
  * @csspart segment-item - One visually-hidden segment label/count pair.
- * @cssprop [--lr-context-meter-segment-color] - Per-segment color. Set inline on `[part="segment"]` by the component itself whenever that segment supplies a `color`; unset (and the token unread) otherwise, leaving the `data-tone` palette in charge.
+ * @csspart legend - The visible category key rendered below the meter when `showLegend` is set.
+ *   `aria-hidden`, because `segment-list` already exposes the same names to assistive technology.
+ * @csspart legend-item - One swatch + label pair in the legend, one per `segments` entry.
+ * @csspart legend-swatch - The color chip of a legend item, painted from that segment's resolved
+ *   `color`/`tone` — the same ladder and the same inline custom-property escape `segment` uses.
+ * @csspart legend-label - The text of a legend item (the segment's `label`).
+ * @cssprop [--lr-context-meter-segment-color] - Per-segment color. Set inline on `[part="segment"]` by the component itself whenever that segment supplies a `color`; unset (and the token unread) otherwise, leaving the `data-tone` palette in charge. The matching `[part="legend-swatch"]` reads the same property, so a swatch can never disagree with the band it stands for.
+ * @cssprop [--lr-context-meter-legend-swatch-size=var(--lr-size-0-625rem)] - Inline and block size of a legend swatch.
  * @status stable
  * @since 4.0.0
  */
@@ -79,13 +86,10 @@ export class LyraContextMeter extends LyraElement {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
     contextMeterLabeledSummary: LYRA_DEFAULT_contextMeterLabeledSummary,
     contextMeterSegmentLabel: LYRA_DEFAULT_contextMeterSegmentLabel,
     contextMeterUsed: LYRA_DEFAULT_contextMeterUsed,
     contextMeterUsedOfTotal: LYRA_DEFAULT_contextMeterUsedOfTotal,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -101,6 +105,17 @@ export class LyraContextMeter extends LyraElement {
 
   /** Overall accessible label/caption, e.g. `"128K context window"`. */
   @property() label = '';
+
+  /** Renders a static `[part="legend"]` key below the meter — one swatch/label pair per `segments`
+   *  entry, each swatch painted with that segment's resolved `color`/`tone`. Off by default.
+   *
+   *  Without it, the only place a segment's own label is exposed is a hover `title` (desktop-only,
+   *  undiscoverable) and the visually-hidden breakdown list — so a meter split across more than two
+   *  or three categories is legible to a screen-reader user but not to a sighted one, who has to
+   *  hand-roll swatch+label markup outside the component. Non-interactive: it toggles nothing and
+   *  emits nothing, mirroring `<lr-sequence-strip>`'s `showLegend` rather than the interactive
+   *  `<lr-graph-legend>`. */
+  @property({ type: Boolean, reflect: true, attribute: 'show-legend' }) showLegend = false;
 
   /** Sum of segment values, clamped so a negative/NaN entry can't produce a negative total. */
   private get usedTotal(): number {
@@ -250,9 +265,33 @@ export class LyraContextMeter extends LyraElement {
     `;
   }
 
+  /** The visible category key. It repeats, in sighted form, exactly the label/count pairs the
+   *  visually-hidden `segment-list` already exposes, so the whole subtree is `aria-hidden` — a
+   *  screen reader announcing the same scheme twice is worse than not announcing the duplicate at
+   *  all. Same stance, and the same `legend`/`legend-item`/`legend-swatch`/`legend-label` part
+   *  names, as `<lr-sequence-strip>`'s legend. */
+  private renderLegend(): TemplateResult {
+    return html`
+      <div part="legend" aria-hidden="true">
+        ${this.segments.map((segment) => {
+          const color = this.segmentColor(segment);
+          return html`<span part="legend-item">
+            <span
+              part="legend-swatch"
+              data-tone=${segment.tone ?? 'neutral'}
+              style=${styleMap(color ? { '--lr-context-meter-segment-color': color } : {})}
+            ></span>
+            <span part="legend-label">${segment.label}</span>
+          </span>`;
+        })}
+      </div>
+    `;
+  }
+
   override render(): TemplateResult {
     return html`
       ${this.variant === 'ring' ? this.renderRing() : this.renderBar()}
+      ${this.showLegend ? this.renderLegend() : nothing}
       ${this.renderSemantics()}
     `;
   }

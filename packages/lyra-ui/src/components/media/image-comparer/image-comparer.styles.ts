@@ -4,6 +4,13 @@ export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
+    /* Namespaced sizing surface, fed by the bare Shoelace-compat names. An unprefixed custom
+       property inherits, so a single --handle-size anywhere up the tree would otherwise silently
+       retune this component along with every other one reading a generically-named property.
+       Consumers override the --lr-image-comparer-* names on the host, which beats these :host
+       declarations; the compat names keep working as the fallback source. */
+    --lr-image-comparer-divider-width: var(--divider-width, var(--lr-size-1px));
+    --lr-image-comparer-handle-size: var(--handle-size, var(--lr-icon-button-size));
   }
   [part~='base'] {
     position: relative;
@@ -55,7 +62,7 @@ export const styles = css`
     z-index: var(--lr-layer-popover);
     inset-block: 0;
     inset-inline-start: var(--lr-comparer-position, 50%);
-    inline-size: var(--divider-width, var(--lr-size-1px));
+    inline-size: var(--lr-image-comparer-divider-width);
     background: var(--lr-color-surface);
     /* Card step, not the overlay step: the shadow here only has to keep a hairline legible against
        arbitrary imagery on both sides -- a wider blur reads as a smudge along the seam. */
@@ -67,7 +74,7 @@ export const styles = css`
     inset-inline: 0;
     inset-block-start: var(--lr-comparer-position, 50%);
     inline-size: auto;
-    block-size: var(--divider-width, var(--lr-size-1px));
+    block-size: var(--lr-image-comparer-divider-width);
   }
   [part='handle'] {
     position: absolute;
@@ -109,8 +116,8 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    inline-size: var(--handle-size, var(--lr-icon-button-size));
-    block-size: var(--handle-size, var(--lr-icon-button-size));
+    inline-size: var(--lr-image-comparer-handle-size);
+    block-size: var(--lr-image-comparer-handle-size);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-pill);
     background: var(--lr-color-surface);

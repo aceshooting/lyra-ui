@@ -168,7 +168,7 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
   arms/seal/emblem, e.g. `es`, `pt`, `sv`) ship **three** fidelity tiers, selected via the `variant`
   property (`flagUrl(code, { variant })` under the hood): `"compact"` — a tiny WebP raster for
   icon-scale use (menus, language pickers, dense lists); `"standard"` — the default, the
-  icon-optimized vector for card/row sizes, ~65% smaller on average than the pristine source for the
+  icon-optimized vector for card/row sizes, ~84% smaller on average than the pristine source for the
   65 affected codes with no visible fidelity loss at that scale; `"detailed"` — the pristine
   full-fidelity vector, for hero-scale display where the extra illustrative detail is actually
   visible. The other 184 codes resolve to the same file regardless of `variant` — a safe no-op.

@@ -45,6 +45,61 @@ export const styles = css`
   [part='node'][data-active-match] {
     outline: var(--lr-border-width-medium) solid var(--lr-xml-viewer-active-match-color, var(--lr-color-warning));
   }
+  /* Host-supplied highlights. Each tone resolves into one private carrier so the row tint and the
+     action button both read from a single base -- the same shape lr-archive-viewer/lr-docx-viewer
+     use for their own tone sets, and the same quiet fill tokens, which are the ones designed to sit
+     behind body text at an accessible contrast ratio. Neutral deliberately resolves to
+     --lr-color-surface-raised rather than --lr-color-surface: tinting a row with the viewer's own
+     ambient background would render a neutral highlight as unhighlighted. */
+  [part='node'][data-highlight] {
+    --_lr-xml-viewer-highlight-background: var(--lr-xml-viewer-highlight-accent-background, var(--lr-color-brand-quiet));
+    background: var(--_lr-xml-viewer-highlight-background);
+  }
+  [part='node'][data-highlight='success'] {
+    --_lr-xml-viewer-highlight-background: var(--lr-xml-viewer-highlight-success-background, var(--lr-color-success-quiet));
+  }
+  [part='node'][data-highlight='warning'] {
+    --_lr-xml-viewer-highlight-background: var(--lr-xml-viewer-highlight-warning-background, var(--lr-color-warning-quiet));
+  }
+  [part='node'][data-highlight='danger'] {
+    --_lr-xml-viewer-highlight-background: var(--lr-xml-viewer-highlight-danger-background, var(--lr-color-danger-quiet));
+  }
+  [part='node'][data-highlight='neutral'] {
+    --_lr-xml-viewer-highlight-background: var(--lr-xml-viewer-highlight-neutral-background, var(--lr-color-surface-raised));
+  }
+  [part='node'][data-active-highlight] {
+    outline: var(--lr-border-width-medium) solid var(--lr-xml-viewer-highlight-active-outline, var(--lr-color-brand));
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part='highlight-action'] {
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    margin-inline-start: var(--lr-space-xs);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+    cursor: pointer;
+    font: inherit;
+    font-size: var(--lr-font-size-xs);
+    padding: var(--lr-size-0-125rem) var(--lr-space-xs);
+  }
+  [part='highlight-action']:hover {
+    background: var(--_lr-xml-viewer-highlight-background);
+  }
+  [part='highlight-action']:active {
+    background: color-mix(in oklab, var(--_lr-xml-viewer-highlight-background), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  [part='highlight-action']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  /* The one attribute an attribute-addressing node-path anchor resolved to, so a citation pointing
+     at a single attribute value of a multi-attribute element stays identifiable. */
+  [part='attribute'][data-active] {
+    outline: var(--lr-border-width-medium) solid var(--lr-xml-viewer-active-attribute-color, var(--lr-color-brand));
+    border-radius: var(--lr-size-0-1875rem);
+  }
   [part='tag'] {
     color: var(--lr-color-brand);
     font-weight: var(--lr-font-weight-semibold);

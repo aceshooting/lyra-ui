@@ -31,7 +31,13 @@ component. Pure projection + event conduit: no fetching, no graph/viewer imports
 - `label: string = ''`
 
 **Events:** `lr-toggle` (`detail: { section, expanded }`, a section header was toggled —
-`section` is `'entities' | 'relationships' | 'communities' | 'chunks'`).
+`section` is `'entities' | 'relationships' | 'communities' | 'chunks'`). Because the panel is a
+conduit, every affordance it renders also reaches a listener on the panel itself, and all four are
+part of its typed event map: `lr-entity-activate` (`detail: { id }`, from an entity chip, community
+card member, or path-strip node), `lr-entity-open` (`detail: { id }`, an entity chip double-click or
+Space), `lr-drill` (`detail: { id }`, a community card's title, drill button, or overflow chip), and
+`lr-relation-activate` (`detail: { relation, sourceId?, targetId? }`, a relationship path-strip
+edge).
 
 **Slots:** none.
 

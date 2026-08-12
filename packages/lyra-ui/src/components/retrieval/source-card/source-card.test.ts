@@ -152,6 +152,41 @@ it('collapses the full wrapper and removes the toggle when its only slotted cont
   expect((el.shadowRoot!.querySelector('[part="full"]') as HTMLElement).hidden).to.be.true;
 });
 
+it('announces the automatic collapse through lr-expand when the full slot empties while expanded', async () => {
+  const el = (await fixture(
+    html`<lr-source-card source-id="doc-1" title="a.pdf"><span slot="full" id="full-content">Full text.</span></lr-source-card>`,
+  )) as LyraSourceCard;
+  (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+
+  const details: unknown[] = [];
+  el.addEventListener('lr-expand', (event) => details.push((event as CustomEvent).detail));
+  const fullSlot = el.shadowRoot!.querySelector('slot[name="full"]') as HTMLSlotElement;
+  const slotChanged = oneEvent(fullSlot, 'slotchange');
+  el.querySelector('#full-content')!.remove();
+  await slotChanged;
+  await el.updateComplete;
+
+  expect(details).to.deep.equal([{ sourceId: 'doc-1', expanded: false }]);
+});
+
+it('stays silent when the full slot empties while the card was already collapsed', async () => {
+  const el = (await fixture(
+    html`<lr-source-card source-id="doc-1" title="a.pdf"><span slot="full" id="full-content">Full text.</span></lr-source-card>`,
+  )) as LyraSourceCard;
+  await el.updateComplete;
+
+  const details: unknown[] = [];
+  el.addEventListener('lr-expand', (event) => details.push((event as CustomEvent).detail));
+  const fullSlot = el.shadowRoot!.querySelector('slot[name="full"]') as HTMLSlotElement;
+  const slotChanged = oneEvent(fullSlot, 'slotchange');
+  el.querySelector('#full-content')!.remove();
+  await slotChanged;
+  await el.updateComplete;
+
+  expect(details.length, 'a collapsed card did not change state, so nothing is announced').to.equal(0);
+});
+
 it('toggles the full wrapper and fires lr-expand with sourceId and the new state', async () => {
   const el = (await fixture(
     html`<lr-source-card source-id="doc-1" title="a.pdf">

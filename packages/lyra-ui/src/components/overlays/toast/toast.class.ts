@@ -7,11 +7,6 @@ import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './toast.styles.js';
 import type { LyraToastItem, ToastVariant } from './toast-item.class.js';
 import './toast-item.class.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export type ToastPlacement =
   | 'top-start'
@@ -67,16 +62,6 @@ function attachInternalsSafely(host: HTMLElement): ElementInternals | undefined 
  * @since 4.0.0
  */
 export class LyraToast extends LyraElement {
-  // GENERATED DEFAULT-STRING SLICE: START
-  /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
-  };
-  // GENERATED DEFAULT-STRING SLICE: END
-
   static override styles = [LyraElement.styles, styles];
 
   /** Where the stack anchors on screen. */

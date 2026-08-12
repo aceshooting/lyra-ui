@@ -7,7 +7,7 @@ import { StripHostTitleAttribute } from '../../../internal/strip-host-title.js';
 import { styles } from './source-card.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore, LYRA_DEFAULT_sourcePageSuffix, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore, LYRA_DEFAULT_sourcePageSuffix, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -55,9 +55,12 @@ class LyraSourceCardBase extends LyraElement<LyraSourceCardEventMap> {}
  * @slot full - The complete source text/chunk, hidden behind the "Show
  * more"/"Show less" toggle. When left empty, no toggle renders at all — a
  * card with no `full` content simply has no expand affordance. Removing all
- * `full`-slotted content while expanded automatically collapses it back.
- * @event lr-expand - The per-card "Show more"/"Show less" toggle was
- * activated. `detail: { sourceId, expanded }`.
+ * `full`-slotted content while expanded automatically collapses it back, and
+ * announces that collapse through `lr-expand` like any other state change.
+ * @event lr-expand - The card's expanded state changed — either the per-card
+ * "Show more"/"Show less" toggle was activated, or all `full`-slotted content
+ * was removed while expanded, collapsing the card automatically.
+ * `detail: { sourceId, expanded }`.
  * @event lr-open - The title was activated. `detail: { sourceId, href }` —
  * `href` may be `undefined`. This component never navigates on its own
  * (staying a controlled component, the same convention
@@ -102,9 +105,6 @@ export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) 
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
     showLess: LYRA_DEFAULT_showLess,
     showMore: LYRA_DEFAULT_showMore,
     sourcePageSuffix: LYRA_DEFAULT_sourcePageSuffix,
@@ -177,7 +177,13 @@ export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) 
   private onFullSlotChange = (e: Event): void => {
     const count = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length;
     this.hasFullSlot = count > 0;
-    if (count === 0) this.fullExpanded = false;
+    // Losing the slotted content collapses the card, which changes aria-expanded and the toggle
+    // label exactly as a click would. A host tracking expansion off the event stream would silently
+    // desync if only the manual toggle announced itself, so the automatic path emits too.
+    if (count === 0 && this.fullExpanded) {
+      this.fullExpanded = false;
+      this.emit('lr-expand', { sourceId: this.sourceId, expanded: false });
+    }
   };
 
   private onExcerptSlotChange = (e: Event): void => {

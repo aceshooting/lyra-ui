@@ -1262,11 +1262,11 @@ export type LyraHideEvent =
   | LyraTooltipEventMap['lr-hide'];
 
 /**
- * `lr-highlight-activate` — dispatched by 7 components: `<lr-av-player>`, `<lr-document-compare>`,
+ * `lr-highlight-activate` — dispatched by 8 components: `<lr-av-player>`, `<lr-document-compare>`,
  * `<lr-document-preview>`, `<lr-highlight-layer>`, `<lr-image-viewer>`, `<lr-terminal>`,
- * `LyraAnchorTargetEventMap`.
+ * `<lr-xml-viewer>`, `LyraAnchorTargetEventMap`.
  *
- * A union of 7 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 8 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.
  * `LyraAnchorTargetEventMap['lr-highlight-activate']`.
  */
@@ -1277,7 +1277,8 @@ export type LyraHighlightActivateEvent =
   | LyraDocumentPreviewEventMap['lr-highlight-activate']
   | LyraHighlightLayerEventMap['lr-highlight-activate']
   | LyraImageViewerEventMap['lr-highlight-activate']
-  | LyraTerminalEventMap['lr-highlight-activate'];
+  | LyraTerminalEventMap['lr-highlight-activate']
+  | LyraXmlViewerEventMap['lr-highlight-activate'];
 
 /**
  * `lr-hover` — dispatched by `<lr-rating>`.
@@ -1931,11 +1932,15 @@ export type LyraPauseEvent =
   | LyraPlaybackEventMap['lr-pause'];
 
 /**
- * `lr-pause-change` — dispatched by `<lr-poll-status>`.
+ * `lr-pause-change` — dispatched by 2 components: `<lr-poll-status>`, `<lr-random-content>`.
  *
- * Detail type: `LyraPollStatusEventMap['lr-pause-change']`.
+ * A union of 2 component entries, so `event.detail` here exposes only what all of them share. For
+ * one component's exact detail, index its own map — e.g.
+ * `LyraPollStatusEventMap['lr-pause-change']`.
  */
-export type LyraPauseChangeEvent = LyraPollStatusEventMap['lr-pause-change'];
+export type LyraPauseChangeEvent =
+  | LyraPollStatusEventMap['lr-pause-change']
+  | LyraRandomContentEventMap['lr-pause-change'];
 
 /**
  * `lr-pick` — dispatched by `<lr-attachment-trigger>`.
@@ -1964,12 +1969,13 @@ export type LyraPlayEvent =
   | LyraPlaybackEventMap['lr-play'];
 
 /**
- * `lr-point-click` — dispatched by 2 components: `<lr-chart>`, `<lr-lite-chart>`.
+ * `lr-point-click` — dispatched by 3 components: `<lr-box-plot>`, `<lr-chart>`, `<lr-lite-chart>`.
  *
- * A union of 2 component entries, so `event.detail` here exposes only what all of them share. For
- * one component's exact detail, index its own map — e.g. `LyraChartEventMap['lr-point-click']`.
+ * A union of 3 component entries, so `event.detail` here exposes only what all of them share. For
+ * one component's exact detail, index its own map — e.g. `LyraBoxPlotEventMap['lr-point-click']`.
  */
 export type LyraPointClickEvent =
+  | LyraBoxPlotEventMap['lr-point-click']
   | LyraChartEventMap['lr-point-click']
   | LyraLiteChartEventMap['lr-point-click'];
 
@@ -2206,12 +2212,14 @@ export type LyraRenderErrorEvent =
   | LyraXmlViewerEventMap['lr-render-error'];
 
 /**
- * `lr-reorder` — dispatched by 3 components: `<lr-reorder-list>`, `<lr-task-list>`, `<lr-tree>`.
+ * `lr-reorder` — dispatched by 4 components: `<lr-node-palette>`, `<lr-reorder-list>`,
+ * `<lr-task-list>`, `<lr-tree>`.
  *
- * A union of 3 component entries, so `event.detail` here exposes only what all of them share. For
- * one component's exact detail, index its own map — e.g. `LyraReorderListEventMap['lr-reorder']`.
+ * A union of 4 component entries, so `event.detail` here exposes only what all of them share. For
+ * one component's exact detail, index its own map — e.g. `LyraNodePaletteEventMap['lr-reorder']`.
  */
 export type LyraReorderEvent =
+  | LyraNodePaletteEventMap['lr-reorder']
   | LyraReorderListEventMap['lr-reorder']
   | LyraTaskListEventMap['lr-reorder']
   | LyraTreeEventMap['lr-reorder'];
@@ -2431,14 +2439,14 @@ export type LyraScrollEvent =
 export type LyraSearchEvent = LyraRetrievalSearchEventMap['lr-search'];
 
 /**
- * `lr-search-change` — dispatched by 19 components: `<lr-av-player>`, `<lr-calendar-viewer>`,
+ * `lr-search-change` — dispatched by 20 components: `<lr-av-player>`, `<lr-calendar-viewer>`,
  * `<lr-contact-viewer>`, `<lr-csv-viewer>`, `<lr-dataset-viewer>`, `<lr-docx-viewer>`,
  * `<lr-ebook-viewer>`, `<lr-email-viewer>`, `<lr-geojson-view>`, `<lr-html-viewer>`,
- * `<lr-include>`, `<lr-json-viewer>`, `<lr-notebook-viewer>`, `<lr-pdf-viewer>`,
- * `<lr-pptx-viewer>`, `<lr-spreadsheet-viewer>`, `<lr-terminal>`, `<lr-xml-viewer>`,
- * `LyraTextViewerTargetEventMap`.
+ * `<lr-include>`, `<lr-json-viewer>`, `<lr-knowledge-graph-explorer>`, `<lr-notebook-viewer>`,
+ * `<lr-pdf-viewer>`, `<lr-pptx-viewer>`, `<lr-spreadsheet-viewer>`, `<lr-terminal>`,
+ * `<lr-xml-viewer>`, `LyraTextViewerTargetEventMap`.
  *
- * A union of 19 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 20 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.
  * `LyraAvPlayerEventMap['lr-search-change']`.
  */
@@ -2455,6 +2463,7 @@ export type LyraSearchChangeEvent =
   | LyraHtmlViewerEventMap['lr-search-change']
   | LyraIncludeEventMap['lr-search-change']
   | LyraJsonViewerEventMap['lr-search-change']
+  | LyraKnowledgeGraphExplorerEventMap['lr-search-change']
   | LyraNotebookViewerEventMap['lr-search-change']
   | LyraPdfViewerEventMap['lr-search-change']
   | LyraPptxViewerEventMap['lr-search-change']

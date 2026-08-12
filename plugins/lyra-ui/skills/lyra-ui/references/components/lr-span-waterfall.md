@@ -54,7 +54,9 @@ cannot leave the component with no `tabindex="0"` stop.
 
 **Themeable custom properties:** `--lr-span-waterfall-name-width` (default `8rem`),
 `--lr-span-waterfall-stripe-speed` (a `running` span's striped-bar animation duration; defaults to
-`--lr-transition-ambient`), and `--lr-span-waterfall-row-active-bg` (default
+`--lr-duration-ambient` — the bare-duration token, not the `--lr-transition-ambient`
+duration+easing shorthand, which is invalid in an `animation-duration` slot), and
+`--lr-span-waterfall-row-active-bg` (default
 `var(--lr-color-brand-quiet)`) — the background of the active (`activeSpanId`) row.
 Status-scoped bar hooks are `--lr-span-waterfall-success-color` (default
 `var(--lr-color-success)`), `--lr-span-waterfall-error-color` (default

@@ -21,7 +21,7 @@ import "../../forms/button/button.class.js";
 import "../../overlays/spinner/spinner.class.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_filterBarActiveFilters, LYRA_DEFAULT_filterBarReset, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_filterBarActiveFilters, LYRA_DEFAULT_filterBarReset } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -47,6 +47,11 @@ export type FilterBarControlType =
 export interface FilterBarOption {
   value: string;
   label: string;
+  /** Optional decorative leading visual rendered into the `<lr-option>`'s `start` slot — a status
+   *  dot, a type glyph, a flag. Deliberately general Lit content rather than an icon-name string,
+   *  matching `SegmentedItem`/`PaletteItem`'s own `icon` fields. It is rendered inert and
+   *  `aria-hidden`, so it never contributes to the option's accessible name. */
+  icon?: unknown;
 }
 
 /** One filter's current value. Built-in controls use strings/string arrays; custom controls may
@@ -329,16 +334,9 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     filterBarActiveFilters: LYRA_DEFAULT_filterBarActiveFilters,
     filterBarReset: LYRA_DEFAULT_filterBarReset,
-    open: LYRA_DEFAULT_open,
-    restore: LYRA_DEFAULT_restore,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -764,6 +762,17 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     }
   }
 
+  /** One `<lr-option>`, shared by the select and combobox branches so an option's optional `icon`
+   *  reaches both. The adornment goes into `<lr-option>`'s own `start` slot as inert, aria-hidden
+   *  chrome, so it can neither take focus nor join the option's accessible name. */
+  private renderOption(option: FilterBarOption): TemplateResult {
+    return html`<lr-option value=${option.value}
+      >${option.icon === undefined || option.icon === null
+        ? nothing
+        : html`<span slot="start" aria-hidden="true" inert>${option.icon}</span>`}${option.label}</lr-option
+    >`;
+  }
+
   private renderControl(def: FilterBarFilterDefinition): TemplateResult {
     const value = this._value[def.id];
     const missing = Boolean(def.required) && !isSet(value);
@@ -823,9 +832,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
         @lr-input=${this.stopControlAlias}
         @lr-change=${this.stopControlAlias}
         @focusout=${onFocusout}
-        >${(def.options ?? []).map(
-          (o) => html`<lr-option value=${o.value}>${o.label}</lr-option>`
-        )}</lr-combobox
+        >${(def.options ?? []).map((o) => this.renderOption(o))}</lr-combobox
       >`;
     }
 
@@ -902,9 +909,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       @lr-input=${this.stopControlAlias}
       @lr-change=${this.stopControlAlias}
       @focusout=${onFocusout}
-      >${(def.options ?? []).map(
-        (o) => html`<lr-option value=${o.value}>${o.label}</lr-option>`
-      )}</lr-select
+      >${(def.options ?? []).map((o) => this.renderOption(o))}</lr-select
     >`;
   }
 

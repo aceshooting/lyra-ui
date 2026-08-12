@@ -1779,3 +1779,38 @@ describe("accessibility", () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it("renders an option's optional icon into lr-option's leading start slot for select and combobox", async () => {
+  const dot = (tone: string) =>
+    html`<span data-tone=${tone} class="option-dot">•</span>`;
+  const el = (await fixture(html`<lr-filter-bar
+    .filters=${[
+      {
+        id: "status",
+        label: "Status",
+        type: "select",
+        options: [
+          { value: "open", label: "Open", icon: dot("open") },
+          { value: "closed", label: "Closed" },
+        ],
+      },
+      {
+        id: "owner",
+        label: "Owner",
+        type: "combobox",
+        options: [{ value: "ada", label: "Ada", icon: dot("ada") }],
+      },
+    ] as FilterBarFilterDefinition[]}
+  ></lr-filter-bar>`)) as LyraFilterBar;
+  await el.updateComplete;
+
+  const options = [...el.shadowRoot!.querySelectorAll("lr-option")];
+  expect(options.length).to.equal(3);
+  const adornments = options.map(
+    (option) => option.querySelector('[slot="start"] .option-dot')?.getAttribute("data-tone") ?? null,
+  );
+  expect(adornments).to.deep.equal(["open", null, "ada"]);
+  // The adornment is decorative chrome, never part of the option's accessible name.
+  expect(options[0]!.querySelector('[slot="start"]')!.getAttribute("aria-hidden")).to.equal("true");
+  expect(options[0]!.textContent?.trim()).to.contain("Open");
+});

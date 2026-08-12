@@ -67,6 +67,16 @@ export const styles = css`
   }
   [part='node-meta'],
   lr-virtual-list::part(node-meta) {
+    /* A flex item's default min-inline-size is auto (a content-based automatic minimum). When
+       lr-neighbor-list's own host is placed where its width is resolved intrinsically (e.g. as a
+       flex/grid item itself, a common real layout for a sidebar/detail-panel row) rather than
+       against an already-definite available width, that content-based minimum -- driven by
+       node-meta's un-wrapped (white-space: nowrap) text -- propagates up through the row and
+       host, growing the whole layout past its container instead of eliding. Pinning it to 0
+       keeps node-meta (and everything containing it) out of that intrinsic-size contribution, so
+       overflow/text-overflow above can actually clip it once real (constrained) space is
+       available. */
+    min-inline-size: 0;
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-xs);
     overflow: hidden;

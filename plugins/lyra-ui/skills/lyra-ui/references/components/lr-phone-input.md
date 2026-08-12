@@ -100,7 +100,10 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
   value, including the literal string `"false"`, as `true`).
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — forwarded to the internal
   telephone input. Name precedence is host `aria-label`, `phoneLabel`, visible `label`, then
-  `placeholder`.
+  `placeholder`, and finally a localized generic "Phone" name, so a bare `<lr-phone-input>` with
+  none of them set never reaches the accessibility tree unnamed. (The visible label part cannot
+  stand in for it: it carries the native `hidden` attribute while there is no label text, which
+  removes it from the accessibility tree entirely.)
 - `phoneLabel: string = ''` (attribute `phone-label`) — explicit accessible-name override for the
   native telephone input.
 - `countryLabel: string = 'Select'` (attribute `country-label`) — country-selector accessible name;

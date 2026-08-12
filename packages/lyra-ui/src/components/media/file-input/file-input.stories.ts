@@ -124,6 +124,29 @@ export const Compact: Story = {
   },
 };
 
+export const SizeLadder: Story = {
+  render: () => html`
+    <div style="display:grid; gap:1.5rem; max-width:40rem;">
+      ${(['xs', 's', 'm', 'l', 'xl'] as const).map(
+        (size) => html`<lr-file-input
+          size=${size}
+          label=${`size="${size}"`}
+          hint="Any spreadsheet format"
+          accept=".csv,.xlsx"
+        ></lr-file-input>`,
+      )}
+    </div>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`size` scales the whole dropzone -- label, instructional text, glyph, padding, hint and selected-file detail text -- not just the form-control label. The `m` tier is the unchanged default.',
+      },
+    },
+  },
+};
+
 export const ThemeHooks: Story = {
   render: () => html`
     <lr-file-input

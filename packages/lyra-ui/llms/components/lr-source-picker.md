@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -60,7 +60,12 @@ selected one. All three are inline `var()` fallbacks at the point of use rather 
 declarations, so each can be set on the element *or on any ancestor*:
 `::part(checkbox)[aria-checked='true']` is invalid CSS — Shadow Parts forbids an attribute selector
 after `::part()` — which previously left re-pointing the library-wide `--lr-color-brand` token as
-the only lever, repainting every other brand surface with it. Plus shared tokens otherwise.
+the only lever, repainting every other brand surface with it. `--lr-source-picker-indent-size`
+(default `var(--lr-size-1-25rem)`) — the indent step added to `[part='item']`'s
+`padding-inline-start` per nesting level; the total indent is capped at `--lr-size-8rem` so a deeply
+nested tree cannot push its labels out of view. The component writes each row's own depth inline as
+the plain number `--lr-source-picker-depth`, which is indent plumbing rather than a retheming knob —
+set the step, not the depth. Plus shared tokens otherwise.
 
 **Optional peer deps:** none.
 

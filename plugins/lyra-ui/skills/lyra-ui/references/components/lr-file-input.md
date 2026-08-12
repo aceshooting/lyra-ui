@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 22 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 22 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -154,7 +154,17 @@ radius of `[part='base']`; `--lr-file-input-compact-padding` (default `var(--lr-
 `var(--lr-space-2xs)`) — the gap between the dropzone's slotted children while `compact`; and
 `--lr-file-input-compact-font-size` (default `var(--lr-font-size-sm)`) — the label's font size while
 `compact`. `--lr-file-input-font-size` (default `var(--lr-form-control-font-size)`) controls the
-dropzone text size. The compact gap falls back to `--lr-file-input-gap` when its compact-specific
+label and selected-filename text size.
+
+`size` retunes the whole dropzone, not just its label: `--lr-file-input-dropzone-font-size`
+(default `var(--lr-font-size-md-sm)`) for the instructional text,
+`--lr-file-input-dropzone-icon-size` (default `var(--lr-font-size-xl)`) for `[part='dropzone-icon']`,
+`--lr-file-input-dropzone-padding` (default `var(--lr-space-l)`) for the dropzone's own padding, and
+`--lr-file-input-detail-font-size` (default `var(--lr-font-size-sm)`) for the secondary text (hint,
+validation error, each file's formatted size). Each documented default is the `m`/`medium` tier, and
+each is re-declared per `size` tier — so an unset or default-size control renders exactly as before,
+while `size="xl"` scales the dropzone coherently instead of enlarging the label alone. `compact`
+still overrides the dropzone padding and font size independently of the tier. The compact gap falls back to `--lr-file-input-gap` when its compact-specific
 property is unset. The compact properties apply only while `compact` is set, so they are the way to tune a dense dropzone
 without re-pointing shared spacing tokens for everything else on the page. The drag accept/reject
 highlight on `[part='base'][data-drag-state='accept'|'reject']` is independently overridable too:

@@ -34,7 +34,13 @@ export class LyraResizeObserver extends LyraElement<LyraResizeObserverEventMap> 
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.addEventListener('slotchange', this.onSlotChange);
+    // No host-level `slotchange` listener here, matching <lr-mutation-observer> and
+    // <lr-intersection-observer>: the internal `<slot>`'s own `@slotchange` binding is the single
+    // driver of re-observation. It covers the nested slot-forwarding composition too (a wrapper
+    // whose shadow root places a `<slot>` directly inside this element) -- verified in Chromium,
+    // Firefox and WebKit, the internal slot fires its own slotchange there as well. A host-level
+    // listener additionally catches the forwarding slot's own bubbling slotchange, which only ever
+    // tore the ResizeObserver down and rebuilt it a second time for the same change.
     // A reconnect (e.g. a drag-and-drop reparent, a tab/panel re-hosting its
     // children, a virtualized list moving this same element instance) fires
     // disconnectedCallback then connectedCallback synchronously with no
@@ -49,7 +55,6 @@ export class LyraResizeObserver extends LyraElement<LyraResizeObserverEventMap> 
   }
 
   override disconnectedCallback(): void {
-    this.removeEventListener('slotchange', this.onSlotChange);
     this.disconnect();
     super.disconnectedCallback();
   }

@@ -43,6 +43,10 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   and `lr-graph.selectedNodeIds`; `null` shows no selection and keeps the popover closed
 - `pinnedNodeIds: string[] = []` (attribute: false) — exactly two pinned nodes reveals the "Find
   path" action
+- `searchQuery: string = ''` (attribute `search-query`) — the label/type filter applied to the node
+  set, driving `[part="search-results"]` and the search-match dimming forwarded to `lr-graph`.
+  Presettable, so a host can deep-link straight into a filtered view; the toolbar's search box keeps
+  it up to date afterwards
 
 (presentation)
 - `renderer: 'svg' | 'canvas' = 'svg'` — forwarded to `lr-graph.renderer`
@@ -66,6 +70,9 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   computes/fetches the path and assigns it back through `path`.
 - `lr-pin-change` (`detail: { pinnedNodeIds: string[] }`) — the complete updated array. Already
   self-applied before emitting, so reassigning back is optional.
+- `lr-search-change` (`detail: { searchQuery: string }`) — the user typed in the toolbar's search
+  box. Already self-applied before emitting, so reassigning back is optional; a direct host
+  assignment to `searchQuery` stays silent.
 - Bubbling straight through from composed children, unmodified: `lr-node-click`
   (`detail: { id, x, y }`), `lr-link-click` (`detail: { source, target, id? }`), `lr-community-click`
   (`detail: { id }`), `lr-node-expand` (`detail: { id }`, from `lr-graph` and/or `lr-neighbor-list`),
@@ -76,7 +83,7 @@ nested `lr-neighbor-list` and a pin toggle). Receives no data; an overriding con
 selected entity from `selectedNodeId`/`nodes` itself.
 
 **CSS parts:** `base` (`role="group"`), `toolbar`, `search` (the search `lr-input`), `legend` (the
-composed `lr-graph-legend`), `search-results` (only while the internal search query is non-empty),
+composed `lr-graph-legend`), `search-results` (only while `searchQuery` is non-empty),
 `search-result` (`role="listitem"` wrapping a `<button>`), `search-empty`, `pinned` (only while
 `pinnedNodeIds` is non-empty), `pinned-heading`, `graph` (the composed `lr-graph`), `path` (only
 while `path` is non-empty), `detail-popover`, `detail-card`.
@@ -87,7 +94,10 @@ tokens (see above).
 **Optional peer deps:** `lr-graph`'s `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` set, transitively.
 
 **Known gotchas:**
-- The search query is internal `@state`, not a public property.
+- An explicit height on the host bounds the whole explorer: `[part="base"]` fills it and
+  `[part="graph"]` takes whatever the toolbar, search results, pinned row and path strip leave over,
+  rather than the graph sizing itself from its own intrinsic aspect ratio. With no height on the
+  host the column still sizes itself from its content, unchanged.
 - `lr-graph.getNodePosition()` and `lr-node-click`'s `{ x, y }` are graph-*local* drawing
   coordinates, never viewport pixels. For `renderer="svg"` this component resolves the real viewport
   rect from `event.composedPath()`'s `[part="node"]` element; for `renderer="canvas"` (no per-node

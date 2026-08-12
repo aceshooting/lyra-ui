@@ -739,6 +739,32 @@ it('cancel() forwards to the underlying Animation, whose native cancel event sur
   expect(el.play).to.be.false;
 });
 
+it('cancel() leaves the target reverted, not re-frozen on the first keyframe by the play-state sync', async () => {
+  const el = (await fixture(html`
+    <lr-animation name="fade-in" duration="2000" iterations="1">
+      <p>content</p>
+    </lr-animation>
+  `)) as LyraAnimation;
+  await el.updateComplete;
+  const target = el.querySelector('p')!;
+  el.start();
+  await el.updateComplete;
+  expect(target.getAnimations().length, 'the fixture must actually be animating').to.equal(1);
+
+  const cancelEvent = oneEvent(el, 'lr-cancel');
+  el.cancel();
+  await cancelEvent;
+  // The native `cancel` handler sets `play = false`, which schedules a Lit update whose
+  // applyPlayState() used to pause() the now-idle Animation -- per the Web Animations spec that
+  // un-cancels it back into 'paused' at time zero, re-applying the first keyframe (opacity: 0)
+  // forever instead of reverting the target to its own CSS.
+  await el.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+
+  expect(target.getAnimations().length, 'a canceled animation must stay idle').to.equal(0);
+  expect(getComputedStyle(target).opacity).to.equal('1');
+});
+
 it('finish() forwards to the underlying Animation, whose native finish event surfaces as lr-finish and resets `play`', async () => {
   const el = (await fixture(html`
     <lr-animation name="fade-in" iterations="1">

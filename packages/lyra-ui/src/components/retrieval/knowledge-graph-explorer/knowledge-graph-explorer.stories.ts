@@ -94,6 +94,32 @@ export const Empty: Story = {
   render: () => html`<lr-knowledge-graph-explorer style="height: 24rem;"></lr-knowledge-graph-explorer>`,
 };
 
+/**
+ * `search-query` is presettable, so a host can deep-link straight into a filtered view (restoring a
+ * query from a URL, say). `lr-search-change` reports every later edit the user makes in the toolbar
+ * search box, so the same host can write it back out.
+ */
+export const PresetSearchQuery: Story = {
+  render: () => {
+    const handleSearchChange = (event: CustomEvent<{ searchQuery: string }>) => {
+      const explorer = event.currentTarget as HTMLElement;
+      const output = explorer.nextElementSibling?.querySelector('output');
+      if (output) output.textContent = event.detail.searchQuery || '(empty)';
+    };
+    return html`
+      <lr-knowledge-graph-explorer
+        search-query="curie"
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+        style="height: 32rem;"
+        @lr-search-change=${handleSearchChange}
+      ></lr-knowledge-graph-explorer>
+      <p>Search query: <output>curie</output></p>
+    `;
+  },
+};
+
 export const Narrow: Story = {
   render: () => html`
     <div style="max-width: 320px;">

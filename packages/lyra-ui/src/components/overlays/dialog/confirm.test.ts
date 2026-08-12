@@ -1,5 +1,7 @@
 import { expect } from '@open-wc/testing';
 import { confirm } from './confirm.js';
+import { registerLyraLocale, setLyraLocale } from '../../../internal/localization.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './dialog.js';
 import type { LyraDialog } from './dialog.js';
 
@@ -76,6 +78,31 @@ it('honors custom confirmLabel/cancelLabel', async () => {
 
   confirmButton.click();
   await promise;
+});
+
+it('falls through to a registered locale catalog for cancel/confirm when no label override is given', async () => {
+  // ConfirmOptions has no `.strings`/`locale` field of its own -- the dialog is transient and
+  // unparented at button-creation time, so the only way resolveLyraString() reaches a registered
+  // catalog (rather than the hardcoded English default) is via the global active locale.
+  registerLyraLocale('x-test-confirm', {
+    cancel: 'Annuler',
+    confirm: 'Confirmer',
+  });
+  setLyraLocale('x-test-confirm');
+
+  try {
+    const promise = confirm({ title: 'Proceed?' });
+    const dialog = getMountedDialog();
+    await dialog.updateComplete;
+    const [cancelButton, confirmButton] = footerButtons(dialog);
+    expect(cancelButton.textContent).to.equal('Annuler');
+    expect(confirmButton.textContent).to.equal('Confirmer');
+
+    confirmButton.click();
+    await promise;
+  } finally {
+    setLyraLocale('en');
+  }
 });
 
 it('renders the description as body text when provided, omits it when not', async () => {
@@ -185,6 +212,56 @@ it('resolves false instead of hanging when the dialog is removed from the DOM by
   dialog.remove();
 
   expect(await promise).to.be.false;
+});
+
+it('gives both action buttons the design-system focus ring instead of the raw UA outline', async () => {
+  const promise = confirm({ title: 'Proceed?' });
+  const dialog = getMountedDialog();
+  await dialog.updateComplete;
+  const [cancelButton, confirmButton] = footerButtons(dialog);
+
+  try {
+    const ringColor = getComputedStyle(dialog).getPropertyValue('--lr-focus-ring-color');
+    expect(ringColor.trim(), 'the focus-ring token resolves for a light-DOM child of the dialog').to.not.equal('');
+
+    for (const button of [cancelButton, confirmButton]) {
+      button!.focus();
+      const style = getComputedStyle(button!);
+      expect(style.outlineStyle, 'a tokenized ring, not the browser default').to.equal('solid');
+      expect(Number.parseFloat(style.outlineWidth)).to.be.greaterThan(0);
+    }
+  } finally {
+    cancelButton!.click();
+    await promise;
+  }
+});
+
+it('shifts both action buttons on hover, so the pointer cursor is not the only interactivity signal', async () => {
+  const promise = confirm({ title: 'Proceed?' });
+  const dialog = getMountedDialog();
+  await dialog.updateComplete;
+  const [cancelButton, confirmButton] = footerButtons(dialog);
+
+  try {
+    await resetMouse();
+    for (const button of [cancelButton!, confirmButton!]) {
+      const resting = getComputedStyle(button).backgroundColor;
+      const box = button.getBoundingClientRect();
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(box.left + box.width / 2), Math.round(box.top + box.height / 2)],
+      });
+      expect(
+        getComputedStyle(button).backgroundColor,
+        'hovering must visibly change the fill',
+      ).to.not.equal(resting);
+      await resetMouse();
+    }
+  } finally {
+    await resetMouse();
+    cancelButton!.click();
+    await promise;
+  }
 });
 
 it('is accessible while open', async () => {

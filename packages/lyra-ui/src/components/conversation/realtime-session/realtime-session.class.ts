@@ -16,7 +16,7 @@ import { activeElementIn } from '../../../internal/active-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_realtimeSessionConnect, LYRA_DEFAULT_realtimeSessionConnected, LYRA_DEFAULT_realtimeSessionConnecting, LYRA_DEFAULT_realtimeSessionConnectionFailed, LYRA_DEFAULT_realtimeSessionDisconnect, LYRA_DEFAULT_realtimeSessionDisconnected, LYRA_DEFAULT_realtimeSessionError, LYRA_DEFAULT_realtimeSessionInterrupt, LYRA_DEFAULT_realtimeSessionLabel, LYRA_DEFAULT_realtimeSessionMute, LYRA_DEFAULT_realtimeSessionReconnecting, LYRA_DEFAULT_realtimeSessionUnmute } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_realtimeSessionConnect, LYRA_DEFAULT_realtimeSessionConnected, LYRA_DEFAULT_realtimeSessionConnecting, LYRA_DEFAULT_realtimeSessionConnectionFailed, LYRA_DEFAULT_realtimeSessionDisconnect, LYRA_DEFAULT_realtimeSessionDisconnected, LYRA_DEFAULT_realtimeSessionError, LYRA_DEFAULT_realtimeSessionInterrupt, LYRA_DEFAULT_realtimeSessionLabel, LYRA_DEFAULT_realtimeSessionMute, LYRA_DEFAULT_realtimeSessionReconnecting, LYRA_DEFAULT_realtimeSessionUnmute } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type RealtimeConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error';
@@ -75,9 +75,6 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
     realtimeSessionConnect: LYRA_DEFAULT_realtimeSessionConnect,
     realtimeSessionConnected: LYRA_DEFAULT_realtimeSessionConnected,
     realtimeSessionConnecting: LYRA_DEFAULT_realtimeSessionConnecting,

@@ -8,7 +8,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './prompt-queue.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_edit, LYRA_DEFAULT_items, LYRA_DEFAULT_moveDown, LYRA_DEFAULT_moveUp, LYRA_DEFAULT_promptQueueActionLabel, LYRA_DEFAULT_promptQueueEmpty, LYRA_DEFAULT_promptQueueItemLabel, LYRA_DEFAULT_promptQueueLabel, LYRA_DEFAULT_promptQueueSendNow, LYRA_DEFAULT_remove } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_moveDown, LYRA_DEFAULT_moveUp, LYRA_DEFAULT_promptQueueActionLabel, LYRA_DEFAULT_promptQueueEmpty, LYRA_DEFAULT_promptQueueItemLabel, LYRA_DEFAULT_promptQueueLabel, LYRA_DEFAULT_promptQueueSendNow, LYRA_DEFAULT_remove } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -60,8 +60,6 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    edit: LYRA_DEFAULT_edit,
-    items: LYRA_DEFAULT_items,
     moveDown: LYRA_DEFAULT_moveDown,
     moveUp: LYRA_DEFAULT_moveUp,
     promptQueueActionLabel: LYRA_DEFAULT_promptQueueActionLabel,

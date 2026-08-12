@@ -27,7 +27,10 @@ export interface LyraScrollerEventMap {
  *
  * @customElement lr-scroller
  * @slot - Scrollable content.
- * @event lr-scroll - The scroll position or available edge changed.
+ * @event lr-scroll - The scroll position or available edge changed. Scroll-driven emissions are
+ *   coalesced through one `requestAnimationFrame` tick, so a fling that fires dozens of native
+ *   `scroll` events produces at most one of these per frame — the same contract
+ *   `<lr-virtual-list>`'s identically-named event already carries.
  * @csspart base - The overall scroller layout.
  * @csspart viewport - The native scroll container.
  * @csspart content - The slotted content wrapper.
@@ -135,6 +138,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
 
   private resetOwnerRealmWork(): void {
     this.ownerRealmGeneration += 1;
+    this.cancelScrollFrame();
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
     this.resizeObserverDocument = undefined;
@@ -202,7 +206,45 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
     if (changed || emitForPositionChange) this.emit("lr-scroll", detail);
   }
 
-  private onScroll = (): void => this.syncEdges(true);
+  // Coalesce to one edge read + one `lr-scroll` dispatch per animation frame. Native `scroll`
+  // events fire far faster than that during a trackpad/touch fling, and each tick otherwise cost a
+  // full scrollWidth/clientWidth/scrollLeft layout read plus a CustomEvent dispatch. The sibling
+  // `<lr-virtual-list>` already contracts its identically-named `lr-scroll` this way, so the two
+  // now share one firing rule. Realm-guarded like every other deferred callback here: a scroller
+  // adopted into (or removed from) another document drops the pending frame instead of reading a
+  // stale viewport.
+  private scrollFrame?: number;
+  private scrollFrameWindow?: Window;
+
+  private cancelScrollFrame(): void {
+    if (this.scrollFrame !== undefined) this.scrollFrameWindow?.cancelAnimationFrame(this.scrollFrame);
+    this.scrollFrame = undefined;
+    this.scrollFrameWindow = undefined;
+  }
+
+  private onScroll = (): void => {
+    if (this.scrollFrame !== undefined) return;
+    const ownerDocument = this.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!ownerWindow || !this.isConnected) return;
+    const generation = this.ownerRealmGeneration;
+    const handle = ownerWindow.requestAnimationFrame(() => {
+      if (
+        this.scrollFrame !== handle ||
+        this.scrollFrameWindow !== ownerWindow ||
+        this.ownerRealmGeneration !== generation ||
+        !this.isConnected ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      this.scrollFrame = undefined;
+      this.scrollFrameWindow = undefined;
+      this.syncEdges(true);
+    });
+    this.scrollFrame = handle;
+    this.scrollFrameWindow = ownerWindow;
+  };
 
   /** `scrollStep` normalized to a finite, non-negative override amount before
    *  `scrollByDirection()`'s `> 0` gate below -- only a positive value overrides the

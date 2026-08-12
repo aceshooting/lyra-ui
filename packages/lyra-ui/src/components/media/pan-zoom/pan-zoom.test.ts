@@ -114,6 +114,53 @@ it('forwards aria-label to the focusable viewport and localizes visible zoom out
   expect(el.shadowRoot!.querySelector('[part="reset"]')!.textContent?.trim()).to.equal('100 pourcent');
 });
 
+it('recomputes the reset button percentage from live zoom, not a hardcoded 100', async () => {
+  const el = await fixture<LyraPanZoom>(html`
+    <lr-pan-zoom .strings=${{ pdfViewerCurrentZoom: '{percent} pourcent' }}></lr-pan-zoom>
+  `);
+  const reset = el.shadowRoot!.querySelector('[part="reset"]') as HTMLButtonElement;
+  expect(reset.textContent?.trim()).to.equal('100 pourcent');
+
+  el.zoomIn();
+  await el.updateComplete;
+  expect(el.zoom).to.equal(1.25);
+  expect(reset.textContent?.trim()).to.equal('125 pourcent');
+
+  el.zoomOut();
+  el.zoomOut();
+  await el.updateComplete;
+  expect(reset.textContent?.trim()).to.equal('75 pourcent');
+
+  reset.click();
+  await el.updateComplete;
+  expect(reset.textContent?.trim()).to.equal('100 pourcent');
+});
+
+it('forwards host focus()/blur()/click() to the keyboard-zoomable viewport', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div><lr-pan-zoom></lr-pan-zoom></div>`);
+  const el = wrapper.querySelector('lr-pan-zoom') as LyraPanZoom;
+  const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+  // Listening on the PARENT, not the host: a native focus/blur is composed but does not bubble, so
+  // only a re-dispatched bubbling event reaches this listener.
+  const seen: string[] = [];
+  wrapper.addEventListener('focus', () => seen.push('focus'));
+  wrapper.addEventListener('blur', () => seen.push('blur'));
+
+  el.focus();
+  expect(el.shadowRoot!.activeElement === viewport).to.equal(true);
+
+  let clicks = 0;
+  viewport.addEventListener('click', () => {
+    clicks += 1;
+  });
+  el.click();
+  expect(clicks).to.equal(1);
+
+  el.blur();
+  expect(el.shadowRoot!.activeElement === null).to.equal(true);
+  expect(seen).to.deep.equal(['focus', 'blur']);
+});
+
 it('preserves present host aria-labels on the region and viewport, then restores the fallback on removal', async () => {
   const el = await fixture<LyraPanZoom>(html`
     <lr-pan-zoom aria-label="" .strings=${{ zoomableFrameLabel: 'Localized zoom surface' }}></lr-pan-zoom>

@@ -33,7 +33,9 @@ case-insensitive text search over every loaded entry path; next/previous wrap an
 virtualized row into view. `scrollToAnchor()` resolves text-quote and fragment anchors and emits
 `lr-anchor-result`. A fragment id is the exact ZIP entry path. A text quote resolves within one
 complete entry path; both forms first mount the absolute virtualized row and only then perform the
-shared DOM-level anchor resolution.
+shared DOM-level anchor resolution. A jump whose archive is replaced by a concurrent `src`
+reassignment mid-flight, or whose row cannot be located after the wait, reports `found: false`
+rather than a phantom success.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or parsing fails;
 `lr-search-change` (`detail: { query, matchCount, activeIndex }`) from search, navigation, and
@@ -53,7 +55,10 @@ stylesheet.
 `--lr-archive-viewer-highlight-success-background`,
 `--lr-archive-viewer-highlight-warning-background`,
 `--lr-archive-viewer-highlight-danger-background`, and
-`--lr-archive-viewer-highlight-neutral-background` control tone backgrounds.
+`--lr-archive-viewer-highlight-neutral-background` control tone backgrounds. The neutral default is
+`var(--lr-color-surface-raised)`, deliberately not `--lr-color-surface`: entry rows paint no
+background of their own and therefore show the viewer's `--lr-color-surface`, so a neutral highlight
+falling back to that same token would render as unhighlighted.
 `--lr-archive-viewer-highlight-active-background` and
 `--lr-archive-viewer-highlight-active-outline` control the active quote.
 

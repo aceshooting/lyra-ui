@@ -8,7 +8,7 @@ import { attachInternalsSafely } from '../../../internal/form-associated.js';
 import { styles } from './copy-button.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -168,7 +168,11 @@ export interface LyraCopyButtonEventMap {
  * @csspart feedback - The visually hidden, `aria-hidden` mirror of the outcome text. The
  * announcement itself lands in the shared light-DOM polite region (`acquireAnnouncementSink()` in
  * `internal/announcer.ts`), because a live region inside a shadow root is not reliably announced;
- * this part is a styling/inspection surface only.
+ * this part is a styling/inspection surface only. This is unrelated pre-existing Lyra state, not a
+ * tooltip alias: `wa-copy-button`'s own `feedback` part names its whole internal `<wa-tooltip>`,
+ * which has no single-name equivalent here by design, since that name was already taken by this
+ * SR-only span before the parity mapping was made — style the tooltip itself through the four
+ * `tooltip__*` parts below instead.
  * @csspart tooltip__base - The nested tooltip's base wrapper.
  * @csspart tooltip__base__popup - The nested tooltip's popup wrapper.
  * @csspart tooltip__base__arrow - The nested tooltip's arrow.
@@ -185,14 +189,10 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
     copied: LYRA_DEFAULT_copied,
     copy: LYRA_DEFAULT_copy,
     copyFailed: LYRA_DEFAULT_copyFailed,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
-    open: LYRA_DEFAULT_open,
-    restore: LYRA_DEFAULT_restore,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

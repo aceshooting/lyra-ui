@@ -488,6 +488,47 @@ it('exposes a localized pause/resume action whenever autoplay is enabled', async
   expect((el as any).timer).to.be.undefined;
 });
 
+it('emits lr-pause-change with the new paused state from the built-in pause/resume button', async () => {
+  const el = (await fixture(html`
+    <lr-random-content autoplay>
+      <div>One</div>
+      <div>Two</div>
+    </lr-random-content>
+  `)) as LyraRandomContent;
+  const button = el.shadowRoot!.querySelector('[part="pause-button"]') as HTMLButtonElement;
+
+  // A host mirroring `paused` into its own UI (or persisting it) has no other way to learn the
+  // user toggled the built-in control -- matching <lr-poll-status>'s identical lr-pause-change
+  // contract for the identical affordance.
+  const pausedEvent = oneEvent(el, 'lr-pause-change');
+  button.click();
+  const paused = await pausedEvent;
+  expect(paused.detail).to.equal(true);
+  expect(el.paused).to.equal(true);
+
+  const resumedEvent = oneEvent(el, 'lr-pause-change');
+  button.click();
+  const resumed = await resumedEvent;
+  expect(resumed.detail).to.equal(false);
+  expect(el.paused).to.equal(false);
+});
+
+it('does not emit lr-pause-change when the host writes paused programmatically', async () => {
+  const el = (await fixture(html`
+    <lr-random-content autoplay>
+      <div>One</div>
+      <div>Two</div>
+    </lr-random-content>
+  `)) as LyraRandomContent;
+  let emitted = 0;
+  el.addEventListener('lr-pause-change', () => { emitted += 1; });
+
+  // Self-mutation must not echo back: a controlled binding writing `paused` would otherwise loop.
+  el.paused = true;
+  await el.updateComplete;
+  expect(emitted).to.equal(0);
+});
+
 it('leaves paused explicitly unset by default', async () => {
   const el = (await fixture(html`
     <lr-random-content autoplay>

@@ -63,6 +63,18 @@ filters. This lets a consumer theme the composed tier from `lr-filter-bar::part(
 depending on the built-in control type selected by a filter definition. Custom renderers retain
 ownership of their own part forwarding.
 
+A `'select'`/`'combobox'` filter's `options` entries are `FilterBarOption { value, label, icon? }`.
+`icon` is optional Lit content — a status dot, a type glyph, a flag — rendered into the composed
+`<lr-option>`'s own `start` slot as inert, `aria-hidden` chrome, so it never joins the option's
+accessible name:
+
+```ts
+options: [
+  { value: 'open', label: 'Open', icon: html`<lr-icon name="circle"></lr-icon>` },
+  { value: 'closed', label: 'Closed' },
+]
+```
+
 Each filter definition's `type` selects which existing Lyra input renders it — this component
 composes them and never invents a control of its own. `'select'`/`'combobox'` map to their
 same-named counterparts (with `combobox`'s `multiple` opting into a multi-value filter),

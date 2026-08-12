@@ -7,19 +7,24 @@ import {
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import type { LyraVariant } from '../../../internal/variants.js';
+import { variants } from '../../../internal/variants.styles.js';
 import { styles } from './progress.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_progress } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_progress } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export type ProgressVariant = 'brand' | 'success' | 'warning' | 'danger';
+/** The library's one semantic-tone vocabulary. */
+export type ProgressVariant = LyraVariant;
 
 const DEFAULT_MAX = 100;
 
 /**
- * `<lr-progress-bar>` — a determinate or indeterminate progress indicator.
+ * `<lr-progress-bar>` — a determinate or indeterminate progress indicator. `variant` selects the
+ * indicator's semantic palette from the library's shared semantic grid (`neutral` through
+ * `danger`), defaulting to `brand`.
  *
  * @customElement lr-progress-bar
  * @slot - Label content, visible independently of `show-value`; live visible accessible text stays
@@ -32,7 +37,12 @@ const DEFAULT_MAX = 100;
  * @csspart label - The label row.
  * @cssprop [--lr-progress-track-height=var(--lr-progress-height,var(--lr-size-1rem))] - Block size of the progress track.
  * @cssprop [--lr-progress-track-color=var(--lr-color-brand-quiet)] - Track color.
- * @cssprop [--lr-progress-indicator-color=var(--lr-color-brand)] - Indicator color.
+ * @cssprop [--lr-progress-indicator-color=var(--lr-progress-indicator-variant-color)] - Indicator
+ * color, overriding the variant palette below.
+ * @cssprop [--lr-progress-indicator-variant-color=var(--lr-color-fill-loud,var(--lr-color-brand))] -
+ * Palette slot: the active `variant`'s loud fill from the shared semantic grid. Feeds
+ * `--lr-progress-indicator-color` above unless that (or the upstream `--indicator-color` alias) is
+ * itself set.
  * @cssprop [--lr-progress-label-color=var(--lr-color-text)] - Label color.
  * @cssprop [--lr-progress-duration=var(--lr-transition-ambient)] - Indeterminate sweep timing.
  * @cssprop [--height=var(--lr-progress-track-height)] - Shoelace-compatible track height.
@@ -48,17 +58,16 @@ export class LyraProgressBar extends LyraElement {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
     progress: LYRA_DEFAULT_progress,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, variants, styles];
   @property({ type: Number, reflect: true }) value = 0;
   @property({ type: Number }) max = 100;
   @property({ type: Boolean, reflect: true }) indeterminate = false;
+  /** Semantic palette, read from the library's shared semantic-tone vocabulary. Recolors the
+   *  indicator via the variant's loud fill from the shared semantic grid. */
   @property({ reflect: true }) variant: ProgressVariant = 'brand';
   @property({ type: Boolean, attribute: 'show-value' }) showValue = false;
   /** Mapped accessible-label property. */

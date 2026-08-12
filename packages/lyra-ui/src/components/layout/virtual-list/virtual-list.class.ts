@@ -7,11 +7,6 @@ import { prefersReducedMotion } from "../../../internal/motion.js";
 import { finiteAdd, finiteInteger } from "../../../internal/numbers.js";
 import { getNumberFormat } from "../../../internal/intl-cache.js";
 import { styles } from "./virtual-list.styles.js";
-// GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_items } from '../../../internal/default-strings.generated.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** Fallback per-row height (px) used for any row that hasn't been measured
  *  yet in `row-height="auto"` mode -- close enough to a typical single-line
@@ -248,14 +243,6 @@ export interface LyraVirtualListEventMap {
  * @since 4.0.0
  */
 export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
-  // GENERATED DEFAULT-STRING SLICE: START
-  /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    items: LYRA_DEFAULT_items,
-  };
-  // GENERATED DEFAULT-STRING SLICE: END
-
   static override styles = [LyraElement.styles, styles];
 
   /** The full (non-windowed) item collection. */

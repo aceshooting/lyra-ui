@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -39,9 +39,13 @@ remains the sole interaction surface.
 `after`, `divider`, `handle` (the full interaction wrapper), and `input` (the transparent native
 range input).
 
-**CSS custom properties:** `--divider-width` (default `var(--lr-size-1px)`) controls the dividing
-line's thickness; `--handle-size` (default `var(--lr-icon-button-size)`) sizes the visible handle in
-both axes. The `dragging` CSS custom state is present only while a pointer gesture is active and is
+**CSS custom properties:** `--lr-image-comparer-divider-width` (default
+`var(--divider-width, var(--lr-size-1px))`) controls the dividing line's thickness, and
+`--lr-image-comparer-handle-size` (default `var(--handle-size, var(--lr-icon-button-size))`) sizes
+the visible handle in both axes. Those namespaced names are the ones to override: the bare
+Shoelace-compat `--divider-width`/`--handle-size` are retained as their fallback source, but an
+unprefixed custom property inherits, so setting one high up the tree silently retunes every other
+element below that reads a property of the same generic name. The `dragging` CSS custom state is present only while a pointer gesture is active and is
 cleared on pointer cancellation, blur, or disconnect.
 
 ```html

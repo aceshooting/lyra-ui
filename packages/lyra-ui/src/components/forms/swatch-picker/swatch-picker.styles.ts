@@ -127,8 +127,16 @@ export const styles = css`
     transition: transform var(--lr-transition-fast);
     forced-color-adjust: none;
   }
-  [part='swatch']:hover [part='swatch-fill'],
-  [part='swatch']:hover [part='swatch-icon'] {
+  /* The disabled arm keys off the button's own native :disabled, which is exactly what render()
+     binds -- not :host([disabled]) -- so the swatch that is actually inert is the swatch that
+     actually dims. (:host(:disabled) would be dead code here: this control is deliberately not
+     form-associated, so the UA never computes a FACE disabled state for the host.) */
+  [part='swatch']:disabled {
+    opacity: var(--lr-opacity-disabled);
+    cursor: not-allowed;
+  }
+  [part='swatch']:not(:disabled):hover [part='swatch-fill'],
+  [part='swatch']:not(:disabled):hover [part='swatch-icon'] {
     transform: scale(1.2);
   }
   [part='swatch']:focus-visible {
@@ -146,8 +154,8 @@ export const styles = css`
      Deliberately placed AFTER the aria-checked rule above: the two selectors are the same
      specificity (0,3,0), so ordering is the only thing that lets the already-selected swatch --
      the one most likely to be pressed again -- show any pressed feedback at all. */
-  [part='swatch']:active [part='swatch-fill'],
-  [part='swatch']:active [part='swatch-icon'] {
+  [part='swatch']:not(:disabled):active [part='swatch-fill'],
+  [part='swatch']:not(:disabled):active [part='swatch-icon'] {
     transform: scale(0.95);
   }
   [part='swatch'][aria-checked='true'] [part='swatch-fill'] {

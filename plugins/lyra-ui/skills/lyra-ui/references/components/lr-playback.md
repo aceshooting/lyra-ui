@@ -37,6 +37,10 @@ tick and manual step); internal `focus`/`blur` are bridged as bubbling, composed
 
 **CSS parts:** `base`, `play-button`, `slider`
 
+The `slider` carries `aria-valuetext` — a localized `Step {index} of {total}` (key
+`playbackStepPosition`, both numbers formatted with the component's effective locale) — so a screen
+reader announces "Step 4 of 10" rather than the bare zero-based index the range input holds.
+
 **Themeable custom properties:** `--lr-playback-icon-size` (default
 `calc(var(--lr-icon-button-size) * 0.35)` — the play/pause glyph's size; applied as the button's
 `font-size`, and the inline SVG renders at `1em`).
@@ -75,7 +79,8 @@ dimming at `length <= 1`), `--lr-focus-ring-*`.
 - `interval-ms` is clamped to the 16ms floor and the browser's finite timer ceiling: a non-finite or
   lower value ticks at 16ms, while an oversized value uses the timer ceiling. Each distinct invalid
   value is warned once (deduplicated per value, not a single once-ever flag).
-- No `aria-valuetext`/visible "N of M" position label on the range input.
+- No *visible* "N of M" position label beside the range input (the `aria-valuetext` above covers
+  the screen-reader case only).
 - Calling `play()`/`pause()` programmatically (not via the button) gives no `aria-live`
   announcement of the Play/Pause state change.
 

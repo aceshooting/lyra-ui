@@ -43,6 +43,13 @@ label: string; icon?: unknown; gemstone?: GemstoneKey }`; a valid CSS `color` is
   the selected glow/shine defaults.
 - `label: string = ''` — accessible name copied to the internal `role="radiogroup"`; when empty, a
   host-level `aria-label` is used as a fallback.
+- `disabled: boolean = false` (reflected) — locks the whole picker. Every swatch renders as a real
+  `disabled` `<button>`, so it leaves the tab sequence and cannot be activated; arrow/Home/End
+  navigation and host `click()` become no-ops; and the swatches dim to `--lr-opacity-disabled` with
+  a `not-allowed` cursor and no hover lift. This is the picker's own attribute only: the control is
+  deliberately **not** form-associated (it submits nothing and carries no `name`, validity or reset
+  semantics), so an ancestor `<fieldset disabled>` does not cascade into it — disable the picker
+  itself alongside the fieldset when a form needs both.
 
 **Events:** `lr-change` (`detail: { value }`) — fired only when the selected value actually
 changes via click or keyboard (re-selecting the current swatch is a no-op).

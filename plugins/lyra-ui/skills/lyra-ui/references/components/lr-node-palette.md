@@ -27,15 +27,28 @@ with a `droppable` canvas on the `FLOW_PALETTE_MIME_TYPE` drag payload shape.
   `type` is the `FlowNode.type` a placement/drop creates, `category` groups items under
   first-appearance-ordered headings, `disabled` renders an item visible but not draggable/placeable
 - `label: string = ''` — accessible name for the search field/listbox
+- `reorderable: boolean = false` (reflected) — opts into Ctrl/Cmd+ArrowUp/ArrowDown keyboard
+  reordering of the catalog. Unset, no `lr-reorder` is ever emitted and Ctrl/Cmd+Arrow keeps
+  behaving exactly like a plain Arrow press
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the listbox's
   computed accessible name; wins over `label` and the localized default, and attribute-reflects
   from a host-level `aria-label`
 
 **Events:** `lr-palette-place` (`detail: { type }`, a pointer click or Enter/Space — the
 click/keyboard alternative to dragging), `lr-select` (`detail: { item }`, emitted alongside
-`lr-palette-place` on both gestures, carrying the full item), `focus`/`blur` (no detail —
-re-dispatched from the internal search field's own `focus`/`blur`, bubbling and composed unlike
-the native events, since neither bubbles nor crosses the shadow boundary on its own).
+`lr-palette-place` on both gestures, carrying the full item), `lr-reorder`
+(`detail: { type, category, fromIndex, toIndex }`, only while `reorderable`), `focus`/`blur` (no
+detail — re-dispatched from the internal search field's own `focus`/`blur`, bubbling and composed
+unlike the native events, since neither bubbles nor crosses the shadow boundary on its own).
+
+`lr-reorder` is a *request*, the same host-applies-the-mutation contract `lr-tree`'s identical
+`reorderable`/`lr-reorder` pair already uses: Ctrl/Cmd+ArrowUp/ArrowDown on the focused item asks to
+move it past its neighbour **inside its own category group**, so a reorder can never turn into a
+recategorization, and nothing is emitted at a group boundary. `category` is `null` for the
+uncategorized bucket; `fromIndex`/`toIndex` index into `items` itself, so applying the move is a
+plain splice-and-reassign. The palette never reorders `items` on its own, so nothing consults
+`defaultPrevented` and the event is not cancelable. The new position is announced only once the
+re-rendered group order confirms the host applied it.
 
 **Slots:** `header` (content above the search field, e.g. a heading or tabs), `footer` (content
 below the list).

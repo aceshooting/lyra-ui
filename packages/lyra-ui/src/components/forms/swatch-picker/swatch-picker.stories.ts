@@ -315,3 +315,17 @@ export const Events: Story = {
     </div>
   `,
 };
+
+export const Disabled: Story = {
+  render: () => html`
+    <div style="display: grid; gap: 1rem;">
+      <lr-swatch-picker label="Accent color" .options=${accents()} value="blue"></lr-swatch-picker>
+      <lr-swatch-picker
+        disabled
+        label="Accent color (locked while saving)"
+        .options=${accents()}
+        value="blue"
+      ></lr-swatch-picker>
+    </div>
+  `,
+};

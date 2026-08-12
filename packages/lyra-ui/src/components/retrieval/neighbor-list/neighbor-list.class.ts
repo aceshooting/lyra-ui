@@ -12,7 +12,7 @@ import '../../overlays/empty/empty.class.js';
 import { styles } from './neighbor-list.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_neighborDirectionBoth, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_neighborExpand, LYRA_DEFAULT_neighborGroupHeader, LYRA_DEFAULT_neighborListEmpty, LYRA_DEFAULT_neighborListLabel, LYRA_DEFAULT_neighborRowLabel, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_neighborDirectionBoth, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_neighborExpand, LYRA_DEFAULT_neighborGroupHeader, LYRA_DEFAULT_neighborListEmpty, LYRA_DEFAULT_neighborListLabel, LYRA_DEFAULT_neighborRowLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -59,8 +59,6 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     neighborDirectionBoth: LYRA_DEFAULT_neighborDirectionBoth,
     neighborDirectionIn: LYRA_DEFAULT_neighborDirectionIn,
     neighborDirectionOut: LYRA_DEFAULT_neighborDirectionOut,
@@ -69,7 +67,6 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     neighborListEmpty: LYRA_DEFAULT_neighborListEmpty,
     neighborListLabel: LYRA_DEFAULT_neighborListLabel,
     neighborRowLabel: LYRA_DEFAULT_neighborRowLabel,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -211,10 +208,15 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
       `;
     }
     const groups = this.groups(sorted);
+    // Looked up once per row below -- indexing by startIndex up front keeps the render O(rows +
+    // groups) instead of rescanning the whole `groups` array (O(groups)) for every row
+    // (O(rows x groups), worst-case O(n^2) since groups can scale with distinct relations up to
+    // one per row).
+    const groupsByStartIndex = new Map(groups?.map((g) => [g.startIndex, g]) ?? []);
     return html`
       <div part="base" role="list" aria-label=${label}>
         ${sorted.map((row, i) => {
-          const group = groups?.find((g) => g.startIndex === i);
+          const group = groupsByStartIndex.get(i);
           // `role="presentation"` (not `role="heading"`) -- ARIA's `list` role only owns
           // `listitem` children, so an explicit `heading` role here would be a disallowed child
           // (same convention as `<lr-node-palette>`'s identical category-header part).

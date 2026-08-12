@@ -287,6 +287,9 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
 
   protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     if (this.fetchState.kind !== 'loaded') return false;
+    // Captured before any await so the post-wait checks below can tell a completed jump apart from
+    // one whose archive was replaced underneath it by a concurrent `src` reassignment.
+    const loadGeneration = this.generation;
     let index = -1;
     let resolvedName: string | undefined;
     if (anchor.kind === 'fragment') {
@@ -306,6 +309,12 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     if (!await this.waitForArchiveRow(list, index)) return false;
     this.requestUpdate();
     await this.updateComplete;
+    // A `src` reassignment landing inside either wait above (a citation/file-tab click on top of a
+    // still-resolving jump) reruns load(), replacing `fetchState.entries` -- so the index and name
+    // resolved from the previous archive address nothing in the one now rendered. Reporting
+    // success here would stop the shared retry loop and fire `lr-anchor-result: { found: true }`
+    // for a row that was never located, let alone scrolled to.
+    if (loadGeneration !== this.generation || this.fetchState.kind !== 'loaded') return false;
     if (anchor.kind === 'fragment') {
       // Resolved entirely here rather than delegating to the shared base's own fragment handling:
       // that generic path finds its target by DOM `id === anchor.id`, and `anchor.id` is this
@@ -318,8 +327,10 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
         ? Array.from(root.querySelectorAll<HTMLElement>('[part~="entry-name"]'))
           .find((el) => el.textContent === resolvedName)
         : null;
+      // The optional call is a silent no-op when nothing matched, so the found-state of this query
+      // -- not an unconditional `true` -- is this branch's real result.
       target?.scrollIntoView?.({ block: 'nearest', behavior: 'auto' });
-      return true;
+      return target != null;
     }
     // TextViewerTarget's deliberately narrowed exported mixin type omits its protected hooks, so
     // TypeScript cannot spell `super.applyAnchor(anchor)` here even though that method is the real

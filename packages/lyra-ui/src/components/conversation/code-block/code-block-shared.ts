@@ -34,6 +34,7 @@ import type {
   LyraAnchor,
   LyraHighlight,
 } from "../../viewers/document-viewer/anchors.js";
+import { resolveIsDarkTheme, watchDarkTheme } from "./shiki-dark-theme.js";
 
 /** Matches `LyraElement.localize()`'s signature so either component's bound
  *  method can be passed straight through. */
@@ -781,4 +782,159 @@ export function renderCodeBlockShell(
         </div>
       </div>
     `;
+}
+
+/** The element surface {@linkcode CodeBlockInteractionController} reads. Every member is either
+ *  native to `HTMLElement` or already public on both code-block variants, so routing through the
+ *  controller widens neither component's own API. */
+export interface CodeBlockInteractionHost extends HTMLElement {
+  readonly renderRoot: HTMLElement | DocumentFragment;
+  readonly updateComplete: Promise<boolean>;
+  readonly code: string;
+  collapsed: boolean;
+}
+
+/** The reactive writes and event emissions the controller cannot perform itself: each component
+ *  keeps `focusedLine`/`justCopied`/`isDarkTheme` as its own `@state()` (they reach its template)
+ *  and its own typed `emit()`, and hands those in as callbacks. */
+export interface CodeBlockInteractionOptions {
+  host: CodeBlockInteractionHost;
+  setFocusedLine: (line: number) => void;
+  setJustCopied: (value: boolean) => void;
+  setDarkTheme: (value: boolean) => void;
+  emitLineClick: (line: number) => void;
+  emitCopy: (text: string) => void;
+  emitToggle: (collapsed: boolean) => void;
+  emitTextSelect: (selection: CodeBlockSelection) => void;
+}
+
+/**
+ * Every interaction behavior `<lr-code-block>` and `<lr-code-block-core>` implement identically:
+ * the gutter's roving-tabindex focus and keyboard contract, the pointer/keyboard/focus handlers on
+ * `[part="body"]`, selection anchoring, the copy button and its confirmation timer, the
+ * collapse/expand toggle, and the dark-theme watcher's lifecycle.
+ *
+ * These lived as line-for-line duplicates on both classes, which is exactly the drift this module
+ * exists to prevent -- and had already bitten this pair once before (`renderPlainCode()`). The
+ * controller owns the two purely-internal bits of bookkeeping outright (the copy timer and the
+ * theme-watcher teardown, neither of which reaches either template); the three values that *are*
+ * rendered stay as each component's own `@state()`, written through the callbacks above so Lit
+ * still sees them change.
+ */
+export class CodeBlockInteractionController {
+  private copyTimer?: { owner: Window; handle: number };
+  private stopWatchingTheme?: () => void;
+
+  constructor(private readonly options: CodeBlockInteractionOptions) {}
+
+  /** Applies the currently resolved theme and keeps it applied. Safe to call on every connect:
+   *  it retires any previous watcher first. */
+  startThemeWatcher(): void {
+    const { host, setDarkTheme } = this.options;
+    this.stopThemeWatcher();
+    setDarkTheme(resolveIsDarkTheme(host));
+    this.stopWatchingTheme = watchDarkTheme(host, () => setDarkTheme(resolveIsDarkTheme(host)));
+  }
+
+  /** Retires the theme watcher. Clears the handle *before* invoking it, so a re-entrant callback
+   *  can never run the same teardown twice. */
+  stopThemeWatcher(): void {
+    const stop = this.stopWatchingTheme;
+    this.stopWatchingTheme = undefined;
+    stop?.();
+  }
+
+  /** Retires an in-flight copy-confirmation timer against the window that scheduled it. */
+  cancelCopyTimer(): void {
+    const timer = this.copyTimer;
+    this.copyTimer = undefined;
+    if (timer) timer.owner.clearTimeout(timer.handle);
+  }
+
+  /** Moves the roving tab stop to `line`, both in the component's state and on the rendered
+   *  gutter buttons (which Lit will not have re-rendered yet). */
+  setFocusedLine(line: number): void {
+    this.options.setFocusedLine(line);
+    for (const target of this.options.host.renderRoot.querySelectorAll<HTMLElement>(
+      '[data-line][part~="line-button"]'
+    )) {
+      target.tabIndex = Number(target.dataset["line"]) === line ? 0 : -1;
+    }
+  }
+
+  onLineActivate = (line: number): void => {
+    this.setFocusedLine(line);
+    this.options.emitLineClick(line);
+  };
+
+  // Roving-tabindex keyboard navigation across the gutter's line buttons (only rendered by
+  // renderCodeBlockPlainCode() while interactiveLines && lineNumbers are both set).
+  onLineKeyDown = (e: KeyboardEvent, line: number): void => {
+    const { host } = this.options;
+    const action = codeBlockLineKeyAction(e.key, line, codeBlockLineCount(host.code));
+    if (action === null) return;
+    e.preventDefault();
+    if (action.kind === "activate") {
+      this.onLineActivate(line);
+      return;
+    }
+    const next = action.line;
+    this.setFocusedLine(next);
+    void host.updateComplete.then(() => {
+      host.renderRoot.querySelector<HTMLElement>(`[data-line="${next}"]`)?.focus();
+    });
+  };
+
+  onBodyClick = (e: MouseEvent): void => {
+    if ((e.composedPath()[0] as Element | undefined)?.closest?.("button.line")) return;
+    const line = codeBlockEventLine(e);
+    if (line !== null) this.onLineActivate(line);
+  };
+
+  onBodyKeyDown = (e: KeyboardEvent): void => {
+    if ((e.composedPath()[0] as Element | undefined)?.closest?.("button.line")) return;
+    const line = codeBlockEventLine(e);
+    if (line !== null) this.onLineKeyDown(e, line);
+  };
+
+  onBodyFocusIn = (e: FocusEvent): void => {
+    const line = codeBlockEventLine(e);
+    if (line !== null) this.setFocusedLine(line);
+  };
+
+  /** Anchors a text selection ending inside `[part="body"]` to the `line-range` it spans, so a
+   *  host can persist or otherwise act on it. Fires nothing when there's no active selection. */
+  onBodyMouseUp = (): void => {
+    const selection = codeBlockSelectionAnchor(this.options.host.shadowRoot);
+    if (selection) this.options.emitTextSelect(selection);
+  };
+
+  copy = (): void => {
+    const { host } = this.options;
+    const owner = host.isConnected ? host.ownerDocument.defaultView : null;
+    writeCodeBlockClipboard(host.code, owner);
+    this.options.emitCopy(host.code);
+    if (!owner) return;
+    this.options.setJustCopied(true);
+    this.cancelCopyTimer();
+    let handle = 0;
+    handle = owner.setTimeout(() => {
+      if (
+        this.copyTimer?.owner !== owner ||
+        this.copyTimer.handle !== handle ||
+        !host.isConnected ||
+        host.ownerDocument.defaultView !== owner
+      )
+        return;
+      this.copyTimer = undefined;
+      this.options.setJustCopied(false);
+    }, CODE_BLOCK_COPY_CONFIRM_MS);
+    this.copyTimer = { owner, handle };
+  };
+
+  toggleCollapsed = (): void => {
+    const { host } = this.options;
+    host.collapsed = !host.collapsed;
+    this.options.emitToggle(host.collapsed);
+  };
 }

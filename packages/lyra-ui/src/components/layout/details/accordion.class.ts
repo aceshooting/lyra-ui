@@ -12,11 +12,6 @@ import type {
 } from './accordion-item.class.js';
 import type { LyraDetails } from './details.class.js';
 import { styles } from './accordion.styles.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand } from '../../../internal/default-strings.generated.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export type LyraAccordionMode = 'single' | 'single-collapsible' | 'multiple';
 export type LyraAccordionPanel = LyraAccordionItem | LyraDetails;
@@ -61,16 +56,6 @@ function normalizeMode(value: unknown): LyraAccordionMode {
  * @since 4.0.0
  */
 export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
-  // GENERATED DEFAULT-STRING SLICE: START
-  /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    expand: LYRA_DEFAULT_expand,
-  };
-  // GENERATED DEFAULT-STRING SLICE: END
-
   static override styles = [LyraElement.styles, styles];
 
   #_mode: LyraAccordionMode = 'multiple';

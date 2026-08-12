@@ -749,6 +749,44 @@ describe('motion', () => {
     expect(css).to.include('@media (prefers-reduced-motion: reduce)');
     expect(css).to.include('.ring { animation: none !important; }');
   });
+
+  it('actually spins the indeterminate ring honoring an ambient-duration override, and actually stops it under prefers-reduced-motion', async () => {
+    const el = (await fixture(html`
+      <lr-document-preview
+        status="converting"
+        style="--lr-transition-ambient: 3s linear"
+      ></lr-document-preview>
+    `)) as LyraDocumentPreview;
+    const ring = el.shadowRoot!.querySelector('.ring') as HTMLElement;
+    const computed = getComputedStyle(ring);
+    expect(computed.animationName).to.equal('lr-document-preview-spin');
+    expect(computed.animationDuration).to.equal('3s');
+    expect(computed.animationTimingFunction).to.equal('linear');
+
+    // Same technique as <lr-spinner>'s reduced-motion test: forcing
+    // window.matchMedia has no effect on a real @media (prefers-reduced-motion)
+    // rule already adopted by the shadow root, so the CSSOM media condition
+    // itself is flipped to force the rule active, then restored.
+    const reducedRule = el.shadowRoot!.adoptedStyleSheets
+      .flatMap((sheet) => [...sheet.cssRules])
+      .find(
+        (rule): rule is CSSMediaRule =>
+          rule instanceof CSSMediaRule &&
+          rule.conditionText === '(prefers-reduced-motion: reduce)' &&
+          [...rule.cssRules].some(
+            (nested) => nested instanceof CSSStyleRule && nested.selectorText.includes('ring'),
+          ),
+      );
+    expect(reducedRule?.conditionText).to.equal('(prefers-reduced-motion: reduce)');
+    const originalCondition = reducedRule!.media.mediaText;
+    try {
+      reducedRule!.media.mediaText = 'all';
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      expect(getComputedStyle(ring).animationName).to.equal('none');
+    } finally {
+      reducedRule!.media.mediaText = originalCondition;
+    }
+  });
 });
 
 describe('accessibility', () => {

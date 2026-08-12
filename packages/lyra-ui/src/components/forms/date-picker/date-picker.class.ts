@@ -39,7 +39,7 @@ import {
 } from './calendar-core.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_nextMonth, LYRA_DEFAULT_open, LYRA_DEFAULT_previousMonth, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_nextMonth, LYRA_DEFAULT_previousMonth } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -210,13 +210,9 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     nextMonth: LYRA_DEFAULT_nextMonth,
-    open: LYRA_DEFAULT_open,
     previousMonth: LYRA_DEFAULT_previousMonth,
-    restore: LYRA_DEFAULT_restore,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

@@ -373,3 +373,97 @@ it('can shrink to a 320px allocation with a long visible label', async () => {
   expect(getComputedStyle(el).minInlineSize).to.equal('0px');
   expect(el.getBoundingClientRect().width).to.be.at.most(320);
 });
+
+describe('showLegend', () => {
+  const legend = (el: LyraContextMeter) =>
+    el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement | null;
+
+  it('renders no legend by default', async () => {
+    const el = (await fixture(
+      html`<lr-context-meter total="10000"></lr-context-meter>`,
+    )) as LyraContextMeter;
+    el.segments = SEGMENTS;
+    await el.updateComplete;
+    expect(legend(el) === null).to.equal(true);
+    expect(el.showLegend).to.equal(false);
+  });
+
+  it('renders one swatch/label pair per segment when show-legend is set', async () => {
+    const el = (await fixture(
+      html`<lr-context-meter show-legend total="10000"></lr-context-meter>`,
+    )) as LyraContextMeter;
+    el.segments = SEGMENTS;
+    await el.updateComplete;
+    const items = el.shadowRoot!.querySelectorAll('[part="legend-item"]');
+    expect(items.length).to.equal(3);
+    expect(
+      [...el.shadowRoot!.querySelectorAll('[part="legend-label"]')].map((n) =>
+        n.textContent!.trim(),
+      ),
+    ).to.deep.equal(['System prompt', 'History', 'Tools']);
+    expect(el.shadowRoot!.querySelectorAll('[part="legend-swatch"]').length).to.equal(3);
+  });
+
+  it('paints each swatch with the same resolved tone or color the segment uses', async () => {
+    const el = (await fixture(
+      html`<lr-context-meter show-legend total="10000"></lr-context-meter>`,
+    )) as LyraContextMeter;
+    el.segments = [
+      { label: 'Brand', value: 1000, tone: 'brand' },
+      { label: 'Custom', value: 1000, color: 'rgb(1, 2, 3)' },
+    ];
+    await el.updateComplete;
+    const swatches = [...el.shadowRoot!.querySelectorAll('[part="legend-swatch"]')] as HTMLElement[];
+    const segments = [...el.shadowRoot!.querySelectorAll('[part="segment"]')] as HTMLElement[];
+    expect(getComputedStyle(swatches[0]!).backgroundColor).to.equal(
+      getComputedStyle(segments[0]!).backgroundColor,
+    );
+    expect(getComputedStyle(swatches[1]!).backgroundColor).to.equal('rgb(1, 2, 3)');
+  });
+
+  it('rejects an unsafe segment color in the legend swatch, exactly as the segment does', async () => {
+    const el = (await fixture(
+      html`<lr-context-meter show-legend total="10000"></lr-context-meter>`,
+    )) as LyraContextMeter;
+    el.segments = [{ label: 'Unsafe', value: 1000, color: 'url("data:image/svg+xml,<svg/>")' }];
+    await el.updateComplete;
+    const swatch = el.shadowRoot!.querySelector('[part="legend-swatch"]') as HTMLElement;
+    expect(swatch.style.getPropertyValue('--lr-context-meter-segment-color')).to.equal('');
+  });
+
+  it('keeps the legend out of the accessibility tree, since the sr-only list already names it', async () => {
+    const el = (await fixture(
+      html`<lr-context-meter show-legend total="10000" label="Context"></lr-context-meter>`,
+    )) as LyraContextMeter;
+    el.segments = SEGMENTS;
+    await el.updateComplete;
+    expect(legend(el)!.getAttribute('aria-hidden')).to.equal('true');
+    await expect(el).to.be.accessible();
+  });
+
+  it('renders the legend below the ring variant without clipping it', async () => {
+    const el = (await fixture(
+      html`<lr-context-meter show-legend variant="ring" total="10000"></lr-context-meter>`,
+    )) as LyraContextMeter;
+    el.segments = SEGMENTS;
+    await el.updateComplete;
+    const legendBox = legend(el)!.getBoundingClientRect();
+    const svgBox = (el.shadowRoot!.querySelector('svg[part="base"]') as SVGElement)
+      .getBoundingClientRect();
+    expect(legendBox.height).to.be.greaterThan(0);
+    expect(legendBox.top).to.be.at.least(svgBox.bottom - 1);
+    expect(el.getBoundingClientRect().bottom).to.be.at.least(legendBox.bottom - 1);
+  });
+
+  it('reflects show-legend both ways', async () => {
+    const el = (await fixture(
+      html`<lr-context-meter total="10000"></lr-context-meter>`,
+    )) as LyraContextMeter;
+    el.showLegend = true;
+    await el.updateComplete;
+    expect(el.hasAttribute('show-legend')).to.equal(true);
+    el.showLegend = false;
+    await el.updateComplete;
+    expect(legend(el) === null).to.equal(true);
+  });
+});

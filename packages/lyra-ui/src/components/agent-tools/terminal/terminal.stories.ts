@@ -56,3 +56,21 @@ export const StreamingProgressBar: Story = {
 export const Narrow320: Story = {
   render: () => html`<div style="max-width:320px"><lr-terminal .content=${SAMPLE}></lr-terminal></div>`,
 };
+
+export const CompactInsideExistingChrome: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Nested inside a container that already draws a border: `frame="plain"` drops the terminal\'s own card chrome so the box is not doubled, and `compact` tightens the toolbar and line padding for a dense transcript row.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="max-width:40rem;border:1px solid var(--lr-color-border);border-radius:var(--lr-radius);background:var(--lr-color-surface);padding:var(--lr-space-s)"
+    >
+      <lr-terminal compact frame="plain" copyable downloadable .content=${SAMPLE}></lr-terminal>
+    </div>
+  `,
+};

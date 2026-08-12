@@ -133,7 +133,9 @@ export const styles = css`
     flex: 0 0 auto;
   }
   [part='key'] {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
     font-weight: var(--lr-font-weight-semibold);
     color: var(--lr-color-text);
   }

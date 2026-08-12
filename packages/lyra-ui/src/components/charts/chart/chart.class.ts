@@ -29,6 +29,12 @@ import {
 } from '../../../internal/announcer.js';
 import { resolveCanvasColor, seriesPalette, translucentAreaColor } from './chart-colors.js';
 import {
+  createForcedColorPattern,
+  forcedColorEncoding,
+  forcedColorsActive,
+  type ForcedColorEncodingName,
+} from './chart-forced-colors.js';
+import {
   legendVisibilityDetail,
   normalizeHiddenDatasets,
   type LyraChartLegendVisibilityChangeDetail,
@@ -299,27 +305,6 @@ interface ChartStyleOptions {
 }
 
 type BrowserWindow = Window & typeof globalThis;
-
-const FORCED_COLOR_ENCODINGS = [
-  { name: 'solid', dash: [] as number[], pointStyle: 'circle' },
-  { name: 'horizontal', dash: [2, 2], pointStyle: 'rect' },
-  { name: 'vertical', dash: [8, 3], pointStyle: 'triangle' },
-  { name: 'diagonal', dash: [8, 3, 2, 3], pointStyle: 'rectRot' },
-  { name: 'reverse-diagonal', dash: [1, 3], pointStyle: 'cross' },
-  { name: 'crosshatch', dash: [10, 2], pointStyle: 'crossRot' },
-  { name: 'dots', dash: [6, 2, 1, 2], pointStyle: 'star' },
-  { name: 'checker', dash: [12, 3, 3, 3], pointStyle: 'line' },
-] as const;
-
-type ForcedColorEncodingName = (typeof FORCED_COLOR_ENCODINGS)[number]['name'];
-
-function forcedColorsActive(view?: Window | null): boolean {
-  try {
-    return !!view?.matchMedia?.('(forced-colors: active)').matches;
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Recursively merges `override` onto `base`, matching JSON-merge semantics:
@@ -599,6 +584,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * so formatting it would corrupt the axis.
    */
   @property({ attribute: false }) valueFormatter?: LyraChartValueFormatter;
+  /** Chart-wide default fill-under-line setting for line-type series; a series's own `Series.fill` overrides it. */
   @property({ type: Boolean }) area = false;
   @property({ type: Boolean }) zoom = false;
   @property() height = '280px';
@@ -1111,7 +1097,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private get ownerWindow(): BrowserWindow | undefined {
-    return (this.ownerDocument.defaultView as BrowserWindow | null) ?? undefined;
+    // Optional-chained for the server-render path: @lit-labs/ssr's element shim has no
+    // `ownerDocument`, and every caller already handles `undefined`.
+    return (this.ownerDocument?.defaultView as BrowserWindow | null | undefined) ?? undefined;
   }
 
   private computedStyle(element: Element = this): CSSStyleDeclaration {
@@ -1434,7 +1422,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             ? translucentAreaColor(this, backgroundColor)
             : backgroundColor
         : backgroundColor;
-    const encoding = FORCED_COLOR_ENCODINGS[index % FORCED_COLOR_ENCODINGS.length]!;
+    const encoding = forcedColorEncoding(index);
     const encodedBackgroundColor = chartStyle.forcedColors
       ? Array.isArray(resolvedBackgroundColor)
         ? resolvedBackgroundColor.map((color, itemIndex) =>
@@ -1545,67 +1533,18 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   /**
-   * Builds a small deterministic CanvasPattern for the category index. Forced-colors exposes only
-   * a few system colors, so the chart ramp necessarily repeats; texture, line dash, and point shape
-   * keep those repeated colors distinguishable without substituting arbitrary author colors.
+   * Builds a small deterministic CanvasPattern for the category index, using the family-wide
+   * encoding table in `chart-forced-colors.ts` so `<lr-box-plot>` and `<lr-lite-chart>` texture
+   * their own series identically.
    */
   private forcedColorPattern(index: number, background: string): CanvasPattern | string {
     if (!this.ownerWindow) return background;
-    const tile = this.ownerDocument.createElement('canvas');
-    // Fixed bitmap geometry is part of the encoding algorithm, not a component design dimension.
-    const size = 8;
-    const half = size / 2;
-    tile.width = size;
-    tile.height = size;
-    const context = tile.getContext('2d');
-    if (!context) return background;
-
-    context.fillStyle = background;
-    context.fillRect(0, 0, size, size);
-    context.fillStyle = this.styleColor('--lr-color-surface', FALLBACK_TOOLTIP_BG);
-    context.strokeStyle = context.fillStyle;
-    context.lineWidth = 1;
-
-    switch (index % FORCED_COLOR_ENCODINGS.length) {
-      case 1:
-        context.fillRect(0, half, size, 1);
-        break;
-      case 2:
-        context.fillRect(half, 0, 1, size);
-        break;
-      case 3:
-        context.beginPath();
-        context.moveTo(-half, size);
-        context.lineTo(half, 0);
-        context.moveTo(half, size);
-        context.lineTo(size + half, 0);
-        context.stroke();
-        break;
-      case 4:
-        context.beginPath();
-        context.moveTo(-half, 0);
-        context.lineTo(half, size);
-        context.moveTo(half, 0);
-        context.lineTo(size + half, size);
-        context.stroke();
-        break;
-      case 5:
-        context.fillRect(0, half, size, 1);
-        context.fillRect(half, 0, 1, size);
-        break;
-      case 6:
-        context.beginPath();
-        context.arc(half, half, 1.5, 0, Math.PI * 2);
-        context.fill();
-        break;
-      case 7:
-        context.fillRect(0, 0, half, half);
-        context.fillRect(half, half, half, half);
-        break;
-      default:
-        break;
-    }
-    return context.createPattern(tile, 'repeat') ?? background;
+    return createForcedColorPattern(
+      this.ownerDocument,
+      index,
+      background,
+      this.styleColor('--lr-color-surface', FALLBACK_TOOLTIP_BG),
+    );
   }
 
   private chartStyleOptions(palette: string[]): ChartStyleOptions {
@@ -2178,6 +2117,29 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     return position === 'top' || position === 'right' || position === 'left' ? position : 'bottom';
   }
 
+  /**
+   * The `data-legend-position` token that selects `[part='base']`'s grid template. Deliberately
+   * *not* the physical side `legendPositionForLayout()` reports: CSS Grid numbers a two-column
+   * template along the inline axis, so the template already mirrors itself under `dir="rtl"`.
+   * Feeding the direction-compensated physical value in here mirrored a side legend a second time
+   * and landed it on the opposite edge from the one `start`/`end` names. The logical aliases
+   * therefore pick a column outright and let the grid perform the single mirror, while a literal
+   * `left`/`right` (the Chart.js-vocabulary passthrough) is pre-compensated so it stays on the
+   * physical edge its name promises. `auto` keeps its existing reading-end placement.
+   */
+  private legendGridPlacement(): 'top' | 'bottom' | 'inline-start' | 'inline-end' {
+    if (this.legendPosition === 'auto') {
+      return this.autoLegendPosition === 'right' ? 'inline-end' : 'bottom';
+    }
+    if (this.legendPosition === 'start') return 'inline-start';
+    if (this.legendPosition === 'end') return 'inline-end';
+    if (this.legendPosition === 'top') return 'top';
+    const rtl = this.effectiveDirection === 'rtl';
+    if (this.legendPosition === 'left') return rtl ? 'inline-end' : 'inline-start';
+    if (this.legendPosition === 'right') return rtl ? 'inline-start' : 'inline-end';
+    return 'bottom';
+  }
+
   private updateChartArea(chart: RuntimeChart | undefined = this.chart): void {
     const area = chart?.chartArea;
     if (!area) return;
@@ -2698,7 +2660,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         ${effective.datasets.map((dataset, index) => {
           const visible = this.legendDatasetVisible(dataset, index);
           const encoding: ForcedColorEncodingName | undefined = forcedColorsActive(this.ownerWindow)
-            ? FORCED_COLOR_ENCODINGS[index % FORCED_COLOR_ENCODINGS.length]!.name
+            ? forcedColorEncoding(index).name
             : undefined;
           return html`
             <button
@@ -2752,7 +2714,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     return html`
       <div
         part="base"
-        data-legend-position=${this.showsLegend ? this.legendPositionForLayout() : nothing}
+        data-legend-position=${this.showsLegend ? this.legendGridPlacement() : nothing}
       >
         <slot class="config-slot" @slotchange=${this.onConfigSlotChange}></slot>
         <div part="plot">

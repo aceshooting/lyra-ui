@@ -17,6 +17,23 @@ describe('email loader', () => {
     expect(getEmailDepsIfLoaded()).to.equal(second);
   });
 
+  it('accepts a bare module namespace that already satisfies the capability, with no .default wrapper', async () => {
+    // postal-mime and DOMPurify both appear as a namespace carrying the named API directly under
+    // some bundler/CJS-interop configurations. resolveOptionalPeerCapability() checks that
+    // namespace BEFORE `.default`; every other case in this file wraps its fake in
+    // `{ default: ... }`, so without this case a regression that only ever read `.default` would
+    // leave both peers undefined -- silently disabling .eml parsing and HTML sanitization -- with
+    // no test failing.
+    const barePostalMime = { parse: () => Promise.resolve({}) };
+    const bareSanitizer = { sanitize: (value: string) => value };
+    const deps = await loadEmailAndSanitizer(
+      () => Promise.resolve(barePostalMime),
+      () => Promise.resolve(bareSanitizer),
+    );
+    expect(deps.PostalMime === barePostalMime).to.equal(true);
+    expect(deps.DOMPurify === bareSanitizer).to.equal(true);
+  });
+
   it('loads each peer independently', async () => {
     const error = new Error('postal boom');
     const originalWarn = console.warn;

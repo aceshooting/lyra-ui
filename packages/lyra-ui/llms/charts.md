@@ -57,13 +57,16 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
 - `legendPosition: LyraChartLegendPosition = 'top'` (attribute `legend-position`) — accepts the
   Chart.js `left|top|right|bottom|center|chartArea|{ [scaleId]: number }` positions plus logical
   `start`/`end`; the additive `auto` chooses right above 480px and bottom below that allocation
-  width. Logical positions swap under RTL
+  width. Logical positions swap under RTL, and a literal `left`/`right` stays on the physical edge
+  it names in both directions — the rendered DOM legend honors both, so `legend-position="start"`
+  really does paint at the reading-start edge under `dir="rtl"`
 - `valueFormatter?: LyraChartValueFormatter` (attribute: false) — formats numeric (value-axis)
   tick, tooltip, legend, and generated accessible-table values; the callback receives the value
   and `'tick'`, `'tooltip'`, `'legend'`, or `'table'` context. Never runs against the categorical
   x-axis's own labels (line/bar's `labels` strings) — Chart.js's category scale passes the tick
   index to `ticks.callback`, not the label text
-- `area: boolean = false`
+- `area: boolean = false` — chart-wide default for whether line-type series fill the region under
+  their line; a series's own `fill` overrides it, rendered with a translucent version of its color
 - `zoom: boolean = false` — wheel/drag/pinch zoom on the `x` axis only (pan disabled, and the zoom
   range is limited to the original data extent); shows the `reset-zoom-button` while zoomed
 - `height: string = '280px'` — a valid CSS length used only as the component's private fallback.
@@ -186,8 +189,13 @@ token layer yet, the helper reads the `--lr-theme-color-chart-N` inputs directly
 a fresh eight-color array each call (safe to mutate) and let chart-adjacent UI, KPI tiles, or the
 `Series` array itself come from one source of truth.
 
+Import the standalone form from `.../chart/chart-colors.js`, not from `.../chart/chart.js`: the
+latter is `<lr-chart>`'s registration entry, so it defines the element (and pulls in `<lr-skeleton>`)
+as a side effect. `chart-colors.js` is side-effect-free and carries nothing but the palette helpers,
+so a KPI tile that only needs eight color strings stays a ~1KB import.
+
 ```ts
-import { seriesPalette } from '@aceshooting/lyra-ui/components/charts/chart/chart.js';
+import { seriesPalette } from '@aceshooting/lyra-ui/components/charts/chart/chart-colors.js';
 
 const colors = seriesPalette();
 const series = [
@@ -525,7 +533,17 @@ selected `[part='bar']` and `[part='point']` marks whose category index is in `s
 `--lr-lite-chart-selected-outline-width` (default `var(--lr-size-2px)`) — that stroke's width.
 Unlike `lr-chart` (canvas-rendered, needs `getComputedStyle`-based re-theming on every draw), this
 is plain SVG/DOM and reads these via native CSS `var()` — no JS-side resolution step, and no
-`refreshTheme()` method needed (there's nothing to go stale).
+`refreshTheme()` method needed (there's nothing to go stale). `--lr-chart-pattern-step`
+(default `var(--lr-space-2xs)`) sizes the forced-colors legend texture, exactly as on `lr-chart`.
+
+**Forced colors:** under `forced-colors: active` the `--lr-color-chart-*` ramp behind
+`--lr-chart-color-1..8` is remapped onto the small repeating system-color cycle the platform
+exposes, so series 1/4/7 (and 2/5/8, 3/6) would otherwise paint identically. `lr-lite-chart` then
+encodes each series a second way, using the same eight-way vocabulary as `lr-chart`: `[part='bar']`
+takes a per-series SVG texture fill, `[part='line']` takes a per-series `stroke-dasharray`, and
+`[part='legend-swatch']` carries a `data-encoding` attribute selecting the matching CSS texture.
+Nothing is opt-in, the encodings exist only while the media query matches, and no author color is
+substituted.
 
 **Optional peer deps:** none. This is the point of the component.
 
@@ -758,11 +776,25 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 change. Canvas work remains connected/visible-gated, while a rendered DOM legend also refreshes
 its computed color swatches.
 
-**Events:** `lr-before-legend-visibility-change` (cancelable proposed legend toggle) and
-`lr-legend-visibility-change` (accepted commit). Both carry
+**Events:** `lr-point-click`, `lr-before-legend-visibility-change` (cancelable proposed legend
+toggle) and `lr-legend-visibility-change` (accepted commit). The two legend events carry
 `{ datasetIndex: number, visible: boolean, hiddenDatasets: readonly number[] }`, where
 `hiddenDatasets` is the complete sorted, valid next snapshot. Calling `preventDefault()` on the
 proposal leaves state untouched and suppresses the commit event.
+
+`lr-point-click` fires when pointer input lands on a box, or when Enter/Space activates the
+keyboard-current box — the same event name and role `lr-chart` and `lr-lite-chart` expose. Its
+`detail` is `{ datasetIndex: number, index: number, label: string | undefined, value: BoxPlotPoint |
+null }`, where `value` is a fresh copy of that box's five-number summary (never the object you
+passed in `boxes`, which the underlying peer annotates in place). A pointer click that misses every
+box emits nothing rather than reporting the nearest one.
+
+**Per-box keyboard access:** the `canvas` part is a focusable `role="application"` surface.
+Arrow keys walk the boxes one at a time (Left/Right swap under RTL; Up/Down always mean
+previous/next), Home/End jump to the first/last, and Enter or Space activates the current box. Each
+move announces that box's series, category, and complete five-number summary through the shared
+document-level light-DOM polite sink. The walk visits the same bounded, deterministic sample the
+generated data table uses, so a very wide data set stays navigable.
 
 **Slots:** `data-table` — an optional consumer-provided complete, paginated, or virtualized
 accessible table alternative.
@@ -787,7 +819,17 @@ bounded-alternative sampling notice)
 concrete semantic fallbacks rather than retaining a prior canvas paint), but declared in its own stylesheet, not a
 re-export: `lr-box-plot` has no `zoom`, so no `reset-zoom-button` chrome exists here. A `BoxPlotSeries`
 that sets no `color` is assigned an entry from the same `--lr-color-chart-1..8` ramp `lr-chart` uses,
-so `--lr-theme-color-chart-*` retheming reaches box plots too.
+so `--lr-theme-color-chart-*` retheming reaches box plots too. `--lr-chart-pattern-step`
+(default `var(--lr-space-2xs)`) sizes the forced-colors legend texture and
+`--lr-chart-canvas-hover-outline-width` (default `var(--lr-border-width-thin)`) sizes the `canvas`
+hover outline — both the same tokens, with the same defaults, as `lr-chart`.
+
+**Forced colors:** under `forced-colors: active` the eight-color ramp is remapped onto the small
+repeating system-color cycle the platform exposes, so series 1/4/7 (and 2/5/8, 3/6) would otherwise
+paint identically. Each box's fill is therefore textured with a per-series pattern, and its legend
+swatch carries the matching CSS texture — the same eight-way encoding `lr-chart` applies to its own
+repeated colors. Box-and-whisker elements expose no border-dash or point-style option, so texture is
+the only channel here; nothing is opt-in and no author color is substituted.
 
 **Optional peer deps:** `@sgratzl/chartjs-chart-boxplot` plus `chart.js`; Chart.js is obtained
 through the same cached `chart-loader.ts` used by `lr-chart`.

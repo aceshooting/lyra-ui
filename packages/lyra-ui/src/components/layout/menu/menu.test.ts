@@ -2,13 +2,13 @@ import { fixture, expect, oneEvent, html, nextFrame, waitUntil } from "@open-wc/
 import "./menu.js";
 import "./menu-item.js";
 import "./menu-label.js";
-import { styles as menuStyles } from "./menu.styles.js";
 import "../../forms/button/button.js";
 import "../../forms/icon-button/icon-button.js";
 import type { LyraMenu } from "./menu.js";
 import type { LyraMenuItem } from "./menu-item.js";
 import type { LyraButton } from "../../forms/button/button.js";
 import type { LyraIconButton } from "../../forms/icon-button/icon-button.js";
+import { setReducedMotion } from "../../../../test/wtr-media.js";
 
 const basic = () => html`
   <lr-menu label="Row actions">
@@ -2294,18 +2294,30 @@ describe("nested submenus", () => {
   });
 
   it("keeps the submenu panel's own open/close transition token-driven, and drops it under reduced motion", async () => {
-    const el = (await fixture(nested())) as LyraMenu;
-    await openMenu(el);
-    const popup = sub(el, "sharemenu").shadowRoot!.querySelector(
-      '[part="popup"]'
-    ) as HTMLElement;
-    const transition = getComputedStyle(popup);
-    expect(transition.transitionProperty).to.contain("opacity");
-    expect(transition.transitionDuration).to.not.equal("0s");
-    const css = menuStyles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
-    expect(css).to.contain(
-      "@media (prefers-reduced-motion: reduce) { [part='popup'] { transition: none !important; } }"
-    );
+    await setReducedMotion("no-preference");
+    try {
+      const el = (await fixture(nested())) as LyraMenu;
+      await openMenu(el);
+      const popup = sub(el, "sharemenu").shadowRoot!.querySelector(
+        '[part="popup"]'
+      ) as HTMLElement;
+      const fullMotion = getComputedStyle(popup);
+      expect(fullMotion.transitionProperty).to.contain("opacity");
+      expect(fullMotion.transitionDuration).to.not.equal("0s");
+
+      await setReducedMotion("reduce");
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      );
+      expect(matchMedia("(prefers-reduced-motion: reduce)").matches).to.equal(
+        true
+      );
+      const reducedMotion = getComputedStyle(popup);
+      expect(reducedMotion.transitionProperty).to.equal("none");
+      expect(reducedMotion.transitionDuration).to.equal("0s");
+    } finally {
+      await setReducedMotion("no-preference");
+    }
   });
 
   it("never opens a disabled row's submenu, by keyboard or by pointer", async () => {

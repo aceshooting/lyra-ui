@@ -581,3 +581,17 @@ describe('accessibility', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it('renders the query field, mode selector, and submit button at one flush toolbar height', async () => {
+  const el = (await fixture(html`<lr-retrieval-search></lr-retrieval-search>`)) as LyraRetrievalSearch;
+  await el.updateComplete;
+  const mode = modeOf(el) as HTMLElement & { updateComplete: Promise<unknown> };
+  const query = queryInputOf(el) as HTMLElement & { updateComplete: Promise<unknown> };
+  await mode.updateComplete;
+  await query.updateComplete;
+
+  const heights = [query, mode, submitButtonOf(el)].map((control) => control.getBoundingClientRect().height);
+  expect(heights[0], 'the query field sits on the shared form-control height').to.be.greaterThan(0);
+  expect(heights[1], 'the mode selector matches the query field').to.be.closeTo(heights[0]!, 1);
+  expect(heights[2], 'and so does the submit button').to.be.closeTo(heights[0]!, 1);
+});

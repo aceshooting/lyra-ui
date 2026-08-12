@@ -24,8 +24,10 @@ Steps:
    differences. Do not guess from memory — mirror status and differences are only accurate there.
 3. Split the list into two buckets:
    - **Mirrored** (lyra-ui documents a `lr-*` equivalent): for every occurrence, rename the tag
-     (`wa-button` -> `lr-button`, etc.), update the import specifier to
-     `@aceshooting/lyra-ui/components/<name>/<name>.js`, and carry over any attribute/slot/event
+     (`wa-button` -> `lr-button`, etc.), update the import specifier to the stable tag-shaped
+     registration path `@aceshooting/lyra-ui/components/<lr-tag>.js` (e.g.
+     `@aceshooting/lyra-ui/components/lr-button.js` — this is the exact **Import** line each
+     `references/components/<lr-tag>.md` states), and carry over any attribute/slot/event
      names that differ between the two per that component's documented differences (do not assume
      every attribute name is identical — check the reference).
    - **Not mirrored**: leave the `wa-*` usage in place and list it separately in the final report —

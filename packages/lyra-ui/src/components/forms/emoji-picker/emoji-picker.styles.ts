@@ -223,11 +223,18 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
   }
-  [part='empty'] {
+  [part='empty'],
+  [part='load-error'] {
     flex-basis: 100%;
     padding: var(--lr-space-m);
     text-align: center;
     color: var(--lr-color-text-quiet);
+  }
+  /* The load-error surface says something went wrong rather than "nothing matched", so it carries
+     the danger foreground the rest of the library uses for a failed operation -- the two states
+     are otherwise the same box in the same place, and would be indistinguishable at a glance. */
+  [part='load-error'] {
+    color: var(--lr-color-danger);
   }
   [part='form-control'],
   [part='form-control-label'],

@@ -5,11 +5,6 @@ import { LyraElement } from "../../../internal/lyra-element.js";
 import { safeLinkHref } from "../../../internal/safe-url.js";
 import type { LyraAppearance } from "../../../internal/variants.js";
 import { styles } from "./card.styles.js";
-// GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export type CardAppearance = LyraAppearance;
 export type CardOrientation = "horizontal" | "vertical";
@@ -111,17 +106,6 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * @since 4.0.0
  */
 export class LyraCard extends LyraElement<LyraCardEventMap> {
-  // GENERATED DEFAULT-STRING SLICE: START
-  /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
-    select: LYRA_DEFAULT_select,
-  };
-  // GENERATED DEFAULT-STRING SLICE: END
-
   static override styles = [LyraElement.styles, styles];
 
   /** Visual treatment, mirroring `wa-card`'s `appearance` vocabulary. `'outlined'` (the default)

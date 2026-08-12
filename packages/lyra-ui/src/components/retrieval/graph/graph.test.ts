@@ -1961,6 +1961,36 @@ describe('community hulls (J6)', () => {
     return el;
   }
 
+  it('concatenates the keyboard cursor index space as nodes, then links, then hulls', async () => {
+    // The four call sites that translate between a roving index and a node/link/hull all derive
+    // their segment offsets from one pair of helpers. This pins the ordering those helpers encode:
+    // a reorder or a new item kind that only reaches some of the sites shows up here as focus
+    // landing on the wrong kind.
+    const el = (await fixture(
+      html`<lr-graph renderer="canvas" width="400" height="300" style="width:400px;height:300px"></lr-graph>`,
+    )) as LyraGraph;
+    el.communities = communities;
+    el.nodes = communityNodes;
+    el.links = [{ source: 'a', target: 'b' }];
+    await el.updateComplete;
+    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, { timeout: NODE_COUNT_TIMEOUT });
+    await aTimeout(50);
+
+    const items = [...el.shadowRoot!.querySelectorAll('[part="cursor-item"]')] as HTMLButtonElement[];
+    expect(items.length, '3 nodes + 1 link + 1 hull').to.equal(5);
+    expect(items.slice(0, 3).map((item) => item.getAttribute('aria-label'))).to.deep.equal(['A', 'B', 'C']);
+
+    const live = () => el.shadowRoot!.querySelector('[part="live-region"]')!.textContent ?? '';
+    items[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    await el.updateComplete;
+    expect(items[4]!.getAttribute('tabindex'), 'End lands on the last hull').to.equal('0');
+    expect(live(), 'and announces it as the community, not a node or link').to.include('Team One');
+
+    items[4]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    await el.updateComplete;
+    expect(items[3]!.getAttribute('tabindex'), 'one step back is the link segment').to.equal('0');
+  });
+
   it('renders no hull when communities is empty', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;

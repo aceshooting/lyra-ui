@@ -55,6 +55,17 @@ export const styles = css`
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     padding: var(--lr-size-4px) var(--lr-space-xs);
+    /* Per-level indent computed in CSS from the plain depth number the component writes inline,
+       rather than a pre-formatted dimension: that keeps the step a retheme-able token and lets the
+       indent be capped, so a deeply nested tree cannot push its labels off-screen with no way back.
+       Same shape lr-tree-item already uses. */
+    padding-inline-start: calc(
+      var(--lr-space-xs) +
+        min(
+          var(--lr-source-picker-depth, 0) * var(--lr-source-picker-indent-size, var(--lr-size-1-25rem)),
+          var(--lr-size-8rem)
+        )
+    );
     border-radius: var(--lr-radius-xs);
     cursor: pointer;
   }

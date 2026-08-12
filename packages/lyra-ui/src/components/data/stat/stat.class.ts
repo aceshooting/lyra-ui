@@ -10,7 +10,7 @@ import type { LyraFrame, LyraVariant } from '../../../internal/variants.js';
 import { styles } from './stat.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_select, LYRA_DEFAULT_statTrendAnnouncement, LYRA_DEFAULT_statTrendBad, LYRA_DEFAULT_statTrendDecreased, LYRA_DEFAULT_statTrendGood, LYRA_DEFAULT_statTrendIncreased, LYRA_DEFAULT_trendUnchanged } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_statTrendAnnouncement, LYRA_DEFAULT_statTrendBad, LYRA_DEFAULT_statTrendDecreased, LYRA_DEFAULT_statTrendGood, LYRA_DEFAULT_statTrendIncreased, LYRA_DEFAULT_trendUnchanged } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** The shared semantic tone. Kept as a local name so existing imports keep resolving. */
@@ -125,10 +125,6 @@ export class LyraStat extends LyraElement {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
-    select: LYRA_DEFAULT_select,
     statTrendAnnouncement: LYRA_DEFAULT_statTrendAnnouncement,
     statTrendBad: LYRA_DEFAULT_statTrendBad,
     statTrendDecreased: LYRA_DEFAULT_statTrendDecreased,

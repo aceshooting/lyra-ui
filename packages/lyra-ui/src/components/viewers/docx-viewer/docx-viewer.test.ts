@@ -1070,6 +1070,45 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     }
   });
 
+  it('renders a neutral-tone highlight with real contrast against the ambient content background', async () => {
+    const originalHighlight = (globalThis as { Highlight?: unknown }).Highlight;
+    (globalThis as { Highlight?: unknown }).Highlight = undefined;
+    try {
+      const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+      useLibrary(el, {
+        mammoth: { convertToHtml: () => Promise.resolve({ value: '<p>Hello world</p>', messages: [] }) },
+        DOMPurify: { sanitize: (value: string) => value },
+      });
+      const restore = stubFetch(BUFFER);
+      try {
+        el.src = 'https://example.test/report.docx';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
+        el.highlights = [{ id: 'h1', tone: 'neutral', anchor: { kind: 'text-quote', quote: 'world' } }];
+        await el.updateComplete;
+        const mark = el.shadowRoot!.querySelector<HTMLElement>('[part="content"] mark[data-lr-highlight-tone="neutral"]')!;
+
+        // `neutral` is a first-class documented tone. [part='content'] paints no background of its
+        // own, so it shows [part='base']'s --lr-color-surface -- falling the neutral highlight
+        // back to that same token renders it with zero contrast, i.e. visibly unhighlighted.
+        const probe = document.createElement('span');
+        probe.setAttribute('style', 'background: var(--lr-color-surface)');
+        el.shadowRoot!.appendChild(probe);
+        const ambient = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        expect(getComputedStyle(mark).backgroundColor).to.not.equal(ambient);
+        expect(getComputedStyle(mark).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+
+        // Still fully retunable through the documented cssprop.
+        el.style.setProperty('--lr-docx-viewer-highlight-neutral-background', 'rgb(9, 8, 7)');
+        expect(getComputedStyle(mark).backgroundColor).to.equal('rgb(9, 8, 7)');
+      } finally {
+        restore();
+      }
+    } finally {
+      (globalThis as { Highlight?: unknown }).Highlight = originalHighlight;
+    }
+  });
+
   it('stamps the fallback part when its adopted owner registry rejects CSS highlight registration', async () => {
     const iframe = document.createElement('iframe');
     document.body.append(iframe);
@@ -1334,6 +1373,65 @@ describe('search', () => {
       expect(detail?.activeIndex).to.equal(2);
       expect(await el.searchNext()).to.be.true;
       expect(detail?.activeIndex).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('navigates the same matches correctly across many consecutive searchNext calls without the document changing (shared text-index cache stays valid)', async () => {
+    const { el, restore } = await loadWithMarkup('<p>cat sat cat ran cat slept cat</p>');
+    try {
+      expect(await el.search('cat')).to.equal(4);
+      for (let step = 0; step < 10; step++) {
+        expect(await el.searchNext()).to.be.true;
+        const marks = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="search-match"]')];
+        expect(marks).to.have.lengthOf(4);
+        const activeMarks = marks.filter((mark) => mark.getAttribute('part')?.includes('search-match-active'));
+        expect(activeMarks).to.have.lengthOf(1);
+        // querySelectorAll returns marks in document order, so its index of the active one is
+        // directly comparable to searchActiveIndex's own left-to-right match ordering.
+        expect(marks.indexOf(activeMarks[0]!)).to.equal((step + 1) % 4);
+      }
+    } finally {
+      restore();
+    }
+  });
+
+  it('rebuilds the cached text index when a new document loads, without leaking the previous document\'s matches', async () => {
+    const { el, restore } = await loadWithMarkup('<p>The cat sat on the mat, said the cat.</p>');
+    try {
+      expect(await el.search('cat')).to.equal(2);
+      // Prime the shared index cache further before the document changes underneath it.
+      expect(await el.searchNext()).to.be.true;
+      expect(await el.searchNext()).to.be.true;
+
+      useLibrary(el, {
+        mammoth: { convertToHtml: () => Promise.resolve({ value: '<p>A brand new document about dogs.</p>', messages: [] }) },
+        DOMPurify: { sanitize: (value: string) => value },
+      });
+      el.src = 'https://example.test/second.docx';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]')?.textContent?.includes('dogs') === true);
+
+      // A fresh search against the new document must reflect only its own content -- if
+      // getTextIndex() had reused the first document's cached corpus/entries, "cat" would still
+      // report matches (or "dogs" would report none, since it isn't in the old cached text at all).
+      expect(await el.search('cat')).to.equal(0);
+      expect(await el.search('dogs')).to.equal(1);
+      const marks = el.shadowRoot!.querySelectorAll('[part~="search-match"]');
+      expect(marks).to.have.lengthOf(1);
+      expect(marks[0]!.textContent).to.equal('dogs');
+    } finally {
+      restore();
+    }
+  });
+
+  it('paints two matches that share an exact text-node boundary (binary-search offset resolution)', async () => {
+    const { el, restore } = await loadWithMarkup('<p><b>cat</b><i>cat</i></p>');
+    try {
+      expect(await el.search('cat')).to.equal(2);
+      const marks = el.shadowRoot!.querySelectorAll('[part~="search-match"]');
+      expect(marks).to.have.lengthOf(2);
+      expect([...marks].map((mark) => mark.textContent)).to.deep.equal(['cat', 'cat']);
     } finally {
       restore();
     }

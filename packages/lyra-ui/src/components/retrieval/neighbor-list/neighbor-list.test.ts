@@ -55,6 +55,45 @@ it('formats multi-value node metadata as a locale-aware list instead of fixed pu
   );
 });
 
+it('clamps node-meta to the row width so text-overflow:ellipsis actually triggers when an ancestor sizes the row intrinsically', async () => {
+  const longType = 'x'.repeat(300);
+  // A definite-width ancestor (e.g. a plain sized <div>) already lets node-meta shrink to fit
+  // via the flexbox automatic-minimum-size rule (overflow != visible zeroes it) even without an
+  // explicit min-inline-size -- so this reproduces the failure mode the file's row layout is
+  // actually exposed to: lr-neighbor-list used as a flex item itself (a sidebar/toolbar row is
+  // the common real layout), where the host's own width is resolved via *intrinsic* sizing.
+  // There, node-meta's un-clamped (nowrap) content width becomes part of that intrinsic
+  // calculation and the host grows past its flex container instead of eliding.
+  const wrapper = await fixture(html`
+    <div style="display: flex; width: 200px;">
+      <lr-neighbor-list
+        .rows=${[{ relation: 'r', direction: 'out' as const, node: { id: 'n1', label: 'N', type: longType } }]}
+      ></lr-neighbor-list>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-neighbor-list') as LyraNeighborList;
+  await el.updateComplete;
+  const meta = el.shadowRoot!.querySelector('[part="node-meta"]') as HTMLElement;
+  expect(getComputedStyle(meta).minInlineSize).to.equal('0px');
+});
+
+it('applies the min-inline-size: 0 clamp through lr-virtual-list::part(node-meta) too (virtualized path)', async () => {
+  // Both the row's own file-header comment and the migrate-wa "both selectors" convention make
+  // this load-bearing: dropping either one silently unstyles one of the two render paths, so this
+  // proves the declaration actually reaches node-meta through the ::part() selector, not just the
+  // plain-path rule.
+  const el = (await fixture(html`<lr-neighbor-list
+    virtualize-at="0"
+    .rows=${[{ relation: 'r', direction: 'out' as const, node: { id: 'n1', label: 'N', type: 'org' } }]}
+  ></lr-neighbor-list>`)) as LyraNeighborList;
+  await el.updateComplete;
+  const virtual = el.shadowRoot!.querySelector('lr-virtual-list')!;
+  await (virtual as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+  await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+  const meta = virtual.shadowRoot!.querySelector('[part="node-meta"]') as HTMLElement;
+  expect(getComputedStyle(meta).minInlineSize).to.equal('0px');
+});
+
 it('renders one row per entry, each with the node label and relation text', async () => {
   const el = (await fixture(html`<lr-neighbor-list></lr-neighbor-list>`)) as LyraNeighborList;
   el.rows = rows;
@@ -104,6 +143,51 @@ it('groups rows by relation with a labeled, counted header when groupByRelation 
   expect(headers.length).to.equal(3);
   const worksFor = Array.from(headers).find((h) => h.textContent?.includes('works_for'))!;
   expect(worksFor.textContent).to.include('2');
+});
+
+it('renders group headers at the exact row position for a realistic multi-group dataset', async () => {
+  // Five relations with differing, non-uniform row counts (15 rows total) -- large enough that a
+  // linear groups.find() rescan per row would be doing real O(rows x groups) work, and varied
+  // enough that a header landing one row off (or at the wrong relation boundary) shows up as a
+  // mismatch below.
+  const relations = ['alpha', 'beta', 'gamma', 'delta', 'epsilon'];
+  const counts = [3, 1, 4, 2, 5];
+  const manyRows: LyraNeighborRow[] = [];
+  relations.forEach((relation, ri) => {
+    for (let i = 0; i < counts[ri]!; i++) {
+      manyRows.push({ relation, direction: 'out', node: { id: `${relation}-${i}`, label: `${relation} ${i}` } });
+    }
+  });
+  // Fed in reverse (not already grouped/sorted by relation) so the observed grouping can only
+  // come from sortedRows()'s collator sort, not from input order happening to already be grouped.
+  const shuffled = [...manyRows].reverse();
+
+  const el = (await fixture(
+    html`<lr-neighbor-list lang="en" group-by-relation .rows=${shuffled}></lr-neighbor-list>`,
+  )) as LyraNeighborList;
+  await el.updateComplete;
+
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  const children = [...base.children];
+  expect(children.length).to.equal(relations.length + manyRows.length);
+
+  const sortedRelations = [...relations].sort((a, b) => a.localeCompare(b));
+  let idx = 0;
+  for (const relation of sortedRelations) {
+    const count = counts[relations.indexOf(relation)]!;
+    const header = children[idx]!;
+    expect(header.getAttribute('part')).to.equal('group-header');
+    expect(header.textContent).to.include(relation);
+    expect(header.textContent).to.include(`(${count})`);
+    idx += 1;
+    for (let i = 0; i < count; i++) {
+      const rowEl = children[idx]!;
+      expect(rowEl.getAttribute('part')).to.equal('row');
+      expect(rowEl.textContent).to.include(relation);
+      idx += 1;
+    }
+  }
+  expect(idx).to.equal(children.length);
 });
 
 it('renders through the internal virtual-list once rows exceeds virtualizeAt', async () => {

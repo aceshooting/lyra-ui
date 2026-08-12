@@ -9,7 +9,7 @@ import { finiteRange } from '../../../internal/numbers.js';
 import { styles } from './image-comparer.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_imageComparerLabel, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_imageComparerLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -46,9 +46,15 @@ export interface LyraImageComparerEventMap {
  * @csspart divider - The visible divider line.
  * @csspart handle - Wrapper around the native range interaction surface and visible handle.
  * @csspart input - The transparent native range input.
- * @cssprop [--divider-width=var(--lr-size-1px)] - Width of the dividing line.
- * @cssprop [--handle-size=var(--lr-icon-button-size)] - Inline and block size of the visible
- *   compare handle.
+ * @cssprop [--lr-image-comparer-divider-width=var(--divider-width, var(--lr-size-1px))] - Width of
+ *   the dividing line. The canonical, namespaced override; prefer it over the bare compat name,
+ *   which inherits and so retunes every element in the subtree reading that generic name.
+ * @cssprop [--lr-image-comparer-handle-size=var(--handle-size, var(--lr-icon-button-size))] - Inline
+ *   and block size of the visible compare handle. Canonical, namespaced override.
+ * @cssprop [--divider-width=var(--lr-size-1px)] - Retained Shoelace-compat source for
+ *   `--lr-image-comparer-divider-width`.
+ * @cssprop [--handle-size=var(--lr-icon-button-size)] - Retained Shoelace-compat source for
+ *   `--lr-image-comparer-handle-size`.
  * @cssstate dragging - Present while a pointer gesture is active on the range input.
  * @status stable
  * @since 4.0.0
@@ -60,7 +66,6 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
     ...super.defaultStrings,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     imageComparerLabel: LYRA_DEFAULT_imageComparerLabel,
-    restore: LYRA_DEFAULT_restore,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

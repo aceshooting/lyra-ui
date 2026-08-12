@@ -10,7 +10,7 @@ import { styles } from "./command-palette.styles.js";
 import { resolveCssLength } from "../../../internal/css-length.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_commandPaletteEmpty, LYRA_DEFAULT_commandPaletteLabel, LYRA_DEFAULT_commandPalettePlaceholder, LYRA_DEFAULT_commandPaletteResults, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_commandPaletteEmpty, LYRA_DEFAULT_commandPaletteLabel, LYRA_DEFAULT_commandPalettePlaceholder, LYRA_DEFAULT_commandPaletteResults } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -108,13 +108,10 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
     commandPaletteEmpty: LYRA_DEFAULT_commandPaletteEmpty,
     commandPaletteLabel: LYRA_DEFAULT_commandPaletteLabel,
     commandPalettePlaceholder: LYRA_DEFAULT_commandPalettePlaceholder,
     commandPaletteResults: LYRA_DEFAULT_commandPaletteResults,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

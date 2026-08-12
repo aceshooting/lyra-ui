@@ -199,6 +199,11 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
    *  allowed to steal another row's canonical content). */
   private detailSlotOwners = new Map<string, Set<string>>();
 
+  /** test.id -> number of rows across all suites sharing that id. Rebuilt alongside
+   *  `detailSlotOwners` in `rebuildDetailSlotOwners()` so `isGloballyUniqueTestId()` is an O(1)
+   *  lookup instead of a nested per-call rescan of every suite/test. */
+  private testIdCounts = new Map<string, number>();
+
   protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('suites')) {
       const anyRunning = this.suites.some((suite) => suite.tests.some((t) => t.status === 'running'));
@@ -228,6 +233,17 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     return this.suites.reduce((n, suite) => n + suite.tests.filter((t) => t.status === status).length, 0);
   }
 
+  /** All four status counts in one pass over every suite/test, for callers (namely
+   *  `renderSummary()`) that need every status's count together rather than one at a time via
+   *  repeated `countOf()` calls. */
+  private computeStatusCounts(): Record<TestStatus, number> {
+    const counts: Record<TestStatus, number> = { passed: 0, failed: 0, skipped: 0, running: 0 };
+    for (const suite of this.suites) {
+      for (const test of suite.tests) counts[test.status]++;
+    }
+    return counts;
+  }
+
   private testKey(suiteId: string, testId: string): string {
     return JSON.stringify([suiteId, testId]);
   }
@@ -246,6 +262,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     );
     const testIdCounts = new Map<string, number>();
     for (const { testId } of rows) testIdCounts.set(testId, (testIdCounts.get(testId) ?? 0) + 1);
+    this.testIdCounts = testIdCounts;
 
     const owners = new Map<string, Set<string>>();
     const add = (name: string, owner: string): void => {
@@ -268,13 +285,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   }
 
   private isGloballyUniqueTestId(testId: string): boolean {
-    let count = 0;
-    for (const suite of this.suites) {
-      for (const test of suite.tests) {
-        if (test.id === testId && ++count > 1) return false;
-      }
-    }
-    return count === 1;
+    return this.testIdCounts.get(testId) === 1;
   }
 
   private hasSlottedChild(name: string): boolean {
@@ -332,11 +343,11 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     this.requestUpdate();
   }
 
-  private renderSummary(): TemplateResult {
+  private renderSummary(statusCounts: Record<TestStatus, number>): TemplateResult {
     return html`
       <div part="summary">
         ${STATUSES.map((status) => {
-          const count = this.countOf(status);
+          const count = statusCounts[status];
           const formattedCount = getNumberFormat(this.effectiveLocale).format(count);
           return html`<span part="count" data-status=${status}
             >${this.localize(STATUS_COUNT_KEY[status], undefined, { count: formattedCount })}</span
@@ -345,7 +356,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
       </div>
       <div part="filter" role="group" aria-label=${this.localize('testResultsFilterLabel')}>
         ${STATUSES.map((status) => {
-          const count = this.countOf(status);
+          const count = statusCounts[status];
           const formattedCount = getNumberFormat(this.effectiveLocale).format(count);
           return html`
             <button
@@ -480,7 +491,8 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
         ? html`<lr-empty heading=${this.localize('noData')}></lr-empty>`
         : html`
             <div part="base" role="group" aria-label=${ariaLabel}>
-              ${this.renderSummary()} ${this.suites.map((suite, index) => this.renderSuite(suite, index))}
+              ${this.renderSummary(this.computeStatusCounts())} ${this.suites.map((suite, index) =>
+                this.renderSuite(suite, index))}
             </div>
           `}
       <lr-live-region mode="polite"></lr-live-region>

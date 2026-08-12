@@ -67,7 +67,7 @@ Dependency-free SVG radial, full-circle ring, or linear meter (no charting libra
 - no automatic color-threshold/variant logic is built in. Set `--lr-gauge-fill` per instance (or
   reactively from application state) when the value should select a success/warning/danger color.
 - no documented component-specific sizing custom property; host size is fixed em values
-  (`8em`/`12em` radial, `12em`/`1.5em` linear) — resize via plain CSS `width`/`height` on the
+  (`8em` radial/ring, `12em`/`1.5em` linear) — resize via plain CSS `width`/`height` on the
   element instead.
 - Divide-by-zero guarded (`max - min || 1`), and radial/linear share one component via the `type`
   attribute.

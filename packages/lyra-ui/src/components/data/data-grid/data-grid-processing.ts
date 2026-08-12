@@ -1,4 +1,5 @@
 import { getCollator, resolveIntlLocale } from '../../../internal/intl-cache.js';
+import { UNSAFE_LEADING } from '../../utility/export-button/csv.js';
 import type {
   DataGridAggregation,
   DataGridColumn,
@@ -274,7 +275,12 @@ export function aggregateValues<Row>(
 
 function csvCell(value: unknown, delimiter: string, escapeFormulas: boolean): string {
   let text = comparableText(value);
-  if (escapeFormulas && /^[=+\-@]/u.test(text) && typeof value !== 'number') text = `'${text}`;
+  // Shares `UNSAFE_LEADING` with `escapeCsvField()` so both writers guard the same set: the bare
+  // ASCII sigils plus the fullwidth twins an import normalizes back to them and the leading
+  // whitespace a spreadsheet strips before parsing the cell. A real numeric cell is exempt --
+  // its text can only ever be a number literal, and text-prefixing it would break every
+  // downstream sum.
+  if (escapeFormulas && typeof value !== 'number' && UNSAFE_LEADING.test(text)) text = `'${text}`;
   if (text.includes(delimiter) || /["\r\n]/u.test(text)) text = `"${text.replaceAll('"', '""')}"`;
   return text;
 }

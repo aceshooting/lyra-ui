@@ -86,6 +86,27 @@ it('renders the handle slot and resolves both upstream sizing properties', async
   expect(getComputedStyle(handleVisual).blockSize).to.equal('31px');
 });
 
+it('exposes namespaced sizing properties that the bare upstream names still feed', async () => {
+  const namespaced = (await fixture(html`<lr-image-comparer
+    style="--lr-image-comparer-divider-width: 9px; --lr-image-comparer-handle-size: 37px"
+  ></lr-image-comparer>`)) as LyraImageComparer;
+  const namespacedDivider = namespaced.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  const namespacedHandle = namespaced.shadowRoot!.querySelector('.handle-visual') as HTMLElement;
+  expect(getComputedStyle(namespacedDivider).inlineSize).to.equal('9px');
+  expect(getComputedStyle(namespacedHandle).inlineSize).to.equal('37px');
+  expect(getComputedStyle(namespacedHandle).blockSize).to.equal('37px');
+
+  // The namespaced name wins when both are set, so a themed app is never overridden by a stray
+  // generic --handle-size inherited from somewhere up the tree.
+  const both = (await fixture(html`<lr-image-comparer
+    style="--divider-width: 3px; --handle-size: 21px; --lr-image-comparer-divider-width: 9px; --lr-image-comparer-handle-size: 37px"
+  ></lr-image-comparer>`)) as LyraImageComparer;
+  expect(getComputedStyle(both.shadowRoot!.querySelector('[part="divider"]') as HTMLElement).inlineSize)
+    .to.equal('9px');
+  expect(getComputedStyle(both.shadowRoot!.querySelector('.handle-visual') as HTMLElement).inlineSize)
+    .to.equal('37px');
+});
+
 it('keeps the full-bleed range hit surface at the icon floor and fills an explicit host allocation', async () => {
   const empty = (await fixture(html`
     <lr-image-comparer style="inline-size: 320px" aria-label="Empty comparison"></lr-image-comparer>

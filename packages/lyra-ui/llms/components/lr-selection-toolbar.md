@@ -36,6 +36,14 @@ ownership even when the detach lasts past an event-loop turn.
 
 **CSS parts:** `toolbar`, `action`, `action-ask`, `action-quote`, `action-cite`, `action-copy`.
 
+The four built-in actions are the shipped set, and `actions` only reorders or subsets them. A
+product-specific fifth action ("translate", "define", "search web") goes in the `actions` slot
+instead: slotted elements render after the built-ins **inside** the same `role="toolbar"` element
+and join the same roving-tabindex group (Home/End/Arrow, RTL-mirrored), so adding one does not mean
+reimplementing the toolbar's positioning, keyboard, and dismissal behavior. A slotted action brings
+its own accessible name and click handling; this component only manages its tab stop, and re-derives
+the group whenever the slot's assigned elements change.
+
 **Themeable custom properties:** `--lr-selection-toolbar-inline-start` and
 `--lr-selection-toolbar-block-start` are normally computed from `rect`; hosts may override them to
 provide their own fixed-position anchor. `--lr-selection-toolbar-placement-gap` (default
@@ -43,7 +51,8 @@ provide their own fixed-position anchor. `--lr-selection-toolbar-placement-gap` 
 the toolbar avoids collisions. It accepts unitless pixel values and `px`, `rem`, and `em` values; unsupported
 values fall back to the default and negative values clamp to `0`.
 
-**Slots:** none. **Optional peer deps:** none.
+**Slots:** `actions` — extra actions rendered after the built-in ask/quote/cite/copy buttons,
+inside the same `role="toolbar"` element and roving-tabindex group. **Optional peer deps:** none.
 
 ```ts
 import "@aceshooting/lyra-ui/components/conversation/selection-toolbar/selection-toolbar.js";

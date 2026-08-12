@@ -710,6 +710,50 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('names the telephone input even with no label, phone-label, aria-label or placeholder set', async () => {
+  const el = (await fixture(html`<lr-phone-input></lr-phone-input>`)) as LyraPhoneInput;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('input[type="tel"]') as HTMLInputElement;
+  expect((input.getAttribute('aria-label') ?? '').length > 0).to.equal(true);
+  await expect(el).to.be.accessible();
+});
+
+it('lets every explicit label source outrank the generic fallback name', async () => {
+  const el = (await fixture(html`<lr-phone-input></lr-phone-input>`)) as LyraPhoneInput;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('input[type="tel"]') as HTMLInputElement;
+  const fallback = input.getAttribute('aria-label');
+
+  el.placeholder = '+352 …';
+  await el.updateComplete;
+  expect(input.getAttribute('aria-label')).to.equal('+352 …');
+  el.label = 'Mobile';
+  await el.updateComplete;
+  expect(input.getAttribute('aria-label')).to.equal('Mobile');
+  el.phoneLabel = 'Work number';
+  await el.updateComplete;
+  expect(input.getAttribute('aria-label')).to.equal('Work number');
+  el.accessibleLabel = 'Contact number';
+  await el.updateComplete;
+  expect(input.getAttribute('aria-label')).to.equal('Contact number');
+
+  // Clearing every source falls back to the same localized name again, never to no name at all.
+  el.accessibleLabel = null;
+  el.phoneLabel = '';
+  el.label = '';
+  el.placeholder = '';
+  await el.updateComplete;
+  expect(input.getAttribute('aria-label')).to.equal(fallback);
+});
+
+it('routes the fallback name through registerLyraLocale rather than a hardcoded literal', async () => {
+  const el = (await fixture(html`<lr-phone-input></lr-phone-input>`)) as LyraPhoneInput;
+  el.strings = { phoneInputLabel: 'Téléphone' };
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('input[type="tel"]') as HTMLInputElement;
+  expect(input.getAttribute('aria-label')).to.equal('Téléphone');
+});
+
 it('treats an empty string as empty and infers a missing phone from length or dial-like punctuation, via a fake libphonenumber-compatible module', async () => {
   const loaded = await loadLibphonenumberAdapter(async () => ({
     getCountries: () => ['LU'],

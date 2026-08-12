@@ -144,6 +144,54 @@ it('steps over disabled rows when moving focus through the enabled roving list',
   expect(el.shadowRoot!.activeElement?.textContent).to.contain('Webhook');
 });
 
+it('moves focus via ArrowDown/Home/End through the exact filtered+categorized roving order', async () => {
+  const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  input.value = 'e';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await el.updateComplete;
+
+  // Matches "HTTP Request" (label/keyword), "Send Email" (label, but disabled), and "Webhook"
+  // (label); "Transform" matches nothing. The roving order below must skip the disabled match
+  // entirely -- this exercises filtered() -> categorized() -> rovingList() together, the exact
+  // chain now cached once per update cycle.
+  const labels = Array.from(el.shadowRoot!.querySelectorAll('[part="item-label"]')).map((n) => n.textContent);
+  expect(labels).to.deep.equal(['HTTP Request', 'Send Email', 'Webhook']);
+
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  await waitUntil(() => el.shadowRoot!.activeElement?.getAttribute('part') === 'item');
+  expect(el.shadowRoot!.activeElement?.textContent).to.include('HTTP Request');
+
+  el.shadowRoot!.activeElement!.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }),
+  );
+  await waitUntil(() => el.shadowRoot!.activeElement?.textContent?.includes('Webhook') ?? false);
+  expect(el.shadowRoot!.activeElement?.textContent).to.include('Webhook');
+
+  el.shadowRoot!.activeElement!.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }),
+  );
+  await waitUntil(() => el.shadowRoot!.activeElement?.textContent?.includes('HTTP Request') ?? false);
+  expect(el.shadowRoot!.activeElement?.textContent).to.include('HTTP Request');
+});
+
+it('ArrowDown from the search field is a no-op when an active filter matches nothing', async () => {
+  const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  input.value = 'nonexistent';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await el.updateComplete;
+  input.focus();
+  // Exercises the `lastRenderedRovingList.length === 0` early-return in onFieldKeyDown -- the
+  // cached field must reflect the just-rendered (empty) filtered/categorized state, not a stale
+  // pre-filter list.
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement?.tagName).to.equal('INPUT');
+});
+
 it('assigns same-object duplicate entries distinct roving positions', async () => {
   const duplicate: PaletteItem = { type: 'duplicate', label: 'Duplicate' };
   const el = (await fixture(
@@ -437,4 +485,133 @@ it("wraps the item hover/focus-visible rule in :where() so a consumer's ::part(i
     .map((rule) => rule.cssText)
     .find((text) => text.includes(':hover') && text.includes('[part="item"]') && text.includes('background'));
   expect(internalRule?.includes(':where(')).to.be.true;
+});
+
+describe('reorderable', () => {
+  function itemLabels(el: LyraNodePalette): string[] {
+    return Array.from(el.shadowRoot!.querySelectorAll('[part="item-label"]')).map((n) => n.textContent ?? '');
+  }
+
+  function pressReorder(row: HTMLElement, key: 'ArrowUp' | 'ArrowDown'): void {
+    row.dispatchEvent(new KeyboardEvent('keydown', { key, ctrlKey: true, bubbles: true, cancelable: true }));
+  }
+
+  it('is off by default: Ctrl+Arrow still just navigates and never emits lr-reorder', async () => {
+    const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
+    await el.updateComplete;
+    expect(el.reorderable).to.equal(false);
+
+    let requests = 0;
+    el.addEventListener('lr-reorder', () => requests++);
+    const first = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement;
+    first.focus();
+    pressReorder(first, 'ArrowDown');
+    await el.updateComplete;
+
+    expect(requests, 'no request without the opt-in').to.equal(0);
+    expect(itemLabels(el), 'and the rendered order is untouched').to.deep.equal([
+      'HTTP Request',
+      'Transform',
+      'Send Email',
+      'Webhook',
+    ]);
+    expect(el.shadowRoot!.activeElement?.textContent, 'Ctrl+ArrowDown still moved focus').to.include('Transform');
+  });
+
+  it('requests a move past the next neighbour in the same category, indexed into items', async () => {
+    const el = (await fixture(
+      html`<lr-node-palette reorderable .items=${items}></lr-node-palette>`,
+    )) as LyraNodePalette;
+    await el.updateComplete;
+    const first = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement;
+    first.focus();
+
+    const pending = oneEvent(el, 'lr-reorder');
+    pressReorder(first, 'ArrowDown');
+    const detail = (await pending).detail as LyraNodePaletteEventMap['lr-reorder']['detail'];
+    expect(detail).to.deep.equal({ type: 'http-request', category: 'Data', fromIndex: 0, toIndex: 1 });
+    expect(itemLabels(el), 'the palette never reorders its own items').to.deep.equal([
+      'HTTP Request',
+      'Transform',
+      'Send Email',
+      'Webhook',
+    ]);
+  });
+
+  it('counts a disabled neighbour, so a request never silently jumps over a visible row', async () => {
+    const el = (await fixture(
+      html`<lr-node-palette reorderable .items=${items}></lr-node-palette>`,
+    )) as LyraNodePalette;
+    await el.updateComplete;
+    // Actions group renders [Send Email (disabled), Webhook]; Webhook is the only focusable one.
+    const webhook = Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]')).find((row) =>
+      row.textContent?.includes('Webhook'),
+    )!;
+    webhook.focus();
+    const pending = oneEvent(el, 'lr-reorder');
+    pressReorder(webhook, 'ArrowUp');
+    const detail = (await pending).detail as LyraNodePaletteEventMap['lr-reorder']['detail'];
+    expect(detail).to.deep.equal({ type: 'webhook', category: 'Actions', fromIndex: 3, toIndex: 2 });
+  });
+
+  it('stays silent at a category boundary, so a reorder can never become a recategorization', async () => {
+    const el = (await fixture(
+      html`<lr-node-palette reorderable .items=${items}></lr-node-palette>`,
+    )) as LyraNodePalette;
+    await el.updateComplete;
+    let requests = 0;
+    el.addEventListener('lr-reorder', () => requests++);
+
+    const first = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement;
+    first.focus();
+    pressReorder(first, 'ArrowUp'); // already first in "Data"
+    const last = Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]')).find((row) =>
+      row.textContent?.includes('Webhook'),
+    )!;
+    last.focus();
+    pressReorder(last, 'ArrowDown'); // already last in "Actions"
+    await el.updateComplete;
+    expect(requests).to.equal(0);
+  });
+
+  it('groups an uncategorized item under a null category', async () => {
+    const loose: PaletteItem[] = [
+      { type: 'a', label: 'Alpha' },
+      { type: 'b', label: 'Beta' },
+    ];
+    const el = (await fixture(
+      html`<lr-node-palette reorderable .items=${loose}></lr-node-palette>`,
+    )) as LyraNodePalette;
+    await el.updateComplete;
+    const first = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement;
+    first.focus();
+    const pending = oneEvent(el, 'lr-reorder');
+    pressReorder(first, 'ArrowDown');
+    const detail = (await pending).detail as LyraNodePaletteEventMap['lr-reorder']['detail'];
+    expect(detail).to.deep.equal({ type: 'a', category: null, fromIndex: 0, toIndex: 1 });
+  });
+
+  it('announces the new position only once the host has actually applied the move', async () => {
+    const el = (await fixture(
+      html`<lr-node-palette reorderable .items=${items}></lr-node-palette>`,
+    )) as LyraNodePalette;
+    await el.updateComplete;
+    const before = sinkTexts().length;
+    const first = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement;
+    first.focus();
+    pressReorder(first, 'ArrowDown');
+    await el.updateComplete;
+    expect(sinkTexts().length, 'the request alone announces nothing').to.equal(before);
+
+    // An unrelated items reassignment that does NOT apply the move must stay silent too.
+    el.items = [...items];
+    await el.updateComplete;
+    expect(sinkTexts().length).to.equal(before);
+
+    el.items = [items[1]!, items[0]!, items[2]!, items[3]!];
+    await el.updateComplete;
+    await waitUntil(() => sinkTexts().length > before);
+    expect(sinkTexts().at(-1)).to.equal('Moved to position 2 of 2');
+    expect(itemLabels(el)).to.deep.equal(['Transform', 'HTTP Request', 'Send Email', 'Webhook']);
+  });
 });

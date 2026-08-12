@@ -70,6 +70,31 @@ it('leaves the shadow part="region" mirror out of the accessibility tree so noth
   expect(region.hasAttribute('role')).to.be.false;
 });
 
+it('sizes the shadow part="region" mirror from the shared --lr-size-1px token, not a hard-coded literal', async () => {
+  const el = (await fixture(html`<lr-live-region></lr-live-region>`)) as LyraLiveRegion;
+  const region = regionEl(el);
+
+  // Default token value: the hairline box every visually-hidden-but-announced element uses.
+  expect(getComputedStyle(region).inlineSize).to.equal('1px');
+  expect(getComputedStyle(region).blockSize).to.equal('1px');
+
+  // Retheming the size scale through the documented `--lr-theme-*` hook must reach the mirror.
+  // A hard-coded `width: 1px` / `height: 1px` / `margin: -1px` ignores it entirely, which is the
+  // regression this asserts against -- src/internal/a11y.ts's `srOnly` is shared by ~50
+  // components, so an untokenized copy there silently exempts all of them from the token scale.
+  el.style.setProperty('--lr-theme-size-1px', '3px');
+  const themed = getComputedStyle(region);
+  expect(themed.inlineSize).to.equal('3px');
+  expect(themed.blockSize).to.equal('3px');
+  expect(themed.marginTop).to.equal('-3px');
+  expect(themed.marginInlineStart).to.equal('-3px');
+
+  // Still visually hidden and still in the accessibility tree either way.
+  expect(themed.position).to.equal('absolute');
+  expect(themed.overflow).to.equal('hidden');
+  expect(themed.whiteSpace).to.equal('nowrap');
+});
+
 it('reflects mode as a host attribute', async () => {
   const el = (await fixture(html`<lr-live-region></lr-live-region>`)) as LyraLiveRegion;
   el.mode = 'assertive';

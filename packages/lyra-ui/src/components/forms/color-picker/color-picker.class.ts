@@ -29,7 +29,7 @@ import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './color-picker.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_colorPicker, LYRA_DEFAULT_colorPickerCurrentValue, LYRA_DEFAULT_colorPickerEyeDropper, LYRA_DEFAULT_colorPickerHue, LYRA_DEFAULT_colorPickerHueValue, LYRA_DEFAULT_colorPickerOpacity, LYRA_DEFAULT_colorPickerOpacityValue, LYRA_DEFAULT_colorPickerSaturationBrightness, LYRA_DEFAULT_colorPickerSaturationBrightnessValue, LYRA_DEFAULT_colorPickerSwatch, LYRA_DEFAULT_colorPickerSwatches, LYRA_DEFAULT_colorPickerToggleFormat, LYRA_DEFAULT_colorPickerValueField, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_colorPicker, LYRA_DEFAULT_colorPickerCurrentValue, LYRA_DEFAULT_colorPickerEyeDropper, LYRA_DEFAULT_colorPickerHue, LYRA_DEFAULT_colorPickerHueValue, LYRA_DEFAULT_colorPickerOpacity, LYRA_DEFAULT_colorPickerOpacityValue, LYRA_DEFAULT_colorPickerSaturationBrightness, LYRA_DEFAULT_colorPickerSaturationBrightnessValue, LYRA_DEFAULT_colorPickerSwatch, LYRA_DEFAULT_colorPickerSwatches, LYRA_DEFAULT_colorPickerToggleFormat, LYRA_DEFAULT_colorPickerValueField, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -259,7 +259,6 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
     colorPicker: LYRA_DEFAULT_colorPicker,
     colorPickerCurrentValue: LYRA_DEFAULT_colorPickerCurrentValue,
     colorPickerEyeDropper: LYRA_DEFAULT_colorPickerEyeDropper,
@@ -273,10 +272,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     colorPickerSwatches: LYRA_DEFAULT_colorPickerSwatches,
     colorPickerToggleFormat: LYRA_DEFAULT_colorPickerToggleFormat,
     colorPickerValueField: LYRA_DEFAULT_colorPickerValueField,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
-    open: LYRA_DEFAULT_open,
-    restore: LYRA_DEFAULT_restore,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

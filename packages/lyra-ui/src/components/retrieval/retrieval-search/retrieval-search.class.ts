@@ -15,7 +15,7 @@ import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js'
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_retrievalFilterChipLabel, LYRA_DEFAULT_retrievalFiltersLabel, LYRA_DEFAULT_retrievalModeHybrid, LYRA_DEFAULT_retrievalModeKeyword, LYRA_DEFAULT_retrievalModeLabel, LYRA_DEFAULT_retrievalModeVector, LYRA_DEFAULT_retrievalSearchEmptyDescription, LYRA_DEFAULT_retrievalSearchLabel, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_retrievalFilterChipLabel, LYRA_DEFAULT_retrievalFiltersLabel, LYRA_DEFAULT_retrievalModeHybrid, LYRA_DEFAULT_retrievalModeKeyword, LYRA_DEFAULT_retrievalModeLabel, LYRA_DEFAULT_retrievalModeVector, LYRA_DEFAULT_retrievalSearchEmptyDescription, LYRA_DEFAULT_retrievalSearchLabel, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -53,8 +53,9 @@ export interface LyraRetrievalSearchEventMap {
  * button offers for its own `stoppable` busy state.
  *
  * Composes `<lr-input type="search">` for the query field, `<lr-segmented>` for the mode
- * selector (the same small-closed-set-choice-in-a-toolbar role it already fills, sized to sit
- * flush beside `<lr-input>`), `<lr-chip>`/`<lr-chip-group>` for removable active-filter/scope
+ * selector (the same small-closed-set-choice-in-a-toolbar role it already fills, left at the shared
+ * default size so it resolves the same `--lr-form-control-height` as the query field and the submit
+ * button and the row reads as one flush line), `<lr-chip>`/`<lr-chip-group>` for removable active-filter/scope
  * chips, `<lr-spinner>` for the loading state, and `<lr-empty>` (compact) for the empty state.
  * `filters`/`scope` chip removal updates this component's own copy first, then emits
  * `lr-filters-change` with the complete next state -- the same "update, then emit; reassign to
@@ -93,13 +94,8 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     cancel: LYRA_DEFAULT_cancel,
-    collapse: LYRA_DEFAULT_collapse,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     noMatches: LYRA_DEFAULT_noMatches,
-    open: LYRA_DEFAULT_open,
-    restore: LYRA_DEFAULT_restore,
     retrievalFilterChipLabel: LYRA_DEFAULT_retrievalFilterChipLabel,
     retrievalFiltersLabel: LYRA_DEFAULT_retrievalFiltersLabel,
     retrievalModeHybrid: LYRA_DEFAULT_retrievalModeHybrid,
@@ -311,9 +307,11 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
             @lr-input=${this.onQueryInput}
             @keydown=${this.onQueryKeyDown}
           ></lr-input>
+          <!-- No size override: the mode selector, the query input and the submit button all
+               resolve their height from the shared --lr-form-control-height ladder, so leaving
+               this at the same default size is what actually makes the row flush. -->
           <lr-segmented
             part="mode"
-            size="s"
             .items=${this.modeItems()}
             .value=${this.mode}
             label=${this.localize('retrievalModeLabel')}

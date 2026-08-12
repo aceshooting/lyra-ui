@@ -14,11 +14,6 @@ import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize, LyraVariant } from '../../../internal/variants.js';
 import type { MenuFocusTarget, SubmenuPanel } from './menu-shared.js';
 import { styles } from './menu-item.styles.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_items, LYRA_DEFAULT_loading, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export type MenuItemType = 'normal' | 'checkbox';
 export type MenuItemVariant = LyraVariant | 'default';
@@ -210,18 +205,6 @@ export interface LyraMenuItemEventMap {
  * @since 4.0.0
  */
 export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
-  // GENERATED DEFAULT-STRING SLICE: START
-  /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    items: LYRA_DEFAULT_items,
-    loading: LYRA_DEFAULT_loading,
-    open: LYRA_DEFAULT_open,
-  };
-  // GENERATED DEFAULT-STRING SLICE: END
-
   // The shared ladder sits before this component's own sheet so the per-tier `--lr-form-control-*`
   // knobs are already declared by the time `[part='base']` reads them.
   static override styles = [LyraElement.styles, sizes, styles];

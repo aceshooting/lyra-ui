@@ -501,6 +501,31 @@ describe('responsive metadata', () => {
     expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
     expect(getComputedStyle(metadata).overflowX).to.equal('auto');
   });
+
+  it('declares overflow-y explicitly so the single-axis overflow-x never leaves an implicit auto vertical scrollbar', async () => {
+    stubFetch({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [10, 20] },
+      properties: {},
+    });
+    const el = await fixture<LyraGeojsonView>(html`<lr-geojson-view></lr-geojson-view>`);
+    (el as unknown as { forceMissingMaplibreForTesting: boolean }).forceMissingMaplibreForTesting = true;
+    el.src = GEOJSON_URL;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="metadata"]') !== null);
+
+    const metadata = el.shadowRoot!.querySelector('[part="metadata"]') as HTMLElement;
+    // Per the CSS overflow spec, once overflow-x computes to a non-'visible' value, the OTHER
+    // axis's *computed* value is force-changed to 'auto' whenever it would otherwise be
+    // 'visible' -- and this coercion applies even when overflow-y: visible is declared
+    // explicitly (verified directly: `overflow-x: auto; overflow-y: visible` still computes
+    // overflowY as 'auto' in Chromium). 'visible' is therefore not an achievable computed value
+    // here, and an 'auto' value is exactly the phantom-scrollbar risk this test guards against
+    // (an unconstrained block-size means a sub-pixel rounding overflow could make 'auto' paint a
+    // vertical scrollbar). 'hidden' is the only value that both survives this coupling rule
+    // undisturbed and deterministically never renders a vertical scrollbar, matching "this part
+    // only ever needs horizontal scrolling".
+    expect(getComputedStyle(metadata).overflowY).to.equal('hidden');
+  });
 });
 
 describe('GeoJSON shape validation and coordinate extraction', () => {
@@ -945,6 +970,65 @@ describe('fetch lifecycle edge cases', () => {
       (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
       (globalThis as { AbortController?: typeof AbortController }).AbortController = originalAbortController;
     }
+  });
+});
+
+// -- Failure-state styling --------------------------------------------------
+
+describe('failure-state styling', () => {
+  // Read back the *rendered* colour rather than the stylesheet source: a rule that never matches
+  // reads identically to a working one from the source side, and inherited body text is exactly
+  // what an unstyled [part='error'] silently falls back to.
+  function resolveDeclaration(root: ShadowRoot, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    root.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  it('paints [part="error"] in the danger tone every sibling document viewer uses', async () => {
+    stubFetch({ not: 'geojson' });
+    const el = (await fixture(html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`)) as LyraGeojsonView;
+    await oneEvent(el, 'lr-render-error');
+    await el.updateComplete;
+    const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    const root = el.shadowRoot!;
+
+    expect(getComputedStyle(error).color).to.equal(
+      resolveDeclaration(root, 'color: var(--lr-color-danger)', 'color'),
+    );
+    // ...and specifically NOT the ordinary inherited body text colour, which is what a viewer with
+    // no [part='error'] rule of its own renders in.
+    expect(getComputedStyle(error).color).to.not.equal(
+      resolveDeclaration(root, 'color: var(--lr-color-text)', 'color'),
+    );
+  });
+
+  it('distinguishes the missing-peer callout from ordinary metadata text', async () => {
+    stubFetch(FEATURE_COLLECTION);
+    const el = (await fixture(html`<lr-geojson-view></lr-geojson-view>`)) as LyraGeojsonView;
+    (el as unknown as { forceMissingMaplibreForTesting: boolean }).forceMissingMaplibreForTesting = true;
+    el.src = GEOJSON_URL;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="missing-library"]') !== null);
+    const callout = el.shadowRoot!.querySelector('[part="missing-library"]') as HTMLElement;
+    const metadata = el.shadowRoot!.querySelector('[part="metadata"]') as HTMLElement;
+
+    expect(getComputedStyle(callout).color).to.equal(
+      resolveDeclaration(el.shadowRoot!, 'color: var(--lr-color-warning)', 'color'),
+    );
+    expect(getComputedStyle(callout).color).to.not.equal(getComputedStyle(metadata).color);
+  });
+
+  it('gives [part="status"] the quiet metadata tone rather than plain body text', async () => {
+    stubFetch(FEATURE_COLLECTION);
+    const el = (await fixture(html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`)) as LyraGeojsonView;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="status"]') != null, 'geojson-view never loaded', { timeout: 2000 });
+    const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
+    expect(getComputedStyle(status).color).to.equal(
+      resolveDeclaration(el.shadowRoot!, 'color: var(--lr-color-text-quiet)', 'color'),
+    );
   });
 });
 

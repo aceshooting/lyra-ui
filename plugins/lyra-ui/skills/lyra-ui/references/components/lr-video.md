@@ -48,12 +48,14 @@ instead of browser-name-gated.
 finite, clamped media state; `requestFullscreen()` and `exitFullscreen()` preserve the platform
 promise/rejection and reject with `NotSupportedError` when the capability is absent. `load()` is a
 Lyra extension that re-clones current light-DOM sources/tracks and restarts native resource
-selection under a fresh event generation.
+selection under a fresh event generation. `focus(options?)`, `blur()`, and `click()` forward to the
+play/pause control (absent, and therefore a no-op, under `controls="none"`).
 
 **Events:** native `ended`, `error`, `loadedmetadata`, `pause`, `play`, `timeupdate`, and
 `volumechange`, relayed exactly once from the host as native `Event` instances. They remain
 non-bubbling, non-composed, and non-cancelable. Scrubbing the custom timeline also dispatches an
-immediate host `timeupdate`, before a browser's eventual native seek notification.
+immediate host `timeupdate`, before a browser's eventual native seek notification. The internal
+play/pause control's `focus`/`blur` are additionally bridged as bubbling, composed host events.
 
 **Slots:** the default slot accepts direct `<source>` and `<track>` children;
 `controls-after-play`, `controls-start`, `exit-fullscreen-icon`, `fullscreen-icon`, `mute-icon`,
@@ -70,6 +72,11 @@ composition slots and may intentionally contain interactive controls.
 `caption-overlay`, `controls`, `controls-overlay`, `poster-overlay`, `poster-play-button`,
 `progress`, `thumbnail`, `timeline`, `timeline-indicator`, `timeline-thumb`, `timeline-track`,
 `video`, and `video-title-overlay`.
+
+The `progress` range input carries `aria-valuetext` as well as `aria-label` — a localized
+`{current} of {duration}` (key `avPlayerPosition`, shared with `lr-av-player`) built from the same
+locale-formatted clock times the visible elapsed/duration labels show, so a screen reader announces
+"1:07 of 5:00" instead of raw seconds.
 
 **Themeable custom properties:** `--controls-background` (default
 `var(--lr-color-overlay-strong)`), `--controls-color` (default `var(--lr-color-text)`), and

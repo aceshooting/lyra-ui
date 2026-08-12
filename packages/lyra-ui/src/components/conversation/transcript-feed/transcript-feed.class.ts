@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { styles } from './transcript-feed.styles.js';
@@ -37,6 +38,14 @@ export interface LyraTranscriptFeedEventMap {
  * moves from the interim area into the `role="log"` region and announces exactly once. Interim
  * entries render *after* the log container, visible but structurally outside it, so per-token
  * mutations are never spoken by assistive tech.
+ *
+ * That announcement does **not** come from the shadow `role="log"` region, which is explicitly
+ * `aria-live="off"`: a live region rendered inside a component's own shadow root is not reliably
+ * announced (JAWS with Firefox ignores one outright). Each newly final entry's `text` is announced
+ * once through the shared light-DOM `polite` sink instead (`internal/announcer.ts`), the same route
+ * `<lr-chat-viewport>` and `<lr-terminal>` take. The entries a feed is *mounted* with are existing
+ * transcript rather than newly spoken captions, so the first render only records them; a caption is
+ * announced when it becomes final on a later update, and never re-announced afterwards.
  *
  * Live captions only: recorded-media transcript sync — clickable cues, seek-on-select — is a
  * separate concern from this component.
@@ -89,6 +98,12 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
 
   private _isFirstUpdate = true;
 
+  /** Handle on the shared light-DOM `polite` region every announcement is written to. */
+  private announcementSink?: AnnouncementSink;
+  /** Ids already spoken (or recorded on the first render), so a caption announces exactly once
+   *  however many later updates keep re-rendering the same row. */
+  private announcedFinalIds = new Set<string>();
+
   /** `maxRenderedEntries`, normalized to a finite non-negative integer (falling back to the
    *  property's own default of `0`, meaning "render all") -- a raw `NaN` (e.g. an invalid
    *  `max-rendered-entries` attribute) would otherwise make `maxRenderedEntries > 0` always
@@ -112,15 +127,79 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     return this.renderedEntries.filter((e) => e.interim);
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.syncAnnouncementSink();
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.releaseAnnouncementSink();
+  }
+
+  adoptedCallback(): void {
+    // The sink is per-document; an element moved into another document has to stop writing into
+    // the region mounted in the one the user is no longer looking at.
+    this.syncAnnouncementSink();
+  }
+
+  private releaseAnnouncementSink(): void {
+    this.announcementSink?.release();
+    this.announcementSink = undefined;
+  }
+
+  /** Mounts (or remounts) the shared region *ahead of* any text -- assistive tech has to have been
+   *  observing a live region before content arrives, so acquiring it lazily at announce time is
+   *  unreliable. Mirrors `<lr-chat-viewport>`'s identically-shaped helper. */
+  private syncAnnouncementSink(): void {
+    if (!this.isConnected) {
+      this.releaseAnnouncementSink();
+      return;
+    }
+    if (this.announcementSink?.element.ownerDocument === this.ownerDocument) return;
+    this.releaseAnnouncementSink();
+    this.announcementSink = acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
+
   protected override willUpdate(): void {
     this._isFirstUpdate = !this.hasUpdated;
   }
 
   protected override updated(changed: PropertyValues): void {
-    if (changed.has('entries') && this.follow) this.scrollToBottom();
+    if (changed.has('entries')) {
+      if (this.follow) this.scrollToBottom();
+      this.announceFinalizedEntries();
+    }
     if (changed.has('follow')) {
       if (this.follow) this.scrollToBottom();
       if (!this._isFirstUpdate) this.emit('lr-follow-change', { following: this.follow });
+    }
+  }
+
+  /** Speaks every entry that has become final since the previous update. The very first update
+   *  only records what is already there: a feed mounted with existing transcript must not read
+   *  the whole backlog aloud. `entries` is the full host-owned list (not `renderedEntries`), so a
+   *  `max-rendered-entries` cap scrolling a row out of the DOM neither suppresses its
+   *  announcement nor lets it be announced a second time on the way back in. */
+  private announceFinalizedEntries(): void {
+    const alreadyAnnounced = this.announcedFinalIds;
+    const current = new Set<string>();
+    const fresh: string[] = [];
+    for (const entry of this.entries) {
+      if (entry.interim) continue;
+      current.add(entry.id);
+      if (!alreadyAnnounced.has(entry.id)) fresh.push(entry.text);
+    }
+    this.announcedFinalIds = current;
+    if (this._isFirstUpdate) return;
+    const sink = this.announcementSink;
+    if (!sink) return;
+    for (const text of fresh) {
+      const message = text.replace(/\s+/g, ' ').trim();
+      if (message) sink.announce(message);
     }
   }
 
@@ -189,7 +268,12 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
         ${empty
           ? html`<div part="empty"><slot name="empty">${this.localize('transcriptFeedEmpty')}</slot></div>`
           : html`
-              <div part="log" role="log" aria-label=${this.accessibleLabel || this.label || this.localize('transcriptFeedLabel')}>
+              <div
+                part="log"
+                role="log"
+                aria-live="off"
+                aria-label=${this.accessibleLabel || this.label || this.localize('transcriptFeedLabel')}
+              >
                 ${repeat(
                   finals,
                   (e) => e.id,

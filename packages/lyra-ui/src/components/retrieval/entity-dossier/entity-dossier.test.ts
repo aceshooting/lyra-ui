@@ -174,6 +174,79 @@ it('lets a deeply-nested composed event (lr-entity-activate from lr-entity-card,
   expect(event.detail).to.deep.equal({ id: 'e1' });
 });
 
+describe('provenance-tab conduit events', () => {
+  const richProvenance: LyraProvenance = {
+    entities: [entity],
+    chunks,
+    communities: [{ id: 'c1', label: 'Nobel laureates', memberCount: 2 }],
+    relationships: [
+      {
+        path: [
+          { kind: 'node', node: entity },
+          { kind: 'edge', relation: 'discovered' },
+          { kind: 'node', node: { id: 'elem1', label: 'Polonium' } },
+        ],
+      },
+    ],
+  };
+
+  async function provenancePanel(): Promise<LyraProvenancePanel> {
+    const el = (await fixture(html`<lr-entity-dossier></lr-entity-dossier>`)) as LyraEntityDossier;
+    el.entity = entity;
+    el.types = [{ id: 'person', label: 'Person' }];
+    el.provenance = richProvenance;
+    await el.updateComplete;
+    const tabs = el.shadowRoot!.querySelector('lr-tab-group') as LyraTabGroup;
+    await tabs.updateComplete;
+    // Third tab: the provenance panel. Selected by position rather than label so this stays
+    // meaningful under a locale override of the reused `provenancePanelLabel` key.
+    const provenanceTab = tabs.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="tab"]')[2]!;
+    provenanceTab.click();
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('lr-provenance-panel') as LyraProvenancePanel;
+    await panel.updateComplete;
+    return panel;
+  }
+
+  function host(panel: LyraProvenancePanel): LyraEntityDossier {
+    return (panel.getRootNode() as ShadowRoot).host as LyraEntityDossier;
+  }
+
+  it("surfaces a community card's lr-drill through the dossier host", async () => {
+    const panel = await provenancePanel();
+    const card = panel.shadowRoot!.querySelector('lr-community-card')!;
+    await (card as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+    const drill = card.shadowRoot!.querySelector('[part="drill-button"]') as HTMLElement;
+    const listener = oneEvent(host(panel), 'lr-drill');
+    drill.click();
+    expect((await listener).detail).to.deep.equal({ id: 'c1' });
+  });
+
+  it("surfaces an entity chip's lr-entity-open through the dossier host", async () => {
+    const panel = await provenancePanel();
+    const chip = panel.shadowRoot!.querySelector('lr-entity-chip')!;
+    await (chip as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+    const listener = oneEvent(host(panel), 'lr-entity-open');
+    (chip.shadowRoot!.querySelector('[part="base"]') as HTMLElement).dispatchEvent(
+      new MouseEvent('dblclick', { bubbles: true, composed: true }),
+    );
+    expect((await listener).detail).to.deep.equal({ id: 'e1' });
+  });
+
+  it("surfaces a relationship path strip's lr-relation-activate through the dossier host", async () => {
+    const panel = await provenancePanel();
+    const strip = panel.shadowRoot!.querySelector('lr-path-strip')!;
+    await (strip as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+    const relation = strip.shadowRoot!.querySelector('[part="relation"]') as HTMLElement;
+    const listener = oneEvent(host(panel), 'lr-relation-activate');
+    relation.click();
+    const detail = (await listener).detail as { relation: string; sourceId?: string; targetId?: string };
+    expect(detail.relation).to.equal('discovered');
+    expect(detail.sourceId).to.equal('e1');
+    expect(detail.targetId).to.equal('elem1');
+  });
+});
+
 it('forwards a host aria-label to the internal lr-tab-group strip', async () => {
   const el = (await fixture(html`<lr-entity-dossier aria-label="Entity detail"></lr-entity-dossier>`)) as LyraEntityDossier;
   el.entity = entity;

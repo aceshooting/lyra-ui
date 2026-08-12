@@ -10,7 +10,7 @@ import { styles } from './poll-status.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_pollInactive, LYRA_DEFAULT_pollPause, LYRA_DEFAULT_pollPaused, LYRA_DEFAULT_pollPausedAnnounce, LYRA_DEFAULT_pollRefreshing, LYRA_DEFAULT_pollRefreshingAnnounce, LYRA_DEFAULT_pollResume, LYRA_DEFAULT_pollResumedAnnounce } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_pollInactive, LYRA_DEFAULT_pollPause, LYRA_DEFAULT_pollPaused, LYRA_DEFAULT_pollPausedAnnounce, LYRA_DEFAULT_pollRefreshing, LYRA_DEFAULT_pollRefreshingAnnounce, LYRA_DEFAULT_pollResume, LYRA_DEFAULT_pollResumedAnnounce } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -49,9 +49,6 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
     pollInactive: LYRA_DEFAULT_pollInactive,
     pollPause: LYRA_DEFAULT_pollPause,
     pollPaused: LYRA_DEFAULT_pollPaused,

@@ -17,7 +17,7 @@ import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { styles } from './flow-canvas.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_flowCanvasLabel, LYRA_DEFAULT_flowCanvasSummary, LYRA_DEFAULT_flowConnectCancelled, LYRA_DEFAULT_flowConnectCommitted, LYRA_DEFAULT_flowConnectStarted, LYRA_DEFAULT_flowConnectTarget, LYRA_DEFAULT_flowEdge, LYRA_DEFAULT_flowEdgeList, LYRA_DEFAULT_flowEdgeWithLabel, LYRA_DEFAULT_flowItemAnnouncement, LYRA_DEFAULT_flowNode, LYRA_DEFAULT_flowNodeDeselected, LYRA_DEFAULT_flowNodeMoved, LYRA_DEFAULT_flowNodeSelected, LYRA_DEFAULT_flowSelectionCleared, LYRA_DEFAULT_noData, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_flowCanvasLabel, LYRA_DEFAULT_flowCanvasSummary, LYRA_DEFAULT_flowConnectCancelled, LYRA_DEFAULT_flowConnectCommitted, LYRA_DEFAULT_flowConnectStarted, LYRA_DEFAULT_flowConnectTarget, LYRA_DEFAULT_flowEdge, LYRA_DEFAULT_flowEdgeList, LYRA_DEFAULT_flowEdgeWithLabel, LYRA_DEFAULT_flowItemAnnouncement, LYRA_DEFAULT_flowNode, LYRA_DEFAULT_flowNodeDeselected, LYRA_DEFAULT_flowNodeMoved, LYRA_DEFAULT_flowNodeSelected, LYRA_DEFAULT_flowSelectionCleared, LYRA_DEFAULT_noData } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -232,9 +232,6 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    details: LYRA_DEFAULT_details,
     flowCanvasLabel: LYRA_DEFAULT_flowCanvasLabel,
     flowCanvasSummary: LYRA_DEFAULT_flowCanvasSummary,
     flowConnectCancelled: LYRA_DEFAULT_flowConnectCancelled,
@@ -251,7 +248,6 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     flowNodeSelected: LYRA_DEFAULT_flowNodeSelected,
     flowSelectionCleared: LYRA_DEFAULT_flowSelectionCleared,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { forcedColorLegendSwatchStyles } from './chart-forced-colors.js';
 
 // Deliberately its own sheet rather than a wholesale re-export of
 // `chart.styles.ts`: unlike `lr-histogram`, `LyraBoxPlot` doesn't extend
@@ -108,6 +109,7 @@ export const styles = css`
     flex: 0 0 auto;
     border-radius: var(--lr-radius-xs);
   }
+  ${forcedColorLegendSwatchStyles}
   lr-skeleton {
     --lr-skeleton-w: 100%;
     --lr-skeleton-h: var(--lr-chart-height, var(--_lr-chart-height, var(--lr-size-280px)));
@@ -115,6 +117,25 @@ export const styles = css`
   canvas {
     inline-size: 100% !important;
     block-size: 100% !important;
+  }
+  [part='canvas'] {
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+  }
+  /* no-pressed-state: the canvas is a role="application" keyboard surface with no click handler of
+     its own -- pressing it activates a box *inside* the bitmap, which no CSS rule can reach, and
+     re-outlining the whole plot on mousedown would read as the entire chart being the target.
+     Same treatment, and same rationale, as chart.styles.ts's canvas. */
+  [part='canvas']:hover {
+    /* Scoped so a consumer can retint/resize just this hover outline without also affecting every
+       other --lr-border-width-thin consumer on the page -- the same indirection rationale as the
+       --lr-chart-grid-color/-tick-color/etc. block above, applied to a state-specific rule. */
+    outline: var(--lr-chart-canvas-hover-outline-width, var(--lr-border-width-thin)) solid var(--lr-chart-grid-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part='canvas']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='error'] {
     margin: 0;

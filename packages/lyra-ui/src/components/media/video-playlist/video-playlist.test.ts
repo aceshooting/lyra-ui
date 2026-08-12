@@ -1055,3 +1055,42 @@ describe('lr-video-playlist inert handling', () => {
     expect(childVideos(el)[0]!.hidden).to.be.false;
   });
 });
+
+it('forwards host focus()/blur()/click() to the roving playlist row and re-dispatches its focus/blur', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <lr-video-playlist>
+        <lr-video title="First"></lr-video>
+        <lr-video title="Second"></lr-video>
+      </lr-video-playlist>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-video-playlist') as LyraVideoPlaylist;
+  await settle(el);
+  // Listening on the PARENT: a native focus/blur is composed but does not bubble, so only the
+  // component's own re-dispatched event reaches this listener.
+  const seen: string[] = [];
+  wrapper.addEventListener('focus', () => seen.push('focus'));
+  wrapper.addEventListener('blur', () => seen.push('blur'));
+
+  el.focus();
+  expect(el.shadowRoot!.activeElement === items(el)[0]).to.equal(true);
+
+  el.blur();
+  expect(el.shadowRoot!.activeElement === null).to.equal(true);
+
+  const changed = oneEvent(el, 'lr-video-change');
+  el.goTo(1);
+  await changed;
+  await settle(el);
+  el.focus();
+  expect(el.shadowRoot!.activeElement === items(el)[1], 'focus follows the roving row').to.equal(true);
+
+  let clicks = 0;
+  items(el)[1]!.addEventListener('click', () => {
+    clicks += 1;
+  });
+  el.click();
+  expect(clicks, 'click() activates the roving row').to.equal(1);
+  expect(seen).to.deep.equal(['focus', 'blur', 'focus']);
+});

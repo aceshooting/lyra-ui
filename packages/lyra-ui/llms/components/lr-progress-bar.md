@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -35,9 +35,17 @@ presence-based, so an explicitly empty value remains empty rather than invoking 
 **Themeable custom properties:** `--lr-progress-track-height` (default
 `var(--lr-progress-height, var(--lr-size-1rem))`; `--lr-progress-height` is the legacy fallback),
 `--lr-progress-track-color` (default `var(--lr-color-brand-quiet)`),
-`--lr-progress-indicator-color` (default `var(--lr-color-brand)`), and
+`--lr-progress-indicator-color` (default `var(--lr-progress-indicator-variant-color)`), and
 `--lr-progress-label-color` (default `var(--lr-color-text)`). Upstream aliases are `--height` and
 `--track-height`, plus `--track-color`, `--indicator-color`, and `--label-color`.
+
+`--lr-progress-indicator-variant-color` is the palette slot the active `variant` feeds: it resolves
+to that variant's loud fill from the shared semantic grid (`var(--lr-color-fill-loud)`), falling back
+to `var(--lr-color-brand)` on an element that has not updated yet. It sits *inside*
+`--lr-progress-indicator-color` and the upstream `--indicator-color` alias in the fallback chain, so
+setting either of those still wins outright and the indicator renders exactly as it did before
+`variant` support existed. Set the variant-color slot instead when you want to retheme one semantic
+tone while leaving the rest of the grid alone.
 
 **Additional API surface:**
 

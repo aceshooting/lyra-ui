@@ -508,6 +508,29 @@ describe('node-path anchors', () => {
     expect(await el.scrollToAnchor({ kind: 'node-path', path: ['@href', 0] })).to.be.false;
   });
 
+  it('distinguishes the specific attribute a trailing @segment addresses, not just its owning element', async () => {
+    const multiAttr = '<root><item><link href="https://a.test" rel="next" title="A">A</link></item></root>';
+    const el = (await fixture(html`<lr-xml-viewer .xml=${multiAttr}></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+
+    expect(await el.scrollToAnchor({ kind: 'node-path', path: [0, 0, '@rel'] })).to.be.true;
+    await el.updateComplete;
+    const active = el.shadowRoot!.querySelectorAll('[part="attribute"][data-active]');
+    // Exactly one of the three attributes is distinguished, and it is the addressed one -- a
+    // consumer citing one attribute value of a multi-attribute element could otherwise not tell
+    // from the rendered DOM which attribute was meant.
+    expect(active.length).to.equal(1);
+    expect(active[0]!.querySelector('[part="attribute-name"]')!.textContent).to.equal('rel');
+    expect(getComputedStyle(active[0]! as HTMLElement).outlineStyle).to.equal('solid');
+
+    // Re-anchoring at element granularity clears the attribute-level distinction again.
+    expect(await el.scrollToAnchor({ kind: 'node-path', path: [0, 0] })).to.be.true;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="attribute"][data-active]').length).to.equal(0);
+  });
+
   it('resolves false for an empty or missing trailing attribute segment', async () => {
     const el = (await fixture(html`<lr-xml-viewer .xml=${RSS_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
     await el.updateComplete;
@@ -958,4 +981,103 @@ it('searchNext/searchPrevious resolve a boolean, matching the shared viewer sear
   expect(await el.search('__definitely_absent__')).to.equal(0);
   expect(await el.searchNext(), 'no matches to move to').to.be.false;
   expect(await el.searchPrevious(), 'no matches to move to').to.be.false;
+});
+
+describe('host-supplied highlights', () => {
+  const HIGHLIGHT_XML = '<root><alpha id="a">One</alpha><beta id="b">Two</beta><gamma id="c">Three</gamma></root>';
+
+  function nodeRows(el: LyraXmlViewer): HTMLElement[] {
+    return Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="node"]'));
+  }
+
+  it('paints a node-path highlight on the addressed element row, with its tone', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${HIGHLIGHT_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+
+    el.highlights = [{ id: 'h1', tone: 'success', anchor: { kind: 'node-path', path: [1] } }];
+    await el.updateComplete;
+
+    const highlighted = nodeRows(el).filter((row) => row.hasAttribute('data-highlight'));
+    expect(highlighted.length, 'exactly the addressed element row is painted').to.equal(1);
+    expect(highlighted[0]!.querySelector('[part="tag"]')!.textContent).to.equal('beta');
+    expect(highlighted[0]!.getAttribute('data-highlight')).to.equal('success');
+    // Rendered result, not stylesheet text: the tint must actually reach the box.
+    expect(getComputedStyle(highlighted[0]!).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('defaults an untoned highlight to accent and clears painting when highlights are removed', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${HIGHLIGHT_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+
+    el.highlights = [{ id: 'h1', anchor: { kind: 'node-path', path: [0] } }];
+    await el.updateComplete;
+    expect(nodeRows(el).filter((row) => row.hasAttribute('data-highlight'))[0]!.getAttribute('data-highlight'))
+      .to.equal('accent');
+
+    el.highlights = [];
+    await el.updateComplete;
+    expect(nodeRows(el).filter((row) => row.hasAttribute('data-highlight')).length).to.equal(0);
+  });
+
+  it('exposes each highlight as a focusable action emitting lr-highlight-activate', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${HIGHLIGHT_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+
+    el.highlights = [
+      { id: 'h1', anchor: { kind: 'node-path', path: [0] }, label: 'First finding' },
+      { id: 'h2', anchor: { kind: 'node-path', path: [2] } },
+    ];
+    await el.updateComplete;
+
+    const actions = Array.from(el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="highlight-action"]'));
+    expect(actions.length).to.equal(2);
+    expect(actions[0]!.getAttribute('aria-label')).to.equal('Highlight: First finding');
+    expect(actions[1]!.getAttribute('aria-label')).to.equal('Highlight 2 of 2');
+
+    const activated = oneEvent(el, 'lr-highlight-activate');
+    actions[1]!.click();
+    const event = await activated as CustomEvent<{ id: string }>;
+    expect(event.detail.id).to.equal('h2');
+    expect(event.cancelable).to.be.false;
+  });
+
+  it('marks the activeHighlightId row so a host can show which citation is current', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${HIGHLIGHT_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+
+    el.highlights = [
+      { id: 'h1', anchor: { kind: 'node-path', path: [0] } },
+      { id: 'h2', anchor: { kind: 'node-path', path: [1] } },
+    ];
+    el.activeHighlightId = 'h2';
+    await el.updateComplete;
+
+    const active = nodeRows(el).filter((row) => row.hasAttribute('data-active-highlight'));
+    expect(active.length).to.equal(1);
+    expect(active[0]!.querySelector('[part="tag"]')!.textContent).to.equal('beta');
+    expect(getComputedStyle(active[0]!).outlineStyle).to.equal('solid');
+  });
+
+  it('ignores highlights whose anchor kind or path this viewer cannot resolve', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${HIGHLIGHT_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+
+    el.highlights = [
+      { id: 'wrong-kind', anchor: { kind: 'page', page: 2 } },
+      { id: 'out-of-range', anchor: { kind: 'node-path', path: [99] } },
+      { id: 'bad-attr', anchor: { kind: 'node-path', path: [0, '@missing'] } },
+    ];
+    await el.updateComplete;
+
+    expect(nodeRows(el).filter((row) => row.hasAttribute('data-highlight')).length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="highlight-action"]').length).to.equal(0);
+  });
+
+  it('is accessible with highlights painted', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${HIGHLIGHT_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+    el.highlights = [{ id: 'h1', tone: 'danger', anchor: { kind: 'node-path', path: [1] } }];
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
 });

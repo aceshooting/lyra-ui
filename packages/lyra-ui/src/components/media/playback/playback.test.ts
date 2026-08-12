@@ -723,6 +723,25 @@ describe('string localization', () => {
     expect(playButton(el).getAttribute('aria-label')).to.equal('Pause');
   });
 
+  it('announces the slider position as a localized step count rather than a bare index', async () => {
+    const el = (await fixture(
+      html`<lr-playback length="10" index="3" lang="ar-EG"></lr-playback>`,
+    )) as LyraPlayback;
+    expect(slider(el).getAttribute('aria-valuetext')).to.equal('Step ٤ of ١٠');
+
+    el.next();
+    await el.updateComplete;
+    expect(slider(el).getAttribute('aria-valuetext')).to.equal('Step ٥ of ١٠');
+
+    const translated = (await fixture(html`
+      <lr-playback
+        length="3"
+        .strings=${{ playbackStepPosition: 'Étape {index} sur {total}' }}
+      ></lr-playback>
+    `)) as LyraPlayback;
+    expect(slider(translated).getAttribute('aria-valuetext')).to.equal('Étape 1 sur 3');
+  });
+
   it('honors a strings override for play/pause/playbackPosition', async () => {
     const el = (await fixture(html`
       <lr-playback

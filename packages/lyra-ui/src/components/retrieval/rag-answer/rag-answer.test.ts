@@ -20,6 +20,17 @@ describe('lr-rag-answer', () => {
     expect(chrome.paddingTop).to.equal('0px');
   });
 
+  it('hides the sources section entirely when showSources is false, even with real sources data', async () => {
+    const el = (await fixture(html`<lr-rag-answer
+      answer="Answer"
+      .citations=${[{ id: 'c1', sourceId: 'd1' }]}
+      .sources=${[{ id: 'd1', name: 'guide.md' }]}
+      .showSources=${false}
+    ></lr-rag-answer>`)) as LyraRagAnswer;
+    await el.updateComplete;
+    expect(Boolean(el.shadowRoot!.querySelector('[part="sources"]'))).to.be.false;
+  });
+
   it('renders per-instance strings overrides on every localized answer surface', async () => {
     const strings = {
       ragAnswerLabel: 'Réponse étayée',
@@ -258,5 +269,19 @@ describe('lr-rag-answer', () => {
     );
     await el.updateComplete;
     expect(selected).to.equal(0);
+  });
+
+  it('degrades to no slotted-content tracking instead of throwing in a realm without MutationObserver', () => {
+    const el = document.createElement('lr-rag-answer') as LyraRagAnswer;
+    const OriginalMutationObserver = window.MutationObserver;
+    (window as unknown as { MutationObserver?: typeof MutationObserver }).MutationObserver = undefined;
+    try {
+      expect(() => el.connectedCallback()).to.not.throw();
+      const observer = (el as unknown as { slotObserver?: MutationObserver }).slotObserver;
+      expect(observer === undefined, 'no observer is armed without a constructor to build it from').to.equal(true);
+    } finally {
+      el.disconnectedCallback();
+      window.MutationObserver = OriginalMutationObserver;
+    }
   });
 });

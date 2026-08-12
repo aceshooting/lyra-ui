@@ -17,7 +17,7 @@ import type { LyraWidgetRendererEventMap } from '../widget-renderer/widget-rende
 import { styles } from './message-parts.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_citation, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_messagePartError, LYRA_DEFAULT_messagePartRetry, LYRA_DEFAULT_messagePartsLabel, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_thinkingPanelLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_messagePartError, LYRA_DEFAULT_messagePartRetry, LYRA_DEFAULT_messagePartsLabel, LYRA_DEFAULT_retry, LYRA_DEFAULT_thinkingPanelLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type MessagePartRenderer = (part: MessagePart, index: number) => unknown;
@@ -90,13 +90,9 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    citation: LYRA_DEFAULT_citation,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     messagePartError: LYRA_DEFAULT_messagePartError,
     messagePartRetry: LYRA_DEFAULT_messagePartRetry,
     messagePartsLabel: LYRA_DEFAULT_messagePartsLabel,
-    open: LYRA_DEFAULT_open,
     retry: LYRA_DEFAULT_retry,
     thinkingPanelLabel: LYRA_DEFAULT_thinkingPanelLabel,
   };

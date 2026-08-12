@@ -48,6 +48,12 @@ export interface LyraSwatchPickerEventMap {
  * option identity; removing the focused option moves focus to the nearest surviving swatch without
  * changing the controlled `value` or emitting `lr-change`.
  *
+ * `disabled` locks the whole picker: every swatch renders as a real `disabled` `<button>` (out of
+ * the tab sequence, inert to activation), keyboard navigation and `click()` become no-ops, and the
+ * swatches dim with a `not-allowed` cursor. It is the picker's own attribute only — this control is
+ * deliberately not form-associated (it submits nothing, carries no `name`, validity or reset
+ * semantics), so an ancestor `<fieldset disabled>` does not cascade into it.
+ *
  * @customElement lr-swatch-picker
  * @event lr-change - Fired when the selected value changes via click or keyboard.
  *   `detail: { value }`.
@@ -105,6 +111,18 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
    *  visible label context exists around it (e.g. no wrapping `<label>` or adjacent heading).
    *  The resolved name is set on the `role="radiogroup"` element. */
   @property() label = '';
+
+  /** Locks the whole picker: every rendered swatch becomes a genuinely `disabled` `<button>` (so
+   *  it leaves the tab sequence and stops emitting activation), arrow/Home/End navigation and
+   *  `click()` become no-ops, and the swatches dim to `--lr-opacity-disabled` with a `not-allowed`
+   *  cursor. Use it for the usual "locked while saving" case.
+   *
+   *  This is the picker's OWN attribute only. `<lr-swatch-picker>` is deliberately not a
+   *  form-associated element — it emits `lr-change` and is driven by `value`, but it submits
+   *  nothing and has no name, validity or reset semantics — so, exactly like a native `<div>`,
+   *  it takes no disablement from an ancestor `<fieldset disabled>`. Disable the picker itself
+   *  alongside the fieldset when a form needs both. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
 
   // Values are submitted/emitted as strings but are not required to be
   // unique. Retain occurrence identity separately so duplicate values do
@@ -217,6 +235,10 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
+    // A swatch that already held focus when `disabled` flipped can still deliver key events even
+    // though every button is now `disabled` and unfocusable, so the guard lives here too rather
+    // than relying on the buttons alone.
+    if (this.disabled) return;
     const navigable = this.options;
     if (navigable.length === 0) return;
     const currentIndex = this.resolveSelectedIndex();
@@ -280,6 +302,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
             aria-checked=${index === selectedIndex ? 'true' : 'false'}
             aria-label=${option.label}
             title=${option.label}
+            ?disabled=${this.disabled}
             tabindex=${index === tabbableIndex ? '0' : '-1'}
             style=${styleMap(color ? { '--lr-swatch-color': color } : {})}
             @click=${() => this.select(option, index)}

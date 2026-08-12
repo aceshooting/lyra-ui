@@ -24,6 +24,30 @@ export const Default: Story = {
   render: () => html`<div style="inline-size:16rem"><lr-node-palette .items=${items}></lr-node-palette></div>`,
 };
 
+/**
+ * `reorderable` lets a keyboard user curate the catalog: Ctrl/Cmd+ArrowUp/ArrowDown on the focused
+ * item requests a move within its own category group. `lr-reorder` is only a request — the host
+ * owns `items` and applies the reported indices, as this story does.
+ */
+export const Reorderable: Story = {
+  render: () => {
+    let ordered = [...items];
+    const onReorder = (event: Event) => {
+      const { fromIndex, toIndex } = (event as CustomEvent<{ fromIndex: number; toIndex: number }>).detail;
+      const next = [...ordered];
+      const [moved] = next.splice(fromIndex, 1);
+      if (moved) next.splice(toIndex, 0, moved);
+      ordered = next;
+      (event.currentTarget as HTMLElement & { items: PaletteItem[] }).items = ordered;
+    };
+    return html`
+      <div style="inline-size:16rem">
+        <lr-node-palette reorderable .items=${ordered} @lr-reorder=${onReorder}></lr-node-palette>
+      </div>
+    `;
+  },
+};
+
 export const WithCanvas: Story = {
   render: () => {
     let nodes: FlowNode[] = [];

@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -26,7 +26,15 @@ codes. `maxScrollback: number = 5000` (attribute `max-scrollback`), `follow: boo
 (reflected) and `downloadable: boolean = false` (reflected) toggle the toolbar buttons, `filename:
 string = 'terminal.log'`, `announceOutput: boolean = false` (attribute `announce-output`),
 `accessibleLabel: string = ''` (attribute `aria-label`), `highlights: LyraHighlight[] = []` (attribute:
-false), and `activeHighlightId: string | null = null` (attribute: false). `anchorKinds:
+false), and `activeHighlightId: string | null = null` (attribute: false).
+`compact: boolean = false` (reflected) — tightens `[part="toolbar"]`'s padding and gap and each
+rendered line's inline padding for a terminal embedded in an already-padded transcript row, the same
+convention `<lr-task-list>` and `<lr-thinking-panel>` use; purely a density knob, the card border and
+background stay. `frame: LyraFrame = 'card'` (reflected) — container treatment in the library-wide
+`frame` vocabulary (`'card' | 'plain'`); `'plain'` removes `[part="base"]`'s border, corner radius,
+and raised surface so a terminal nested inside a container that already draws a border (an agent-run
+panel, a message bubble) doesn't double it, while keeping the toolbar/log divider and whichever
+regular or compact padding applies. `anchorKinds:
 LyraAnchor['kind'][] = ['line-range']` is readonly — a scrollback buffer addresses positions by line number, so `line-range` is the
 only kind `scrollToAnchor()` resolves; `page`/`text-quote`/`region` belong to the paginated document
 viewers, not here. `<lr-terminal>` is not registered in the document-renderer registry, so this field
@@ -71,7 +79,13 @@ viewport's block size; not declared on `:host`, so it is inherited from the host
 `--lr-terminal-highlight-warning-bg` (default `var(--lr-color-warning-quiet)`),
 `--lr-terminal-highlight-danger-bg` (default `var(--lr-color-danger-quiet)`), and
 `--lr-terminal-highlight-neutral-bg` (default `var(--lr-color-surface)`) — the background of a
-`highlights[]` entry of the matching `tone`. Each is decoupled from the identical shared token it
+`highlights[]` entry of the matching `tone`. `--lr-terminal-compact-toolbar-padding` (default
+`var(--lr-space-2xs) var(--lr-space-xs)`) and `--lr-terminal-compact-toolbar-gap` (default
+`var(--lr-space-2xs)`) retune `[part="toolbar"]`'s padding and button gap while `compact`, and
+`--lr-terminal-compact-line-padding-inline` (default `var(--lr-space-xs)`) retunes each rendered
+line's inline padding while `compact` — all three sit behind inline `var()` fallbacks, so a
+transcript can retune every nested terminal at once without restating the rules. Each highlight
+background is decoupled from the identical shared token it
 falls back to (e.g. `accent`'s `--lr-color-brand-quiet` is also the copy/download-button hover tint)
 so retinting one tone doesn't repaint the other surface reading that token, and from any
 `::part('line')` stylesheet override — the background is applied inline, so a stylesheet rule can't

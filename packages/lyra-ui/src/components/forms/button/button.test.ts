@@ -387,9 +387,14 @@ describe('lr-button', () => {
     // block below -- a stylesheet-text match cannot tell a fill that moves from one that resolves
     // to the page surface, which is exactly how the quiet hover shipped broken. What is left here
     // is the reduced-motion contract, which is a media-query shape rather than a colour.
-    expect(css).to.match(/\[part~='base'\]:not\(:disabled\):active\s*\{[^}]*transform:\s*scale\(/);
+    // The :not() argument is a selector LIST (`:disabled` for the <button> path, the anchor
+    // path's aria-disabled attribute alongside it), so the shape match stays tolerant of what
+    // else is excluded and pins only the reduced-motion contract itself.
     expect(css).to.match(
-      /@media \(prefers-reduced-motion: reduce\) \{[^]*\[part~='base'\]:not\(:disabled\):active\s*\{[^}]*transform:\s*none[^}]*\}[^]*\}/,
+      /\[part~='base'\]:not\([^)]*:disabled[^)]*\):active\s*\{[^}]*transform:\s*scale\(/,
+    );
+    expect(css).to.match(
+      /@media \(prefers-reduced-motion: reduce\) \{[^]*\[part~='base'\]:not\([^)]*:disabled[^)]*\):active\s*\{[^}]*transform:\s*none[^}]*\}[^]*\}/,
     );
   });
 
@@ -968,6 +973,54 @@ describe('lr-button', () => {
         const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
         expect(anchor.getAttribute('href')).to.equal('https://example.com');
         expect(anchor.hasAttribute('aria-disabled')).to.be.false;
+      });
+
+      it('dims the disabled anchor and shows not-allowed, exactly like the native button path', async () => {
+        // An <a> can never match :disabled, so the [part~='base']:disabled rule that dims the
+        // <button> render path is unreachable here -- without a companion rule keyed off the
+        // attribute the anchor DOES carry, a disabled link button looks fully clickable and
+        // silently does nothing.
+        const el = (await fixture(
+          html`<lr-button disabled href="https://example.com">Go</lr-button>`,
+        )) as LyraButton;
+        const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
+        const anchorStyle = getComputedStyle(anchor);
+        expect(Number(anchorStyle.opacity) < 1, 'disabled link must be dimmed').to.equal(true);
+        expect(anchorStyle.cursor).to.equal('not-allowed');
+
+        const native = (await fixture(html`<lr-button disabled>Go</lr-button>`)) as LyraButton;
+        const button = native.shadowRoot!.querySelector('button[part~="base"]') as HTMLButtonElement;
+        const buttonStyle = getComputedStyle(button);
+        expect(anchorStyle.opacity).to.equal(buttonStyle.opacity);
+        expect(anchorStyle.cursor).to.equal(buttonStyle.cursor);
+      });
+
+      it('leaves an enabled link at full opacity with a pointer cursor', async () => {
+        const el = (await fixture(
+          html`<lr-button href="https://example.com">Go</lr-button>`,
+        )) as LyraButton;
+        const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
+        const style = getComputedStyle(anchor);
+        expect(Number(style.opacity)).to.equal(1);
+        expect(style.cursor).to.equal('pointer');
+      });
+
+      it('dims a link disabled purely by an ancestor fieldset', async () => {
+        const form = (await fixture(html`
+          <form>
+            <fieldset>
+              <lr-button href="https://example.com">Go</lr-button>
+            </fieldset>
+          </form>
+        `)) as HTMLFormElement;
+        const el = form.querySelector('lr-button') as LyraButton;
+        const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+        fieldset.disabled = true;
+        await el.updateComplete;
+        const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
+        const style = getComputedStyle(anchor);
+        expect(Number(style.opacity) < 1, 'fieldset-disabled link must be dimmed').to.equal(true);
+        expect(style.cursor).to.equal('not-allowed');
       });
 
       it('omits href when disabled by an ancestor fieldset', async () => {

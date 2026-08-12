@@ -2579,8 +2579,18 @@ test('reviewed method-parameter aliases are exact and preserve every other signa
   }
 });
 
-test('wa-data-grid pins only its four reviewed public method-parameter aliases', () => {
+test('wa-data-grid pins only its five reviewed public method-parameter aliases', () => {
   assert.deepEqual(reviewedMappingNormalizations('wa-data-grid').methodParameterTypeEquivalences, [
+    {
+      // Parameter WIDENING, not an interface rename like the four below: `DataGridPinSide` is
+      // `'left' | 'right' | 'start' | 'end' | false`, a strict superset of upstream's union, so
+      // every call a `wa-data-grid` consumer can already write stays valid after the prefix
+      // substitution. A narrowing here would not be reviewable this way.
+      method: 'pinColumn',
+      parameter: 'side',
+      upstream: "'left' | 'right' | false",
+      target: 'DataGridPinSide',
+    },
     {
       method: 'copySelectedRows',
       parameter: 'options',

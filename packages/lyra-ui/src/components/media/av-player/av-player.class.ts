@@ -26,7 +26,7 @@ import { styles } from './av-player.styles.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_avPlayerFailedToLoad, LYRA_DEFAULT_avPlayerLabel, LYRA_DEFAULT_avPlayerPlaybackRate, LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_avPlayerTimeline, LYRA_DEFAULT_avPlayerTranscript, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_viewerHighlightLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_avPlayerFailedToLoad, LYRA_DEFAULT_avPlayerLabel, LYRA_DEFAULT_avPlayerPlaybackRate, LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_avPlayerTimeline, LYRA_DEFAULT_avPlayerTranscript, LYRA_DEFAULT_viewerHighlightLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -125,6 +125,8 @@ export interface LyraAvPlayerEventMap {
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
   'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
+  blur: CustomEvent<undefined>;
+  focus: CustomEvent<undefined>;
 }
 
 class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
@@ -179,6 +181,8 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  * @event lr-search-change - Fired from `search()`/`searchNext()`/`searchPrevious()`/
  *   `clearSearch()`. `detail: { query, matchCount, activeIndex }`.
  * @event lr-render-error - The native media element reported an `error` event. `detail: { error }`.
+ * @event focus - Re-dispatched from the native media element as a bubbling, composed event.
+ * @event blur - Re-dispatched from the native media element as a bubbling, composed event.
  * @csspart base - The root wrapper.
  * @csspart media - The native `<audio>`/`<video>` element.
  * @csspart toolbar - The playback-rate control row.
@@ -241,11 +245,6 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     avPlayerRateOption: LYRA_DEFAULT_avPlayerRateOption,
     avPlayerTimeline: LYRA_DEFAULT_avPlayerTimeline,
     avPlayerTranscript: LYRA_DEFAULT_avPlayerTranscript,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
-    pause: LYRA_DEFAULT_pause,
-    play: LYRA_DEFAULT_play,
     viewerHighlightLabel: LYRA_DEFAULT_viewerHighlightLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -346,6 +345,33 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   private get mediaEl(): HTMLMediaElement | undefined {
     return this.mediaController.element;
   }
+
+  /** Focus the native `[part="media"]` element — it carries `controls`, so it is this component's
+   *  primary focusable affordance. */
+  override focus(options?: FocusOptions): void {
+    this.mediaEl?.focus(options);
+  }
+
+  /** Blur the native `[part="media"]` element. */
+  override blur(): void {
+    this.mediaEl?.blur();
+  }
+
+  /** Activate the native `[part="media"]` element, so a host-level `.click()` is not a silent
+   *  no-op. */
+  override click(): void {
+    this.mediaEl?.click();
+  }
+
+  private onMediaFocus = (event: FocusEvent): void => {
+    event.stopPropagation();
+    this.emit('focus');
+  };
+
+  private onMediaBlur = (event: FocusEvent): void => {
+    event.stopPropagation();
+    this.emit('blur');
+  };
 
   /** Live playback position: the media element's own `currentTime` once mounted, else the last
    *  locally-tracked value (e.g. a `seek()` issued before metadata loaded). */
@@ -1028,6 +1054,8 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
             ?loop=${this.loop}
             ?muted=${this.muted}
             preload=${this.preload}
+            @focus=${this.onMediaFocus}
+            @blur=${this.onMediaBlur}
             ${ref(this.mediaRef)}
             >${this.renderTracks()}</audio
           >`)
@@ -1040,6 +1068,8 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
             ?loop=${this.loop}
             ?muted=${this.muted}
             preload=${this.preload}
+            @focus=${this.onMediaFocus}
+            @blur=${this.onMediaBlur}
             ${ref(this.mediaRef)}
             >${this.renderTracks()}</video
           >`)}

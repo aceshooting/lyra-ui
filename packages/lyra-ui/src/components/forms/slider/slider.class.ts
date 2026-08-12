@@ -33,7 +33,7 @@ import {
 import { activeElementIn } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_rangeEnd, LYRA_DEFAULT_rangeStart, LYRA_DEFAULT_restore, LYRA_DEFAULT_sliderLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_rangeEnd, LYRA_DEFAULT_rangeStart, LYRA_DEFAULT_sliderLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -279,7 +279,6 @@ export class LyraSlider extends LyraSliderBase {
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     rangeEnd: LYRA_DEFAULT_rangeEnd,
     rangeStart: LYRA_DEFAULT_rangeStart,
-    restore: LYRA_DEFAULT_restore,
     sliderLabel: LYRA_DEFAULT_sliderLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END

@@ -1,4 +1,4 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './embedding-explorer.js';
 import type { EmbeddingPoint, LyraEmbeddingExplorer } from './embedding-explorer.class.js';
 
@@ -57,9 +57,15 @@ describe('lr-embedding-explorer', () => {
   it('supports keyboard activation and navigation', async () => {
     const el = (await fixture(html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`)) as LyraEmbeddingExplorer;
     await el.updateComplete;
-    const point = el.shadowRoot!.querySelector('[part="point"]') as SVGCircleElement;
-    point.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    expect((point) != null).to.equal(true);
+    const rendered = () => [...el.shadowRoot!.querySelectorAll<SVGGElement>('[part="point"]')];
+
+    const selectEvent = oneEvent(el, 'lr-point-select');
+    rendered()[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect((await selectEvent).detail.point.id).to.equal('a');
+
+    rendered()[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    expect(rendered().map((point) => point.getAttribute('tabindex'))).to.deep.equal(['-1', '0']);
   });
 
   it('exposes selectable points as listbox options with explicit selected state', async () => {
@@ -150,6 +156,26 @@ describe('lr-embedding-explorer', () => {
       const center = new DOMPoint(0, 0).matrixTransform(matrix);
       expect((hit.getRootNode<ShadowRoot>().elementFromPoint(center.x + 11, center.y)) === (hit), `${width}px allocation pointer edge`).to.equal(true);
     }
+  });
+
+  it('keeps a dense, long-label point set from overflowing a 320px allocation', async () => {
+    const dense: EmbeddingPoint[] = Array.from({ length: 18 }, (_, index) => ({
+      id: `point-${index}`,
+      x: Math.cos((index / 18) * Math.PI * 2),
+      y: Math.sin((index / 18) * Math.PI * 2),
+      label: `Deployment guide for the unbroken-long-label-region-${index}-service-cluster-rollout`,
+      cluster: index % 4,
+    }));
+    const wrapper = await fixture(html`
+      <div style="inline-size: 320px; max-inline-size: 100%;">
+        <lr-embedding-explorer .points=${dense}></lr-embedding-explorer>
+      </div>
+    `);
+    const el = wrapper.querySelector<LyraEmbeddingExplorer>('lr-embedding-explorer')!;
+    await el.updateComplete;
+    expect(el.scrollWidth, `host ${el.scrollWidth}/${el.clientWidth}`).to.be.at.most(el.clientWidth + 1);
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.scrollWidth, `base ${base.scrollWidth}/${el.clientWidth}`).to.be.at.most(el.clientWidth + 1);
   });
 
   it('applies the height property to the rendered plot', async () => {

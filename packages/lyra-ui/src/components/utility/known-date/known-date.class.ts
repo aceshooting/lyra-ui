@@ -20,7 +20,7 @@ import { setCustomState } from '../../../internal/custom-states.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_dateInputInvalid, LYRA_DEFAULT_dateInputMaxMessage, LYRA_DEFAULT_dateInputMinMessage, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_knownDateDay, LYRA_DEFAULT_knownDateMonth, LYRA_DEFAULT_knownDateYear, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_dateInputInvalid, LYRA_DEFAULT_dateInputMaxMessage, LYRA_DEFAULT_dateInputMinMessage, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_knownDateDay, LYRA_DEFAULT_knownDateMonth, LYRA_DEFAULT_knownDateYear } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -244,19 +244,13 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    date: LYRA_DEFAULT_date,
     dateInputInvalid: LYRA_DEFAULT_dateInputInvalid,
     dateInputMaxMessage: LYRA_DEFAULT_dateInputMaxMessage,
     dateInputMinMessage: LYRA_DEFAULT_dateInputMinMessage,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     knownDateDay: LYRA_DEFAULT_knownDateDay,
     knownDateMonth: LYRA_DEFAULT_knownDateMonth,
     knownDateYear: LYRA_DEFAULT_knownDateYear,
-    open: LYRA_DEFAULT_open,
-    restore: LYRA_DEFAULT_restore,
-    search: LYRA_DEFAULT_search,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

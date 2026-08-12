@@ -309,6 +309,17 @@ it('preserves an explicitly empty host aria-label on a menu-role popup', async (
   expect(popup.getAttribute('aria-label')).to.equal('Menu');
 });
 
+it('honors a .strings override for the menuLabel key, provably reaching the rendered popup', async () => {
+  const el = (await fixture(
+    html`<lr-dropdown .strings=${{ menuLabel: 'Actions' }}
+      ><button slot="trigger">Open</button>
+      <button role="menuitem">Item</button></lr-dropdown
+    >`,
+  )) as LyraDropdown;
+  const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
+  expect(popup.getAttribute('aria-label')).to.equal('Actions');
+});
+
 it('dismisses an open tooltip on Escape while the trigger keeps focus', async () => {
   const el = (await fixture(
     html`<lr-tooltip show-delay="0">Helpful text<button slot="trigger">Help</button></lr-tooltip>`,

@@ -674,3 +674,48 @@ it('does not mutate or focus stale roving buttons after adoption', async () => {
     frame.remove();
   }
 });
+
+it('renders an actions slot so a consumer can add a fifth action beyond the four built-ins', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected">
+      <button slot="actions" id="translate" type="button">Translate</button>
+    </lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  await aTimeout(0);
+
+  const slot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="actions"]');
+  expect(slot === null, 'the toolbar renders an actions slot').to.equal(false);
+  const extra = el.querySelector<HTMLButtonElement>('#translate')!;
+  expect(slot!.assignedElements({ flatten: true }).includes(extra)).to.equal(true);
+  // It has to sit inside the role="toolbar" element, or it is not part of the toolbar at all.
+  expect(slot!.closest('[part="toolbar"]') === null).to.equal(false);
+  // ...and after the built-ins, so the shipped four keep their documented order.
+  const toolbarChildren = [...el.shadowRoot!.querySelector('[part="toolbar"]')!.children];
+  expect(toolbarChildren.indexOf(slot!)).to.equal(toolbarChildren.length - 1);
+});
+
+it('includes a slotted action in the toolbar roving-tabindex group and its keyboard navigation', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected">
+      <button slot="actions" id="translate" type="button">Translate</button>
+    </lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  await aTimeout(0);
+  const actions = [...el.shadowRoot!.querySelectorAll('lr-button[data-action]')] as Array<
+    HTMLElement & { updateComplete: Promise<unknown> }
+  >;
+  await Promise.all(actions.map((action) => action.updateComplete));
+  const extra = el.querySelector<HTMLButtonElement>('#translate')!;
+
+  const stops = (): number[] => [
+    ...actions.map((action) => (action.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).tabIndex),
+    extra.tabIndex,
+  ];
+  expect(stops(), 'exactly one tab stop, on the first action').to.deep.equal([0, -1, -1, -1, -1]);
+
+  const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+  toolbar.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
+  await aTimeout(0);
+  expect(stops(), 'End lands on the slotted action, now the last stop').to.deep.equal([-1, -1, -1, -1, 0]);
+  expect(el.ownerDocument.activeElement === extra).to.equal(true);
+});

@@ -815,3 +815,80 @@ it('decouples the close-button hover fill from --lr-callout-background so a bran
     'rgb(1, 2, 3)',
   );
 });
+
+// -- quiet-tier background across light and dark mode -------------------------
+
+/** WCAG relative luminance of a computed `rgb()`/`rgba()` string, so "is this actually the dark
+ *  tier?" is asserted on the rendered colour rather than on a memorised hex value that a legitimate
+ *  ramp regeneration would churn. */
+function relativeLuminance(color: string): number {
+  const channels = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/u.exec(color);
+  if (!channels) throw new Error(`unparseable computed colour: ${color}`);
+  const [r, g, b] = [1, 2, 3].map((index) => {
+    const channel = Number(channels[index]) / 255;
+    return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+describe('quiet-tier background in dark mode', () => {
+  const VARIANTS = ['brand', 'neutral', 'success', 'warning', 'danger'] as const;
+
+  it('darkens the standalone fallback background, the arm an unset variant actually renders', async () => {
+    // An unset variant matches none of the contextual variant rules, so --lr-color-fill-quiet is
+    // undefined on the host and the SECOND arm of --lr-callout-background is what paints the panel.
+    // That fallback arm is the one place a light-mode literal could hide, so it gets its own case.
+    const light = (await fixture(html`<lr-callout>Message</lr-callout>`)) as LyraCallout;
+    const dark = (await fixture(html`<lr-callout data-lr-theme="dark">Message</lr-callout>`)) as LyraCallout;
+    expect(light.hasAttribute('variant'), 'fixture no longer exercises the fallback arm').to.equal(false);
+    expect(dark.hasAttribute('variant'), 'fixture no longer exercises the fallback arm').to.equal(false);
+    const lightFill = getComputedStyle(light).backgroundColor;
+    const darkFill = getComputedStyle(dark).backgroundColor;
+    expect(darkFill, 'the unset-variant fallback background did not move in dark mode').to.not.equal(
+      lightFill,
+    );
+    expect(
+      relativeLuminance(darkFill),
+      `dark fallback background (${darkFill}) is not darker than its light value (${lightFill})`,
+    ).to.be.lessThan(relativeLuminance(lightFill));
+  });
+
+  it('darkens the quiet background of every explicit variant', async () => {
+    for (const variant of VARIANTS) {
+      const light = (await fixture(html`<lr-callout variant=${variant}>Message</lr-callout>`)) as LyraCallout;
+      const dark = (await fixture(
+        html`<lr-callout variant=${variant} data-lr-theme="dark">Message</lr-callout>`,
+      )) as LyraCallout;
+      const lightFill = getComputedStyle(light).backgroundColor;
+      const darkFill = getComputedStyle(dark).backgroundColor;
+      expect(darkFill, `${variant} quiet background did not move in dark mode`).to.not.equal(lightFill);
+      expect(
+        relativeLuminance(darkFill),
+        `${variant} dark quiet background (${darkFill}) is not darker than its light value (${lightFill})`,
+      ).to.be.lessThan(relativeLuminance(lightFill));
+    }
+  });
+
+  it('still resolves the dark background through its --lr-theme-* input, on the fallback arm too', async () => {
+    // A literal in the dark branch would render the same colour whatever the theme input says.
+    const fallback = (await fixture(html`
+      <lr-callout data-lr-theme="dark" style="--lr-theme-color-brand-fill-quiet: rgb(3, 5, 7)"
+        >Message</lr-callout
+      >
+    `)) as LyraCallout;
+    expect(getComputedStyle(fallback).backgroundColor).to.equal('rgb(3, 5, 7)');
+
+    for (const variant of VARIANTS) {
+      const el = (await fixture(html`
+        <lr-callout
+          variant=${variant}
+          data-lr-theme="dark"
+          style="--lr-theme-color-${variant}-fill-quiet: rgb(9, 11, 13)"
+        >Message</lr-callout>
+      `)) as LyraCallout;
+      expect(getComputedStyle(el).backgroundColor, `${variant} ignored its theme input`).to.equal(
+        'rgb(9, 11, 13)',
+      );
+    }
+  });
+});

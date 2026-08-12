@@ -177,6 +177,36 @@ it('the default slot appends extra host buttons to the cluster', async () => {
   expect(el.querySelector('button')!.textContent).to.equal('Export');
 });
 
+it('gives a slotted button the same hit area and chrome as the built-in ones', async () => {
+  // Nothing in a shadow stylesheet reaches light-DOM slotted content except ::slotted(), so the
+  // documented "styled by the same group" contract needs its own rule -- a plain descendant
+  // selector can never match the consumer's own <button>.
+  const el = (await fixture(
+    html`<lr-flow-controls><button type="button">Export</button></lr-flow-controls>`,
+  )) as LyraFlowControls;
+  const slotted = el.querySelector('button') as HTMLButtonElement;
+  const builtIn = el.shadowRoot!.querySelector('[part="zoom-in"]') as HTMLElement;
+  const slottedStyle = getComputedStyle(slotted);
+  const builtInStyle = getComputedStyle(builtIn);
+  expect(slottedStyle.minInlineSize).to.equal(builtInStyle.minInlineSize);
+  expect(slottedStyle.minBlockSize).to.equal(builtInStyle.minBlockSize);
+  expect(slottedStyle.cursor).to.equal('pointer');
+  expect(slottedStyle.borderTopStyle).to.equal('none');
+});
+
+it('dims a disabled slotted button exactly like a disabled built-in one', async () => {
+  const el = (await fixture(
+    html`<lr-flow-controls><button type="button" disabled>Export</button></lr-flow-controls>`,
+  )) as LyraFlowControls;
+  const slotted = el.querySelector('button') as HTMLButtonElement;
+  // No canvas is bound, so every built-in button is disabled too -- same state, same treatment.
+  const builtIn = el.shadowRoot!.querySelector('[part="zoom-in"]') as HTMLElement;
+  const slottedStyle = getComputedStyle(slotted);
+  expect(Number(slottedStyle.opacity) < 1, 'slotted button must dim').to.equal(true);
+  expect(slottedStyle.opacity).to.equal(getComputedStyle(builtIn).opacity);
+  expect(slottedStyle.cursor).to.equal('not-allowed');
+});
+
 it('re-resolves against a new for target when the for attribute changes at runtime', async () => {
   const root = (await fixture(html`
     <div>

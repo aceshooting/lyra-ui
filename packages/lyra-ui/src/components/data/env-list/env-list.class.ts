@@ -6,7 +6,7 @@ import { styles } from './env-list.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_envListCopy, LYRA_DEFAULT_envListHide, LYRA_DEFAULT_envListLabel, LYRA_DEFAULT_envListReveal, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_noData, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_copy, LYRA_DEFAULT_envListCopy, LYRA_DEFAULT_envListHide, LYRA_DEFAULT_envListLabel, LYRA_DEFAULT_envListReveal, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_noData } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -59,16 +59,13 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
     copy: LYRA_DEFAULT_copy,
-    details: LYRA_DEFAULT_details,
     envListCopy: LYRA_DEFAULT_envListCopy,
     envListHide: LYRA_DEFAULT_envListHide,
     envListLabel: LYRA_DEFAULT_envListLabel,
     envListReveal: LYRA_DEFAULT_envListReveal,
     envListValueHidden: LYRA_DEFAULT_envListValueHidden,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

@@ -9,7 +9,7 @@ import { styles } from './push-to-talk.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_pushToTalkCancelled, LYRA_DEFAULT_pushToTalkDenied, LYRA_DEFAULT_pushToTalkError, LYRA_DEFAULT_pushToTalkHold, LYRA_DEFAULT_pushToTalkRequesting, LYRA_DEFAULT_pushToTalkStart, LYRA_DEFAULT_pushToTalkStarted, LYRA_DEFAULT_pushToTalkStop, LYRA_DEFAULT_pushToTalkStopped, LYRA_DEFAULT_pushToTalkUnsupported } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_pushToTalkCancelled, LYRA_DEFAULT_pushToTalkDenied, LYRA_DEFAULT_pushToTalkError, LYRA_DEFAULT_pushToTalkHold, LYRA_DEFAULT_pushToTalkRequesting, LYRA_DEFAULT_pushToTalkStart, LYRA_DEFAULT_pushToTalkStarted, LYRA_DEFAULT_pushToTalkStop, LYRA_DEFAULT_pushToTalkStopped, LYRA_DEFAULT_pushToTalkUnsupported } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type PushToTalkMode = 'hold' | 'toggle';
@@ -132,9 +132,6 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
     pushToTalkCancelled: LYRA_DEFAULT_pushToTalkCancelled,
     pushToTalkDenied: LYRA_DEFAULT_pushToTalkDenied,
     pushToTalkError: LYRA_DEFAULT_pushToTalkError,

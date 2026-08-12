@@ -28,7 +28,7 @@ import { applyOverlayArrow, type LyraArrowPlacement } from './overlay-arrow.js';
 import { styles } from './overlay.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_menuLabel, LYRA_DEFAULT_open, LYRA_DEFAULT_popover } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_menuLabel, LYRA_DEFAULT_popover } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -131,10 +131,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     menuLabel: LYRA_DEFAULT_menuLabel,
-    open: LYRA_DEFAULT_open,
     popover: LYRA_DEFAULT_popover,
   };
   // GENERATED DEFAULT-STRING SLICE: END

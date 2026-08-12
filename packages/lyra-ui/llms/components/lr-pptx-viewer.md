@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `@aiden0z/pptx-renderer` — see `llms/peers.md`
-- **Themeable via** 12 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,9 +19,12 @@ Best-effort client-side PPTX viewer backed by the optional `@aiden0z/pptx-render
 localized fidelity notice is always visible because animations, equations, embedded objects,
 speaker notes, and several advanced effects are not rendered.
 
-**Properties:** `src: string = ''`, `name: string = ''`, and `label: string = ''`. A host
+**Properties:** `src: string = ''`, `name: string = ''`, `label: string = ''`, and `maxHeight:
+string = ''` (attribute `max-height`). A host
 `aria-label` takes precedence over
-`label` and `name`. `highlights`, `activeHighlightId`, `anchor`, and `anchorKinds`
+`label` and `name`. `maxHeight` caps the scrollable `[part="container"]`; invalid CSS `max-height`
+values, declaration breaks, and `url()` are ignored. `highlights`, `activeHighlightId`, `anchor`,
+and `anchorKinds`
 (`['text-quote', 'fragment']`) provide the shared text-viewer contract when the renderer exposes
 DOM text.
 
@@ -47,6 +50,10 @@ The three shared text-viewer events bubble and compose and are non-cancelable.
 `next-icon`, and `container`. While loading, the decorative skeleton is paired with an ordinary
 visually-hidden localized label; later loading and error transitions use the shared document-level
 polite and assertive sinks, respectively, without adding live semantics inside the viewer shadow.
+
+**Themeable custom properties:** `--lr-pptx-viewer-max-height` (default `none`) — maximum block
+size of `[part="container"]` before it scrolls internally; also settable via the `max-height`
+property, which writes this token inline.
 
 **Optional peer dependency:** install `@aiden0z/pptx-renderer` with
 `pnpm add @aiden0z/pptx-renderer`. The registry matches the official PPTX MIME type and `.pptx`

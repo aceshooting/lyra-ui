@@ -12,12 +12,33 @@ export const styles = css`
     background: var(--lr-color-surface-raised);
     overflow: hidden;
   }
+  /* Chrome escape -- the shared frame="plain" treatment, same convention as lr-result-card's,
+     lr-stack-trace's, lr-task-list's, and lr-thinking-panel's. Streamed tool output is routinely
+     nested inside a container that already draws a border (an agent-run panel, a message bubble),
+     which would otherwise double the box. Only the outer card decoration goes: the toolbar/log
+     divider below is interior structure that still explains where the actions end and the log
+     begins, exactly the call task-list and thinking-panel make for their own header/body divider,
+     and the toolbar buttons' own border/hover/focus affordances never depended on this one. */
+  :host([frame='plain']) [part='base'] {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
   [part='toolbar'] {
     display: flex;
     justify-content: flex-end;
     gap: var(--lr-space-xs);
     padding: var(--lr-space-xs) var(--lr-space-s);
     border-block-end: var(--lr-size-1px) solid var(--lr-color-border);
+  }
+  /* Density escape -- same convention as lr-task-list's/lr-thinking-panel's compact. The tuned
+     values sit behind inline var() fallbacks (rather than a :host declaration, which every
+     instance would re-declare and so shadow any ancestor value) so a transcript can retune every
+     nested terminal at once from outside; the fallbacks are one step tighter than the regular
+     values, so an unset terminal renders exactly as before. */
+  :host([compact]) [part='toolbar'] {
+    gap: var(--lr-terminal-compact-toolbar-gap, var(--lr-space-2xs));
+    padding: var(--lr-terminal-compact-toolbar-padding, var(--lr-space-2xs) var(--lr-space-xs));
   }
   [part='copy-button'],
   [part='download-button'] {
@@ -92,6 +113,12 @@ export const styles = css`
   lr-virtual-list::part(line):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  /* The log's own half of the density escape above. Reached through the same one-hop ::part()
+     selector as the base rule (the lines live in lr-virtual-list's shadow root), and carrying the
+     host attribute selector, so it outranks that rule on both specificity and source order. */
+  :host([compact]) lr-virtual-list::part(line) {
+    padding-inline: var(--lr-terminal-compact-line-padding-inline, var(--lr-space-xs));
   }
   :host(:not([wrap])) lr-virtual-list::part(line) {
     white-space: pre;

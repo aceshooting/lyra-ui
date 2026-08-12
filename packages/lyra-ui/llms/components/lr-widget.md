@@ -87,6 +87,11 @@ empty), `label-group` (wrapper around the label and sublabel), `label`, `sublabe
 `view-toggle` (a single view toggle button), `view-icon` (a decorative view glyph), `view-label`
 (a view's visible label), `collapse-button`, `fullscreen-button`, `body`, `backdrop`
 
+Both header rows (`actions` and `view-toggles`) scroll horizontally on their own when the header is
+too narrow for them, and each independently paints a `--lr-scroll-fade-size` edge fade while — and
+only while — it actually overflows, so a clipped row reads as scrollable rather than truncated. The
+overflow is measured, not assumed: a row that fits is left unmasked.
+
 **Themeable custom properties:** `--lr-widget-overlay-color` (default `var(--lr-color-overlay)` —
 the fullscreen backdrop scrim color), `--lr-widget-fullscreen-inset` (default per side
 `max(var(--lr-space-l), <safe-area inset>)` — the fullscreen `[part="base"]` inset; the

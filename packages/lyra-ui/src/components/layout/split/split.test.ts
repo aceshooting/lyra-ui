@@ -3399,7 +3399,9 @@ it("defaults open to false: the floating pane renders nothing (hidden, out of th
 
     const [panelA] = [...el.children] as HTMLElement[];
     expect(panelA.hidden).to.be.true;
-    expect(el.shadowRoot!.querySelector('[part="backdrop"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('[part="backdrop"]') === null).to.equal(
+      true
+    );
   } finally {
     spy.restore();
   }
@@ -3429,8 +3431,8 @@ it("reveals the floating pane and renders a backdrop once open is set to true", 
     const [panelA] = [...el.children] as HTMLElement[];
     expect(panelA.hidden).to.be.false;
     expect(panelA.style.position).to.equal("absolute");
-    expect(el.shadowRoot!.querySelector('[part="backdrop"]')).to.not.equal(
-      null
+    expect(el.shadowRoot!.querySelector('[part="backdrop"]') === null).to.equal(
+      false
     );
   } finally {
     spy.restore();
@@ -3572,8 +3574,8 @@ it("restores the still-active floating overlay and its scroll lock across a disc
     fireCollapseResize(spy.callbacks[0], 300); // floating
     el.open = true;
     await elementUpdated(el);
-    expect(el.shadowRoot!.querySelector('[part="backdrop"]')).to.not.equal(
-      null
+    expect(el.shadowRoot!.querySelector('[part="backdrop"]') === null).to.equal(
+      false
     );
 
     const parent = el.parentElement!;
@@ -3583,8 +3585,8 @@ it("restores the still-active floating overlay and its scroll lock across a disc
 
     // The drawer is still open and still rendered after the reconnect -- nothing was torn down.
     expect(el.open).to.be.true;
-    expect(el.shadowRoot!.querySelector('[part="backdrop"]')).to.not.equal(
-      null
+    expect(el.shadowRoot!.querySelector('[part="backdrop"]') === null).to.equal(
+      false
     );
     const [panelA] = [...el.children] as HTMLElement[];
     expect(panelA.style.position).to.equal("absolute");
@@ -3625,8 +3627,8 @@ it("re-registers a fresh floating overlay on reconnect instead of resuming when 
     await elementUpdated(el);
 
     expect(el.open).to.be.true;
-    expect(el.shadowRoot!.querySelector('[part="backdrop"]')).to.not.equal(
-      null
+    expect(el.shadowRoot!.querySelector('[part="backdrop"]') === null).to.equal(
+      false
     );
     // A fresh handle was registered: Escape still dismisses the drawer post-reconnect.
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));

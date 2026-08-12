@@ -329,7 +329,10 @@ Highlight backgrounds are independently themeable with
 `--lr-docx-viewer-highlight-success-background`,
 `--lr-docx-viewer-highlight-warning-background`,
 `--lr-docx-viewer-highlight-danger-background`, and
-`--lr-docx-viewer-highlight-neutral-background`, defaulting to the matching quiet color tokens.
+`--lr-docx-viewer-highlight-neutral-background`, defaulting to the matching quiet color tokens --
+except neutral, which defaults to `var(--lr-color-surface-raised)`: `[part='content']` paints no
+background of its own and therefore shows `[part='base']`'s `--lr-color-surface`, so a neutral
+highlight falling back to that same token would render as unhighlighted.
 `--lr-docx-viewer-highlight-active-background` and
 `--lr-docx-viewer-highlight-active-outline` style the active host highlight.
 `--lr-docx-viewer-search-match-background`,
@@ -464,7 +467,9 @@ case-insensitive text search over every loaded entry path; next/previous wrap an
 virtualized row into view. `scrollToAnchor()` resolves text-quote and fragment anchors and emits
 `lr-anchor-result`. A fragment id is the exact ZIP entry path. A text quote resolves within one
 complete entry path; both forms first mount the absolute virtualized row and only then perform the
-shared DOM-level anchor resolution.
+shared DOM-level anchor resolution. A jump whose archive is replaced by a concurrent `src`
+reassignment mid-flight, or whose row cannot be located after the wait, reports `found: false`
+rather than a phantom success.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or parsing fails;
 `lr-search-change` (`detail: { query, matchCount, activeIndex }`) from search, navigation, and
@@ -484,7 +489,10 @@ stylesheet.
 `--lr-archive-viewer-highlight-success-background`,
 `--lr-archive-viewer-highlight-warning-background`,
 `--lr-archive-viewer-highlight-danger-background`, and
-`--lr-archive-viewer-highlight-neutral-background` control tone backgrounds.
+`--lr-archive-viewer-highlight-neutral-background` control tone backgrounds. The neutral default is
+`var(--lr-color-surface-raised)`, deliberately not `--lr-color-surface`: entry rows paint no
+background of their own and therefore show the viewer's `--lr-color-surface`, so a neutral highlight
+falling back to that same token would render as unhighlighted.
 `--lr-archive-viewer-highlight-active-background` and
 `--lr-archive-viewer-highlight-active-outline` control the active quote.
 
@@ -756,12 +764,21 @@ Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid
 header row always occupying row 1 (this component always parses with a header row, so the first row
 is never part of the virtualized body); `scrollToAnchor()` scrolls the addressed row into view via
 the virtualized list's `active-id`. `highlights` paint as a `part="cell-highlight"` cell wrapping a
-focusable `part="cell-highlight-action"` native button, keeping the ARIA table tree intact.
+focusable `part="cell-highlight-action"` native button, keeping the ARIA table tree intact. A jump
+whose document is replaced by a concurrent `src` reassignment mid-flight reports `found: false`
+rather than a phantom success, and a header-row target scrolls with the same
+`prefers-reduced-motion`-gated smooth behavior every other row uses.
 
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
 `max-height`); invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
 Host `aria-label` names the table by attribute presence, including an explicitly empty value;
-`name` and the localized row-count caption are fallbacks.
+`name` and the localized row-count caption are fallbacks. The same computed name (host `aria-label`,
+else `name`) also names a persistent `role="region"` landmark on `[part='base']` in *every* fetch
+state — idle, loading, empty, error, loaded — so a landmark-navigating screen-reader user reaches the
+viewer before it has any rows, not only after a successful non-empty load. With neither set,
+`[part='base']` stays a plain wrapper rather than an unnamed region. The outer region carries the
+plain display name while the inner `[part='table']` keeps the richer row-count caption; the two are
+complementary, matching `lr-csv-viewer`/`lr-archive-viewer`'s base-vs-content split.
 `anchorKinds: readonly LyraAnchorKind[] = ['cell-range']` (this viewer's supported `LyraAnchor.kind`
 values for the shared anchor-target contract).
 
@@ -778,7 +795,8 @@ Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
 
-**CSS parts:** `base`, `body`, `table`, `header-row`, `header-cell`, `data-row`, `cell`,
+**CSS parts:** `base` (a persistent `role="region"` named by the host `aria-label` or `name`, in
+every fetch state), `body`, `table`, `header-row`, `header-cell`, `data-row`, `cell`,
 `cell-highlight` (a `role="cell"` covered by a `highlights` entry; wraps the action button),
 `cell-highlight-action` (the native button filling a highlighted cell — focusable, emits
 `lr-highlight-activate` on click or Enter/Space; its complete accessible name uses the localized
@@ -1011,7 +1029,8 @@ Fetches CSV text, parses quoted fields with the optional `papaparse` peer, and v
 Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid, 1-based, with the
 header row included whenever `has-header-row` is set; `scrollToAnchor()` scrolls the addressed
 row/column into view via the virtualized list's `active-id`. `highlights` paint as a focusable
-`part="cell-highlight"`.
+`part="cell-highlight"`. A jump whose document is replaced by a concurrent `src` reassignment
+mid-flight reports `found: false` rather than a phantom success.
 
 **Properties:** `src: string = ''` and `name: string = ''`. `hasHeaderRow: boolean = true` (attribute
 `has-header-row`) controls whether the first parsed row is rendered as a sticky header.
@@ -1360,17 +1379,33 @@ every element's tag name, attribute names/values, and own text (empty/whitespace
 active, matches are recomputed, the active index is clamped to the new result set, and a fresh
 `lr-search-change` announces that state.
 
+**Highlights:** host-supplied `highlights` are first-class here, not carried and ignored. Every entry
+whose anchor is a `node-path` this document resolves tints its element row — `[part='node']` gains
+`data-highlight` carrying the entry's `tone` (`accent` when omitted) — and adds a focusable
+`[part='highlight-action']` button that emits `lr-highlight-activate`. The button's accessible name
+is the entry's own `label` when supplied, otherwise a localized "Highlight n of m". `activeHighlightId`
+adds `data-active-highlight` to the matching row. Entries are deduplicated by `id`; an entry whose
+anchor kind or path this document cannot resolve is dropped whole rather than painted at some
+coarser granularity, and an entry inside a collapsed subtree paints once that subtree is expanded.
+
 **Events:** `lr-copy` — `detail: { text }`. `lr-search-change` — `detail: { query, matchCount,
 activeIndex }`. `lr-render-error` — `detail: { error }`, fetching or parsing failed, including a
 parse error or exceeding the node cap. `lr-anchor-result` — non-cancelable; `detail: { found:
 boolean }`, fired after an `anchor` assignment or a `scrollToAnchor()` call is applied.
+`lr-highlight-activate` — non-cancelable; `detail: { id }`, fired when a highlight's
+`[part='highlight-action']` button is activated by click or Enter/Space.
 
 **CSS parts:** `base`, `toolbar` (the whole-document copy button row, only when `copyable`),
 `copy-button` (the whole-document one, or a per-node one), `tree`, `node` (`data-active` while it's
-the resolved anchor target, `data-match`, `data-active-match`), `tag` (`data-match`), `attribute`,
+the resolved anchor target, `data-match`, `data-active-match`, `data-highlight` carrying a resolved
+highlight's tone, `data-active-highlight`), `tag` (`data-match`), `attribute` (`data-active` while a
+`node-path` anchor's trailing `'@attrName'` segment addresses that specific attribute — so a citation
+pointing at one attribute value of a multi-attribute element stays identifiable in the rendered
+tree, rather than resolving indistinguishably from the bare element path),
 `attribute-name`, `attribute-value` (`data-match`), `text` (`data-match`), `comment`, `cdata`, `pi`,
 `toggle` (an element's expand/collapse button, hidden but present for row alignment on leaf/empty
-elements), `error`, `spinner`.
+elements), `highlight-action` (the focusable button a resolved `highlights` entry adds to its element
+row), `error`, `spinner`.
 
 **Themeable custom properties:** `--lr-xml-viewer-max-height` (default `none`) — maximum block size
 of the scrollable body; also settable via the `max-height` property.
@@ -1390,6 +1425,18 @@ be recolored without touching the active one. `--lr-xml-viewer-match-bg` (defaul
 `var(--lr-color-warning-quiet)`) — background of a matching `[part='tag']`/`[part='attribute-value']`.
 Both are inline `var()` fallbacks at the point of use, so either can be set on the element or any
 ancestor; unset, they fall back to the same shared tokens the rules used before.
+
+`--lr-xml-viewer-highlight-accent-background` (default `var(--lr-color-brand-quiet)`),
+`--lr-xml-viewer-highlight-success-background` (default `var(--lr-color-success-quiet)`),
+`--lr-xml-viewer-highlight-warning-background` (default `var(--lr-color-warning-quiet)`),
+`--lr-xml-viewer-highlight-danger-background` (default `var(--lr-color-danger-quiet)`) and
+`--lr-xml-viewer-highlight-neutral-background` (default `var(--lr-color-surface-raised)`) are the row
+backgrounds of a resolved `highlights` entry per tone. The neutral default is deliberately
+`--lr-color-surface-raised` and not `--lr-color-surface`: the viewer paints its own surface with the
+latter, so a neutral highlight tinted with it would render as unhighlighted.
+`--lr-xml-viewer-highlight-active-outline` (default `var(--lr-color-brand)`) outlines the entry named
+by `activeHighlightId`, and `--lr-xml-viewer-active-attribute-color` (default `var(--lr-color-brand)`)
+outlines the `[part='attribute']` an attribute-addressing `node-path` anchor resolved to.
 
 `[part='toggle']`'s glyph box stays compact (`1.25rem`) while its *interactive* box takes the shared
 minimum target size as a floor via `--lr-icon-button-size`. That token is a floor, not a fixed size,
@@ -1503,6 +1550,12 @@ sink), `error` (ordinary visible error text; later transitions use the same asse
 `spinner` (a decorative skeleton plus an ordinary visually-hidden localized label; later loading
 transitions use the shared document-level polite sink). No active live semantics are rendered in
 the viewer's shadow tree.
+
+Those states carry the same visual tones the rest of this family uses rather than plain inherited
+body text: `error` is `--lr-color-danger` (matching `lr-docx-viewer`/`lr-email-viewer`/
+`lr-html-viewer`), `missing-library` is `--lr-color-warning` -- a missing optional peer is a degraded
+but working state, since the `lr-json-viewer` fallback below it still renders the data, not a failure
+-- and `status` is the quiet `--lr-color-text-quiet` metadata tone.
 
 Registered by importing `geojson-view/geojson-view.js` directly — not part of the root barrel, the
 same as `lr-map`/`lr-graph`, since it depends on the same optional `maplibre-gl` peer. Remote

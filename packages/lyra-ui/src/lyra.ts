@@ -385,6 +385,16 @@ export type {
 } from './components/charts/chart/lite-chart.class.js';
 export { binValues } from './components/charts/chart/histogram-bin.js';
 export type { HistogramBucket } from './components/charts/chart/histogram-bin.js';
+export { LyraChart } from './components/charts/chart/chart.class.js';
+export { LyraBarChart } from './components/charts/chart/bar-chart.class.js';
+export { LyraBubbleChart } from './components/charts/chart/bubble-chart.class.js';
+export { LyraDoughnutChart } from './components/charts/chart/doughnut-chart.class.js';
+export { LyraLineChart } from './components/charts/chart/line-chart.class.js';
+export { LyraPieChart } from './components/charts/chart/pie-chart.class.js';
+export { LyraPolarAreaChart } from './components/charts/chart/polar-area-chart.class.js';
+export { LyraRadarChart } from './components/charts/chart/radar-chart.class.js';
+export { LyraScatterChart } from './components/charts/chart/scatter-chart.class.js';
+export { LyraHistogram } from './components/charts/chart/histogram.class.js';
 export type {
   ChartPoint,
   Series,
@@ -403,12 +413,15 @@ export type {
   LyraChartValueFormatterContext,
 } from './components/charts/chart/chart.class.js';
 export type { LyraChartLegendVisibilityChangeDetail } from './components/charts/chart/chart-legend-visibility.js';
+export { LyraBoxPlot } from './components/charts/chart/box-plot.class.js';
 export type {
   BoxPlotSeries,
   BoxPlotPoint,
   LyraBoxPlotEventMap,
 } from './components/charts/chart/box-plot.class.js';
+export { LyraGraph } from './components/retrieval/graph/graph.class.js';
 export type { GraphNode, GraphLink } from './components/retrieval/graph/graph.class.js';
+export { LyraMap } from './components/media/map/map.class.js';
 export type {
   LegendEntry,
   ChoroplethLayer,
@@ -1058,6 +1071,7 @@ export type { LyraRadioGroupEventMap } from './components/forms/radio/radio-grou
 export type { LyraJsonViewerEventMap } from './components/utility/json-viewer/json-viewer.class.js';
 export type { LyraLiteChartEventMap } from './components/charts/chart/lite-chart.class.js';
 export type { LyraMapEventMap } from './components/media/map/map.class.js';
+export { LyraGeojsonView } from './components/viewers/geojson-view/geojson-view.class.js';
 export type { LyraGeojsonViewEventMap } from './components/viewers/geojson-view/geojson-view.class.js';
 export type { LyraMarkdownEventMap } from './components/conversation/markdown/markdown.class.js';
 export type { LyraMarkdownCoreEventMap } from './components/conversation/markdown/markdown-core.class.js';

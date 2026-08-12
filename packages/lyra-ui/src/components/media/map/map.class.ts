@@ -21,7 +21,7 @@ import { styles } from './map.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_mapMissingLibrary, LYRA_DEFAULT_open, LYRA_DEFAULT_remove } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_close, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_mapMissingLibrary } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -246,13 +246,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     close: LYRA_DEFAULT_close,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
     mapMissingLibrary: LYRA_DEFAULT_mapMissingLibrary,
-    open: LYRA_DEFAULT_open,
-    remove: LYRA_DEFAULT_remove,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

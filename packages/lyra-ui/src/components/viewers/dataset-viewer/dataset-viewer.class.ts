@@ -17,7 +17,7 @@ import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_datasetViewerCaption, LYRA_DEFAULT_datasetViewerCaptionNamed, LYRA_DEFAULT_datasetViewerEmpty, LYRA_DEFAULT_datasetViewerMissingParser, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDataset, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_open, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_datasetViewerCaption, LYRA_DEFAULT_datasetViewerCaptionNamed, LYRA_DEFAULT_datasetViewerEmpty, LYRA_DEFAULT_datasetViewerMissingParser, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDataset, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -73,7 +73,10 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
  *   matchCount, activeIndex }`.
- * @csspart base - The root wrapper.
+ * @csspart base - The root wrapper. Carries a persistent `role="region"` named by a host
+ *   `aria-label` (winning by attribute presence) or otherwise `name`, in every fetch state --
+ *   idle, loading, empty, error and loaded alike. With neither set it stays a plain wrapper rather
+ *   than an unnamed region.
  * @csspart body - The scrollable body wrapper.
  * @csspart table - The `role="table"` container. Its accessible name is a host `aria-label` when
  *   set, otherwise `name`, otherwise a localized row-count caption.
@@ -106,30 +109,26 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
     cellHighlightWithLabel: LYRA_DEFAULT_cellHighlightWithLabel,
-    collapse: LYRA_DEFAULT_collapse,
     datasetViewerCaption: LYRA_DEFAULT_datasetViewerCaption,
     datasetViewerCaptionNamed: LYRA_DEFAULT_datasetViewerCaptionNamed,
     datasetViewerEmpty: LYRA_DEFAULT_datasetViewerEmpty,
     datasetViewerMissingParser: LYRA_DEFAULT_datasetViewerMissingParser,
-    details: LYRA_DEFAULT_details,
     documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
     documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
     documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
     documentPreviewTypeDataset: LYRA_DEFAULT_documentPreviewTypeDataset,
     documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
     highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
-    loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
-    open: LYRA_DEFAULT_open,
-    search: LYRA_DEFAULT_search,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as delimited text. */
   @property() src = '';
-  /** Display name used for the table's accessible name when the host has no `aria-label`. Host
-   *  `aria-label` wins by attribute presence, including an empty value. */
+  /** Display name used for the table's accessible name when the host has no `aria-label`, and for
+   *  the `[part="base"]` region landmark in every fetch state. Host `aria-label` wins by attribute
+   *  presence, including an empty value. */
   @property() name = '';
   /** CSS length that caps the scrollable body. */
   /** A CSS `max-height`; invalid values are ignored. */
@@ -334,19 +333,30 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
   /** Scrolls raw-grid `(rawRow, col)` into view -- shared by `applyAnchor()` and every search
    *  navigation method, so both stay byte-identical in how a coordinate becomes a scroll. */
   private async jumpToCell(rawRow: number, col: number): Promise<boolean> {
-    if (this.fetchState.kind !== 'loaded') return false;
-    const { fields, rows } = this.fetchState.table;
+    const loadedState = this.fetchState;
+    if (loadedState.kind !== 'loaded') return false;
+    const { fields, rows } = loadedState.table;
     if (rawRow < 1 || rawRow > rows.length + 1 || col < 0 || col >= fields.length) return false;
     const bodyIndex = rawRow - 2; // -1 raw(1-based) -> 0-based, -1 for the always-present header row
     if (bodyIndex < 0) {
       const target = this.renderRoot.querySelector('[part="header-row"]')?.querySelectorAll('[part~="header-cell"]')[col] as HTMLElement | undefined;
-      target?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      target?.scrollIntoView({
+        behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+      });
       return !!target;
     }
     this.activeRowKey = bodyIndex;
     await this.updateComplete;
     await this.scrollColumnIntoView(col);
-    return true;
+    // `fetchState` is only ever reassigned by load(), so an identity change across the awaits above
+    // means a concurrent `src` reassignment replaced the document mid-jump (a citation/file-tab
+    // click landing on top of a still-resolving jump). The coordinate this call resolved belongs to
+    // the previous document and nothing was scrolled into view for the current one, so report the
+    // failure rather than letting the shared retry loop accept a phantom success and fire
+    // `lr-anchor-result: { found: true }`.
+    return this.fetchState === loadedState;
   }
 
   private async scrollColumnIntoView(col: number): Promise<void> {
@@ -480,7 +490,20 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
 
   override render(): TemplateResult {
     const maxHeight = sanitizeCssLength(this.maxHeight);
-    return html`<div part="base" style=${maxHeight ? styleMap({ '--lr-dataset-viewer-max-height': maxHeight }) : nothing}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
+    // `name` (or a host-level aria-label) names the dataset region in EVERY fetch state, not just
+    // once a table exists -- otherwise a landmark-navigating screen-reader user finds nothing at
+    // all while the viewer is idle, loading, empty, or in error, which is every state except a
+    // successful non-empty load. The richer row-count caption stays on the inner [part='table']:
+    // the two are complementary, matching <lr-csv-viewer>/<lr-archive-viewer>'s base-vs-content
+    // split. With neither name nor aria-label there is nothing meaningful to announce, so the
+    // region role is only added once a name exists (mirroring <lr-archive-viewer>).
+    const authoredLabel = hostAriaLabel(this);
+    const label = authoredLabel ?? this.name;
+    const named = authoredLabel !== null || Boolean(this.name);
+    const style = maxHeight ? styleMap({ '--lr-dataset-viewer-max-height': maxHeight }) : nothing;
+    return named
+      ? html`<div part="base" role="region" aria-label=${label} style=${style}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`
+      : html`<div part="base" style=${style}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

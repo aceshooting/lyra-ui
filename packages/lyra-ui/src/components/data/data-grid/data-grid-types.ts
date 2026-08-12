@@ -13,8 +13,17 @@ export type DataGridSelectable = '' | 'single' | 'multiple' | 'none';
 /** The shared Lyra size ladder, excluding the intentionally unsupported `2xs` tier. */
 export type DataGridSize = Exclude<LyraSize, '2xs'>;
 
-/** Pinning side. `false` means unpinned. */
-export type DataGridPinSide = 'left' | 'right' | false;
+/** Pinning side. `false` means unpinned.
+ *
+ *  `'left'` and `'right'` are **RTL-relative, not physical**: the pinning CSS is written in
+ *  logical properties (`inset-inline-start`/`inset-inline-end`), so a column pinned `'left'`
+ *  renders at the inline-start edge -- the physical *right* edge under `dir="rtl"` -- exactly
+ *  like a column pinned `'start'` would. `'start'`/`'end'` are the newer, unambiguously-named
+ *  spellings for the same two directions (mirroring `<lr-table>`'s `columns[].sticky:
+ *  boolean | TableEdgeAlign`, normalized the same way by `stickyDirection()` in
+ *  `table.class.ts`); `'left'` means `'start'` and `'right'` means `'end'` in the current writing
+ *  direction. Both spellings are permanent and interchangeable -- neither is deprecated. */
+export type DataGridPinSide = 'left' | 'right' | 'start' | 'end' | false;
 
 export type DataGridSortAlgorithm =
   | 'alphanumeric'

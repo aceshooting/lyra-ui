@@ -96,6 +96,27 @@ export const styles = css`
     overflow-x: auto;
     overflow-y: hidden;
   }
+  /* Edge fade on either header row, gated on that row actually overflowing -- its own
+     ScrollOverflowController toggles data-scroll-overflow from a real scrollWidth/clientWidth
+     measurement. Painting it unconditionally is not harmless: at the 2rem-per-edge default a row
+     narrower than its own two fades renders half-transparent and reads as disabled. */
+  [part="actions"][data-scroll-overflow],
+  [part="view-toggles"][data-scroll-overflow] {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+  }
   [part="view-toggle"] {
     display: inline-flex;
     flex: 0 1 auto;

@@ -22,7 +22,7 @@ import { resolveCssLength } from "../../../internal/css-length.js";
 import { styles } from "./split.styles.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_open, LYRA_DEFAULT_resizeDivider } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_resizeDivider } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -204,8 +204,6 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    open: LYRA_DEFAULT_open,
     resizeDivider: LYRA_DEFAULT_resizeDivider,
   };
   // GENERATED DEFAULT-STRING SLICE: END

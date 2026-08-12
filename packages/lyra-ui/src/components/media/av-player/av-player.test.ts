@@ -2019,3 +2019,31 @@ it('searchNext/searchPrevious resolve a boolean, matching the shared viewer sear
   expect(await el.searchNext(), 'no matches to move to').to.be.false;
   expect(await el.searchPrevious(), 'no matches to move to').to.be.false;
 });
+
+it('forwards host focus()/blur()/click() to the native media element and re-dispatches its focus/blur', async () => {
+  const wrapper = await fixture<HTMLElement>(
+    html`<div><lr-av-player src=${MP3_SRC}></lr-av-player></div>`,
+  );
+  const el = wrapper.querySelector('lr-av-player') as LyraAvPlayer;
+  await el.updateComplete;
+  const media = el.shadowRoot!.querySelector('[part="media"]') as HTMLMediaElement;
+  // Listening on the PARENT: a native focus/blur is composed but does not bubble, so only the
+  // component's own re-dispatched event reaches this listener.
+  const seen: string[] = [];
+  wrapper.addEventListener('focus', () => seen.push('focus'));
+  wrapper.addEventListener('blur', () => seen.push('blur'));
+
+  el.focus();
+  expect(el.shadowRoot!.activeElement === media).to.equal(true);
+
+  let clicks = 0;
+  media.addEventListener('click', () => {
+    clicks += 1;
+  });
+  el.click();
+  expect(clicks).to.equal(1);
+
+  el.blur();
+  expect(el.shadowRoot!.activeElement === null).to.equal(true);
+  expect(seen).to.deep.equal(['focus', 'blur']);
+});

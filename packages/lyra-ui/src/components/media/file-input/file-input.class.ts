@@ -148,7 +148,16 @@ export interface LyraFileInputEventMap {
  * @csspart remove-button - Removes one selected file.
  * @cssstate blank - Matches while no files are selected.
  * @cssstate dragging - Matches during an active file drag session.
- * @cssprop [--lr-file-input-font-size=var(--lr-form-control-font-size)] - Dropzone text size.
+ * @cssprop [--lr-file-input-font-size=var(--lr-form-control-font-size)] - Label and selected-filename
+ * text size; tracks the shared `size` ladder.
+ * @cssprop [--lr-file-input-dropzone-font-size=var(--lr-font-size-md-sm)] - Instructional text size
+ * inside the dropzone. Retuned per `size` tier; the documented default is the `m`/`medium` tier.
+ * @cssprop [--lr-file-input-dropzone-icon-size=var(--lr-font-size-xl)] - `[part="dropzone-icon"]`
+ * glyph size. Retuned per `size` tier.
+ * @cssprop [--lr-file-input-dropzone-padding=var(--lr-space-l)] - Padding inside `[part="base"]`
+ * and the stacked dropzone content. Retuned per `size` tier; `compact` overrides it.
+ * @cssprop [--lr-file-input-detail-font-size=var(--lr-font-size-sm)] - Size of the secondary text:
+ * the hint, the validation error, and each selected file's formatted size. Retuned per `size` tier.
  * @cssprop [--lr-file-input-gap=var(--lr-space-xs)] - Gap between the dropzone's slotted
  * children. While `compact`, this is the fallback when `--lr-file-input-compact-gap` is unset.
  * @cssprop [--lr-file-input-radius=var(--lr-radius)] - Corner radius of `[part="base"]`.

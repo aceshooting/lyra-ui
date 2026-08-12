@@ -215,6 +215,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   private readonly headingId = nextId('confirm-bar-heading');
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       const defaultSlotNodes = Array.from(this.childNodes).filter(
         (node) => node.nodeType !== Node.ELEMENT_NODE || !(node as Element).getAttribute('slot'),
@@ -244,6 +245,13 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     const detail = next === 'approved' ? { args: this.args } : undefined;
     const event = this.emit(eventName, detail, { cancelable: true });
     if (event.defaultPrevented) {
+      // Same handoff as the synchronous path below, and for the same reason: `?loading` on the
+      // just-activated button makes `lr-button`'s internal native `<button>` genuinely `disabled`,
+      // and a browser blurs a focused element the instant it becomes disabled. Without moving
+      // focus first, a keyboard user who activated Approve/Deny would be silently dropped to
+      // <body> for the whole duration of the host's async work. Ordered before the `pending` write
+      // so the button is still focusable when focus leaves it.
+      this.statusEl?.focus();
       this.pending = next;
       return;
     }
@@ -256,6 +264,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('decision') && changed.get('decision') !== undefined && this.decision != null) {
       const key = this.decision === 'approved' ? 'confirmApprovedAnnounce' : 'confirmDeniedAnnounce';
       this.liveRegion?.announce(this.localize(key), { force: true });

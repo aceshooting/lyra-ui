@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './tour.js';
 import type { LyraTour, TourStep } from './tour.js';
+import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { styles } from './tour.styles.js';
 import { registerLyraLocale } from '../../../internal/localization.js';
 
@@ -1460,10 +1461,32 @@ describe('lr-tour', () => {
     }
   });
 
-  it('collapses the popover enter animation under prefers-reduced-motion', () => {
-    expect(styles.cssText).to.match(/@media \(prefers-reduced-motion: reduce\)/);
-    expect(styles.cssText).to.match(/@media \(prefers-reduced-motion: reduce\) \{[^]*\[part='popover'\][^{]*\{[^}]*animation:\s*none/);
+  it('collapses the popover enter animation under prefers-reduced-motion, and runs it otherwise', async () => {
     expect(styles.cssText).to.include('var(--lr-transition-base)');
+    await setReducedMotion('no-preference');
+    try {
+      const el = (await fixture(
+        html`<div>
+          <lr-tour .steps=${makeSteps(1)} open></lr-tour>
+          ${targetButtons(1)}
+        </div>`,
+      )) as HTMLDivElement;
+      const tour = el.querySelector('lr-tour') as LyraTour;
+      await tour.updateComplete;
+      const popover = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+
+      const fullMotion = getComputedStyle(popover);
+      expect(fullMotion.animationName).to.equal('lr-tour-popover-in');
+      expect(fullMotion.animationDuration).to.not.equal('0s');
+
+      await setReducedMotion('reduce');
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      expect(matchMedia('(prefers-reduced-motion: reduce)').matches).to.equal(true);
+      const reducedMotion = getComputedStyle(popover);
+      expect(reducedMotion.animationName).to.equal('none');
+    } finally {
+      await setReducedMotion('no-preference');
+    }
   });
 
   it('does not trigger a Lit "scheduled an update after an update completed" dev warning across start/next/back/goToStep/a missing-target step/end', async () => {

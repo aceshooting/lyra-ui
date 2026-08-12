@@ -9,7 +9,7 @@ import { styles } from './calendar.styles.js';
 import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_calendarEmpty, LYRA_DEFAULT_calendarLabel, LYRA_DEFAULT_calendarNextMonth, LYRA_DEFAULT_calendarPreviousMonth, LYRA_DEFAULT_date } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_calendarEmpty, LYRA_DEFAULT_calendarLabel, LYRA_DEFAULT_calendarNextMonth, LYRA_DEFAULT_calendarPreviousMonth } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -61,7 +61,6 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
     calendarLabel: LYRA_DEFAULT_calendarLabel,
     calendarNextMonth: LYRA_DEFAULT_calendarNextMonth,
     calendarPreviousMonth: LYRA_DEFAULT_calendarPreviousMonth,
-    date: LYRA_DEFAULT_date,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

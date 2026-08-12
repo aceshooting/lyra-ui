@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `pdfjs-dist` — see `llms/peers.md`
-- **Themeable via** 17 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -98,8 +98,11 @@ size of the virtualized page list (`[part="pages"]`); also settable via the `max
 which writes this token inline on `[part="base"]`. `--lr-pdf-viewer-toolbar-button-hover-bg`
 (default `var(--lr-color-surface)`) — hover fill of the toolbar buttons; it defaults to the surface
 fill rather than the toolbar's own `--lr-color-brand-quiet` tint precisely so the hover state is
-visible against the toolbar behind it. Everything else below the page list is retuned through the
-exported parts above rather than through dedicated custom properties.
+visible against the toolbar behind it. `--lr-pdf-viewer-search-match-bg` (default
+`var(--lr-color-warning-quiet)`) and `--lr-pdf-viewer-search-match-active-bg` (default
+`var(--lr-color-warning)`) retint the painted `search-match`/`search-match-active` marks without
+overriding the shared warning tokens directly. Everything else below the page list is retuned
+through the exported parts above rather than through dedicated custom properties.
 
 **Optional peer dependency:** install `pdfjs-dist` with `pnpm add pdfjs-dist`. The component registers
 a lazy `application/pdf` renderer with `<lr-document-viewer>` so the PDF library is loaded only when

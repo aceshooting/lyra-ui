@@ -161,11 +161,25 @@ export const styles = css`
      subtree -- dims the label along with the fill. Mixing the resting fill toward
      --lr-color-mix-partner (which tracks the text color) always moves, always in the direction the
      surface needs, and leaves the label alone. */
-  [part='submit-button']:hover {
+  /* Gated on :not(:disabled) through the same :where() wrapper the thumb buttons use above -- a
+     submit button held disabled by the disabled or a long-lived pending state still matches :hover
+     (CSS keeps matching it on a disabled control), so an ungated rule made the one control the
+     user cannot activate look like the most activatable thing on the panel. */
+  :where([part='submit-button']):hover:where(:not(:disabled)) {
     background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
-  [part='submit-button']:active {
+  :where([part='submit-button']):active:where(:not(:disabled)) {
     background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  /* Matches the up/down thumb buttons' own disabled treatment, so every control in the component
+     reads as unavailable from the same two signals (dimmed fill, not-allowed cursor). */
+  [part='submit-button']:disabled {
+    cursor: not-allowed;
+    opacity: var(--lr-opacity-disabled);
+  }
+  [part='comment']:disabled {
+    cursor: not-allowed;
+    opacity: var(--lr-opacity-disabled);
   }
   [part='submit-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

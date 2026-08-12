@@ -2,7 +2,8 @@ import { fixture, expect, html, waitUntil, oneEvent, aTimeout } from '@open-wc/t
 import jsonGrammar from 'shiki/langs/json.mjs';
 import './code-block.js';
 import type { LyraCodeBlock } from './code-block.js';
-import type { ShikiHighlighter } from './code-loader.js';
+import type { ShikiHighlighter, ShikiHighlighterCore } from './code-loader.js';
+import { __setShikiHighlighterCoreLoaderForTesting } from './shiki-types.js';
 import { styles } from './code-block.styles.js';
 
 type Internals = {
@@ -1379,4 +1380,67 @@ it('rejects a max-height that would inject extra declarations onto the body', as
   await el.updateComplete;
   const after = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
   expect(after.style.getPropertyValue('--lr-code-block-max-height').trim()).to.equal('20rem');
+});
+
+it('does not write highlighted state from the fine-grained languages load once the element has disconnected', async () => {
+  let resolveCore!: (value: ShikiHighlighterCore | null) => void;
+  const pending = new Promise<ShikiHighlighterCore | null>((resolve) => {
+    resolveCore = resolve;
+  });
+  __setShikiHighlighterCoreLoaderForTesting(() => pending);
+  const el = document.createElement('lr-code-block') as LyraCodeBlock;
+  el.language = 'json';
+  el.languages = { json: jsonGrammar };
+  el.code = '{"a":1}';
+  try {
+    // Connect and tear down inside one synchronous tick: Lit's first update cycle still runs
+    // afterwards (that is what calls syncHighlight() via willUpdate()), so the load it starts
+    // has to guard on isConnected itself -- the highlightToken staleness counter never moves.
+    document.body.append(el);
+    el.remove();
+    await el.updateComplete;
+
+    resolveCore({
+      codeToHtml: () => '<pre class="shiki"><code>FAKE</code></pre>',
+    } as unknown as ShikiHighlighterCore);
+    await aTimeout(0);
+    await el.updateComplete;
+
+    expect(
+      internalsOf(el).highlightedHtml,
+      'must not be written on a disconnected instance',
+    ).to.equal(null);
+  } finally {
+    el.remove();
+    __setShikiHighlighterCoreLoaderForTesting(undefined);
+  }
+});
+
+it('does not write highlighted state from the default per-language load once the element has disconnected', async () => {
+  const el = (await fixture(
+    html`<lr-code-block language="json" .code=${'{"a":1}'}></lr-code-block>`,
+  )) as LyraCodeBlock;
+  let finishGrammarLoad!: () => void;
+  const fakeHighlighter = {
+    getLoadedLanguages: () => [],
+    loadLanguage: () =>
+      new Promise<void>((resolve) => {
+        finishGrammarLoad = resolve;
+      }),
+    codeToHtml: () => '<pre class="shiki"><code>FAKE</code></pre>',
+  } as unknown as ShikiHighlighter;
+
+  internalsOf(el).highlighter = fakeHighlighter;
+  internalsOf(el).highlightedHtml = null;
+  // Grammar not loaded yet, so this takes syncHighlight()'s loadShikiLanguage() branch.
+  internalsOf(el).syncHighlight();
+  el.remove();
+  finishGrammarLoad();
+  await aTimeout(0);
+  await el.updateComplete;
+
+  expect(
+    internalsOf(el).highlightedHtml,
+    'must not be written on a disconnected instance',
+  ).to.equal(null);
 });

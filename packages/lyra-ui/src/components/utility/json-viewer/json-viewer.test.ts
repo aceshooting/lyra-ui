@@ -1023,3 +1023,26 @@ it('searchPrevious resolves false when there is nothing to move to', async () =>
   await el.runSearch('no-such-token');
   expect(await el.searchPrevious()).to.be.false;
 });
+
+describe('responsive: 320px allocation', () => {
+  it('keeps a long unbroken key from forcing horizontal overflow instead of wrapping', async () => {
+    // [part='value'] already wraps long unbroken text (overflow-wrap: anywhere +
+    // min-inline-size: 0); this asserts the KEY -- flex: 0 0 auto in the row, with no
+    // shrink/wrap handling of its own -- doesn't force the whole row (and with it, the
+    // scrollable base part) wider than a 320px allocation.
+    const longKey = `veryLongUnbrokenPropertyName${'Segment'.repeat(20)}`;
+    const wrapper = (await fixture(html`
+      <div style="inline-size: 320px; max-inline-size: 320px;">
+        <lr-json-viewer .data=${{ [longKey]: 'x' }}></lr-json-viewer>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-json-viewer') as LyraJsonViewer;
+    await el.updateComplete;
+
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.scrollWidth).to.be.at.most(Math.ceil(base.getBoundingClientRect().width) + 1);
+    const key = el.shadowRoot!.querySelector('[part="key"]') as HTMLElement;
+    expect(key.textContent).to.equal(longKey);
+    expect(key.scrollWidth).to.be.at.most(Math.ceil(key.getBoundingClientRect().width) + 1);
+  });
+});

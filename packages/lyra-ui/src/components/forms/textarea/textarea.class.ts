@@ -22,7 +22,7 @@ import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_select, LYRA_DEFAULT_textareaCharacterCount, LYRA_DEFAULT_textareaCharactersRemaining, LYRA_DEFAULT_textareaLabel, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_textareaCharacterCount, LYRA_DEFAULT_textareaCharactersRemaining, LYRA_DEFAULT_textareaLabel, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -150,12 +150,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
-    open: LYRA_DEFAULT_open,
-    restore: LYRA_DEFAULT_restore,
-    select: LYRA_DEFAULT_select,
     textareaCharacterCount: LYRA_DEFAULT_textareaCharacterCount,
     textareaCharactersRemaining: LYRA_DEFAULT_textareaCharactersRemaining,
     textareaLabel: LYRA_DEFAULT_textareaLabel,

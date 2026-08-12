@@ -57,7 +57,7 @@ import type {
 } from "./data-grid-types.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_menuLabel, LYRA_DEFAULT_next, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_previous, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_tableFilterLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_menuLabel, LYRA_DEFAULT_next, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_previous, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_tableFilterLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export * from "./data-grid-types.js";
@@ -190,6 +190,19 @@ function safeText(value: unknown): string {
   return String(value);
 }
 
+/** Normalizes `DataGridPinSide`'s `'start'`/`'end'` spelling to the `'left'`/`'right'` values the
+ *  render/layout/sort logic below is keyed to. Both spellings mean the same inline-start/
+ *  inline-end edges -- the CSS already resolves `[data-pin='left'|'right']` through
+ *  `inset-inline-start`/`inset-inline-end`, so either spelling mirrors under `dir="rtl"`
+ *  identically. Mirrors `table.class.ts`'s `stickyDirection()`. Storage (`columnPinning`,
+ *  `column.pinned`) and `getColumnPin()` keep echoing back whichever spelling the caller set --
+ *  only render/layout call sites normalize through this. */
+function normalizePinSide(side: DataGridPinSide): "left" | "right" | false {
+  if (side === "start") return "left";
+  if (side === "end") return "right";
+  return side;
+}
+
 function normalizedGroupBy(value: string | string[] | null): string[] {
   if (Array.isArray(value))
     return value.map((entry) => entry.trim()).filter(Boolean);
@@ -249,6 +262,7 @@ function normalizedGroupBy(value: string | string[] | null): string[] {
  * @csspart filter-button - A column filter trigger.
  * @csspart filter-panel - The active column filter editor.
  * @csspart first-button - First-page button.
+ * @csspart first-icon - The first-page directional icon.
  * @csspart footer - Footer container.
  * @csspart footer-cell - A footer cell.
  * @csspart footer-row - Footer row.
@@ -258,6 +272,7 @@ function normalizedGroupBy(value: string | string[] | null): string[] {
  * @csspart header - Header row.
  * @csspart header-cell - A column header cell.
  * @csspart last-button - Last-page button.
+ * @csspart last-icon - The last-page directional icon.
  * @csspart live-region - The visually-hidden, `aria-hidden` mirror of the last polite
  * announcement. The announcement itself lands in the shared light-DOM polite region
  * (`acquireAnnouncementSink()` in `internal/announcer.ts`), because a live region inside a shadow
@@ -265,6 +280,7 @@ function normalizedGroupBy(value: string | string[] | null): string[] {
  * @csspart loading-overlay - Visible, non-live loading-state overlay. The grid carries
  *   `aria-busy`; post-mount loading announcements use the shared light-DOM polite sink.
  * @csspart next-button - Next-page button.
+ * @csspart next-icon - The next-page directional icon.
  * @csspart no-results - No-filter-results state.
  * @csspart page - A numbered page button.
  * @csspart page-current - The current numbered page button.
@@ -273,6 +289,7 @@ function normalizedGroupBy(value: string | string[] | null): string[] {
  * @csspart pager-button - Shared part for every pager button.
  * @csspart pin-indicator - Pinned-column edge marker.
  * @csspart previous-button - Previous-page button.
+ * @csspart previous-icon - The previous-page directional icon.
  * @csspart resize-handle - Pointer and keyboard column resize handle.
  * @csspart row - A data row.
  * @csspart row-detail - Expanded detail content.
@@ -313,8 +330,6 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     clear: LYRA_DEFAULT_clear,
     collapse: LYRA_DEFAULT_collapse,
     copied: LYRA_DEFAULT_copied,
-    copy: LYRA_DEFAULT_copy,
-    details: LYRA_DEFAULT_details,
     expand: LYRA_DEFAULT_expand,
     loading: LYRA_DEFAULT_loading,
     menuLabel: LYRA_DEFAULT_menuLabel,
@@ -322,7 +337,6 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     noColumns: LYRA_DEFAULT_noColumns,
     noData: LYRA_DEFAULT_noData,
     noMatches: LYRA_DEFAULT_noMatches,
-    open: LYRA_DEFAULT_open,
     paginationFirstPage: LYRA_DEFAULT_paginationFirstPage,
     paginationJumpToPage: LYRA_DEFAULT_paginationJumpToPage,
     paginationLabel: LYRA_DEFAULT_paginationLabel,
@@ -703,13 +717,13 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     );
     const rank = (side: "left" | "right", id: string): number => {
       const ordered = this.orderedColumns.filter(
-        (entry) => this.getColumnPin(entry.id) === side
+        (entry) => normalizePinSide(this.getColumnPin(entry.id)) === side
       );
       return ordered.findIndex((entry) => entry.id === id);
     };
     return entries.sort((left, right) => {
-      const leftPin = this.getColumnPin(left.id);
-      const rightPin = this.getColumnPin(right.id);
+      const leftPin = normalizePinSide(this.getColumnPin(left.id));
+      const rightPin = normalizePinSide(this.getColumnPin(right.id));
       if (leftPin === rightPin) return 0;
       if (leftPin === "left") return -1;
       if (rightPin === "left") return 1;
@@ -1050,8 +1064,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     if (this.page !== 0) this.page = 0;
   }
 
-  /** Pins or unpins a column without emitting the user-only pin event. */
-  pinColumn(columnId: string, side: 'left' | 'right' | false): void {
+  /** Pins or unpins a column without emitting the user-only pin event. Accepts `'left'`/`'right'`
+   *  (RTL-relative, not physical -- see `DataGridPinSide`) or their `'start'`/`'end'` aliases. */
+  pinColumn(columnId: string, side: DataGridPinSide): void {
     if (!this.orderedColumns.some(({ id }) => id === columnId)) return;
     const next = new Map(this.columnPinning);
     next.set(columnId, side);
@@ -1126,7 +1141,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       );
     if (state.pinning)
       this.columnPinning = this.validColumnMap(state.pinning, known, (side) =>
-        side === "left" || side === "right" ? side : false
+        side === "left" || side === "right" || side === "start" || side === "end"
+          ? side
+          : false
       );
     if (state.sort)
       this.sort = state.sort
@@ -1627,7 +1644,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     column: DataGridColumn<Row>,
     id: string
   ): Record<string, string> {
-    const side = this.getColumnPin(id);
+    const side = normalizePinSide(this.getColumnPin(id));
     const pinOffset = side ? this.pinOffset(id, side) : 0;
     return {
       ...(side ? { "--pin-offset": `${pinOffset}px` } : {}),
@@ -1656,7 +1673,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const subset =
       side === "left" ? entries.slice(0, index) : entries.slice(index + 1);
     return subset
-      .filter((entry) => this.getColumnPin(entry.id) === side)
+      .filter((entry) => normalizePinSide(this.getColumnPin(entry.id)) === side)
       .reduce(
         (sum, entry) => sum + this.estimatedColumnWidth(entry.column, entry.id),
         0
@@ -2432,7 +2449,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
               data-column-position=${position}
               data-align=${column.align ?? "start"}
               data-sortable=${sortable ? "" : nothing}
-              data-pin=${this.getColumnPin(id) || nothing}
+              data-pin=${normalizePinSide(this.getColumnPin(id)) || nothing}
               style=${styleMap(this.columnStyle(column, id))}
               .draggable=${canMove}
               @focus=${() => {
@@ -2624,7 +2641,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
               data-column-position=${columnPosition}
               data-column-id=${id}
               data-align=${column.align ?? "start"}
-              data-pin=${this.getColumnPin(id) || nothing}
+              data-pin=${normalizePinSide(this.getColumnPin(id)) || nothing}
               style=${styleMap(this.columnStyle(column, id))}
               @focus=${() => {
                 this.focusedRow = rowPosition;
@@ -2914,7 +2931,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           ?disabled=${current <= 0 || count === 0}
           @click=${() => this.applyPageChange(0)}
         >
-          <span aria-hidden="true">«</span>
+          <span part="first-icon" aria-hidden="true"
+            >${chevronIcon()}${chevronIcon()}</span
+          >
         </button>
         <button
           part="pager-button previous-button"
@@ -2923,7 +2942,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           ?disabled=${current <= 0 || count === 0}
           @click=${() => this.applyPageChange(current - 1)}
         >
-          <span aria-hidden="true">‹</span>
+          <span part="previous-icon" aria-hidden="true">${chevronIcon()}</span>
         </button>
         ${numbers[0] !== undefined && numbers[0] > 0
           ? html`<span part="ellipsis" aria-hidden="true">…</span>`
@@ -2970,7 +2989,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           ?disabled=${current >= count - 1 || count === 0}
           @click=${() => this.applyPageChange(current + 1)}
         >
-          <span aria-hidden="true">›</span>
+          <span part="next-icon" aria-hidden="true">${chevronIcon()}</span>
         </button>
         <button
           part="pager-button last-button"
@@ -2979,7 +2998,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           ?disabled=${current >= count - 1 || count === 0}
           @click=${() => this.applyPageChange(Math.max(0, count - 1))}
         >
-          <span aria-hidden="true">»</span>
+          <span part="last-icon" aria-hidden="true"
+            >${chevronIcon()}${chevronIcon()}</span
+          >
         </button>
       </nav>
     `;

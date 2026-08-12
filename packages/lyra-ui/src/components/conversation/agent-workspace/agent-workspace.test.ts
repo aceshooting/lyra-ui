@@ -1,5 +1,5 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import type { AgentRun, ChatMessage, RetrievalChunk } from '../../../ai/types.js';
+import type { AgentRun, CancelEventDetail, ChatMessage, RetrievalChunk } from '../../../ai/types.js';
 import '../../forms/button/button.js';
 import './agent-workspace.js';
 import type { LyraAgentWorkspace } from './agent-workspace.class.js';
@@ -113,6 +113,35 @@ it('composes transcript and agent details from controlled data', async () => {
   expect(el.shadowRoot!.querySelector('lr-grounding-summary')).to.exist;
   expect(el.shadowRoot!.querySelector('lr-context-inspector')).to.exist;
   expect(el.shadowRoot!.querySelector('[part="details"]')).to.exist;
+});
+
+it('forwards lr-cancel from the built-in agent run carrying that run\'s own object detail', async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`<lr-agent-workspace .run=${run}></lr-agent-workspace>`);
+  await el.updateComplete;
+  const agentRun = el.shadowRoot!.querySelector('lr-agent-run');
+  expect(agentRun === null, 'the built-in agent run renders when `run` is set').to.equal(false);
+
+  let detailIsObject = false;
+  let reason: string | undefined;
+  el.addEventListener('lr-cancel', (event) => {
+    detailIsObject = typeof event.detail === 'object' && event.detail !== null;
+    // `event` is typed straight off `LyraAgentWorkspaceEventMap` via LyraElement's
+    // addEventListener overload, so reading `.reason` here is only well-typed while that map
+    // declares `CancelEventDetail` rather than `undefined`.
+    reason = event.detail.reason;
+  });
+  // Exactly what <lr-agent-run>'s own Cancel button emits (`emit('lr-cancel', {})`), plus a
+  // `reason` the shape allows -- both cross the shadow boundary unchanged.
+  agentRun!.dispatchEvent(
+    new CustomEvent<CancelEventDetail>('lr-cancel', {
+      detail: { reason: 'stopped' },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+
+  expect(detailIsObject).to.equal(true);
+  expect(reason).to.equal('stopped');
 });
 
 it('renders ordered message parts when present while preserving legacy text messages', async () => {

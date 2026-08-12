@@ -388,7 +388,7 @@ describe("lr-stepper", () => {
     expect(buttons[1]!.querySelector('[part="step-check"]')).to.not.equal(null);
 
     // No icon field at all -- no step-icon part rendered, byte-for-byte unaffected.
-    expect(buttons[2]!.querySelector('[part="step-icon"]')).to.equal(null);
+    expect(buttons[2]!.querySelector('[part="step-icon"]') === null).to.equal(true);
   });
 
   it("keeps rich step icons inert so the step button remains the only action", async () => {

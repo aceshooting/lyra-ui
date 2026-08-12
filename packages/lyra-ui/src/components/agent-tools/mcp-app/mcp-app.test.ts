@@ -461,3 +461,73 @@ it('still renders srcdoc for an inline html resource', async () => {
   expect(frame.getAttribute('srcdoc')).to.contain('inline');
   expect(frame.hasAttribute('src'), 'the inline branch must not also set src').to.be.false;
 });
+
+// -- Tool results are correlated to the frame generation that asked for them ----
+
+it('drops a tool result whose frame generation no longer matches the mounted frame', async () => {
+  const el = (await fixture(html`<lr-mcp-app
+    .resource=${{ uri: 'ui://first', html: '<p>First</p>' }}
+  ></lr-mcp-app>`)) as LyraMcpApp;
+  const firstWindow = el.shadowRoot!.querySelector('iframe')!.contentWindow;
+
+  const firstCall = oneEvent(el, 'lr-mcp-tool-call');
+  window.dispatchEvent(frameMessage(
+    firstWindow,
+    {
+      channel: 'lyra-mcp-app',
+      version: 1,
+      type: 'tool-call',
+      requestId: 'request-1',
+      name: 'slow_tool',
+      args: {},
+    },
+    'null',
+  ));
+  const staleGeneration = (await firstCall).detail.frameGeneration;
+  expect(typeof staleGeneration, 'the request carries the generation it came from').to.equal('number');
+
+  // A tool call is inherently asynchronous -- the host is still doing real work (an API call, a
+  // filesystem read) when the conversation UI swaps the displayed resource on the same element.
+  el.resource = { uri: 'ui://second', html: '<p>Second</p>' };
+  await el.updateComplete;
+  const secondWindow = el.shadowRoot!.querySelector('iframe')!.contentWindow;
+  expect(secondWindow === firstWindow, 'the swap really mounted a fresh frame').to.equal(false);
+
+  const posted: Record<string, unknown>[] = [];
+  (el as unknown as { post: (message: Record<string, unknown>) => void }).post = (message) => {
+    posted.push(message);
+  };
+  const toolResults = (): Record<string, unknown>[] => posted.filter((m) => m['type'] === 'tool-result');
+
+  el.postToolResult('request-1', { temperature: 18 }, undefined, staleGeneration);
+  expect(
+    toolResults().length,
+    "the old resource's result must not be delivered into the newly-loaded app",
+  ).to.equal(0);
+
+  const secondCall = oneEvent(el, 'lr-mcp-tool-call');
+  window.dispatchEvent(frameMessage(
+    secondWindow,
+    {
+      channel: 'lyra-mcp-app',
+      version: 1,
+      type: 'tool-call',
+      requestId: 'request-2',
+      name: 'slow_tool',
+      args: {},
+    },
+    'null',
+  ));
+  const liveGeneration = (await secondCall).detail.frameGeneration;
+  expect(liveGeneration).to.not.equal(staleGeneration);
+
+  el.postToolResult('request-2', { temperature: 19 }, undefined, liveGeneration);
+  expect(toolResults().length, 'a result correlated to the live frame still lands').to.equal(1);
+  expect(toolResults()[0]!['requestId']).to.equal('request-2');
+
+  // A caller that passes no correlation keeps the pre-existing behavior: post to whatever frame is
+  // currently mounted. The argument is additive, so existing hosts are unaffected.
+  el.postToolResult('request-3', { temperature: 20 });
+  expect(toolResults().length).to.equal(2);
+  expect(toolResults()[1]!['requestId']).to.equal('request-3');
+});

@@ -282,7 +282,13 @@ own heading-detection also drives the dialog's accessible name; `description`, i
 a slotted `<p>`. `tone: 'danger'` fills the confirm button with `--lr-color-danger` instead of
 `--lr-color-brand`, for destructive actions. Confirm/cancel buttons are plain inline-styled
 `<button>` elements (no shared button component exists in this library yet), but every color value
-used is still a `--lr-*` token reference, never a raw literal.
+used is still a `--lr-*` token reference, never a raw literal. They carry the same interaction
+states as every other control in the library: a hover/pressed fill mixed toward
+`--lr-color-mix-partner` by `--lr-color-mix-hover`/`--lr-color-mix-active`, and a
+`--lr-focus-ring-width`/`--lr-focus-ring-color`/`--lr-focus-ring-offset` `:focus-visible` ring. An
+inline `style` attribute cannot express a pseudo-class, so those rules ship in a small `<style>`
+element mounted inside the transient dialog (and removed with it), targeting the buttons through
+their `data-lr-confirm-action` attribute.
 
 **Known gotchas:**
 - Every dismissal path (confirm button, cancel button, Escape, backdrop click) funnels through

@@ -340,6 +340,45 @@ describe('region highlights', () => {
     expect(box.style.getPropertyValue('inset-inline-start')).to.equal('');
   });
 
+  it('anchors a highlight label to its parent box\'s physical left edge in both ltr and rtl', async () => {
+    // The parent [part="highlight"] box is deliberately physically positioned (left/top, never
+    // inset-inline-start) because the underlying raster never mirrors under RTL. The label used
+    // to use inset-inline-start:0, which under dir="rtl" resolves to the box's physical *right*
+    // edge -- detaching the label from its non-mirroring parent's left edge while the parent
+    // itself stayed put. Widen the box (via an outer ::part() override in the light DOM, which
+    // always wins over the component's own internal rule) well past the label's own content
+    // width, so a left-vs-right flush produces an unmistakable geometry difference instead of the
+    // ~2px border/padding noise the default icon-button-size floor leaves between box and label.
+    //
+    // The override lives on document.head, not inside the fixture, and each `lr-image-viewer` is
+    // fixtured directly (not through a wrapper <div>) -- fixturing a plain wrapper only awaits its
+    // own nextFrame(), not the nested custom element's first Lit update (see stubImageLoad's own
+    // comment above for the same trap), which left `[part="highlight-label"]` unrendered yet.
+    const styleOverride = document.createElement('style');
+    styleOverride.textContent = 'lr-image-viewer::part(highlight) { min-inline-size: 200px !important; }';
+    document.head.appendChild(styleOverride);
+    try {
+      for (const dir of ['ltr', 'rtl'] as const) {
+        const el = (await fixture(html`<lr-image-viewer dir=${dir} src=${PNG_SRC} .highlights=${highlights}></lr-image-viewer>`)) as LyraImageViewer;
+        const box = el.shadowRoot!.querySelector('[part="highlight"]') as HTMLElement;
+        const label = el.shadowRoot!.querySelector('[part="highlight-label"]') as HTMLElement;
+        expect(
+          el.shadowRoot!.querySelectorAll('[part="highlight-label"]').length,
+          `dir="${dir}" still renders the labeled highlight's label span`,
+        ).to.equal(1);
+        const boxRect = box.getBoundingClientRect();
+        const labelRect = label.getBoundingClientRect();
+        expect(boxRect.width, `dir="${dir}" widened the box well past the label's own width`).to.be.greaterThan(100);
+        expect(
+          labelRect.left - boxRect.left,
+          `dir="${dir}" keeps the label flush with the box's physical left edge, not its right`,
+        ).to.be.closeTo(2, 3);
+      }
+    } finally {
+      styleOverride.remove();
+    }
+  });
+
   it('scrollToAnchor resolves true for a region anchor and false for an unsupported kind', async () => {
     const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC} .highlights=${highlights}></lr-image-viewer>`)) as LyraImageViewer;
     await stubImageLoad(el);
@@ -650,6 +689,31 @@ describe('pointer-driven annotation', () => {
       wrapper.dispatchEvent(new PointerEvent('pointerup', { pointerId: 9, bubbles: true }));
       await el.updateComplete;
     }
+  });
+
+  it('ignores a non-primary-button pointerdown (e.g. right-click) but still starts a draft on a left-click', async () => {
+    const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC} annotatable></lr-image-viewer>`)) as LyraImageViewer;
+    const wrapper = stubWrapperRect(el);
+    // button: 2 is the secondary (right) mouse button per the PointerEvent/MouseEvent spec.
+    // A right-click while annotatable must not begin an annotation drag -- it should be free for
+    // a context menu, and must never mutate internal draft state as a side effect.
+    wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 20, button: 2, clientX: 20, clientY: 10, bubbles: true }));
+    await el.updateComplete;
+    // Compare a count/primitive, never the queried node itself: a failing `expect(domNode).to.not
+    // .exist` hands chai a live DOM node as the failure's `actual` value, and chai's own
+    // diff/inspection of a node's circular parentNode/ownerDocument graph is what actually hangs
+    // the whole file at a red result, not merely a wrong outcome.
+    expect(el.shadowRoot!.querySelectorAll('[part="annotation-box"]').length, 'a right-click renders no draft box').to.equal(0);
+    expect((el as unknown as { draft: unknown }).draft, 'a right-click never sets a draft').to.equal(null);
+    expect((el as unknown as { pointerDraftId: unknown }).pointerDraftId, 'a right-click never claims a pointer draft id').to.equal(null);
+
+    // The primary (left) button still starts a draft as before -- the fix must not touch that path.
+    wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 21, button: 0, clientX: 20, clientY: 10, bubbles: true }));
+    await el.updateComplete;
+    const boxes = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="annotation-box"]')];
+    expect(boxes.length, 'a left-click still starts a draft').to.equal(1);
+    expect(boxes[0]!.style.left).to.equal('10%');
+    expect(boxes[0]!.style.top).to.equal('10%');
   });
 
   it('ignores pointerdown on the wrapper while annotation mode is off', async () => {

@@ -24,7 +24,7 @@ import {
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_convertingDocument, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewAlt, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewGenericError, LYRA_DEFAULT_documentPreviewGenericFile, LYRA_DEFAULT_documentPreviewNotAvailable, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_download, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_open, LYRA_DEFAULT_progress } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_convertingDocument, LYRA_DEFAULT_documentPreviewAlt, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewGenericError, LYRA_DEFAULT_documentPreviewGenericFile, LYRA_DEFAULT_documentPreviewNotAvailable, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_download, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -213,9 +213,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
     convertingDocument: LYRA_DEFAULT_convertingDocument,
-    details: LYRA_DEFAULT_details,
     documentPreviewAlt: LYRA_DEFAULT_documentPreviewAlt,
     documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
     documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
@@ -229,10 +227,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     download: LYRA_DEFAULT_download,
     highlightOfTotal: LYRA_DEFAULT_highlightOfTotal,
     highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
-    loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
-    open: LYRA_DEFAULT_open,
-    progress: LYRA_DEFAULT_progress,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

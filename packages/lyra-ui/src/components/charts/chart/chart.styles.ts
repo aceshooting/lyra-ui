@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { forcedColorLegendSwatchStyles } from './chart-forced-colors.js';
 
 export const styles = css`
   :host {
@@ -126,82 +127,8 @@ export const styles = css`
     block-size: var(--lr-space-s);
     flex: 0 0 auto;
     border-radius: var(--lr-radius-xs);
-    --lr-chart-pattern-step: var(--lr-space-2xs);
   }
-  /* These attributes are emitted only while (forced-colors: active) matches. The inline system
-     color remains one channel; texture mirrors the canvas pattern so repeated colors stay distinct
-     in the DOM legend as well. The swatch is the data key, while its enclosing button/focus chrome
-     remains system-controlled. */
-  [part='legend-swatch'][data-encoding] {
-    forced-color-adjust: none;
-    border: var(--lr-border-width-thin) solid currentColor;
-    background-size: var(--lr-chart-pattern-step) var(--lr-chart-pattern-step);
-  }
-  [part='legend-swatch'][data-encoding='solid'] {
-    background-image: none;
-  }
-  [part='legend-swatch'][data-encoding='horizontal'] {
-    background-image: repeating-linear-gradient(
-      0deg,
-      transparent 0 calc(var(--lr-chart-pattern-step) - var(--lr-border-width-thin)),
-      var(--lr-color-surface) calc(var(--lr-chart-pattern-step) - var(--lr-border-width-thin))
-        var(--lr-chart-pattern-step)
-    );
-  }
-  [part='legend-swatch'][data-encoding='vertical'] {
-    background-image: repeating-linear-gradient(
-      90deg,
-      transparent 0 calc(var(--lr-chart-pattern-step) - var(--lr-border-width-thin)),
-      var(--lr-color-surface) calc(var(--lr-chart-pattern-step) - var(--lr-border-width-thin))
-        var(--lr-chart-pattern-step)
-    );
-  }
-  [part='legend-swatch'][data-encoding='diagonal'] {
-    background-image: repeating-linear-gradient(
-      45deg,
-      transparent 0 calc(var(--lr-chart-pattern-step) - var(--lr-border-width-thin)),
-      var(--lr-color-surface) calc(var(--lr-chart-pattern-step) - var(--lr-border-width-thin))
-        var(--lr-chart-pattern-step)
-    );
-  }
-  [part='legend-swatch'][data-encoding='reverse-diagonal'] {
-    background-image: repeating-linear-gradient(
-      -45deg,
-      transparent 0 calc(var(--lr-chart-pattern-step) - var(--lr-border-width-thin)),
-      var(--lr-color-surface) calc(var(--lr-chart-pattern-step) - var(--lr-border-width-thin))
-        var(--lr-chart-pattern-step)
-    );
-  }
-  [part='legend-swatch'][data-encoding='crosshatch'] {
-    background-image:
-      linear-gradient(
-        0deg,
-        transparent calc(50% - var(--lr-border-width-thin)),
-        var(--lr-color-surface) calc(50% - var(--lr-border-width-thin)) 50%,
-        transparent 50%
-      ),
-      linear-gradient(
-        90deg,
-        transparent calc(50% - var(--lr-border-width-thin)),
-        var(--lr-color-surface) calc(50% - var(--lr-border-width-thin)) 50%,
-        transparent 50%
-      );
-  }
-  [part='legend-swatch'][data-encoding='dots'] {
-    background-image: radial-gradient(
-      circle,
-      var(--lr-color-surface) 0 var(--lr-border-width-thin),
-      transparent var(--lr-border-width-medium)
-    );
-  }
-  [part='legend-swatch'][data-encoding='checker'] {
-    background-image: conic-gradient(
-      var(--lr-color-surface) 0 25%,
-      transparent 25% 50%,
-      var(--lr-color-surface) 50% 75%,
-      transparent 75%
-    );
-  }
+  ${forcedColorLegendSwatchStyles}
   [part='base']:where([data-legend-position='top']) {
     grid-template-areas:
       'legend'
@@ -209,14 +136,18 @@ export const styles = css`
       'warning'
       'table';
   }
-  [part='base']:where([data-legend-position='left']) {
+  /* Column 1 vs column 2, not physical left vs right: a grid numbers its columns along the inline
+     axis, so this pair mirrors itself under dir=rtl. The host resolves every legend-position value
+     (logical alias, literal physical edge, or auto) into whichever column lands on the intended
+     physical edge once that single mirror has been applied -- see legendGridPlacement(). */
+  [part='base']:where([data-legend-position='inline-start']) {
     grid-template-areas:
       'legend plot'
       'warning warning'
       'table table';
     grid-template-columns: minmax(0, auto) minmax(0, 1fr);
   }
-  [part='base']:where([data-legend-position='right']) {
+  [part='base']:where([data-legend-position='inline-end']) {
     grid-template-areas:
       'plot legend'
       'warning warning'
@@ -224,8 +155,8 @@ export const styles = css`
     grid-template-columns: minmax(0, 1fr) minmax(0, auto);
   }
   @container (max-width: 479px) {
-    [part='base']:where([data-legend-position='left']),
-    [part='base']:where([data-legend-position='right']) {
+    [part='base']:where([data-legend-position='inline-start']),
+    [part='base']:where([data-legend-position='inline-end']) {
       grid-template-areas:
         'plot'
         'legend'

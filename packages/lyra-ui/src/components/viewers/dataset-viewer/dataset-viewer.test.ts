@@ -208,6 +208,54 @@ describe('lr-dataset-viewer', () => {
       expect(table.getAttribute('aria-label')).to.equal('');
     } finally { restore(); }
   });
+  it('names a persistent region landmark on [part="base"] in every fetch state, not only once loaded', async () => {
+    const el = (await fixture(html`<lr-dataset-viewer name="Quarterly sales"></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const base = () => el.shadowRoot!.querySelector('[part="base"]')!;
+
+    // idle -- before any src is set. A screen-reader user navigating by landmark previously found
+    // nothing here at all, despite `name` being set.
+    expect(base().getAttribute('role')).to.equal('region');
+    expect(base().getAttribute('aria-label')).to.equal('Quarterly sales');
+
+    const restore = fetchText(TAB_DATA);
+    try {
+      el.src = 'https://example.test/a.tsv';
+      await el.updateComplete;
+      // loading
+      expect(base().getAttribute('role')).to.equal('region');
+      expect(base().getAttribute('aria-label')).to.equal('Quarterly sales');
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+      // loaded -- the outer region keeps the plain display name while the inner table keeps its
+      // richer row-count caption; the two are not mutually exclusive.
+      expect(base().getAttribute('role')).to.equal('region');
+      expect(base().getAttribute('aria-label')).to.equal('Quarterly sales');
+      expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-label')).to.contain('2');
+    } finally { restore(); }
+  });
+
+  it('names the region from a host aria-label, in preference to name, across fetch states', async () => {
+    const el = (await fixture(html`<lr-dataset-viewer name="Data" aria-label="Team roster"></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const base = () => el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base().getAttribute('aria-label')).to.equal('Team roster');
+
+    const restore = fetchText('not,a\nvalid');
+    try {
+      window.fetch = (() => Promise.reject(new Error('boom'))) as typeof window.fetch;
+      el.src = 'https://example.test/a.tsv';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      // error state
+      expect(base().getAttribute('role')).to.equal('region');
+      expect(base().getAttribute('aria-label')).to.equal('Team roster');
+    } finally { restore(); }
+  });
+
+  it('adds no unnamed region when neither name nor a host aria-label is set', async () => {
+    const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.hasAttribute('role')).to.equal(false);
+    expect(base.hasAttribute('aria-label')).to.equal(false);
+  });
+
   it('localizes the interpolated row count', async () => {
     const el = (await fixture(html`<lr-dataset-viewer lang="ar"></lr-dataset-viewer>`)) as LyraDatasetViewer;
     const restore = fetchText(TAB_DATA);
@@ -383,6 +431,68 @@ describe('lr-dataset-viewer', () => {
       } finally {
         restore();
       }
+    });
+
+    it('scrolls a header-row anchor with the same reduced-motion-gated behavior as every other row', async () => {
+      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const restore = fetchText(GRID_DATASET);
+      const originalMatchMedia = window.matchMedia;
+      try {
+        el.src = 'https://example.test/data.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="header-row"]') !== null);
+        const cell = el.shadowRoot!.querySelector('[part="header-row"]')!
+          .querySelectorAll('[part~="header-cell"]')[1] as HTMLElement;
+        const behaviors: (ScrollBehavior | undefined)[] = [];
+        cell.scrollIntoView = ((options?: ScrollIntoViewOptions) => { behaviors.push(options?.behavior); }) as HTMLElement['scrollIntoView'];
+
+        window.matchMedia = (() => ({ matches: false }) as MediaQueryList) as typeof window.matchMedia;
+        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'B1' })).to.equal(true);
+        // <lr-csv-viewer>'s structurally identical header branch already does this, as does this
+        // component's own scrollColumnIntoView() for every non-header row.
+        expect(behaviors).to.deep.equal(['smooth']);
+
+        window.matchMedia = (() => ({ matches: true }) as MediaQueryList) as typeof window.matchMedia;
+        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'B1' })).to.equal(true);
+        expect(behaviors).to.deep.equal(['smooth', 'auto']);
+      } finally {
+        window.matchMedia = originalMatchMedia;
+        restore();
+      }
+    });
+
+    it('reports a failed jump when a concurrent src reassignment lands during the scroll wait', async () => {
+      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const restore = fetchText(GRID_DATASET);
+      try {
+        el.src = 'https://example.test/data.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+        // One attempt only: the mixin's retry loop would otherwise re-resolve against the newly
+        // loaded document, which is correct behavior but hides this call's own result.
+        (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 0;
+        (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 0;
+
+        // Reassign `src` through the real public setter from inside the await that jumpToCell is
+        // already suspended on -- exactly the citation/file-tab click that lands mid-jump.
+        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+        let swapped = false;
+        Object.defineProperty(list, 'updateComplete', {
+          configurable: true,
+          get: () => {
+            if (swapped) return Promise.resolve(true);
+            swapped = true;
+            return (async () => {
+              el.src = 'https://example.test/other.tsv';
+              await el.updateComplete;
+              await aTimeout(0);
+              return true;
+            })();
+          },
+        });
+
+        const found = await el.scrollToAnchor({ kind: 'cell-range', range: 'A2' });
+        expect(swapped, 'the reassignment really landed inside the jump').to.equal(true);
+        expect(found, 'a jump whose document was replaced mid-flight is not a success').to.equal(false);
+      } finally { restore(); }
     });
 
     it('resolves an anchor and highlight in the header row, deduplicating repeated public ids', async () => {

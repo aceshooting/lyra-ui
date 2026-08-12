@@ -18,6 +18,23 @@ describe('loadMammothAndSanitizer()', () => {
     expect(deps.DOMPurify?.sanitize).to.exist;
   });
 
+  it('accepts a bare module namespace that already satisfies the capability, with no .default wrapper', async () => {
+    // Both peers ship in bundler/CJS-interop configurations where the dynamic import resolves to
+    // the namespace carrying the named API directly, with no `default` re-export at all. The
+    // shared resolveOptionalPeerCapability() checks that namespace BEFORE falling back to
+    // `.default`; every other case in this file wraps its fake in `{ default: ... }`, so without
+    // this case a regression that only ever read `.default` would leave both peers undefined and
+    // silently disable DOCX rendering (and, for the sanitizer, sanitization) with no test failing.
+    const bareMammoth = { convertToHtml: () => Promise.resolve({ value: '', messages: [] }) };
+    const bareSanitizer = { sanitize: (html: string) => html };
+    const deps = await loadMammothAndSanitizer(
+      () => Promise.resolve(bareMammoth),
+      () => Promise.resolve(bareSanitizer),
+    );
+    expect(deps.mammoth === bareMammoth).to.equal(true);
+    expect(deps.DOMPurify === bareSanitizer).to.equal(true);
+  });
+
   it('keeps DOMPurify available when mammoth fails', async () => {
     const error = new Error('mammoth boom');
     const originalWarn = console.warn;

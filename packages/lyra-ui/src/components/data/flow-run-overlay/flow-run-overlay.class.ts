@@ -14,7 +14,7 @@ import type { FlowRunDecorations, FlowRunStatus } from '../flow-canvas/flow-canv
 import { styles } from './flow-run-overlay.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_flowRunOverlayLabel, LYRA_DEFAULT_flowRunStatusCount, LYRA_DEFAULT_flowRunStepStatus, LYRA_DEFAULT_flowRunSummary, LYRA_DEFAULT_open, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_flowRunOverlayLabel, LYRA_DEFAULT_flowRunStatusCount, LYRA_DEFAULT_flowRunStepStatus, LYRA_DEFAULT_flowRunSummary, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -61,13 +61,10 @@ export class LyraFlowRunOverlay extends LyraElement {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     flowRunOverlayLabel: LYRA_DEFAULT_flowRunOverlayLabel,
     flowRunStatusCount: LYRA_DEFAULT_flowRunStatusCount,
     flowRunStepStatus: LYRA_DEFAULT_flowRunStepStatus,
     flowRunSummary: LYRA_DEFAULT_flowRunSummary,
-    open: LYRA_DEFAULT_open,
     statusDenied: LYRA_DEFAULT_statusDenied,
     statusError: LYRA_DEFAULT_statusError,
     statusPending: LYRA_DEFAULT_statusPending,

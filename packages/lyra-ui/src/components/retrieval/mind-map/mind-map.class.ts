@@ -10,7 +10,7 @@ import { layoutMindMap, type LyraTopic, type MindMapLayoutResult, type PlacedTop
 import { styles } from './mind-map.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_mindMapCollapsed, LYRA_DEFAULT_mindMapExpanded, LYRA_DEFAULT_mindMapLabel, LYRA_DEFAULT_mindMapLeafStatus, LYRA_DEFAULT_mindMapTopicStatus, LYRA_DEFAULT_noData, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_mindMapCollapsed, LYRA_DEFAULT_mindMapExpanded, LYRA_DEFAULT_mindMapLabel, LYRA_DEFAULT_mindMapLeafStatus, LYRA_DEFAULT_mindMapTopicStatus, LYRA_DEFAULT_noData } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -44,7 +44,8 @@ const NAV_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Ho
  * @csspart node - A topic node group.
  * @csspart node-label - A topic's label text.
  * @csspart link - A parent-child connector.
- * @csspart focus-ring - The keyboard focus ring.
+ * @csspart focus-ring - The keyboard focus ring, drawn from the moment the svg takes focus (the
+ * first placed topic is seeded as the keyboard cursor) rather than only after the first arrow key.
  * @csspart live-region - The visually hidden announcement region.
  * @csspart empty - The empty-state message, shown when `topics` is empty.
  * @cssprop [--lr-mind-map-ring-gap=6rem] - Radius step per depth ring.
@@ -59,15 +60,12 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     mindMapCollapsed: LYRA_DEFAULT_mindMapCollapsed,
     mindMapExpanded: LYRA_DEFAULT_mindMapExpanded,
     mindMapLabel: LYRA_DEFAULT_mindMapLabel,
     mindMapLeafStatus: LYRA_DEFAULT_mindMapLeafStatus,
     mindMapTopicStatus: LYRA_DEFAULT_mindMapTopicStatus,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -361,6 +359,18 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     }
   };
 
+  // Tabbing into the single-tab-stop svg has to show something: the drawn focus ring only renders
+  // once focusedId is non-null, and the svg's own outline is suppressed, so a bare Tab used to land
+  // with no visible focus state at all until the first arrow press. Seeding the first placed topic
+  // here draws the ring immediately. Native "focus" does not bubble, so it can never be caught by a
+  // delegated listener -- "focusin" does, and covers focus landing on the svg or on anything the
+  // layout ever nests inside it.
+  private onFocusIn = (): void => {
+    if (this.focusedId !== null) return;
+    const first = this.cachedLayout.placed[0];
+    if (first) this.focusedId = first.id;
+  };
+
   private onNodeClick(node: PlacedTopic): void {
     this.focusedId = node.id;
     this.svgEl?.focus();
@@ -423,6 +433,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
           tabindex="0"
           viewBox="0 0 ${layout.width} ${layout.height}"
           @keydown=${this.onKeyDown}
+          @focusin=${this.onFocusIn}
         >
           ${layout.links.map((link) => {
             const from = byId.get(link.fromId);

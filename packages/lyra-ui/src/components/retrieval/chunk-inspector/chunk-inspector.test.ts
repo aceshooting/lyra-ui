@@ -32,8 +32,12 @@ it('preserves given order when sort="none"', async () => {
   el.sort = 'none';
   await el.updateComplete;
   const rows = el.shadowRoot!.querySelectorAll('[part="chunk"]');
-  expect(rows[0]!.getAttribute === undefined ? true : true).to.be.true; // rows render in given order
   expect(rows.length).to.equal(2);
+  // Given order is [c3 (untitled, score 0.2), c1 ('curie-bio.pdf', score 0.92)] -- a score sort
+  // would put c1 first, so matching titles to this exact order proves sort="none" is honored.
+  const titles = [...rows].map((row) => row.querySelector('[part="title"]')!.textContent);
+  expect(titles[0]).to.include('Untitled source');
+  expect(titles[1]).to.include('curie-bio.pdf');
 });
 
 it('renders score as visible percent text and a tone-mapped fill', async () => {
@@ -110,6 +114,43 @@ it('renders through the internal virtual-list once chunks exceeds virtualizeAt',
   el.chunks = many;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.exist;
+});
+
+it('hands the virtual list a stable items array and key function across unrelated re-renders', async () => {
+  const many: LyraChunk[] = Array.from({ length: 5 }, (_, i) => ({ id: `c${i}`, text: `chunk ${i}`, score: i / 5, sourceId: 's1' }));
+  const el = (await fixture(html`<lr-chunk-inspector virtualize-at="3"></lr-chunk-inspector>`)) as LyraChunkInspector;
+  el.chunks = many;
+  await el.updateComplete;
+  const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+    items: unknown[];
+    keyFunction?: (item: unknown) => string;
+  };
+  const firstItems = list.items;
+  const firstKeyFunction = list.keyFunction;
+
+  // An update that touches neither `chunks` nor `sort` must not force the list to rebuild its
+  // O(n) offsets/identities, which it keys on the reference identity of both of these.
+  el.activeId = 'c2';
+  await el.updateComplete;
+  expect(list.items === firstItems, 'the sorted items array keeps its identity').to.equal(true);
+  expect(list.keyFunction === firstKeyFunction, 'the key function keeps its identity').to.equal(true);
+
+  el.compact = true;
+  await el.updateComplete;
+  expect(list.items === firstItems).to.equal(true);
+  expect(list.keyFunction === firstKeyFunction).to.equal(true);
+
+  // A genuine input change still produces a fresh sorted view.
+  el.chunks = [...many].reverse();
+  await el.updateComplete;
+  expect(list.items === firstItems, 'a new chunks array recomputes the sort').to.equal(false);
+  expect(list.keyFunction === firstKeyFunction, 'but the key function is still the same one').to.equal(true);
+  expect((list.items as LyraChunk[]).map((c) => c.id)).to.deep.equal(['c4', 'c3', 'c2', 'c1', 'c0']);
+
+  el.sort = 'none';
+  const beforeSortChange = list.items;
+  await el.updateComplete;
+  expect(list.items === beforeSortChange, 'a sort change recomputes too').to.equal(false);
 });
 
 it('normalizes a NaN virtualizeAt to the default (50) instead of silently disabling virtualization', async () => {

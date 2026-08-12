@@ -15,8 +15,12 @@ export const virtualListHighlightStyles = css`
   ::highlight(lr-highlight-danger) {
     background-color: var(--lr-archive-viewer-highlight-danger-background, var(--lr-color-danger-quiet));
   }
+  /* --lr-color-surface-raised, not --lr-color-surface: entry rows never paint a background of
+     their own, so they show the viewer's own --lr-color-surface. Falling back to that same token
+     would render a neutral-tone highlight with zero contrast against the row it marks -- i.e.
+     visibly unhighlighted. Matches highlight-layer's neutral fallback. */
   ::highlight(lr-highlight-neutral) {
-    background-color: var(--lr-archive-viewer-highlight-neutral-background, var(--lr-color-surface));
+    background-color: var(--lr-archive-viewer-highlight-neutral-background, var(--lr-color-surface-raised));
   }
   ::highlight(lr-highlight-active) {
     background-color: var(--lr-archive-viewer-highlight-active-background, var(--lr-color-brand-quiet));
@@ -37,7 +41,7 @@ export const virtualListHighlightStyles = css`
     background: var(--lr-archive-viewer-highlight-danger-background, var(--lr-color-danger-quiet));
   }
   mark[data-lr-highlight-tone='neutral'] {
-    background: var(--lr-archive-viewer-highlight-neutral-background, var(--lr-color-surface));
+    background: var(--lr-archive-viewer-highlight-neutral-background, var(--lr-color-surface-raised));
   }
   mark[data-lr-highlight-name='lr-highlight-active'] {
     outline: var(--lr-border-width-thin) solid

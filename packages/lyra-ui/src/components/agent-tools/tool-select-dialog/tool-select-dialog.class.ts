@@ -10,7 +10,7 @@ import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../
 import { getNumberFormat, resolveIntlLocale } from '../../../internal/intl-cache.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noMatchesQuery, LYRA_DEFAULT_open, LYRA_DEFAULT_otherCategory, LYRA_DEFAULT_restore, LYRA_DEFAULT_searchToolsPlaceholder, LYRA_DEFAULT_selectTools, LYRA_DEFAULT_toolCount, LYRA_DEFAULT_toolSelectCustomizeHint, LYRA_DEFAULT_toolSelectNoneAvailable, LYRA_DEFAULT_toolSelectSummary, LYRA_DEFAULT_useDefaultTools } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noMatchesQuery, LYRA_DEFAULT_otherCategory, LYRA_DEFAULT_searchToolsPlaceholder, LYRA_DEFAULT_selectTools, LYRA_DEFAULT_toolCount, LYRA_DEFAULT_toolSelectCustomizeHint, LYRA_DEFAULT_toolSelectNoneAvailable, LYRA_DEFAULT_toolSelectSummary, LYRA_DEFAULT_useDefaultTools } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -150,13 +150,9 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     noMatchesQuery: LYRA_DEFAULT_noMatchesQuery,
-    open: LYRA_DEFAULT_open,
     otherCategory: LYRA_DEFAULT_otherCategory,
-    restore: LYRA_DEFAULT_restore,
     searchToolsPlaceholder: LYRA_DEFAULT_searchToolsPlaceholder,
     selectTools: LYRA_DEFAULT_selectTools,
     toolCount: LYRA_DEFAULT_toolCount,

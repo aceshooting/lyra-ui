@@ -19,7 +19,8 @@ Steps:
 1. Grep the target path for `<sl-` tag usages and `@shoelace-style/shoelace` imports. Build a list
    of every distinct `sl-*` tag name found, with file:line references.
 2. For each distinct tag name, first check whether the project also depends on
-   `@shoelace-style/webawesome` or already has migration notes mapping its Shoelace usage to Web
+   `@awesome.me/webawesome` (or `@awesome.me/webawesome-pro`) or already has migration notes
+   mapping its Shoelace usage to Web
    Awesome — if so, treat the Web Awesome mapping as more authoritative and defer to
    `/lyra-ui:migrate-from-wa`'s logic for that tag instead of guessing directly from Shoelace
    naming.
@@ -30,8 +31,11 @@ Steps:
    before migrating it — if a name doesn't match, check for a renamed equivalent in that file
    rather than dropping or guessing at the attribute.
 4. Migrate only the call sites you've verified this way: rename the tag, update the import
-   specifier to `@aceshooting/lyra-ui/components/<name>/<name>.js`, and adjust any
-   attribute/slot/event names that don't match 1:1.
+   specifier to the stable tag-shaped registration path
+   `@aceshooting/lyra-ui/components/<lr-tag>.js` (e.g.
+   `@aceshooting/lyra-ui/components/lr-button.js` — the exact **Import** line each
+   `references/components/<lr-tag>.md` states), and adjust any attribute/slot/event names that
+   don't match 1:1.
 5. Leave anything you couldn't verify a confident mapping for untouched, and list it separately.
 6. Report: what migrated (grouped by component, with a one-line note per component on what, if
    anything, changed name), what's still `sl-*` and why (no confident mapping found), and

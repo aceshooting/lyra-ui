@@ -58,14 +58,22 @@ export function resolveAccessibleTrigger(trigger: HTMLElement): HTMLElement {
   return focusable ?? trigger;
 }
 
-/** Visually-hidden-but-screen-reader-available helper class. */
+/** Visually-hidden-but-screen-reader-available helper class.
+ *
+ * The hairline box is sized from the shared --lr-size-1px token and the logical
+ * inline-size/block-size/margin-inline/margin-block properties rather than raw 1px literals and
+ * physical width/height/margin, matching every component stylesheet in the library -- this module
+ * is shared by dozens of components, so an untokenized copy here would exempt all of them at once
+ * from the token scale -- and no automated gate would notice, since check-style-policy.mjs only
+ * walks component-level `.styles.ts` files and never this directory. */
 export const srOnly = css`
   .sr-only {
     position: absolute;
-    width: 1px;
-    height: 1px;
+    inline-size: var(--lr-size-1px);
+    block-size: var(--lr-size-1px);
     padding: 0;
-    margin: -1px;
+    margin-inline: calc(-1 * var(--lr-size-1px));
+    margin-block: calc(-1 * var(--lr-size-1px));
     overflow: hidden;
     clip: rect(0 0 0 0);
     white-space: nowrap;

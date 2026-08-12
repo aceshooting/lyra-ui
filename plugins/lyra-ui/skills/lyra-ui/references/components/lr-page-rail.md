@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -56,4 +56,10 @@ the localized page name, so thumbnail work does not create one live region per v
 **Themeable custom properties:** `--lr-page-rail-height` (default `var(--lr-size-24rem)`) — block
 size of the virtualized rail. `--lr-page-rail-current-bg` (default `var(--lr-color-brand-quiet)`) —
 background of the `page-current` button, kept while the row is hovered so the current page stays
-identifiable under the pointer.
+identifiable under the pointer. Each heat-dot tone has its own matching cssprop, all defaulting to
+the same shared tone token the marker used before: `--lr-page-rail-heat-accent-color` (default
+`var(--lr-color-brand)`, the base `heat-dot` rule shared by the default "accent" tone),
+`--lr-page-rail-heat-success-color` (default `var(--lr-color-success)`),
+`--lr-page-rail-heat-warning-color` (default `var(--lr-color-warning)`),
+`--lr-page-rail-heat-danger-color` (default `var(--lr-color-danger)`), and
+`--lr-page-rail-heat-neutral-color` (default `var(--lr-color-text-quiet)`).

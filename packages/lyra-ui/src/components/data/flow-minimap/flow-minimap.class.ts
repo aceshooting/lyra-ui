@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
+import { resolveCssLength } from '../../../internal/css-length.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
   acquireAnnouncementSink,
@@ -12,7 +13,7 @@ import type { FlowStructureSnapshot } from '../flow-canvas/flow-canvas.class.js'
 import { styles } from './flow-minimap.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_flowMinimapInstructions, LYRA_DEFAULT_flowMinimapLabel, LYRA_DEFAULT_flowMinimapViewport, LYRA_DEFAULT_flowMinimapViewportChanged, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_flowMinimapInstructions, LYRA_DEFAULT_flowMinimapLabel, LYRA_DEFAULT_flowMinimapViewport, LYRA_DEFAULT_flowMinimapViewportChanged } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -31,6 +32,10 @@ interface FlowCanvasLike extends HTMLElement {
    *  `LyraFlowCanvas`) does not also guard those methods internally. */
   readonly locked: boolean;
 }
+
+/** Fallback for `--lr-flow-minimap-viewport-min-size` when the token resolves to nothing usable:
+ *  WCAG 2.2 SC 2.5.8's 24px minimum target size, in CSS px. */
+const DEFAULT_VIEWPORT_MIN_SIZE_PX = 24;
 
 /**
  * `<lr-flow-minimap>` — a corner overview map of a `lr-flow-canvas`: scaled node rectangles plus
@@ -62,6 +67,13 @@ interface FlowCanvasLike extends HTMLElement {
  * @cssprop [--lr-flow-minimap-node-success-color=var(--lr-color-success)] - Successful-node fill.
  * @cssprop [--lr-flow-minimap-node-error-color=var(--lr-color-danger)] - Failed-node fill.
  * @cssprop [--lr-flow-minimap-node-denied-color=var(--lr-color-warning)] - Denied-node fill.
+ * @cssprop [--lr-flow-minimap-viewport-min-size=var(--lr-size-1-5rem)] - Smallest rendered size,
+ *   in physical pixels, of the draggable `viewport` rectangle along either axis. On a canvas whose
+ *   node bounds dwarf the visible viewport the raw rectangle collapses to a few pixels, which
+ *   leaves the only pointer-drag handle for panning effectively unclickable; the floor grows it
+ *   symmetrically about its own centre so it still points at what the viewport shows. Defaults to
+ *   WCAG 2.2 SC 2.5.8's 24px minimum target size. Set `0` to opt out and render the exact
+ *   viewport-to-content ratio instead.
  * @status stable
  * @since 4.0.0
  */
@@ -70,13 +82,10 @@ export class LyraFlowMinimap extends LyraElement {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     flowMinimapInstructions: LYRA_DEFAULT_flowMinimapInstructions,
     flowMinimapLabel: LYRA_DEFAULT_flowMinimapLabel,
     flowMinimapViewport: LYRA_DEFAULT_flowMinimapViewport,
     flowMinimapViewportChanged: LYRA_DEFAULT_flowMinimapViewportChanged,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -110,6 +119,12 @@ export class LyraFlowMinimap extends LyraElement {
    *  to `false`) the next time `onMapClick` runs, so a genuine click on the map still centers it. */
   private justDraggedViewport = false;
   private announceNextSnapshot = false;
+  /** Physical-pixel floor for the draggable viewport rect, resolved from the live
+   *  `--lr-flow-minimap-viewport-min-size` token. */
+  private viewportMinSizePx = DEFAULT_VIEWPORT_MIN_SIZE_PX;
+  /** `[part='base']`'s resolved border width, which is what separates the host's own content box
+   *  from the SVG's rendered box. */
+  private baseBorderPx = 0;
   private readonly instructionsId = nextId('flow-minimap-instructions');
   /** Watches target lifecycle so late, removed, and same-id replacement canvases are reconciled. */
   private canvasWatcher?: MutationObserver;
@@ -119,6 +134,37 @@ export class LyraFlowMinimap extends LyraElement {
     this.syncAnnouncementSink();
     this.watchForCanvas();
     this.resolveAndAttach();
+  }
+
+  /** Re-reads the live token values the viewport-rect floor depends on. */
+  private refreshViewportMetrics(): void {
+    // Optional-chained: this runs from willUpdate(), which @lit-labs/ssr invokes during server
+    // render, where the element shim has no `ownerDocument` at all -- a bare property access
+    // throws before the guard below can reject it. There is no layout to measure server-side
+    // anyway; the first client update re-runs this with a real view.
+    const view = this.ownerDocument?.defaultView;
+    if (!view || !this.isConnected) return;
+    const computed = view.getComputedStyle(this);
+    // The token is deliberately NOT declared on :host -- a :host declaration would shadow a value
+    // a consumer set on any ancestor, which is the natural place to theme a whole canvas. So its
+    // default is read from the shared size token instead, exactly as the documented
+    // `var(--lr-size-1-5rem)` default says, and the numeric constant below only guards an
+    // environment where neither resolves at all.
+    const minSize = resolveCssLength(
+      computed.getPropertyValue('--lr-flow-minimap-viewport-min-size').trim() ||
+        computed.getPropertyValue('--lr-size-1-5rem').trim(),
+      this,
+    );
+    this.viewportMinSizePx =
+      minSize !== undefined && Number.isFinite(minSize) && minSize >= 0
+        ? minSize
+        : DEFAULT_VIEWPORT_MIN_SIZE_PX;
+    const border = resolveCssLength(
+      computed.getPropertyValue('--lr-border-width-thin').trim(),
+      this,
+    );
+    this.baseBorderPx =
+      border !== undefined && Number.isFinite(border) && border >= 0 ? border : 0;
   }
 
   override disconnectedCallback(): void {
@@ -179,6 +225,10 @@ export class LyraFlowMinimap extends LyraElement {
   // Runs from `willUpdate()`, not `updated()`, so `snapshot`'s reset lands in the render this same
   // cycle produces instead of synchronously scheduling a second cycle from within `updated()`.
   protected override willUpdate(changed: PropertyValues): void {
+    // Ahead of render(), so the geometry it computes stays pure. Both lengths are live theme
+    // values, so they are re-read per update rather than cached once: a theme switch, a token a
+    // consumer set on any ancestor, and a root font-size change all have to reach the floor.
+    this.refreshViewportMetrics();
     if (this.hasUpdated && changed.has('for')) {
       this.resolveAndAttach();
     }
@@ -248,10 +298,58 @@ export class LyraFlowMinimap extends LyraElement {
     return { minX, minY, maxX, maxY };
   }
 
-  private viewportRectContent(): { x: number; y: number; width: number; height: number } {
+  /** Physical size of the rendered map surface, in CSS px. `[part='map']` fills `[part='base']`'s
+   *  content box, which is the host's own content box inset by that wrapper's border on each side
+   *  (`box-sizing: border-box` is inherited library-wide) -- so this stays exact without measuring
+   *  an element that does not exist yet on the first frame that renders the SVG. */
+  private mapSizePx(): { width: number; height: number } {
+    const inset = 2 * this.baseBorderPx;
+    return {
+      width: Math.max(0, this.clientWidth - inset),
+      height: Math.max(0, this.clientHeight - inset),
+    };
+  }
+
+  /** The viewport rectangle in map user-units, floored to a real pointer target.
+   *
+   *  The raw rect is the canvas viewport divided by its zoom, which is meaningful data but not a
+   *  usable affordance: on the canvases this component exists for -- node bounds far larger than
+   *  the screen -- it collapses to a couple of physical pixels inside a 12rem x 8rem map, leaving
+   *  the only pointer-drag handle for panning effectively unclickable and near-invisible. The same
+   *  shape `<lr-heatmap>` already solves for its data-driven cells, resolved from a live token the
+   *  same way, and outside `check:hit-area`'s reach because that gate deliberately excludes SVG
+   *  shape elements.
+   *
+   *  The floor is a physical-pixel length, so it is converted into user units through the SVG's own
+   *  scale -- `preserveAspectRatio="xMidYMid meet"` scales uniformly by the SMALLER of the two
+   *  viewBox-to-box ratios. Growth is symmetric about the rect's own centre, so a floored rect
+   *  still points at the part of the graph the viewport is actually showing; keyboard panning and
+   *  drag math read the canvas viewport directly and are untouched. */
+  private viewportRectContent(
+    viewBoxWidth: number,
+    viewBoxHeight: number,
+  ): { x: number; y: number; width: number; height: number } {
     const vp = this.snapshot?.viewport;
     if (!vp || vp.zoom === 0) return { x: 0, y: 0, width: 0, height: 0 };
-    return { x: -vp.x / vp.zoom, y: -vp.y / vp.zoom, width: vp.width / vp.zoom, height: vp.height / vp.zoom };
+    const x = -vp.x / vp.zoom;
+    const y = -vp.y / vp.zoom;
+    const width = vp.width / vp.zoom;
+    const height = vp.height / vp.zoom;
+    const map = this.mapSizePx();
+    const scale =
+      map.width > 0 && map.height > 0 && viewBoxWidth > 0 && viewBoxHeight > 0
+        ? Math.min(map.width / viewBoxWidth, map.height / viewBoxHeight)
+        : 0;
+    const floor = scale > 0 ? this.viewportMinSizePx / scale : 0;
+    if (!Number.isFinite(floor) || floor <= 0) return { x, y, width, height };
+    const flooredWidth = Math.max(width, floor);
+    const flooredHeight = Math.max(height, floor);
+    return {
+      x: x - (flooredWidth - width) / 2,
+      y: y - (flooredHeight - height) / 2,
+      width: flooredWidth,
+      height: flooredHeight,
+    };
   }
 
   private clientToContentPoint(svgEl: SVGSVGElement, clientX: number, clientY: number): { x: number; y: number } {
@@ -409,7 +507,7 @@ export class LyraFlowMinimap extends LyraElement {
     const vbY = bounds.minY - padding;
     const vbW = Math.max(1, bounds.maxX - bounds.minX + padding * 2);
     const vbH = Math.max(1, bounds.maxY - bounds.minY + padding * 2);
-    const viewportRect = this.viewportRectContent();
+    const viewportRect = this.viewportRectContent(vbW, vbH);
     return html`<div part="base" role="region" aria-label=${label}>
       <svg
         part="map"

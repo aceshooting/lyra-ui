@@ -18,7 +18,7 @@ import { activeElementIn } from '../../../internal/active-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoading } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoading } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** How `loading` renders. `'spinner'` (the default) replaces the grid with an indeterminate
@@ -619,13 +619,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     expand: LYRA_DEFAULT_expand,
     loadMore: LYRA_DEFAULT_loadMore,
-    loading: LYRA_DEFAULT_loading,
     noColumns: LYRA_DEFAULT_noColumns,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
     resizeColumn: LYRA_DEFAULT_resizeColumn,
     showAllColumns: LYRA_DEFAULT_showAllColumns,
     showFewerColumns: LYRA_DEFAULT_showFewerColumns,

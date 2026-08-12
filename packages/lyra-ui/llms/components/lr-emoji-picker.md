@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `emoji-picker-element-data` — see `llms/peers.md`
-- **Themeable via** 14 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -82,7 +82,9 @@ content, overrides the `errorText` attribute when provided).
 **CSS parts:** `form-control` (the outer wrapper around label, `base`, error and hint),
 `form-control-label` (the visible label), `base`, `search` (`role="combobox"`), `grid`
 (`role="listbox"`, the scroll viewport), `group-label`, `emoji` (each emoji's own `role="option"`
-button), `empty` (shown when the search matches nothing), `hint` (the hint message), `error` (the
+button), `empty` (shown when the search matches nothing, or when a consumer deliberately opted out
+with `groups = []`), `load-error` (the failure surface shown in `empty`'s place when the optional
+peer failed to load), `hint` (the hint message), `error` (the
 error message). The grid scrolls in the block axis and explicitly clips inline overflow, so an
 allocation narrower than one option does not introduce a second scrollbar. While windowing is
 active the rows are wrapped in `virtual-spacer`
@@ -132,7 +134,12 @@ windowed row are additionally capped at 20 regardless of available width.
 **Optional peer dependency:** install `emoji-picker-element-data` with
 `pnpm add emoji-picker-element-data` for the built-in auto-loaded default emoji set — omit it and
 supply `groups` directly instead. The loader never throws; a missing or failed peer logs one
-`console.warn` and simply leaves `groups` empty. The adapter buckets the peer's flat entry list by
+`console.warn` and leaves `groups` empty, and the picker then **fails closed and visibly**: the
+grid renders a distinct localized `[part="load-error"]` surface instead of the ordinary
+`[part="empty"]` message, so a skipped install is distinguishable at a glance from a genuine
+zero-match search or a deliberate `groups = []` opt-out, and announces the same message once
+through the document's shared assertive live region (not a shadow-root `role="alert"`, which
+announces unreliably). Assigning `groups` afterwards clears it. The adapter buckets the peer's flat entry list by
 its numeric `group` id and tags each bucket with both the English `label` and the matching
 `labelKey` — `emojiPickerGroupSmileysEmotion`, `emojiPickerGroupPeopleBody`,
 `emojiPickerGroupComponent`, `emojiPickerGroupAnimalsNature`, `emojiPickerGroupFoodDrink`,

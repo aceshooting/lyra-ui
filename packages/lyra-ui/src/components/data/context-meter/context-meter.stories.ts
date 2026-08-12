@@ -110,3 +110,33 @@ export const TokenBudgetGallery: Story = {
     withSegments(meters[1], [{ label: 'Used', value: 95, tone: 'danger' }]);
   },
 };
+
+export const WithLegend: Story = {
+  name: 'With legend (show-legend)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A visible key for the category colors. Without it the only place a segment label ' +
+          'appears is a hover title and the visually-hidden breakdown list, so a sighted user has ' +
+          'no way to read the mapping on touch or at a glance.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; gap: 2rem; flex-wrap: wrap; align-items: flex-start;">
+      <lr-context-meter
+        show-legend
+        total="131072"
+        label="128K context window"
+        style="max-inline-size: 24rem;"
+      ></lr-context-meter>
+      <lr-context-meter show-legend variant="ring" total="131072" label="128K"></lr-context-meter>
+    </div>
+  `,
+  play: async ({ canvasElement }) => {
+    for (const meter of canvasElement.querySelectorAll('lr-context-meter')) {
+      withSegments(meter, CONTEXT_SEGMENTS);
+    }
+  },
+};

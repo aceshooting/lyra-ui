@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 11 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -97,7 +97,10 @@ are both set)
 scroll cap; only takes effect once `max-height` is set), `--lr-code-block-font` (default
 `var(--lr-font-mono)`, the library's shared monospace stack), `--lr-code-block-tab-size` (default `2` — tab width for the
 rendered code, applied to `[part='pre']`), `--lr-code-block-active-line-outline-color` (default
-`var(--lr-color-brand)` — the outline around the line marked active by `active-highlight-id`), plus shared tokens `--lr-color-border`, `--lr-radius`,
+`var(--lr-color-brand)` — the outline around the line marked active by `active-highlight-id`),
+`--lr-code-block-highlighted-line-bg` (default `var(--lr-color-warning-quiet)` — the background of a
+line marked by `highlight-lines` or a `line-range` entry in `highlights`, in both the light and
+dark-theme rendering paths), plus shared tokens `--lr-color-border`, `--lr-radius`,
 `--lr-color-surface`, `--lr-space-xs/-s/-m`, `--lr-font`, `--lr-color-text-quiet`,
 `--lr-color-text`, `--lr-color-brand`/`-brand-quiet`, `--lr-transition-fast`,
 `--lr-focus-ring-width/-color/-offset`.
@@ -118,6 +121,10 @@ wrapped line's tabs diverge.
 other `--lr-color-brand` surface in the component — the header language pill, hover states, the focus
 ring — alone. It too is an inline `var()` fallback rather than a `:host` declaration, deliberately,
 so it inherits: set it on the element, on an ancestor, or at the theme level.
+
+`--lr-code-block-highlighted-line-bg` follows the same pattern: an inline `var()` fallback (not a
+`:host` declaration) so it inherits, retinting just the highlighted-line background and leaving every
+other `--lr-color-warning-quiet` surface alone.
 
 **Optional peer deps:** `shiki` (lazy-loaded and cached once per page by `code-loader.ts`'s
 `loadShikiHighlighter()`, which builds a single `Highlighter` seeded with the bundled `github-light`/

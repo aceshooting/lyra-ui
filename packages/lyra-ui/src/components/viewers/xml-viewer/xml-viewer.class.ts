@@ -4,7 +4,13 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { DocumentAnchorTarget } from '../../../internal/anchor-target.js';
-import type { AnchorResultDetail, LyraAnchor, LyraAnchorKind } from '../document-viewer/anchors.js';
+import type {
+  AnchorResultDetail,
+  HighlightActivateDetail,
+  LyraAnchor,
+  LyraAnchorKind,
+  LyraHighlight,
+} from '../document-viewer/anchors.js';
 import {
   isAbortError,
   isResourceLimitError,
@@ -22,7 +28,7 @@ import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_open, LYRA_DEFAULT_xmlViewerChildCount, LYRA_DEFAULT_xmlViewerCollapseNode, LYRA_DEFAULT_xmlViewerCopyDocument, LYRA_DEFAULT_xmlViewerCopyNode, LYRA_DEFAULT_xmlViewerExpandNode, LYRA_DEFAULT_xmlViewerLabel, LYRA_DEFAULT_xmlViewerParseError, LYRA_DEFAULT_xmlViewerTooManyNodes } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_copy, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_xmlViewerChildCount, LYRA_DEFAULT_xmlViewerCollapseNode, LYRA_DEFAULT_xmlViewerCopyDocument, LYRA_DEFAULT_xmlViewerCopyNode, LYRA_DEFAULT_xmlViewerExpandNode, LYRA_DEFAULT_xmlViewerLabel, LYRA_DEFAULT_xmlViewerParseError, LYRA_DEFAULT_xmlViewerTooManyNodes } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -166,6 +172,7 @@ export interface LyraXmlViewerEventMap {
   'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
+  'lr-highlight-activate': CustomEvent<HighlightActivateDetail>;
 }
 
 // Same one-line base every other `DocumentAnchorTarget()` adopter uses: the mixin takes a
@@ -185,7 +192,16 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  * library implements (`lr-pdf-viewer`, `lr-ebook-viewer`, `lr-notebook-viewer`) rather than
  * a settable property. `node-path` anchors address an element by child-index chain from the
  * document root, with an optional trailing `'@attrName'` segment addressing one of that
- * element's attributes.
+ * element's attributes. Resolving one paints `data-active` on the addressed `[part="node"]` row and,
+ * for an attribute-addressing path, on that one `[part="attribute"]` pair -- so a citation pointing
+ * at a single attribute value of a multi-attribute element stays distinguishable in the rendered
+ * DOM.
+ *
+ * Host-supplied `highlights` are resolved the same way: every entry whose anchor is a `node-path`
+ * this document can resolve tints its element row (`data-highlight`, carrying the entry's tone) and
+ * gains a focusable `[part="highlight-action"]` button that emits `lr-highlight-activate`. Entries
+ * whose anchor kind or path this viewer cannot resolve are ignored rather than partially painted,
+ * and a highlight inside a collapsed subtree paints once that subtree is expanded.
  *
  * Namespace-literal: qualified names render exactly as authored, with no namespace-URI-aware
  * matching. Every document type declaration is rejected before `DOMParser`, preventing both
@@ -200,6 +216,8 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  *   parse error or exceeding the node cap. `detail: { error }`.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
  *   call is applied. Non-cancelable. `detail: { found }`.
+ * @event lr-highlight-activate - A `highlights` entry's `[part="highlight-action"]` button was
+ *   activated by click or Enter/Space. Non-cancelable. `detail: { id }`.
  * @csspart base - The root scroll container.
  * @csspart toolbar - The whole-document copy button row (only when `copyable`).
  * @csspart copy-button - A copy-to-clipboard button -- the whole-document one (in `toolbar`) or a
@@ -207,9 +225,11 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  * @csspart tree - The rendered node tree.
  * @csspart node - One element row (`data-active` while it's the resolved anchor target,
  *   `data-match` while any part of it matches the current search, `data-active-match` while it's
- *   the currently active search match).
+ *   the currently active search match, `data-highlight` carrying the tone of a `highlights` entry
+ *   resolved to it, and `data-active-highlight` while that entry is `activeHighlightId`).
  * @csspart tag - An element's tag name (`data-match`).
- * @csspart attribute - One attribute's name/value pair wrapper.
+ * @csspart attribute - One attribute's name/value pair wrapper (`data-active` while a `node-path`
+ *   anchor's trailing `'@attrName'` segment addresses this specific attribute).
  * @csspart attribute-name - An attribute's name.
  * @csspart attribute-value - An attribute's value (`data-match`).
  * @csspart text - A text leaf (`data-match`).
@@ -218,8 +238,25 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  * @csspart pi - A processing-instruction leaf.
  * @csspart toggle - An element's expand/collapse button (hidden, but present for row alignment,
  *   on leaf/empty elements).
+ * @csspart highlight-action - The focusable button a resolved `highlights` entry adds to its
+ *   element row; emits `lr-highlight-activate`.
  * @csspart error - The error region.
  * @csspart spinner - The loading status region.
+ * @cssprop [--lr-xml-viewer-active-attribute-color=var(--lr-color-brand)] - Outline color of the
+ *   `[part="attribute"]` an attribute-addressing `node-path` anchor resolved to.
+ * @cssprop [--lr-xml-viewer-highlight-accent-background=var(--lr-color-brand-quiet)] - Row
+ *   background of an accent-tone (the default tone) `highlights` entry.
+ * @cssprop [--lr-xml-viewer-highlight-success-background=var(--lr-color-success-quiet)] - Row
+ *   background of a success-tone `highlights` entry.
+ * @cssprop [--lr-xml-viewer-highlight-warning-background=var(--lr-color-warning-quiet)] - Row
+ *   background of a warning-tone `highlights` entry.
+ * @cssprop [--lr-xml-viewer-highlight-danger-background=var(--lr-color-danger-quiet)] - Row
+ *   background of a danger-tone `highlights` entry.
+ * @cssprop [--lr-xml-viewer-highlight-neutral-background=var(--lr-color-surface-raised)] - Row
+ *   background of a neutral-tone `highlights` entry. Deliberately not `--lr-color-surface`: the
+ *   viewer's own ambient background would render a neutral highlight as unhighlighted.
+ * @cssprop [--lr-xml-viewer-highlight-active-outline=var(--lr-color-brand)] - Outline color of the
+ *   `highlights` entry currently named by `activeHighlightId`.
  * @cssprop [--lr-xml-viewer-max-height=none] - Maximum block size of the scrollable body before
  *   it scrolls internally. Also settable via the `max-height` property.
  * @cssprop [--lr-xml-viewer-active-match-color=var(--lr-color-warning)] - Outline color of the
@@ -242,17 +279,15 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     anchorJumped: LYRA_DEFAULT_anchorJumped,
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
-    collapse: LYRA_DEFAULT_collapse,
     copy: LYRA_DEFAULT_copy,
-    details: LYRA_DEFAULT_details,
     documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
     documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
     documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
     documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
     documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
-    loading: LYRA_DEFAULT_loading,
+    highlightOfTotal: LYRA_DEFAULT_highlightOfTotal,
+    highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
-    open: LYRA_DEFAULT_open,
     xmlViewerChildCount: LYRA_DEFAULT_xmlViewerChildCount,
     xmlViewerCollapseNode: LYRA_DEFAULT_xmlViewerCollapseNode,
     xmlViewerCopyDocument: LYRA_DEFAULT_xmlViewerCopyDocument,
@@ -309,9 +344,15 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   @state() private expandedOverrides = new Map<string, boolean>();
 
   @state() private activePath: string | null = null;
+  /** `attrKey(pathKey, attrName)` of the attribute a `node-path` anchor's trailing `'@attrName'`
+   *  segment addressed, or `null` when the current anchor stops at element granularity. */
+  @state() private activeAttr: string | null = null;
   @state() private activeSearchIndex = -1;
 
   private searchQuery = '';
+  /** Resolved once per `render()` and read by every recursive `renderNode()` call, so painting N
+   *  rows never re-resolves M highlights N times. */
+  private renderedHighlights = new Map<string, { highlight: LyraHighlight; index: number; total: number }>();
   private searchState: SearchState = EMPTY_SEARCH;
   private lastSearchLocale = '';
   private generation = 0;
@@ -533,8 +574,59 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     if (!resolved?.element) return false;
     const numericPath = anchor.path.filter((s): s is number => typeof s === 'number');
     this.expandAncestors(anchor.path);
-    this.activePath = JSON.stringify(numericPath);
+    const pathKey = JSON.stringify(numericPath);
+    this.activePath = pathKey;
+    // An attribute-addressing path resolves to one specific attribute of that element, so mark it
+    // as such -- element-only `data-active` on the row would leave a consumer citing one attribute
+    // value of a multi-attribute element unable to tell which attribute was meant. Always
+    // reassigned (to `null` for a bare element path) so a later element-granularity anchor clears
+    // the previous attribute-level distinction instead of leaving it stranded.
+    this.activeAttr = resolved.attr ? attrKey(pathKey, resolved.attr) : null;
     return true;
+  }
+
+  /**
+   * Host-supplied `highlights` resolved against the loaded document, keyed by the rendered path key
+   * of the element each one addresses. Entries are deduplicated by public `id` (a host re-sending
+   * the same citation must not paint twice), then filtered down to `node-path` anchors this
+   * document can actually resolve -- an unresolvable entry is dropped whole rather than painted at
+   * some coarser granularity. `index`/`total` position each surviving entry for its localized
+   * accessible name, exactly as `<lr-svg-viewer>` numbers its own region highlights; two entries
+   * resolving to the SAME element still both count toward `total`, while the first one supplied
+   * owns that row's paint.
+   */
+  private resolveHighlights(): Map<string, { highlight: LyraHighlight; index: number; total: number }> {
+    const byPath = new Map<string, { highlight: LyraHighlight; index: number; total: number }>();
+    if (this.xmlState.kind !== 'loaded') return byPath;
+    const root = this.xmlState.doc.documentElement;
+    if (!root) return byPath;
+    const seen = new Set<string>();
+    const resolved: Array<{ highlight: LyraHighlight; pathKey: string }> = [];
+    for (const highlight of this.highlights) {
+      if (seen.has(highlight.id)) continue;
+      seen.add(highlight.id);
+      if (highlight.anchor.kind !== 'node-path') continue;
+      if (!resolvePath(root, highlight.anchor.path)) continue;
+      resolved.push({
+        highlight,
+        pathKey: JSON.stringify(highlight.anchor.path.filter((s): s is number => typeof s === 'number')),
+      });
+    }
+    resolved.forEach(({ highlight, pathKey }, index) => {
+      if (!byPath.has(pathKey)) byPath.set(pathKey, { highlight, index, total: resolved.length });
+    });
+    return byPath;
+  }
+
+  /** The localized accessible name of one highlight's action button -- its own `label` when the
+   *  host supplied one, otherwise its position in the resolved set. Mirrors `<lr-svg-viewer>`. */
+  private highlightActionLabel(highlight: LyraHighlight, index: number, total: number): string {
+    if (highlight.label) return this.localize('highlightWithLabel', undefined, { label: highlight.label });
+    const numberFormat = getNumberFormat(this.effectiveLocale);
+    return this.localize('highlightOfTotal', undefined, {
+      index: numberFormat.format(index + 1),
+      total: numberFormat.format(total),
+    });
   }
 
   private expandAncestors(path: PathSegment[]): void {
@@ -672,6 +764,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     const indentStyle = `padding-inline-start:calc(${depth} * var(--lr-space-l))`;
     const isMatch = this.searchState.matches.has(pathKey);
     const activeMatchKey = this.searchState.ordered[this.activeSearchIndex];
+    const highlight = this.renderedHighlights.get(pathKey);
     const toggleLabel = el.tagName;
     let elementIndex = 0;
     const childRows = renderedChildren.map((node) => {
@@ -698,6 +791,8 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
         ?data-active=${this.activePath === pathKey}
         ?data-match=${isMatch}
         ?data-active-match=${isMatch && pathKey === activeMatchKey}
+        data-highlight=${highlight ? (highlight.highlight.tone ?? 'accent') : nothing}
+        ?data-active-highlight=${Boolean(highlight) && highlight!.highlight.id === this.activeHighlightId}
       >
         <button
           part="toggle"
@@ -719,6 +814,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
           >&lt;<span part="tag" ?data-match=${this.searchState.tagMatches.has(pathKey)}>${el.tagName}</span
           >${Array.from(el.attributes).map(
             (a) => html` <span part="attribute"
+              ?data-active=${this.activeAttr === attrKey(pathKey, a.name)}
               ><span part="attribute-name">${a.name}</span>="<span
                 part="attribute-value"
                 ?data-match=${this.searchState.attrMatches.has(attrKey(pathKey, a.name))}
@@ -735,6 +831,21 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
               pluralCount: renderedChildren.length,
             })}</span>`
           : nothing}
+        ${highlight
+          ? html`<button
+              part="highlight-action"
+              type="button"
+              data-highlight-id=${highlight.highlight.id}
+              aria-label=${this.highlightActionLabel(highlight.highlight, highlight.index, highlight.total)}
+              @click=${(e: Event) => {
+                e.stopPropagation();
+                this.emit('lr-highlight-activate', { id: highlight.highlight.id });
+              }}
+            >
+              ${highlight.highlight.label
+                || this.highlightActionLabel(highlight.highlight, highlight.index, highlight.total)}
+            </button>`
+          : nothing}
         ${this.renderCopyButton(() => el, toggleLabel)}
       </div>
       ${expanded
@@ -746,6 +857,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   override render(): TemplateResult {
     const label = this.getAttribute('aria-label') || this.name || this.localize('xmlViewerLabel');
     const state = this.xmlState;
+    this.renderedHighlights = this.resolveHighlights();
     return html`
       <div
         part="base"

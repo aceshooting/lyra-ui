@@ -179,11 +179,20 @@ export const styles = css`
     color: var(--lr-button-quiet-text);
     border-color: var(--lr-button-quiet-border);
   }
-  [part~='base']:disabled {
+  /* Two selectors for one state, because the two render paths carry it differently. The native
+     <button> path matches :disabled (from its own disabled attribute OR a fieldset cascade). The
+     anchor path never can -- an <a> is not a form control, so :disabled cannot match it whatever
+     aria-disabled says -- and decision D8 renders a disabled link button as an href-less,
+     tabindex="-1", aria-disabled="true" anchor. Keying the second arm off the attribute the anchor
+     DOES carry is what keeps the two modes looking the same; without it a disabled link rendered
+     fully opaque with a pointer cursor, i.e. exactly like a working link that silently does
+     nothing. Every :not(:disabled) below excludes the same attribute for the same reason. */
+  [part~='base']:disabled,
+  [part~='base'][aria-disabled='true'] {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  [part~='base']:not(:disabled) {
+  [part~='base']:not(:disabled, [aria-disabled='true']) {
     transition:
       background-color var(--lr-transition-fast),
       color var(--lr-transition-fast),
@@ -192,15 +201,15 @@ export const styles = css`
   /* One hover and one press rule for every appearance -- what moves per tier is the mix BASE
      declared above, not the rule. Both out-specify each :host([appearance='…']) [part~='base']
      block, so no tier silently loses its pointer feedback. */
-  [part~='base']:not(:disabled):hover {
+  [part~='base']:not(:disabled, [aria-disabled='true']):hover {
     background: var(--lr-button-hover-background);
   }
-  [part~='base']:not(:disabled):active {
+  [part~='base']:not(:disabled, [aria-disabled='true']):active {
     background: var(--lr-button-active-background);
     transform: scale(var(--lr-button-active-scale, 0.9875));
   }
   @media (prefers-reduced-motion: reduce) {
-    [part~='base']:not(:disabled):active {
+    [part~='base']:not(:disabled, [aria-disabled='true']):active {
       transform: none;
     }
   }
@@ -306,11 +315,11 @@ export const styles = css`
      padding, so the shared hover/press background would paint a tight rectangle around bare
      inline text in the middle of a paragraph -- exactly the button-shaped box this appearance
      exists to avoid. It moves its text by the same two mix tokens instead. */
-  :host([appearance='link']) [part~='base']:not(:disabled):hover {
+  :host([appearance='link']) [part~='base']:not(:disabled, [aria-disabled='true']):hover {
     background: transparent;
     color: color-mix(in oklab, var(--lr-button-accent), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
-  :host([appearance='link']) [part~='base']:not(:disabled):active {
+  :host([appearance='link']) [part~='base']:not(:disabled, [aria-disabled='true']):active {
     background: transparent;
     color: color-mix(in oklab, var(--lr-button-accent), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }

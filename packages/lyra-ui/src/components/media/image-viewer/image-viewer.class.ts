@@ -21,7 +21,7 @@ import { sanitizePercentRect } from '../../../internal/safe-css.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_imageViewerAnnotate, LYRA_DEFAULT_imageViewerAnnotationAdded, LYRA_DEFAULT_imageViewerAnnotationBoxPosition, LYRA_DEFAULT_imageViewerAnnotationCancelled, LYRA_DEFAULT_imageViewerAnnotationHint, LYRA_DEFAULT_imageViewerFailedToLoad, LYRA_DEFAULT_imageViewerFitActual, LYRA_DEFAULT_imageViewerFitContain, LYRA_DEFAULT_imageViewerFitLabel, LYRA_DEFAULT_imageViewerFitWidth, LYRA_DEFAULT_imageViewerHighlightsLabel, LYRA_DEFAULT_imageViewerLabel, LYRA_DEFAULT_imageViewerRotate, LYRA_DEFAULT_imageViewerUnlabeledHighlight, LYRA_DEFAULT_loading, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_imageViewerAnnotate, LYRA_DEFAULT_imageViewerAnnotationAdded, LYRA_DEFAULT_imageViewerAnnotationBoxPosition, LYRA_DEFAULT_imageViewerAnnotationCancelled, LYRA_DEFAULT_imageViewerAnnotationHint, LYRA_DEFAULT_imageViewerFailedToLoad, LYRA_DEFAULT_imageViewerFitActual, LYRA_DEFAULT_imageViewerFitContain, LYRA_DEFAULT_imageViewerFitLabel, LYRA_DEFAULT_imageViewerFitWidth, LYRA_DEFAULT_imageViewerHighlightsLabel, LYRA_DEFAULT_imageViewerLabel, LYRA_DEFAULT_imageViewerRotate, LYRA_DEFAULT_imageViewerUnlabeledHighlight } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -156,8 +156,6 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     anchorJumped: LYRA_DEFAULT_anchorJumped,
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
     documentPreviewTypeImage: LYRA_DEFAULT_documentPreviewTypeImage,
     imageViewerAnnotate: LYRA_DEFAULT_imageViewerAnnotate,
@@ -174,8 +172,6 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     imageViewerLabel: LYRA_DEFAULT_imageViewerLabel,
     imageViewerRotate: LYRA_DEFAULT_imageViewerRotate,
     imageViewerUnlabeledHighlight: LYRA_DEFAULT_imageViewerUnlabeledHighlight,
-    loading: LYRA_DEFAULT_loading,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -431,6 +427,10 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
   private onWrapperPointerDown = (event: PointerEvent): void => {
     if (!this.annotatable || !this.wrapperEl) return;
+    // Only the primary button starts a drag. A secondary/middle press has to stay free for the
+    // context menu and must not capture the pointer or leave a draft box behind, which it would
+    // otherwise do with no matching pointerup path to clear it.
+    if (event.button !== 0) return;
     const rect = this.wrapperEl.getBoundingClientRect();
     const px = clamp(((event.clientX - rect.left) / rect.width) * 100, 0, 100);
     const py = clamp(((event.clientY - rect.top) / rect.height) * 100, 0, 100);

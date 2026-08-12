@@ -22,7 +22,7 @@ import { variants } from '../../../internal/variants.styles.js';
 import { styles } from './toast-item.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_close, LYRA_DEFAULT_closeWithContext, LYRA_DEFAULT_closeWithTruncatedContext, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_close, LYRA_DEFAULT_closeWithContext, LYRA_DEFAULT_closeWithTruncatedContext } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -152,10 +152,6 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     close: LYRA_DEFAULT_close,
     closeWithContext: LYRA_DEFAULT_closeWithContext,
     closeWithTruncatedContext: LYRA_DEFAULT_closeWithTruncatedContext,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    duration: LYRA_DEFAULT_duration,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

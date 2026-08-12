@@ -7,6 +7,12 @@ export const styles = css`
        allocated width (a chat transcript, a split pane, a narrow dialog) instead of the
        viewport's. */
     container: lr-confirm-bar / inline-size;
+    /* inline-size containment strips the box of content-based intrinsic sizing, so without this
+       fallback the bar collapses to a sliver in any shrink-to-fit context (a flex row, a centered
+       grid cell, a fit-content wrapper) -- the same pairing every other inline-size query
+       container in the library declares (eval-result, mcp-app, prompt-studio). The compact host
+       state sets container: none and is unaffected either way. */
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
     min-inline-size: 0;
     max-inline-size: 100%;
   }

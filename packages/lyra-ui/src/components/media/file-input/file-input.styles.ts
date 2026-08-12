@@ -7,6 +7,42 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     --lr-file-input-font-size: var(--lr-form-control-font-size);
+    /* The dropzone's own ladder. sizes.styles.ts only carries the six shared --lr-form-control-*
+       knobs, which describe a single-line row control; this is a block drop target whose
+       instructional text, glyph, padding and detail text each need their own tier or size ends up
+       resizing the label alone. These :host values ARE the m/medium tier, so an unset or
+       default-size control renders exactly as it did before the ladder existed. */
+    --lr-file-input-dropzone-font-size: var(--lr-font-size-md-sm);
+    --lr-file-input-dropzone-icon-size: var(--lr-font-size-xl);
+    --lr-file-input-dropzone-padding: var(--lr-space-l);
+    --lr-file-input-detail-font-size: var(--lr-font-size-sm);
+  }
+  :host([size='2xs']),
+  :host([size='xs']) {
+    --lr-file-input-dropzone-font-size: var(--lr-font-size-xs);
+    --lr-file-input-dropzone-icon-size: var(--lr-font-size-md-sm);
+    --lr-file-input-dropzone-padding: var(--lr-space-s);
+    --lr-file-input-detail-font-size: var(--lr-font-size-2xs);
+  }
+  :host([size='s']),
+  :host([size='small']) {
+    --lr-file-input-dropzone-font-size: var(--lr-font-size-sm);
+    --lr-file-input-dropzone-icon-size: var(--lr-font-size-lg);
+    --lr-file-input-dropzone-padding: var(--lr-space-m);
+    --lr-file-input-detail-font-size: var(--lr-font-size-xs);
+  }
+  :host([size='l']),
+  :host([size='large']) {
+    --lr-file-input-dropzone-font-size: var(--lr-font-size-lg);
+    --lr-file-input-dropzone-icon-size: var(--lr-font-size-2xl);
+    --lr-file-input-dropzone-padding: var(--lr-space-2xl);
+    --lr-file-input-detail-font-size: var(--lr-font-size-md-sm);
+  }
+  :host([size='xl']) {
+    --lr-file-input-dropzone-font-size: var(--lr-font-size-xl);
+    --lr-file-input-dropzone-icon-size: var(--lr-font-size-3xl);
+    --lr-file-input-dropzone-padding: var(--lr-space-2xl);
+    --lr-file-input-detail-font-size: var(--lr-font-size-m);
   }
   [part~='file-input'] {
     min-inline-size: 0;
@@ -43,12 +79,12 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
     appearance: none;
-    padding: var(--lr-space-l);
+    padding: var(--lr-file-input-dropzone-padding);
     border: var(--lr-border-width-medium) dashed var(--lr-color-border);
     border-radius: var(--lr-file-input-radius, var(--lr-radius));
     background: var(--lr-color-surface);
     color: var(--lr-color-text-quiet);
-    font-size: var(--lr-font-size-md-sm);
+    font-size: var(--lr-file-input-dropzone-font-size);
   }
   .dropzone-content {
     grid-area: 1 / 1;
@@ -61,10 +97,10 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     gap: var(--lr-file-input-gap, var(--lr-space-xs));
-    padding: var(--lr-space-l);
+    padding: var(--lr-file-input-dropzone-padding);
     color: var(--lr-color-text-quiet);
     text-align: center;
-    font-size: var(--lr-font-size-md-sm);
+    font-size: var(--lr-file-input-dropzone-font-size);
     overflow-wrap: anywhere;
     pointer-events: none;
   }
@@ -72,7 +108,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: var(--lr-font-size-xl);
+    font-size: var(--lr-file-input-dropzone-icon-size);
   }
   [part='dropzone-text'] {
     min-inline-size: 0;
@@ -198,7 +234,7 @@ export const styles = css`
   }
   [part='file-size'] {
     color: var(--lr-color-text-quiet);
-    font-size: var(--lr-font-size-sm);
+    font-size: var(--lr-file-input-detail-font-size);
   }
   [part='remove-button'] {
     display: inline-flex;
@@ -236,14 +272,14 @@ export const styles = css`
     min-inline-size: 0;
     margin-block-start: var(--lr-space-xs);
     color: var(--lr-color-text-quiet);
-    font-size: var(--lr-font-size-sm);
+    font-size: var(--lr-file-input-detail-font-size);
     overflow-wrap: anywhere;
   }
   [part='error'] {
     min-inline-size: 0;
     margin-block-start: var(--lr-space-xs);
     color: var(--lr-color-danger);
-    font-size: var(--lr-font-size-sm);
+    font-size: var(--lr-file-input-detail-font-size);
     overflow-wrap: anywhere;
   }
 `;

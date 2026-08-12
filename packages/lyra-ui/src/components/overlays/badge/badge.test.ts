@@ -353,3 +353,76 @@ it('never renders a remove button on lr-badge, even with the tag-only attribute 
   const el = (await fixture(html`<lr-badge with-remove>Ready</lr-badge>`)) as LyraBadge;
   expect(el.shadowRoot!.querySelectorAll('button').length).to.equal(0);
 });
+
+// -- quiet-tier fill across light and dark mode -------------------------------
+
+/** WCAG relative luminance of a computed `rgb()`/`rgba()` string, so "is this actually the dark
+ *  tier?" is asserted on the rendered colour rather than on a memorised hex value that a legitimate
+ *  ramp regeneration would churn. */
+function relativeLuminance(color: string): number {
+  const channels = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/u.exec(color);
+  if (!channels) throw new Error(`unparseable computed colour: ${color}`);
+  const [r, g, b] = [1, 2, 3].map((index) => {
+    const channel = Number(channels[index]) / 255;
+    return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+describe('quiet-tier fill in dark mode', () => {
+  // The badge never names a variant colour itself: variant="warning" re-points the shared
+  // --lr-color-fill-quiet slot, which the semantic grid resolves per mode. Asserting the RENDERED
+  // background is what proves the chain has no light-mode literal baked into it anywhere -- reading
+  // the stylesheet text would pass just as happily on a hardcoded value.
+  const QUIET_VARIANTS = ['brand', 'success', 'warning', 'danger'] as const;
+
+  it('paints a darker quiet fill under data-lr-theme="dark" for every semantic variant', async () => {
+    for (const variant of QUIET_VARIANTS) {
+      const light = (await fixture(
+        html`<lr-badge variant=${variant} appearance="filled">Quiet</lr-badge>`,
+      )) as LyraBadge;
+      const dark = (await fixture(
+        html`<lr-badge variant=${variant} appearance="filled" data-lr-theme="dark">Quiet</lr-badge>`,
+      )) as LyraBadge;
+      const lightFill = getComputedStyle(base(light)).backgroundColor;
+      const darkFill = getComputedStyle(base(dark)).backgroundColor;
+      expect(darkFill, `${variant} quiet fill did not move in dark mode`).to.not.equal(lightFill);
+      expect(
+        relativeLuminance(darkFill),
+        `${variant} dark quiet fill (${darkFill}) is not darker than its light value (${lightFill})`,
+      ).to.be.lessThan(relativeLuminance(lightFill));
+    }
+  });
+
+  it('keeps the neutral badge surface mode-aware too, though it reads the ambient surface', async () => {
+    // variant="neutral" deliberately keeps the ambient "no signal" surface instead of the grid's
+    // grey quiet row, so it needs its own proof that the ambient token is not a light-mode literal.
+    const light = (await fixture(
+      html`<lr-badge variant="neutral" appearance="filled">Quiet</lr-badge>`,
+    )) as LyraBadge;
+    const dark = (await fixture(
+      html`<lr-badge variant="neutral" appearance="filled" data-lr-theme="dark">Quiet</lr-badge>`,
+    )) as LyraBadge;
+    const lightFill = getComputedStyle(base(light)).backgroundColor;
+    const darkFill = getComputedStyle(base(dark)).backgroundColor;
+    expect(darkFill).to.not.equal(lightFill);
+    expect(relativeLuminance(darkFill)).to.be.lessThan(relativeLuminance(lightFill));
+  });
+
+  it('still resolves the dark quiet fill through its --lr-theme-* input', async () => {
+    // A literal in the dark branch would render the same colour whatever the theme input says.
+    for (const variant of QUIET_VARIANTS) {
+      const el = (await fixture(html`
+        <lr-badge
+          variant=${variant}
+          appearance="filled"
+          data-lr-theme="dark"
+          style="--lr-theme-color-${variant}-fill-quiet: rgb(3, 5, 7)"
+        >Quiet</lr-badge>
+      `)) as LyraBadge;
+      expect(getComputedStyle(base(el)).backgroundColor, `${variant} ignored its theme input`).to.equal(
+        'rgb(3, 5, 7)',
+      );
+    }
+  });
+});

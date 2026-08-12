@@ -9,7 +9,7 @@ import '../../overlays/empty/empty.class.js';
 import { styles } from './chunk-inspector.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_chunkScore, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_scoreTierHigh, LYRA_DEFAULT_scoreTierLow, LYRA_DEFAULT_scoreTierMedium, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore, LYRA_DEFAULT_sourcePageSuffix, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_chunkScore, LYRA_DEFAULT_scoreTierHigh, LYRA_DEFAULT_scoreTierLow, LYRA_DEFAULT_scoreTierMedium, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore, LYRA_DEFAULT_sourcePageSuffix, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -48,6 +48,9 @@ export interface LyraChunkInspectorEventMap {
 }
 
 type Tier = 'high' | 'medium' | 'low';
+
+/** How `<lr-chunk-inspector>` orders the chunks it was given. */
+export type ChunkInspectorSort = 'score' | 'none';
 
 /**
  * `<lr-chunk-inspector>` — a ranked retrieved-chunks list: relevance score bars with tier tones,
@@ -107,9 +110,6 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     chunkInspectorEmpty: LYRA_DEFAULT_chunkInspectorEmpty,
     chunkInspectorLabel: LYRA_DEFAULT_chunkInspectorLabel,
     chunkScore: LYRA_DEFAULT_chunkScore,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
     scoreTierHigh: LYRA_DEFAULT_scoreTierHigh,
     scoreTierLow: LYRA_DEFAULT_scoreTierLow,
     scoreTierMedium: LYRA_DEFAULT_scoreTierMedium,
@@ -124,7 +124,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
 
   @property({ attribute: false }) chunks: LyraChunk[] = [];
   @property({ attribute: false }) thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 };
-  @property() sort: 'score' | 'none' = 'score';
+  @property() sort: ChunkInspectorSort = 'score';
   /** Marks the chunk currently open in the viewer. */
   @property({ attribute: 'active-id' }) activeId = '';
   @property({ type: Number, attribute: 'virtualize-at' }) virtualizeAt = 50;
@@ -142,11 +142,27 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     return finiteCount(this.virtualizeAt, 50);
   }
 
+  // Memoizes the sorted view for as long as neither input actually changed. `<lr-virtual-list>`
+  // keys its own O(n) offset/identity rebuild and its memoized activeIndex on the *reference*
+  // identity of the `items` array it is handed, so returning a freshly-allocated sort on every
+  // render made every unrelated update (a new `activeId`, `compact`) rebuild the whole list.
+  private sortedChunksCache?: { source: LyraChunk[]; sort: ChunkInspectorSort; result: LyraChunk[] };
+
   private sortedChunks(): LyraChunk[] {
-    return this.sort === 'score'
-      ? [...this.chunks].sort((a, b) => this.safeScore(b.score) - this.safeScore(a.score))
-      : this.chunks;
+    const cached = this.sortedChunksCache;
+    if (cached && cached.source === this.chunks && cached.sort === this.sort) return cached.result;
+    const result =
+      this.sort === 'score'
+        ? [...this.chunks].sort((a, b) => this.safeScore(b.score) - this.safeScore(a.score))
+        : this.chunks;
+    this.sortedChunksCache = { source: this.chunks, sort: this.sort, result };
+    return result;
   }
+
+  // A stable bound field, not an inline arrow recreated per render: `<lr-virtual-list>` compares
+  // `keyFunction` by reference too, and a new closure invalidates the same caches a new items array
+  // would. Mirrors the sibling `renderVirtualChunk` field just below.
+  private readonly chunkKey = (item: unknown): string => (item as LyraChunk).id;
 
   private safeScore(score: number): number {
     return finiteRange(score, 0, 0, 1);
@@ -239,6 +255,15 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   // which is an invalid ARIA containment.
   private renderVirtualChunk = (item: unknown): TemplateResult => this.chunkTemplate(item as LyraChunk, true);
 
+  /** Deliberately a *fresh* closure per render, the mirror image of the stable `items`/`chunkKey`
+   *  identities above. `<lr-virtual-list>` rebuilds its O(n) offsets/identities whenever either of
+   *  those changes identity, but treats a new `renderItem` as nothing more than "re-paint the
+   *  visible rows" -- which is exactly the signal a change to this component's own row-affecting
+   *  state (expansion, the active row, thresholds, locale) needs, at none of the cost. */
+  private virtualRenderItem(): (item: unknown) => TemplateResult {
+    return (item: unknown) => this.renderVirtualChunk(item);
+  }
+
   override render(): TemplateResult {
     const sorted = this.sortedChunks();
     const label =
@@ -258,8 +283,8 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
           ? html`<lr-virtual-list
               exportparts="chunk:chunk, chunk-current:chunk-current, score:score, score-current:score-current, score-bar:score-bar, score-fill:score-fill, score-fill-success:score-fill-success, score-fill-warning:score-fill-warning, score-fill-danger:score-fill-danger, open-button:open-button, title:title, text:text, text-clamped:text-clamped, toggle:toggle"
               .items=${sorted}
-              .renderItem=${this.renderVirtualChunk}
-              .keyFunction=${(item: unknown) => (item as LyraChunk).id}
+              .renderItem=${this.virtualRenderItem()}
+              .keyFunction=${this.chunkKey}
               .activeId=${this.activeId || ''}
             ></lr-virtual-list>`
           : html`<div role="list">${sorted.map((c) => this.renderChunk(c))}</div>`}

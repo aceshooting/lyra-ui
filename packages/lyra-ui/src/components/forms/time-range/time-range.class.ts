@@ -25,7 +25,7 @@ import {
 } from '../../../internal/form-associated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_rangeEnd, LYRA_DEFAULT_rangeStart, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_rangeEnd, LYRA_DEFAULT_rangeStart } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -148,6 +148,13 @@ export interface LyraTimeRangeEventMap {
  * overlapping booking, a window the server rejects) still blocks submission of the form the
  * element sits in.
  *
+ * Clicking anywhere on the track — the vast majority of the control's clickable area — jumps
+ * whichever handle is nearer the clicked position to that point and continues as the same drag
+ * gesture, then leaves that handle focused so arrow keys carry on from there. Mirrors
+ * `<lr-slider>`'s `range` mode exactly, including the RTL ratio mirroring and the tie-break toward
+ * the handle that can actually travel toward the click. A pointerdown that starts on a handle stays
+ * a plain handle drag.
+ *
  * Deliberately no label/hint/error chrome -- `startLabel`/`endLabel` here are per-handle
  * accessible-name overrides, not visible label text, the same carve-out `<lr-slider>` states for
  * its own single-handle `label`; a labeled-field consumer wraps this element in their own layout.
@@ -229,7 +236,6 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     rangeEnd: LYRA_DEFAULT_rangeEnd,
     rangeStart: LYRA_DEFAULT_rangeStart,
-    restore: LYRA_DEFAULT_restore,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -753,19 +759,33 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   };
 
   private onPointerDown = (handle: TimeRangeHandle, e: PointerEvent): void => {
-    if (this.effectiveDisabled) return;
-    const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement;
-    const dragWindow = base.ownerDocument.defaultView;
-    if (!this.isConnected || !dragWindow) return;
+    this.beginDrag(handle, e, e.target as HTMLElement);
+  };
+
+  /** Start tracking `e.pointerId` as a drag of `handle`, transferring pointer capture to
+   *  `captureTarget` and wiring the shared window-level move/end listeners. Shared by a pointerdown
+   *  that starts on a handle itself and one that starts elsewhere on the track (see
+   *  `onBasePointerDown`), so both gestures continue identically from here on — the same split
+   *  `lr-slider` uses. Returns the live drag state, or `undefined` when no drag was started. */
+  private beginDrag(
+    handle: TimeRangeHandle,
+    e: PointerEvent,
+    captureTarget: HTMLElement,
+  ): DragState | undefined {
+    if (this.effectiveDisabled) return undefined;
+    const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement | null;
+    const dragWindow = base?.ownerDocument.defaultView;
+    if (!base || !this.isConnected || !dragWindow) return undefined;
     const firstDrag = this.drags.size === 0;
-    if (!firstDrag && this.dragWindow !== dragWindow) return;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    this.drags.set(e.pointerId, {
+    if (!firstDrag && this.dragWindow !== dragWindow) return undefined;
+    captureTarget.setPointerCapture?.(e.pointerId);
+    const drag: DragState = {
       handle,
       changed: false,
       rect: base.getBoundingClientRect(),
       rtl: isRtl(this),
-    });
+    };
+    this.drags.set(e.pointerId, drag);
     if (firstDrag) {
       this.dragWindow = dragWindow;
       dragWindow.addEventListener('pointermove', this.onPointerMove);
@@ -779,6 +799,59 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     // or `this.drags` keeps a permanently-stale entry and these window
     // listeners (and the closure keeping this instance alive) never get
     // removed. Mirrors lr-split's identical fix.
+    return drag;
+  }
+
+  /** Domain value at a pointer position, using the same mirrored ratio `onPointerMove` uses so a
+   *  seek and a drag can never disagree about which end of the track is `min` under RTL. */
+  private valueAtPointer(clientX: number, rect: DOMRect, rtl: boolean): number {
+    const raw = rect.width === 0 ? 0 : (clientX - rect.left) / rect.width;
+    const ratio = Math.min(1, Math.max(0, rtl ? 1 - raw : raw));
+    const { lo, hi } = this.domain();
+    return finiteInterpolate(lo, hi, ratio);
+  }
+
+  /** Whichever handle is nearer `target`. A two-handle track click is otherwise ambiguous. Ties
+   *  (including both handles resting on the same value) go to the handle that can actually travel
+   *  toward the click — mirrors `lr-slider`'s `nearestHandle()` exactly. */
+  private nearestHandle(target: number): TimeRangeHandle {
+    const { lo, hi } = this.domain();
+    const start = finiteRange(this.start, lo);
+    const end = finiteRange(this.end, hi);
+    const toStart = Math.abs(target - start);
+    const toEnd = Math.abs(target - end);
+    if (toStart < toEnd) return 'start';
+    if (toEnd < toStart) return 'end';
+    return target < start ? 'start' : 'end';
+  }
+
+  /** A pointerdown anywhere on `[part="base"]` other than a handle itself — the vast majority of
+   *  the control's clickable area — jumps the nearer handle to that point and continues the same
+   *  gesture as a drag, matching `lr-slider[range]`'s documented click-to-seek. A pointerdown that
+   *  started on a handle bubbles into this listener too; it is already fully handled by
+   *  `onPointerDown` above, so it is ignored here. */
+  private onBasePointerDown = (e: PointerEvent): void => {
+    if (this.effectiveDisabled) return;
+    const handles = Array.from(
+      this.renderRoot.querySelectorAll('[part="handle-start"],[part="handle-end"]'),
+    ) as HTMLElement[];
+    if (handles.length === 0 || handles.includes(e.target as HTMLElement)) return;
+    const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement | null;
+    if (!base) return;
+    const rect = base.getBoundingClientRect();
+    if (rect.width === 0) return;
+    const target = this.valueAtPointer(e.clientX, rect, isRtl(this));
+    const handle = this.nearestHandle(target);
+    const handleEl = this.renderRoot.querySelector(
+      `[part="handle-${handle}"]`,
+    ) as HTMLElement | null;
+    if (!handleEl) return;
+    const drag = this.beginDrag(handle, e, handleEl);
+    if (!drag) return;
+    if (this.setValue(handle, target, false)) drag.changed = true;
+    // Keyboard interaction (arrow keys, Home/End, ...) continues seamlessly right after the click,
+    // exactly as if the user had tabbed to that handle and grabbed it directly.
+    handleEl.focus();
   };
 
   private onPointerMove = (e: PointerEvent): void => {
@@ -796,14 +869,11 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
       this.endDrag(e.pointerId, false);
       return;
     }
-    const rect = drag.rect;
-    const raw = (e.clientX - rect.left) / rect.width;
     // The track is positioned with inset-inline-start (0% at the visual
     // right edge under RTL), so the pointer ratio has to mirror that or a
-    // rightward drag would move the handle the wrong way.
-    const ratio = Math.min(1, Math.max(0, drag.rtl ? 1 - raw : raw));
-    const { lo, hi } = this.domain();
-    const value = finiteInterpolate(lo, hi, ratio);
+    // rightward drag would move the handle the wrong way -- `valueAtPointer`
+    // owns that mirroring for both this and click-to-seek.
+    const value = this.valueAtPointer(e.clientX, drag.rect, drag.rtl);
     drag.changed = this.setValue(drag.handle, value, false) || drag.changed;
   };
 
@@ -919,6 +989,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
         part="base"
         role="group"
         aria-label=${this.getAttribute('aria-label') || nothing}
+        @pointerdown=${this.onBasePointerDown}
       >
         <div part="track"></div>
         <div

@@ -676,3 +676,59 @@ it('deduplicates and prunes controlled selected ids across source replacement an
   expect(el.selectedIds).to.deep.equal(['b']);
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent).to.include('1 of 1');
 });
+
+describe('depth indent', () => {
+  const deep: LyraSourceEntry[] = [
+    {
+      id: 'l0',
+      label: 'Level 0',
+      children: [
+        { id: 'l1', label: 'Level 1', children: [{ id: 'l2', label: 'Level 2', mimeType: 'text/plain' }] },
+      ],
+    },
+  ];
+
+  async function expandedDeepPicker(): Promise<LyraSourcePicker> {
+    const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
+    el.sources = deep;
+    await el.updateComplete;
+    // Filtering auto-expands every folder, which is the cheapest way to render all three levels
+    // without driving two disclosure clicks.
+    el.shadowRoot!.querySelector('[part="search"]')!.dispatchEvent(
+      new CustomEvent('lr-input', { detail: { value: 'Level' }, bubbles: true, composed: true }),
+    );
+    await el.updateComplete;
+    return el;
+  }
+
+  function rows(el: LyraSourcePicker): HTMLElement[] {
+    return Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]'));
+  }
+
+  it('drives the per-level indent from a retheme-able token instead of a hardcoded literal', async () => {
+    const el = await expandedDeepPicker();
+    expect(rows(el).length).to.equal(3);
+    const before = rows(el).map((row) => Number.parseFloat(getComputedStyle(row).paddingInlineStart));
+    expect(before[1]! - before[0]!, 'one indent step per level').to.be.greaterThan(0);
+    expect(before[2]! - before[1]!, 'and the step is uniform').to.be.closeTo(before[1]! - before[0]!, 0.5);
+
+    el.style.setProperty('--lr-source-picker-indent-size', '3rem');
+    await el.updateComplete;
+    const after = rows(el).map((row) => Number.parseFloat(getComputedStyle(row).paddingInlineStart));
+    expect(after[1]! - after[0]!, 'the override reaches the rendered indent').to.be.closeTo(48, 0.5);
+    expect(after[2]! - after[1]!).to.be.closeTo(48, 0.5);
+  });
+
+  it('caps runaway nesting so a deep tree cannot push its labels out of view', async () => {
+    const el = await expandedDeepPicker();
+    // 8rem = 128px is the shared cap; a 20rem step would otherwise indent level 1 by 320px.
+    el.style.setProperty('--lr-source-picker-indent-size', '20rem');
+    await el.updateComplete;
+    const padding = rows(el).map((row) => Number.parseFloat(getComputedStyle(row).paddingInlineStart));
+    const base = padding[0]!;
+    for (const value of padding) {
+      expect(value - base, 'no row indents past the cap').to.be.at.most(128.5);
+    }
+    expect(padding[1]! - base, 'and the cap is what actually bit').to.be.closeTo(128, 0.5);
+  });
+});

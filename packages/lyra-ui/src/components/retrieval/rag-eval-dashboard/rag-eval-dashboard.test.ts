@@ -93,5 +93,18 @@ it('preserves an unavailable controlled slice and renders a localized unavailabl
   );
   expect(el.shadowRoot!.querySelectorAll('[part="run"]').length).to.equal(0);
   expect(el.shadowRoot!.querySelectorAll('lr-stat').length).to.equal(0);
-  expect(el.shadowRoot!.querySelector('lr-lite-chart')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('lr-lite-chart') === null).to.equal(true);
+});
+
+it('omits the trend chart when show-chart is disabled', async () => {
+  const el = (await fixture(
+    html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="groundedness" slice="all"></lr-rag-eval-dashboard>`,
+  )) as LyraRagEvalDashboard;
+  expect(el.shadowRoot!.querySelector('[part="chart"]') === null).to.equal(false);
+
+  el.showChart = false;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="chart"]') === null).to.equal(true);
+  expect(el.shadowRoot!.querySelector('lr-lite-chart') === null).to.equal(true);
 });

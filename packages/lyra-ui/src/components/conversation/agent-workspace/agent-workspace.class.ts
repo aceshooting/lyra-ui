@@ -8,6 +8,7 @@ import type { AgentRunMetric } from '../../agent-tools/agent-run/agent-run.class
 import type { ContextInspectorSegment } from '../../agent-tools/context-inspector/context-inspector.class.js';
 import type {
   AgentRun,
+  CancelEventDetail,
   ChatMessage,
   Citation,
   CitationSelectEventDetail,
@@ -21,7 +22,7 @@ import { styles } from './agent-workspace.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentWorkspaceContext, LYRA_DEFAULT_agentWorkspaceConversation, LYRA_DEFAULT_agentWorkspaceDetails, LYRA_DEFAULT_agentWorkspaceEmpty, LYRA_DEFAULT_agentWorkspaceGrounding, LYRA_DEFAULT_agentWorkspaceLabel, LYRA_DEFAULT_agentWorkspaceRetrieval, LYRA_DEFAULT_agentWorkspaceRun, LYRA_DEFAULT_agentWorkspaceTools, LYRA_DEFAULT_composerPlaceholder, LYRA_DEFAULT_details } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_agentWorkspaceContext, LYRA_DEFAULT_agentWorkspaceConversation, LYRA_DEFAULT_agentWorkspaceDetails, LYRA_DEFAULT_agentWorkspaceEmpty, LYRA_DEFAULT_agentWorkspaceGrounding, LYRA_DEFAULT_agentWorkspaceLabel, LYRA_DEFAULT_agentWorkspaceRetrieval, LYRA_DEFAULT_agentWorkspaceRun, LYRA_DEFAULT_agentWorkspaceTools, LYRA_DEFAULT_composerPlaceholder } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -36,7 +37,10 @@ export interface LyraAgentWorkspaceEventMap {
   'lr-retrieval-select': CustomEvent<RetrievalResultsSelectDetail>;
   'lr-citation-select': CustomEvent<CitationSelectEventDetail>;
   'lr-tool-approval-decide': CustomEvent<ToolTimelineApprovalDetail>;
-  'lr-cancel': CustomEvent<undefined>;
+  // Both of these bubble up unchanged from the composed `<lr-agent-run>`, so each has to carry
+  // that element's own detail type -- `lr-cancel` is emitted there as `emit('lr-cancel', {})`,
+  // i.e. always a real `CancelEventDetail` object, never `undefined`.
+  'lr-cancel': CustomEvent<CancelEventDetail>;
   'lr-retry': CustomEvent<RetryEventDetail>;
 }
 
@@ -102,7 +106,6 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     agentWorkspaceRun: LYRA_DEFAULT_agentWorkspaceRun,
     agentWorkspaceTools: LYRA_DEFAULT_agentWorkspaceTools,
     composerPlaceholder: LYRA_DEFAULT_composerPlaceholder,
-    details: LYRA_DEFAULT_details,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

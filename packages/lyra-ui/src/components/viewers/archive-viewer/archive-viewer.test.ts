@@ -807,6 +807,56 @@ describe('lr-archive-viewer anchor contract across virtualization', () => {
     }
   });
 
+  it('reports a failed fragment jump when a concurrent src reassignment lands during the row wait', async () => {
+    const { el, list, restore } = await listingWithEntries(names);
+    // One attempt only: the mixin's retry loop would otherwise re-resolve against the newly loaded
+    // archive, which is correct behavior but hides this call's own result.
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 0;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 0;
+    try {
+      list.rowHeight = '40';
+      await list.updateComplete;
+
+      // applyAnchor() suspends on `this.updateComplete` after the row is confirmed mounted and
+      // before its final entry-name lookup. Reassign `src` through the real public setter from
+      // inside exactly that await -- a user clicking a different citation/file tab mid-jump.
+      let updateCompleteGetter: (() => Promise<boolean>) | undefined;
+      for (let proto = Object.getPrototypeOf(el); proto && !updateCompleteGetter; proto = Object.getPrototypeOf(proto)) {
+        updateCompleteGetter = Object.getOwnPropertyDescriptor(proto, 'updateComplete')?.get as (() => Promise<boolean>) | undefined;
+      }
+      expect(typeof updateCompleteGetter, 'located the real updateComplete getter').to.equal('function');
+      let accesses = 0;
+      let swapped = false;
+      Object.defineProperty(el, 'updateComplete', {
+        configurable: true,
+        get() {
+          accesses += 1;
+          const real = updateCompleteGetter!.call(this);
+          // 1st access is the mixin's own pre-flight await; the 2nd is applyAnchor's.
+          if (accesses !== 2) return real;
+          return (async () => {
+            await real;
+            swapped = true;
+            el.src = 'https://example.test/other-archive.zip';
+            await updateCompleteGetter!.call(el);
+            await aTimeout(0);
+            return true;
+          })();
+        },
+      });
+
+      try {
+        const found = await el.scrollToAnchor({ kind: 'fragment', id: names[targetIndex]! });
+        expect(swapped, 'the reassignment really landed inside the jump').to.equal(true);
+        expect(found, 'a jump whose archive was replaced mid-flight is not a success').to.equal(false);
+      } finally {
+        delete (el as unknown as { updateComplete?: unknown }).updateComplete;
+      }
+    } finally {
+      restore();
+    }
+  });
+
   it('gives up scrolling to an anchored row once it is not immediately found and there is no browsing context to retry against', async () => {
     const { el, list, restore } = await listingWithEntries(names);
     (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
@@ -1185,6 +1235,37 @@ describe('lr-archive-viewer part reachability through the embedded virtual list'
         )!;
         expect(mark.getAttribute('part')).to.include('highlight');
         expect(getComputedStyle(mark).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+      } finally {
+        restore();
+      }
+    } finally {
+      (globalThis as { Highlight?: unknown }).Highlight = originalHighlight;
+    }
+  });
+
+  it('renders a neutral-tone highlight with real contrast against the ambient entry-row background', async () => {
+    const originalHighlight = (globalThis as { Highlight?: unknown }).Highlight;
+    (globalThis as { Highlight?: unknown }).Highlight = undefined;
+    try {
+      const { el, vlistRoot, restore } = await listing();
+      try {
+        el.highlights = [{ id: 'readme', tone: 'neutral', anchor: { kind: 'text-quote', quote: 'README' } }];
+        await el.updateComplete;
+        await waitUntil(() => vlistRoot.querySelector('mark[data-lr-highlight-tone="neutral"]') !== null);
+        const mark = vlistRoot.querySelector<HTMLElement>('mark[data-lr-highlight-tone="neutral"]')!;
+        const row = mark.closest('[part~="entry"]') as HTMLElement;
+
+        // `neutral` is a first-class documented LyraHighlightTone. Falling its background back to
+        // the very token the viewer paints its own surface with makes the highlight invisible --
+        // the row shows exactly that ambient colour, so the marked text reads as unhighlighted.
+        const ambient = resolveDeclaration(vlistRoot, 'background: var(--lr-color-surface)', 'background-color');
+        expect(getComputedStyle(mark).backgroundColor).to.not.equal(ambient);
+        expect(getComputedStyle(mark).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+        expect(getComputedStyle(mark).backgroundColor).to.not.equal(getComputedStyle(row).backgroundColor);
+
+        // Still fully retunable through the documented cssprop.
+        el.style.setProperty('--lr-archive-viewer-highlight-neutral-background', 'rgb(9, 8, 7)');
+        expect(getComputedStyle(mark).backgroundColor).to.equal('rgb(9, 8, 7)');
       } finally {
         restore();
       }

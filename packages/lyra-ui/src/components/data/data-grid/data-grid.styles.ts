@@ -25,6 +25,38 @@ export const styles = css`
     color: var(--text-color);
   }
 
+  /* Wires the size density ladder into the values above. The "m" tier is the :host block's own
+     default, so it is intentionally absent here -- these rules only override the non-default
+     tiers, leaving "m" byte-for-byte what it always rendered.
+
+     Deliberately NOT sourced from the shared sizes stylesheet's --lr-form-control-height /
+     --lr-form-control-padding-* -- that ladder is tuned for single-line form controls and its "m"
+     tier (2.5rem) sits BELOW this component's own "m" row-height (3.5rem), so borrowing it verbatim
+     would make "l" (3rem) render shorter than the default row, inverting the ladder. Each tier
+     below instead scales this component's own row-height/cell-padding baseline directly. */
+  :host([size='xs']) {
+    --cell-padding: var(--lr-space-xs);
+    --header-row-height: var(--lr-size-2rem);
+    --row-height: var(--lr-size-2rem);
+  }
+  :host([size='s']),
+  :host([size='small']) {
+    --cell-padding: var(--lr-space-s);
+    --header-row-height: var(--lr-size-2-5rem);
+    --row-height: var(--lr-size-2-5rem);
+  }
+  :host([size='l']),
+  :host([size='large']) {
+    --cell-padding: var(--lr-space-l);
+    --header-row-height: var(--lr-size-4rem);
+    --row-height: var(--lr-size-4rem);
+  }
+  :host([size='xl']) {
+    --cell-padding: var(--lr-space-2xl);
+    --header-row-height: var(--lr-size-5rem);
+    --row-height: var(--lr-size-5rem);
+  }
+
   [part='data-grid'] {
     position: relative;
     isolation: isolate;
@@ -463,6 +495,46 @@ export const styles = css`
     text-align: center;
   }
 
+  [part='first-icon'],
+  [part='previous-icon'],
+  [part='next-icon'],
+  [part='last-icon'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: var(--lr-line-height-none);
+  }
+
+  /* The two chevrons of an edge button overlap slightly so they read as one doubled glyph rather
+     than two separate arrows -- matches lr-pagination's identical first/last treatment. */
+  [part='first-icon'] svg + svg,
+  [part='last-icon'] svg + svg {
+    margin-inline-start: var(--lr-size-neg-4px);
+  }
+
+  /* chevronIcon() points right by default, so 'next'/'last' render unrotated and
+     'first'/'previous' rotate to point left -- then both pairs flip under RTL, exactly like
+     lr-pagination's first/previous/next/last icons. */
+  [part='first-icon'],
+  [part='previous-icon'] {
+    transform: rotate(180deg);
+  }
+
+  [part='next-icon'],
+  [part='last-icon'] {
+    transform: rotate(0deg);
+  }
+
+  :host(:dir(rtl)) [part='first-icon'],
+  :host(:dir(rtl)) [part='previous-icon'] {
+    transform: rotate(0deg);
+  }
+
+  :host(:dir(rtl)) [part='next-icon'],
+  :host(:dir(rtl)) [part='last-icon'] {
+    transform: rotate(180deg);
+  }
+
   [part='drag-ghost'] {
     position: fixed;
     z-index: var(--lr-layer-toast);
@@ -473,7 +545,7 @@ export const styles = css`
     background: var(--background-color);
   }
 
-  @container (max-width: 20rem) {
+  @container (max-inline-size: 20rem) {
     [part='toolbar'] {
       align-items: stretch;
       flex-direction: column;

@@ -88,6 +88,26 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     line-height: var(--lr-line-height-normal);
   }
+  /*
+   * Activates shiki's "dual themes" dark variant for highlighted fenced blocks, exactly as
+   * code-block.styles.ts does for lr-code-block's own pre. tokenizeMarkdownHighlight() renders
+   * every token with its light color as a plain inline color/background-color and its dark color
+   * stashed in the --shiki-dark/--shiki-dark-bg custom properties on the same element; shiki's own
+   * documented way to toggle them is a stylesheet rule that reassigns color/background-color from
+   * those variables. !important is required because an inline style attribute outranks an external
+   * stylesheet at any selector specificity short of it. These values come from shiki's theme data
+   * rather than this library's design tokens -- the one deliberate exception in this file.
+   *
+   * Gated on [data-dark-theme='true'] (kept live by shiki-dark-theme.ts's watchDarkTheme(), off the
+   * component's own resolved --lr-color-text/--lr-color-surface) rather than the OS-level
+   * prefers-color-scheme media query, so a consumer who sets --lr-theme-color-* explicitly still
+   * gets the dark shiki palette.
+   */
+  [part='content'][data-dark-theme='true'] [part='code-block'],
+  [part='content'][data-dark-theme='true'] [part='code-block'] span {
+    color: var(--shiki-dark, inherit) !important;
+    background-color: var(--shiki-dark-bg, transparent) !important;
+  }
   [part='link'] {
     color: var(--lr-color-brand);
     text-underline-offset: var(--lr-size-0-125rem);

@@ -16,7 +16,7 @@ import {
 import { styles } from './dialog.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_popover } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_close } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -197,10 +197,6 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     close: LYRA_DEFAULT_close,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

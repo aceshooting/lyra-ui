@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { forcedColorLegendSwatchStyles } from './chart-forced-colors.js';
 
 export const styles = css`
   :host {
@@ -111,6 +112,20 @@ export const styles = css`
     fill: none;
     stroke-width: var(--lr-border-width-medium);
   }
+  /* The marks are the data key, so their own pixels survive forced colors: the colors they carry
+     there already come from the forced-colors system-color remap of the --lr-color-chart-* ramp,
+     and the per-series texture/dash layered over that is what keeps repeated system colors apart.
+     Letting the platform force fill/stroke a second time would collapse every series back onto one
+     color and erase the encoding entirely. Axes, gridlines, labels, and the legend text stay
+     system-controlled. forced-color-adjust is inherited, so it must sit on the marks and the
+     pattern tiles themselves rather than on the svg, which would opt the chrome out too -- the same
+     placement rationale as swatch-picker.styles.ts's swatch-fill. */
+  [part='bar'],
+  [part='line'],
+  [part='point'],
+  pattern {
+    forced-color-adjust: none;
+  }
   [part='point'] {
     cursor: pointer;
   }
@@ -137,6 +152,7 @@ export const styles = css`
     border-radius: var(--lr-size-2px);
     flex: 0 0 auto;
   }
+  ${forcedColorLegendSwatchStyles}
   [part='legend-text'] {
     margin-inline-start: var(--lr-space-2xs);
     color: var(--lr-chart-tick-color);

@@ -43,3 +43,5 @@ be set on the element *or on any ancestor*, and the rule wraps its `[aria-select
 in `:where()` so a consumer's own `::part(tab)` override still wins. They exist because
 `::part(tab)[aria-selected='true']` is invalid CSS — Shadow Parts forbids an attribute selector after
 `::part()`. Left unset, rendering is unchanged.
+
+**Optional peer deps:** none.

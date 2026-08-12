@@ -2274,3 +2274,125 @@ describe('lr-time-range barred from constraint validation', () => {
     expect(el.disabled, 'the fieldset never mutates the own disabled IDL').to.be.false;
   });
 });
+
+describe('click-to-seek on the track', () => {
+  /** Pins `[part="base"]` to a 200px-wide box at x=0 and neutralizes pointer capture, exactly as
+   *  the drag tests above do, so a pointerdown's clientX maps to a known ratio. */
+  function pinTrack(el: LyraTimeRange): HTMLElement {
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    for (const part of ['handle-start', 'handle-end']) {
+      const handle = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+      handle.setPointerCapture = () => {};
+    }
+    base.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        top: 0,
+        right: 200,
+        bottom: 0,
+        width: 200,
+        height: 0,
+        x: 0,
+        y: 0,
+        toJSON() {
+          return {};
+        },
+      }) as DOMRect;
+    return base;
+  }
+
+  const seek = (el: LyraTimeRange, clientX: number, pointerId = 1) => {
+    const base = pinTrack(el);
+    const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+    track.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, composed: true, pointerId, clientX }),
+    );
+  };
+
+  it('jumps the nearer handle to a click on the track and keeps the gesture draggable', async () => {
+    const el = (await fixture(
+      html`<lr-time-range min="0" max="100" start="40" end="60" step="1"></lr-time-range>`,
+    )) as LyraTimeRange;
+    seek(el, 20); // 10% of a 200px track -> value 10, far nearer `start` (40) than `end` (60)
+    expect(el.start).to.equal(10);
+    expect(el.end).to.equal(60);
+    // The same pointer id continues as a real drag, exactly as if the handle had been grabbed.
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 60 }));
+    expect(el.start).to.equal(30);
+  });
+
+  it('picks the end handle when the click lands nearer to it', async () => {
+    const el = (await fixture(
+      html`<lr-time-range min="0" max="100" start="40" end="60" step="1"></lr-time-range>`,
+    )) as LyraTimeRange;
+    seek(el, 180); // value 90
+    expect(el.end).to.equal(90);
+    expect(el.start).to.equal(40);
+  });
+
+  it('moves focus to the handle it jumped, so arrow keys continue the same gesture', async () => {
+    const el = (await fixture(
+      html`<lr-time-range min="0" max="100" start="40" end="60" step="1"></lr-time-range>`,
+    )) as LyraTimeRange;
+    seek(el, 20);
+    const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+    expect(el.shadowRoot!.activeElement === startHandle).to.equal(true);
+    startHandle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(el.start).to.equal(11);
+  });
+
+  it('emits lr-input during the seek and one lr-change when the pointer is released', async () => {
+    const el = (await fixture(
+      html`<lr-time-range min="0" max="100" start="40" end="60" step="1"></lr-time-range>`,
+    )) as LyraTimeRange;
+    let inputs = 0;
+    let changes = 0;
+    el.addEventListener('lr-input', () => inputs++);
+    el.addEventListener('lr-change', () => changes++);
+    seek(el, 20);
+    expect(inputs).to.equal(1);
+    expect(changes).to.equal(0);
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
+    expect(changes).to.equal(1);
+  });
+
+  it('mirrors the seek ratio under dir="rtl"', async () => {
+    const el = (await fixture(
+      html`<lr-time-range dir="rtl" min="0" max="100" start="40" end="60" step="1"></lr-time-range>`,
+    )) as LyraTimeRange;
+    // Physical x=180 on a 200px track under RTL: raw 0.9 mirrors to ratio 0.1 -> value 10.
+    seek(el, 180);
+    expect(el.start).to.equal(10);
+    expect(el.end).to.equal(60);
+  });
+
+  it('ignores a track click while disabled', async () => {
+    const el = (await fixture(
+      html`<lr-time-range disabled min="0" max="100" start="40" end="60" step="1"></lr-time-range>`,
+    )) as LyraTimeRange;
+    seek(el, 20);
+    expect(el.start).to.equal(40);
+    expect(el.end).to.equal(60);
+  });
+
+  it('unset-regression: a pointerdown that starts on a handle is still a plain handle drag', async () => {
+    const el = (await fixture(
+      html`<lr-time-range min="0" max="100" start="40" end="60" step="1"></lr-time-range>`,
+    )) as LyraTimeRange;
+    const base = pinTrack(el);
+    const endHandle = el.shadowRoot!.querySelector('[part="handle-end"]') as HTMLElement;
+    let inputs = 0;
+    el.addEventListener('lr-input', () => inputs++);
+    // clientX=20 is nowhere near `end`; if the base handler also ran it would drag `start` (or
+    // snap `end` to 10) instead of leaving both handles put until the pointer actually moves.
+    endHandle.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, composed: true, pointerId: 3, clientX: 20 }),
+    );
+    expect(el.start).to.equal(40);
+    expect(el.end).to.equal(60);
+    expect(inputs).to.equal(0);
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 3, clientX: 140 }));
+    expect(el.end).to.equal(70);
+    expect(base.getBoundingClientRect().width).to.equal(200);
+  });
+});

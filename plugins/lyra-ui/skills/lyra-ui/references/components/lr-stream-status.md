@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -70,7 +70,13 @@ message text color, stalled border), `--lr-color-warning-quiet` (stalled backgro
 dot's color/opacity transitions), and `--lr-transition-ambient` (the streaming pulse cycle).
 The phase defaults flow through `--lr-stream-status-dot-color` and
 `--lr-stream-status-dot-opacity`; setting either custom property on the element or an ancestor
-wins through the shadow cascade and is the supported per-instance override.
+wins through the shadow cascade and is the supported per-instance override. The stalled row's own
+longhands are indirected the same way: `--lr-stream-status-stalled-bg` (falls back to
+`--lr-color-warning-quiet`) and `--lr-stream-status-stalled-border-color` (falls back to
+`--lr-color-warning`) retheme the `base` part's background/border while `phase="stalled"`, and
+`--lr-stream-status-message-color` (also falling back to `--lr-color-warning`) retheme the
+`message` part's text color independently of the border — the two currently share a default value
+but are separate hooks, so overriding one never moves the other.
 
 **Optional peer deps:** none.
 

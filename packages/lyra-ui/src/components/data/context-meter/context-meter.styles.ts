@@ -75,6 +75,66 @@ export const styles = css`
     background: var(--lr-context-meter-segment-color);
   }
 
+  /* --- legend --------------------------------------------------------- */
+  /* The key grows a row per consumer-supplied segment and each label grows with translation, so it
+     wraps rather than overflowing, and every item keeps min-inline-size: 0 so a long label shrinks
+     inside its own row instead of forcing the meter's allocation wider. Same shape and the same
+     part names as lr-sequence-strip's legend. */
+  [part='legend'] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--lr-space-2xs) var(--lr-space-s);
+    margin-block-start: var(--lr-space-xs);
+    font-size: var(--lr-font-size-xs);
+    color: var(--lr-color-text-quiet);
+  }
+  [part='legend-item'] {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lr-space-2xs);
+    min-inline-size: 0;
+  }
+  [part='legend-swatch'] {
+    flex: none;
+    inline-size: var(--lr-context-meter-legend-swatch-size, var(--lr-size-0-625rem));
+    block-size: var(--lr-context-meter-legend-swatch-size, var(--lr-size-0-625rem));
+    border-radius: var(--lr-radius-xs);
+    /* The chip reproduces the option's data colour, exactly as [part='segment'] does -- same tone
+       ladder, same inline custom-property escape, so a swatch can never disagree with the band it
+       stands for. */
+    background: var(--lr-color-border);
+  }
+  [part='legend-swatch'][data-tone='brand'] {
+    background: var(--lr-color-brand);
+  }
+  [part='legend-swatch'][data-tone='success'] {
+    background: var(--lr-color-success);
+  }
+  [part='legend-swatch'][data-tone='warning'] {
+    background: var(--lr-color-warning);
+  }
+  [part='legend-swatch'][data-tone='danger'] {
+    background: var(--lr-color-danger);
+  }
+  [part='legend-swatch'][style*='--lr-context-meter-segment-color'] {
+    background: var(--lr-context-meter-segment-color);
+  }
+  [part='legend-label'] {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+  /* The ring is a fixed 8em square, so a legend under it would be clipped by the host's own block
+     size. Only under show-legend does the host stop being that square: the ring keeps its declared
+     size and the key flows beneath it. */
+  :host([variant='ring'][show-legend]) {
+    block-size: auto;
+  }
+  :host([variant='ring'][show-legend]) svg[part='base'] {
+    inline-size: var(--lr-size-8em);
+    block-size: var(--lr-size-8em);
+  }
+
   /* --- ring variant -------------------------------------------------- */
   :host([variant='ring']) svg[part='base'] {
     display: block;

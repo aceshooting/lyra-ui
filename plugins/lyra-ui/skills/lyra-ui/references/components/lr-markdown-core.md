@@ -26,7 +26,9 @@ this component's own module never imports or calls that function at all; it only
 
 A fenced code block whose language isn't a key in `languages` always renders the plain-text fallback
 — there is no default/full-table highlighter here to fall back to, the same default (not degraded)
-rendering path as `<lr-code-block-core>`'s identical contract. Every other capability — GFM tables,
+rendering path as `<lr-code-block-core>`'s identical contract. A block that *is* highlighted follows the
+page's resolved theme through the same `[part="content"][data-dark-theme="true"]` hook `<lr-markdown>`
+documents above, painting each token from `--shiki-dark`/`--shiki-dark-bg` on a dark palette. Every other capability — GFM tables,
 links, blockquotes, images, heading anchors, `getHeadingTree()`, `fragment`/`text-quote` anchor-target
 support (`highlights`, `activeHighlightId`, `scrollToAnchor()`, the `lr-highlight-activate`/
 `lr-text-select`/`lr-anchor-result` events), math via the optional `katex` peer, the sanitize/

@@ -8,7 +8,7 @@ import { resolveCanvasColor } from '../../../internal/canvas-color.js';
 import { styles } from './audio-visualizer.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_audioVisualizerIdle, LYRA_DEFAULT_audioVisualizerLabel, LYRA_DEFAULT_audioVisualizerListening, LYRA_DEFAULT_audioVisualizerSpeaking, LYRA_DEFAULT_audioVisualizerThinking, LYRA_DEFAULT_thinking } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_audioVisualizerIdle, LYRA_DEFAULT_audioVisualizerLabel, LYRA_DEFAULT_audioVisualizerListening, LYRA_DEFAULT_audioVisualizerSpeaking, LYRA_DEFAULT_audioVisualizerThinking } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -78,7 +78,6 @@ export class LyraAudioVisualizer extends LyraElement {
     audioVisualizerListening: LYRA_DEFAULT_audioVisualizerListening,
     audioVisualizerSpeaking: LYRA_DEFAULT_audioVisualizerSpeaking,
     audioVisualizerThinking: LYRA_DEFAULT_audioVisualizerThinking,
-    thinking: LYRA_DEFAULT_thinking,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

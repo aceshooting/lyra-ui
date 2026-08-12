@@ -45,6 +45,14 @@ upgrade one render later once shiki resolves and the block's language is tokeniz
 is attempted while `streaming` is `true` — it applies once a stream settles, adding no per-chunk cost
 while content is still arriving.
 
+Highlighted blocks follow the page's resolved theme. Shiki emits both palettes at once, so
+`[part="content"]` carries `data-dark-theme="true"` whenever the component's own resolved
+`--lr-color-text` is lighter than its `--lr-color-surface`, and the stylesheet then paints each
+token from `--shiki-dark`/`--shiki-dark-bg` rather than the light inline color. It keys off the
+resolved tokens rather than `prefers-color-scheme`, so an app theming with `--lr-theme-color-*`
+independently of the OS setting gets the dark palette too — the same mechanism `<lr-code-block>`
+uses for its own `[part="body"]`.
+
 **Properties:**
 
 - `content: string = ''` — the Markdown source to render

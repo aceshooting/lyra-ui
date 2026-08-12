@@ -35,6 +35,7 @@ import {
   normalizeMarkdownLeadingTabs,
   parseMarkdownDocument,
   renderMarkdownContent,
+  watchMarkdownDarkTheme,
   renderMarkdownDocument,
   repaintMarkdownHighlights,
   setCachedHighlight as setCachedHighlightShared,
@@ -49,7 +50,7 @@ import { styles } from './markdown.styles.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Re-exported so `markdown.ts`'s `export *` keeps exposing this from the same public path as
@@ -126,6 +127,14 @@ class LyraMarkdownBase extends LyraElement<LyraMarkdownEventMap> {}
  * once shiki resolves. No highlighting is attempted while `streaming` is `true` — it applies once a
  * stream settles, so there is no added per-chunk cost while content is still arriving.
  *
+ * Highlighted blocks follow the page's resolved theme. Shiki emits both palettes at once, so
+ * `[part="content"]` carries `data-dark-theme="true"` whenever the component's own resolved
+ * `--lr-color-text` is lighter than its `--lr-color-surface`, and the stylesheet then paints each
+ * token from `--shiki-dark`/`--shiki-dark-bg` instead of the light inline color. It keys off the
+ * resolved tokens rather than `prefers-color-scheme`, so a consumer theming with
+ * `--lr-theme-color-*` independently of the OS setting gets the dark palette too -- the same
+ * mechanism `<lr-code-block>` uses for its own `[part="body"]`.
+ *
  * When `heading-anchors` is set, every rendered heading's slug (computed via the shared
  * GitHub-slugger-style `Slugger`) is stamped as its `id`; `getHeadingTree()` computes that same
  * outline on every parse regardless of `heading-anchors`, so a host can build a table of contents
@@ -196,9 +205,6 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
     anchorJumped: LYRA_DEFAULT_anchorJumped,
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -320,6 +326,12 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
   // them via `lr-render-error`, not a visual difference.
   @state() private renderedHtml: string | null = null;
 
+  /** Whether the host's resolved token palette is a dark scheme -- drives the `data-dark-theme`
+   *  hook that swaps Shiki's dual-theme output to its dark half. */
+  @state() private isDarkTheme = false;
+
+  private stopWatchingTheme?: () => void;
+
   private deps?: MarkdownDeps;
 
   /** The configurable `marked.Marked` parser shared by both Markdown variants on this page. It is
@@ -400,6 +412,10 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.stopThemeWatcher();
+    this.stopWatchingTheme = watchMarkdownDarkTheme(this, (isDarkTheme) => {
+      this.isDarkTheme = isDarkTheme;
+    });
     beginMarkdownDepsLoad(this, (resolved) => {
       this.deps = resolved;
       this.renderMarkdown();
@@ -409,12 +425,22 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
   override disconnectedCallback(): void {
     super.disconnectedCallback(); // reaches DocumentAnchorTarget's own cleanup (anchor retry, selection binding)
     this.cancelStreamingRender();
+    this.stopThemeWatcher();
     this.highlightHandle?.release();
     this.highlightHandle = undefined;
   }
 
   adoptedCallback(): void {
     this.cancelStreamingRender();
+    this.stopThemeWatcher();
+  }
+
+  /** Retires the resolved-theme watch. Clears the handle before invoking it so a re-entrant
+   *  callback can never run the same teardown twice. */
+  private stopThemeWatcher(): void {
+    const stop = this.stopWatchingTheme;
+    this.stopWatchingTheme = undefined;
+    stop?.();
   }
 
   /** Binds selection -> `lr-text-select` once, on the stable `[part="content"]` wrapper --
@@ -726,6 +752,7 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
       sanitize: this.sanitize,
       renderedHtml: this.renderedHtml,
       hostAriaLabel: this.getAttribute('aria-label'),
+      isDarkTheme: this.isDarkTheme,
       onClick: this.onContentClick,
       liveRegion: this.renderAnchorLiveRegion(),
     });

@@ -31,9 +31,12 @@ first.
 **Methods:** `goTo(index)` selects a finite integer direct-child index; invalid, fractional, and
 disabled indexes are inert. Calling it for the current index still emits `lr-video-change`, matching
 the mirrored contract. `next()` and `previous()` select the next or previous enabled child when one
-exists.
+exists. `focus(options?)`, `blur()`, and `click()` forward to the playlist row that currently owns
+the roving tab stop (falling back to the first enabled row), which is otherwise unreachable from
+outside the shadow root.
 
-**Events:** `lr-video-change`, bubbling and composed but non-cancelable, with exact detail
+**Events:** internal `focus`/`blur` from a playlist row are bridged as bubbling, composed host
+events. `lr-video-change` is bubbling and composed but non-cancelable, with exact detail
 `{ previousIndex, currentIndex, video }`. `video` is a fresh frozen plain-data snapshot with exact
 shape `{ title, poster, sources, tracks }`, not the live child element. `sources` contains frozen
 `{ src, type, media }` records for the child's direct `src` and `<source>` declarations; `tracks`

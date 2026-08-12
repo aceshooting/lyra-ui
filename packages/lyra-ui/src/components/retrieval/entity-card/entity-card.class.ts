@@ -15,7 +15,7 @@ import '../../overlays/empty/empty.class.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_entityCommunity, LYRA_DEFAULT_entityDegree, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_focusInGraph, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_untitledEntity } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_entityCommunity, LYRA_DEFAULT_entityDegree, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_focusInGraph, LYRA_DEFAULT_noData, LYRA_DEFAULT_untitledEntity } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -100,15 +100,11 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     entityCommunity: LYRA_DEFAULT_entityCommunity,
     entityDegree: LYRA_DEFAULT_entityDegree,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     focusInGraph: LYRA_DEFAULT_focusInGraph,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
-    restore: LYRA_DEFAULT_restore,
     untitledEntity: LYRA_DEFAULT_untitledEntity,
   };
   // GENERATED DEFAULT-STRING SLICE: END

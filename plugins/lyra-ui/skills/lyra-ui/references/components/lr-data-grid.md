@@ -8,7 +8,7 @@
 - **Status** `experimental` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 42 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 46 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -156,11 +156,19 @@ delegated ancestors can observe editor entry and exit without crossing the shado
 
 **CSS parts:** `body`, `cell`, `column-menu`, `column-menu-button`, `columns-menu`, `data-grid`,
 `drag-ghost`, `ellipsis`, `empty`, `expand-button`, `filter-button`, `filter-panel`, `first-button`,
-`footer`, `footer-cell`, `footer-row`, `group-count`, `group-row`, `group-value`, `header`,
-`header-cell`, `last-button`, `live-region`, `loading-overlay`, `next-button`, `no-results`, `page`,
-`page-current`, `page-size`, `pager`, `pager-button`, `pin-indicator`, `previous-button`,
+`first-icon`, `footer`, `footer-cell`, `footer-row`, `group-count`, `group-row`, `group-value`,
+`header`, `header-cell`, `last-button`, `last-icon`, `live-region`, `loading-overlay`,
+`next-button`, `next-icon`, `no-results`, `page`, `page-current`, `page-size`, `pager`,
+`pager-button`, `pin-indicator`, `previous-button`, `previous-icon`,
 `resize-handle`, `row`, `row-detail`, `search`, `select-all-checkbox`, `sort-indicator`,
 `sort-number`, `table`, `toolbar`.
+
+The four pager navigation controls each wrap their glyph in an icon part — `first-icon`,
+`previous-icon`, `next-icon`, `last-icon` — rendered as real chevron SVGs rather than literal
+`«`/`‹`/`›`/`»` text, so they mirror under `dir="rtl"` instead of pointing the wrong way. `first-icon`
+and `last-icon` hold two overlapping chevrons so the pair reads as one doubled glyph. This matches
+`<lr-pagination>`'s identical treatment; style the glyph through the icon part and the control
+through `first-button`/`previous-button`/`next-button`/`last-button` (or the shared `pager-button`).
 
 `[part="live-region"]` is a visually-hidden, `aria-hidden` **mirror** of the last polite
 announcement — a styling and inspection surface, with no live-region role of its own. The

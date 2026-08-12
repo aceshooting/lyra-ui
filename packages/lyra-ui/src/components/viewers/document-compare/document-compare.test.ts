@@ -459,8 +459,31 @@ describe('lr-document-compare', () => {
     });
 
     it('stacks panes below 640px container width', async () => {
-      const css = styles.cssText.replace(/\s+/g, ' ');
-      expect(css).to.include('@container (max-inline-size: 639.98px)');
+      const wrap = await fixture(html`
+        <div style="inline-size:320px;">
+          <lr-document-compare
+            view="side-by-side"
+            .oldVersion=${{ id: 'v1', name: 'Old', text: 'a' }}
+            .newVersion=${{ id: 'v2', name: 'New', text: 'b' }}
+          ></lr-document-compare>
+        </div>
+      `);
+      const narrow = wrap.querySelector('lr-document-compare') as LyraDocumentCompare;
+      await narrow.updateComplete;
+      const panes = narrow.shadowRoot!.querySelector('[part="panes"]') as HTMLElement;
+      expect(getComputedStyle(panes).flexDirection).to.equal('column');
+
+      // Control: the same part at the default (wide) allocation stays a row.
+      const wide = (await fixture(html`
+        <lr-document-compare
+          view="side-by-side"
+          .oldVersion=${{ id: 'v1', name: 'Old', text: 'a' }}
+          .newVersion=${{ id: 'v2', name: 'New', text: 'b' }}
+        ></lr-document-compare>
+      `)) as LyraDocumentCompare;
+      await wide.updateComplete;
+      const widePanes = wide.shadowRoot!.querySelector('[part="panes"]') as HTMLElement;
+      expect(getComputedStyle(widePanes).flexDirection).to.equal('row');
     });
 
     it('uses no hardcoded physical left/right in its stylesheet (logical properties only)', () => {

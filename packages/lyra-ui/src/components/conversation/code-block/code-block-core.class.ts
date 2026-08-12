@@ -9,27 +9,22 @@ import {
   type ShikiLanguageInput,
 } from "./shiki-types.js";
 import { styles } from "./code-block.styles.js";
-import { resolveIsDarkTheme, watchDarkTheme } from "./shiki-dark-theme.js";
 import {
-  CODE_BLOCK_COPY_CONFIRM_MS,
+  CodeBlockInteractionController,
   applyCodeBlockAriaBusy,
   clampCodeBlockFocusedLine,
   codeBlockActiveHighlightLineSet,
-  codeBlockEventLine,
   codeBlockLineHasFocus,
   codeBlockLineCount,
   codeBlockLineHighlightSet,
-  codeBlockLineKeyAction,
   codeBlockNeedsHighlightResync,
   codeBlockPreSuppliedGrammar,
-  codeBlockSelectionAnchor,
   codeBlockShowsSkeleton,
   renderCodeBlockPlainCode,
   renderCodeBlockShell,
   restoreCodeBlockLineFocus,
   scrollCodeBlockToAnchor,
   tokenizeCodeBlock,
-  writeCodeBlockClipboard,
 } from "./code-block-shared.js";
 import type {
   LyraAnchor,
@@ -39,7 +34,7 @@ import "../../overlays/skeleton/skeleton.class.js";
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from "../../../internal/converters.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_codeBlockLineLabel, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_collapse, LYRA_DEFAULT_collapseCode, LYRA_DEFAULT_copied, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_details, LYRA_DEFAULT_expandCode, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_codeBlockLineLabel, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_collapseCode, LYRA_DEFAULT_copied, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_expandCode } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraCodeBlockCoreEventMap {
@@ -146,15 +141,12 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
     codeBlockLineLabel: LYRA_DEFAULT_codeBlockLineLabel,
     codeRegion: LYRA_DEFAULT_codeRegion,
     codeRegionWithLanguage: LYRA_DEFAULT_codeRegionWithLanguage,
-    collapse: LYRA_DEFAULT_collapse,
     collapseCode: LYRA_DEFAULT_collapseCode,
     copied: LYRA_DEFAULT_copied,
     copiedToClipboard: LYRA_DEFAULT_copiedToClipboard,
     copy: LYRA_DEFAULT_copy,
     copyCode: LYRA_DEFAULT_copyCode,
-    details: LYRA_DEFAULT_details,
     expandCode: LYRA_DEFAULT_expandCode,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -256,7 +248,26 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
 
   @state() private isDarkTheme = false;
 
-  private stopWatchingTheme?: () => void;
+  // Every interaction behavior this component and <lr-code-block> implement identically -- the
+  // gutter's roving tabindex and keyboard contract, the [part="body"] handlers, selection
+  // anchoring, copy + its confirmation timer, the collapse toggle, and the theme watcher. Shared
+  // so a fix to any of it lands once instead of needing to be applied to both class files.
+  private readonly interactions = new CodeBlockInteractionController({
+    host: this,
+    setFocusedLine: (line) => {
+      this.focusedLine = line;
+    },
+    setJustCopied: (value) => {
+      this.justCopied = value;
+    },
+    setDarkTheme: (value) => {
+      this.isDarkTheme = value;
+    },
+    emitLineClick: (line) => this.emit("lr-line-click", { line }),
+    emitCopy: (text) => this.emit("lr-copy", { text }),
+    emitToggle: (collapsed) => this.emit("lr-toggle", { collapsed }),
+    emitTextSelect: (selection) => this.emit("lr-text-select", selection),
+  });
 
   // Guards the async per-language load in syncHighlight() against a
   // `code`/`language` change that arrives before a previous load resolves --
@@ -269,17 +280,11 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   private highlighterGeneration = 0;
   private activeLanguages?: Record<string, ShikiLanguageInput>;
 
-  private copyTimer?: { owner: Window; handle: number };
-
   private readonly bodyId = nextId("code-block-body");
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.stopThemeWatcher();
-    this.isDarkTheme = resolveIsDarkTheme(this);
-    this.stopWatchingTheme = watchDarkTheme(this, () => {
-      this.isDarkTheme = resolveIsDarkTheme(this);
-    });
+    this.interactions.startThemeWatcher();
     const languages = this.languages;
     const generation = this.activateLanguages(languages);
     if (Object.keys(languages).length === 0) return; // no languages supplied -- stays in the plain-text-fallback state permanently, same as languagesOnly + no matching grammar already behaves in lr-code-block today
@@ -303,9 +308,9 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.cancelCopyTimer();
+    this.interactions.cancelCopyTimer();
     this.justCopied = false;
-    this.stopThemeWatcher();
+    this.interactions.stopThemeWatcher();
     this.activeLanguages = undefined;
     this.highlighterGeneration += 1;
     this.highlightToken += 1;
@@ -316,21 +321,9 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   adoptedCallback(): void {
     // A node can move between owner documents while already disconnected; always retire an
     // old-realm confirmation timer even when no further disconnect callback will run.
-    this.cancelCopyTimer();
+    this.interactions.cancelCopyTimer();
     this.justCopied = false;
-    this.stopThemeWatcher();
-  }
-
-  private stopThemeWatcher(): void {
-    const stop = this.stopWatchingTheme;
-    this.stopWatchingTheme = undefined;
-    stop?.();
-  }
-
-  private cancelCopyTimer(): void {
-    const timer = this.copyTimer;
-    this.copyTimer = undefined;
-    if (timer) timer.owner.clearTimeout(timer.handle);
+    this.interactions.stopThemeWatcher();
   }
 
   // The `languages` entry for the *current* `language`, if any -- shared by
@@ -366,65 +359,6 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
     return scrollCodeBlockToAnchor(this, target);
   }
-
-  private onLineActivate(line: number): void {
-    this.setFocusedLine(line);
-    this.emit("lr-line-click", { line });
-  }
-
-  private setFocusedLine(line: number): void {
-    this.focusedLine = line;
-    for (const target of this.renderRoot.querySelectorAll<HTMLElement>(
-      '[data-line][part~="line-button"]'
-    )) {
-      target.tabIndex = Number(target.dataset["line"]) === line ? 0 : -1;
-    }
-  }
-
-  // Roving-tabindex keyboard navigation across the gutter's line buttons (only rendered by
-  // renderPlainCode() while interactiveLines && lineNumbers are both set).
-  private onLineKeyDown = (e: KeyboardEvent, line: number): void => {
-    const action = codeBlockLineKeyAction(e.key, line, this.lineCount());
-    if (action === null) return;
-    e.preventDefault();
-    if (action.kind === "activate") {
-      this.onLineActivate(line);
-      return;
-    }
-    const next = action.line;
-    this.setFocusedLine(next);
-    this.updateComplete.then(() => {
-      this.renderRoot
-        .querySelector<HTMLElement>(`[data-line="${next}"]`)
-        ?.focus();
-    });
-  };
-
-  private onBodyClick = (e: MouseEvent): void => {
-    if ((e.composedPath()[0] as Element | undefined)?.closest?.("button.line"))
-      return;
-    const line = codeBlockEventLine(e);
-    if (line !== null) this.onLineActivate(line);
-  };
-
-  private onBodyKeyDown = (e: KeyboardEvent): void => {
-    if ((e.composedPath()[0] as Element | undefined)?.closest?.("button.line"))
-      return;
-    const line = codeBlockEventLine(e);
-    if (line !== null) this.onLineKeyDown(e, line);
-  };
-
-  private onBodyFocusIn = (e: FocusEvent): void => {
-    const line = codeBlockEventLine(e);
-    if (line !== null) this.setFocusedLine(line);
-  };
-
-  /** Anchors a text selection ending inside `[part="body"]` to the `line-range` it spans, so a
-   *  host can persist or otherwise act on it. Fires nothing when there's no active selection. */
-  private onBodyMouseUp = (): void => {
-    const selection = codeBlockSelectionAnchor(this.shadowRoot);
-    if (selection) this.emit("lr-text-select", selection);
-  };
 
   // Mutating `highlightedHtml` here (rather than in `updated()`) absorbs the
   // synchronous case -- language already loaded, see `syncHighlight()` --
@@ -567,37 +501,10 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
       highlightedLines: this.lineHighlightSet(),
       activeLines: this.activeHighlightLineSet(),
       localize: this.localize.bind(this),
-      onLineActivate: (line) => this.onLineActivate(line),
-      onLineKeyDown: (e, line) => this.onLineKeyDown(e, line),
+      onLineActivate: (line) => this.interactions.onLineActivate(line),
+      onLineKeyDown: (e, line) => this.interactions.onLineKeyDown(e, line),
     });
   }
-
-  private copy = (): void => {
-    const owner = this.isConnected ? this.ownerDocument.defaultView : null;
-    writeCodeBlockClipboard(this.code, owner);
-    this.emit("lr-copy", { text: this.code });
-    if (!owner) return;
-    this.justCopied = true;
-    this.cancelCopyTimer();
-    let handle = 0;
-    handle = owner.setTimeout(() => {
-      if (
-        this.copyTimer?.owner !== owner ||
-        this.copyTimer.handle !== handle ||
-        !this.isConnected ||
-        this.ownerDocument.defaultView !== owner
-      )
-        return;
-      this.copyTimer = undefined;
-      this.justCopied = false;
-    }, CODE_BLOCK_COPY_CONFIRM_MS);
-    this.copyTimer = { owner, handle };
-  };
-
-  private toggleCollapsed = (): void => {
-    this.collapsed = !this.collapsed;
-    this.emit("lr-toggle", { collapsed: this.collapsed });
-  };
 
   // The header row and the whole body/skeleton/`<pre>` shell come from
   // renderCodeBlockShell() in code-block-shared.ts -- see that function's own
@@ -620,12 +527,12 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
       lineNumbers: this.lineNumbers,
       localize: this.localize.bind(this),
       renderPlainCode: () => this.renderPlainCode(),
-      onToggle: this.toggleCollapsed,
-      onCopy: this.copy,
-      onBodyMouseUp: this.onBodyMouseUp,
-      onBodyClick: this.onBodyClick,
-      onBodyKeyDown: this.onBodyKeyDown,
-      onBodyFocusIn: this.onBodyFocusIn,
+      onToggle: this.interactions.toggleCollapsed,
+      onCopy: this.interactions.copy,
+      onBodyMouseUp: this.interactions.onBodyMouseUp,
+      onBodyClick: this.interactions.onBodyClick,
+      onBodyKeyDown: this.interactions.onBodyKeyDown,
+      onBodyFocusIn: this.interactions.onBodyFocusIn,
     });
   }
 }

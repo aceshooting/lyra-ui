@@ -34,7 +34,7 @@ import {
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -93,7 +93,10 @@ export interface LyraButtonEventMap {
  * button is disabled (its own `disabled` or an ancestor `<fieldset disabled>`) the anchor renders
  * with `aria-disabled="true"` and **no `href`** — an href-less anchor is not focusable or
  * navigable, so a disabled link button genuinely cannot be activated (unlike a bare
- * `aria-disabled` on a still-navigable link). An unsafe/unparseable `href` falls back to the
+ * `aria-disabled` on a still-navigable link). It also dims to `--lr-opacity-disabled` with a
+ * `not-allowed` cursor and drops its hover/press feedback, exactly as the native `<button>` path
+ * does — an `<a>` can never match the `:disabled` pseudo-class, so that arm of the disabled
+ * styling is keyed off `aria-disabled` instead. An unsafe/unparseable `href` falls back to the
  * native `<button>`.
  *
  * `accessibleLabel` (attribute `aria-label`) is forwarded reactively to the internal button/anchor
@@ -244,8 +247,6 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
-    loading: LYRA_DEFAULT_loading,
-    restore: LYRA_DEFAULT_restore,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

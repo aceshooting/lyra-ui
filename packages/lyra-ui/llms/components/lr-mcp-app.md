@@ -34,19 +34,38 @@ unless explicitly enabled in `resource.permissions`.
   title precedence is host `aria-label`, `label`, resource title, then the localized fallback.
 
 **Methods:** `postHostContext(context: unknown): void` posts host state into the active frame;
-`postToolResult(requestId: string, result?: unknown, error?: string): void` resolves a prior tool
-request. Both are no-ops before a frame exists.
+`postToolResult(requestId: string, result?: unknown, error?: string, frameGeneration?: number): void`
+resolves a prior tool request. Both are no-ops before a frame exists.
 
 **Exported types:** `McpAppResource`, `McpAppCsp`, `McpAppPermissions`,
 `McpAppToolCallDetail`, and `LyraMcpAppEventMap`.
 
-**Events:** `lr-mcp-ready` (`{ uri }`), `lr-mcp-tool-call` (`{ requestId?, name, args }`),
-`lr-mcp-send-message` (`{ message }`), `lr-mcp-open-link` (`{ href }`), `lr-mcp-log`
+**Events:** `lr-mcp-ready` (`{ uri }`), `lr-mcp-tool-call`
+(`{ requestId?, name, args, frameGeneration }`), `lr-mcp-send-message` (`{ message }`),
+`lr-mcp-open-link` (`{ href }`), `lr-mcp-log`
 (`{ level, value }`), and `lr-mcp-resize` (`{ height }`). These are host-authorized requests; the
 component does not execute tools, send messages, or navigate itself.
 
 Changing `resource` mounts a fresh iframe/window generation; messages from the prior
 `contentWindow` are ignored even when two opaque-origin inline documents otherwise look alike.
+
+The host-to-frame direction is correlated the same way. `lr-mcp-tool-call`'s
+`detail.frameGeneration` is an opaque id for the frame generation that raised the request; passing
+it back as `postToolResult()`'s fourth argument makes the component drop a reply whose generation no
+longer matches the mounted frame. That matters because a tool call is inherently asynchronous — the
+host does real work (an API call, a filesystem read) before replying, and a conversation UI can swap
+`resource` on the same element meanwhile, so an uncorrelated reply would otherwise be delivered into
+a completely unrelated app. The argument is optional and additive: omitting it means "no correlation
+available" and posts to whichever frame is currently mounted, exactly as before.
+
+```ts
+element.addEventListener('lr-mcp-tool-call', async (event) => {
+  const { requestId, name, args, frameGeneration } = event.detail;
+  if (!requestId) return;
+  const result = await runTool(name, args);
+  element.postToolResult(requestId, result, undefined, frameGeneration);
+});
+```
 Changing only `height`/`maxHeight` updates frame geometry without returning an already-ready frame
 to its loading state. The initial host context reports `effectiveLocale`, so inherited/document
 locale and per-element locale overrides follow the same precedence as the rest of Lyra UI.

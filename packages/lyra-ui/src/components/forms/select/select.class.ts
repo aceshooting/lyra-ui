@@ -41,7 +41,7 @@ import {
 } from '../../../internal/option-selection.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_select, LYRA_DEFAULT_selectSelectedOverflow, LYRA_DEFAULT_selectValueMissing } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_select, LYRA_DEFAULT_selectSelectedOverflow, LYRA_DEFAULT_selectValueMissing } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -282,12 +282,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     clear: LYRA_DEFAULT_clear,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
-    open: LYRA_DEFAULT_open,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
-    restore: LYRA_DEFAULT_restore,
     select: LYRA_DEFAULT_select,
     selectSelectedOverflow: LYRA_DEFAULT_selectSelectedOverflow,
     selectValueMissing: LYRA_DEFAULT_selectValueMissing,

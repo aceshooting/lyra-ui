@@ -13,7 +13,7 @@ import { activeElementIn } from '../../../internal/active-element.js';
 import type { LyraTab } from './tab.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_scrollNext, LYRA_DEFAULT_scrollPrevious } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_scrollNext, LYRA_DEFAULT_scrollPrevious } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -235,9 +235,6 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
     scrollNext: LYRA_DEFAULT_scrollNext,
     scrollPrevious: LYRA_DEFAULT_scrollPrevious,
   };

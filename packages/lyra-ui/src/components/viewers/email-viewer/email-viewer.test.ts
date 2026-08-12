@@ -88,6 +88,18 @@ const GMAIL_QUOTE_EML = [
   '',
 ].join('\r\n');
 
+const TWO_GMAIL_QUOTE_EML = [
+  'From: Ada <ada@example.test>',
+  'Subject: Re: thread',
+  'Content-Type: text/html; charset=utf-8',
+  '',
+  '<p>Sounds good.</p>'
+    + '<div class="gmail_quote">First quoted block</div>'
+    + '<p>Middle text.</p>'
+    + '<div class="gmail_quote">Second quoted block</div>',
+  '',
+].join('\r\n');
+
 const FIXED_HTML_EML = [
   'From: Ada <ada@example.test>',
   'Subject: Containment',
@@ -871,6 +883,98 @@ describe('lr-email-viewer', () => {
         await el.updateComplete;
         expect(el.shadowRoot!.querySelector('[part="quoted"]')!.hasAttribute('hidden')).to.be.false;
       } finally { restore(); }
+    });
+
+    it('toggles one HTML quote block without touching a sibling block\'s hidden/aria-expanded state', async () => {
+      const restore = stubFetch(TWO_GMAIL_QUOTE_EML);
+      const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>`);
+      try {
+        await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="quote-toggle"]').length === 2);
+        const blocks = () => el.shadowRoot!.querySelectorAll<HTMLElement>('[part="quoted"]');
+        const toggles = () => el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="quote-toggle"]');
+
+        expect(blocks()[0]!.hasAttribute('hidden')).to.be.true;
+        expect(blocks()[1]!.hasAttribute('hidden')).to.be.true;
+        expect(toggles()[0]!.getAttribute('aria-expanded')).to.equal('false');
+        expect(toggles()[1]!.getAttribute('aria-expanded')).to.equal('false');
+        expect(blocks()[0]!.textContent).to.contain('First quoted block');
+        expect(blocks()[1]!.textContent).to.contain('Second quoted block');
+
+        toggles()[0]!.click();
+        await el.updateComplete;
+
+        expect(blocks()[0]!.hasAttribute('hidden'), 'the clicked block expands').to.be.false;
+        expect(toggles()[0]!.getAttribute('aria-expanded')).to.equal('true');
+        expect(toggles()[0]!.textContent).to.equal('Hide quoted text');
+        expect(blocks()[1]!.hasAttribute('hidden'), 'the sibling block must stay folded').to.be.true;
+        expect(toggles()[1]!.getAttribute('aria-expanded'), 'the sibling toggle must stay collapsed').to.equal('false');
+        expect(toggles()[1]!.textContent).to.equal('Show quoted text');
+      } finally {
+        restore();
+      }
+    });
+
+    it('memoizes folded HTML across unrelated re-renders and only re-parses when the fold state actually changes', async () => {
+      // Regression coverage for the redundant-reparse finding: `foldHtmlQuotes()` used to run a
+      // fresh `DOMParser().parseFromString()` + `QUOTE_SELECTOR` walk on every render while
+      // `fold-quotes` is on, including renders triggered by an unrelated property write. Counting
+      // real `DOMParser` construction/parse calls (the same instrumentation style used by "parses
+      // folded HTML ... in the adopted owner realm" above) proves the memoization actually skips
+      // that work instead of merely asserting the (unaffected) rendered output.
+      const restore = stubFetch(TWO_GMAIL_QUOTE_EML);
+      const OriginalDOMParser = window.DOMParser;
+      let parseCount = 0;
+      class CountingDOMParser {
+        parseFromString(source: string, type: DOMParserSupportedType): Document {
+          parseCount++;
+          return new OriginalDOMParser().parseFromString(source, type);
+        }
+      }
+      window.DOMParser = CountingDOMParser as unknown as typeof DOMParser;
+      try {
+        const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>`);
+        await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="quote-toggle"]').length === 2);
+        const afterLoad = parseCount;
+        expect(afterLoad, 'the sanitized body is parsed to fold it for the first render').to.be.greaterThan(0);
+
+        // An unrelated property write forces a full `render()`/`renderBody()` pass, but neither
+        // `bodyHtml` nor `expandedHtmlQuoteIndices` changed -- the memoized fold must be reused.
+        el.name = 'renamed.eml';
+        await el.updateComplete;
+        expect(parseCount, 'an unrelated re-render must not re-parse the already-folded body').to.equal(afterLoad);
+
+        const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="quote-toggle"]')!;
+        toggle.click();
+        await el.updateComplete;
+        expect(parseCount, 'a real fold-state change re-parses exactly once').to.equal(afterLoad + 1);
+        const afterToggle = parseCount;
+
+        // Re-render again with the now-expanded state unchanged: still cached.
+        el.name = 'renamed-again.eml';
+        await el.updateComplete;
+        expect(parseCount, 'a further unrelated re-render must still reuse the cached fold').to.equal(afterToggle);
+      } finally {
+        window.DOMParser = OriginalDOMParser;
+        restore();
+      }
+    });
+
+    it('recomputes the folded HTML when a .strings override changes the toggle label, even with body/expanded state unchanged', async () => {
+      // Guards the memoization's cache key: it must miss on a locale-driven label change even
+      // though neither `bodyHtml` nor `expandedHtmlQuoteIndices` (the two "obvious" cache keys)
+      // changed, or the toggle would keep showing a stale translation after `.strings` updates.
+      const restore = stubFetch(GMAIL_QUOTE_EML);
+      const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>`);
+      try {
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null);
+        expect(el.shadowRoot!.querySelector('[part="quote-toggle"]')!.textContent).to.equal('Show quoted text');
+        el.strings = { emailViewerShowQuoted: 'Montrer le texte cité' };
+        el.requestUpdate();
+        await el.updateComplete;
+        expect(el.shadowRoot!.querySelector('[part="quote-toggle"]')!.textContent).to.equal('Montrer le texte cité');
+      } finally {
+        restore();
+      }
     });
 
     it('leaves the toggle untouched if its matching quote block is no longer in the DOM', async () => {

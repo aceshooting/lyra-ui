@@ -29,18 +29,48 @@ export interface ConfirmOptions {
 const BUTTON_BASE_STYLE =
   'font: inherit; font-size: var(--lr-font-size-md-sm); padding: var(--lr-space-xs) var(--lr-space-m); ' +
   'border-radius: var(--lr-radius); cursor: pointer; border: var(--lr-border-width-thin) solid var(--lr-color-border);';
-const CANCEL_STYLE = 'background: var(--lr-color-surface); color: var(--lr-color-text);';
+const CANCEL_STYLE =
+  '--lr-confirm-button-fill: var(--lr-color-surface); ' +
+  'background: var(--lr-confirm-button-state, var(--lr-color-surface)); color: var(--lr-color-text);';
 const CONFIRM_TONE_STYLE: Record<'neutral' | 'danger', string> = {
   neutral:
-    'background: var(--lr-color-brand); color: var(--lr-color-on-brand); border-color: var(--lr-color-brand);',
+    '--lr-confirm-button-fill: var(--lr-color-brand); ' +
+    'background: var(--lr-confirm-button-state, var(--lr-color-brand)); color: var(--lr-color-on-brand); ' +
+    'border-color: var(--lr-color-brand);',
   danger:
-    'background: var(--lr-color-danger); color: var(--lr-color-on-danger); border-color: var(--lr-color-danger);',
+    '--lr-confirm-button-fill: var(--lr-color-danger); ' +
+    'background: var(--lr-confirm-button-state, var(--lr-color-danger)); color: var(--lr-color-on-danger); ' +
+    'border-color: var(--lr-color-danger);',
 };
+
+// The two action buttons carry this attribute so a real stylesheet can reach them. An inline style
+// attribute cannot express a pseudo-class at all, which is why these buttons had no hover feedback
+// and no design-system focus ring while every other interactive part in the library has both.
+const CONFIRM_BUTTON_ATTRIBUTE = `data-${tag('confirm-action')}`;
+
+// The base fill stays in the inline style and the state rules shift the value of a custom property
+// that inline declaration reads: an inline declaration outranks any author rule, so a stylesheet
+// that re-declared `background` directly would simply never apply. Pressed pushes the same mix
+// further toward --lr-color-mix-partner (which follows the text colour), so both states darken on a
+// light theme and lighten on a dark one without this file knowing which is in force.
+const BUTTON_STATE_STYLE = `
+  [${CONFIRM_BUTTON_ATTRIBUTE}]:hover {
+    --lr-confirm-button-state: color-mix(in oklab, var(--lr-confirm-button-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  [${CONFIRM_BUTTON_ATTRIBUTE}]:active {
+    --lr-confirm-button-state: color-mix(in oklab, var(--lr-confirm-button-fill), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  [${CONFIRM_BUTTON_ATTRIBUTE}]:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+`;
 
 function createButton(label: string, style: string, onClick: () => void): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
   button.textContent = label;
+  button.setAttribute(CONFIRM_BUTTON_ATTRIBUTE, '');
   button.style.cssText = `${BUTTON_BASE_STYLE} ${style}`;
   button.addEventListener('click', onClick);
   return button;
@@ -86,6 +116,12 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
     // documented contract is that Escape, the backdrop and the cancel button all resolve `false`.
     dialog.lightDismiss = true;
     let settled = false;
+
+    // Mounted inside the transient dialog so it is torn down with it, leaving nothing behind
+    // between calls -- the same lifetime the rest of this helper's DOM has.
+    const buttonStates = document.createElement('style');
+    buttonStates.textContent = BUTTON_STATE_STYLE;
+    dialog.appendChild(buttonStates);
 
     const heading = document.createElement('h2');
     heading.textContent = title;

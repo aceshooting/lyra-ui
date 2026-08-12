@@ -26,15 +26,21 @@ export async function checkLocalizationSlices(packageDir) {
     },
   };
   const defaults = LyraButton.defaultStrings;
+  // Probe with a key lr-button GENUINELY localizes (`fieldRequired`, from its valueMissing validity
+  // message). This used to probe `loading`, which lr-button never localizes at all -- that key only
+  // reached its slice because the generator once treated any string literal in the class as a
+  // reachable message key, and `setCustomState(this.internals, 'loading', ...)` names a CSS custom
+  // state that merely collides with a catalog key. Once the generator became call-scoped, the slice
+  // (correctly) lost `loading` and this probe started reading back the bare key name.
   assert.equal(
-    runtime.resolveLyraString(host, 'loading', undefined, undefined, undefined, defaults),
-    'Loading…',
+    runtime.resolveLyraString(host, 'fieldRequired', undefined, undefined, undefined, defaults),
+    'This field is required.',
     'an unbundled class import must resolve its generated English fallback',
   );
-  localization.registerLyraLocale('x-node-slice', { loading: 'Node locale loading' });
+  localization.registerLyraLocale('x-node-slice', { fieldRequired: 'Node locale required' });
   assert.equal(
-    runtime.resolveLyraString(host, 'loading', undefined, undefined, undefined, defaults),
-    'Node locale loading',
+    runtime.resolveLyraString(host, 'fieldRequired', undefined, undefined, undefined, defaults),
+    'Node locale required',
     'the public registry and lean component runtime must share one locale registry',
   );
   assert.equal(

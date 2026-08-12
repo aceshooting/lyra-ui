@@ -30,6 +30,14 @@ upgrade one render later once shiki resolves and the block's language is tokeniz
 is attempted while `streaming` is `true` — it applies once a stream settles, adding no per-chunk cost
 while content is still arriving.
 
+Highlighted blocks follow the page's resolved theme. Shiki emits both palettes at once, so
+`[part="content"]` carries `data-dark-theme="true"` whenever the component's own resolved
+`--lr-color-text` is lighter than its `--lr-color-surface`, and the stylesheet then paints each
+token from `--shiki-dark`/`--shiki-dark-bg` rather than the light inline color. It keys off the
+resolved tokens rather than `prefers-color-scheme`, so an app theming with `--lr-theme-color-*`
+independently of the OS setting gets the dark palette too — the same mechanism `<lr-code-block>`
+uses for its own `[part="body"]`.
+
 **Properties:**
 
 - `content: string = ''` — the Markdown source to render
@@ -232,7 +240,9 @@ this component's own module never imports or calls that function at all; it only
 
 A fenced code block whose language isn't a key in `languages` always renders the plain-text fallback
 — there is no default/full-table highlighter here to fall back to, the same default (not degraded)
-rendering path as `<lr-code-block-core>`'s identical contract. Every other capability — GFM tables,
+rendering path as `<lr-code-block-core>`'s identical contract. A block that *is* highlighted follows the
+page's resolved theme through the same `[part="content"][data-dark-theme="true"]` hook `<lr-markdown>`
+documents above, painting each token from `--shiki-dark`/`--shiki-dark-bg` on a dark palette. Every other capability — GFM tables,
 links, blockquotes, images, heading anchors, `getHeadingTree()`, `fragment`/`text-quote` anchor-target
 support (`highlights`, `activeHighlightId`, `scrollToAnchor()`, the `lr-highlight-activate`/
 `lr-text-select`/`lr-anchor-result` events), math via the optional `katex` peer, the sanitize/
@@ -2062,7 +2072,13 @@ module; `timestamp` is epoch **milliseconds**). Reconciled keyed by `id` via Lit
 same-`id` entry with new `text` replaces in place, and a same-`id` entry whose `interim` flips from
 `true` to unset/`false` moves from the interim area into the `role="log"` region and announces
 exactly once. Interim entries render _after_ the log container — visible, but structurally outside
-it — so per-token mutations are never spoken by assistive tech. `follow: boolean = true`
+it — so per-token mutations are never spoken by assistive tech. That announcement does **not** come
+from the shadow `role="log"` region, which is explicitly `aria-live="off"`: a live region inside a
+component's own shadow root is not reliably announced (JAWS with Firefox ignores one outright).
+Each newly final entry's `text` is announced once through the shared light-DOM polite live region
+instead, the same route `<lr-chat-viewport>` and `<lr-terminal>` take. The entries a feed is
+*mounted* with are treated as existing transcript rather than newly spoken captions, so the first
+render only records them. `follow: boolean = true`
 (reflected), `showTimestamps: boolean = false` (attribute `show-timestamps`), `formatTimestamp?:
 (epochMs: number) => string` (attribute: false), `maxRenderedEntries: number = 0` (attribute
 `max-rendered-entries`) — `0` renders every entry; a positive value keeps only the newest N,
@@ -3044,6 +3060,14 @@ ownership even when the detach lasts past an event-loop turn.
 
 **CSS parts:** `toolbar`, `action`, `action-ask`, `action-quote`, `action-cite`, `action-copy`.
 
+The four built-in actions are the shipped set, and `actions` only reorders or subsets them. A
+product-specific fifth action ("translate", "define", "search web") goes in the `actions` slot
+instead: slotted elements render after the built-ins **inside** the same `role="toolbar"` element
+and join the same roving-tabindex group (Home/End/Arrow, RTL-mirrored), so adding one does not mean
+reimplementing the toolbar's positioning, keyboard, and dismissal behavior. A slotted action brings
+its own accessible name and click handling; this component only manages its tab stop, and re-derives
+the group whenever the slot's assigned elements change.
+
 **Themeable custom properties:** `--lr-selection-toolbar-inline-start` and
 `--lr-selection-toolbar-block-start` are normally computed from `rect`; hosts may override them to
 provide their own fixed-position anchor. `--lr-selection-toolbar-placement-gap` (default
@@ -3051,7 +3075,8 @@ provide their own fixed-position anchor. `--lr-selection-toolbar-placement-gap` 
 the toolbar avoids collisions. It accepts unitless pixel values and `px`, `rem`, and `em` values; unsupported
 values fall back to the default and negative values clamp to `0`.
 
-**Slots:** none. **Optional peer deps:** none.
+**Slots:** `actions` — extra actions rendered after the built-in ask/quote/cite/copy buttons,
+inside the same `role="toolbar"` element and roving-tabindex group. **Optional peer deps:** none.
 
 ```ts
 import "@aceshooting/lyra-ui/components/conversation/selection-toolbar/selection-toolbar.js";

@@ -31,7 +31,10 @@ well as full-width layouts.
 - `label: string = ''` — accessible region name; a host `aria-label` is used when set
 
 **Events:** `lr-scroll` with `scrollStart`, `scrollEnd`, `scrollLeft`, and `scrollTop` in the
-detail object.
+detail object. Scroll-driven emissions are coalesced through one `requestAnimationFrame` tick, so a
+fling that fires dozens of native `scroll` events produces at most one `lr-scroll` per frame — the
+same contract `lr-virtual-list`'s identically-named event carries, so the two are interchangeable
+for scroll-linked layout work.
 
 **Slots:** default scrollable content.
 

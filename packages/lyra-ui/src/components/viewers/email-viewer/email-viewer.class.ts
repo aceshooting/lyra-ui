@@ -265,6 +265,20 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
   private generation = 0;
   private lastLoadSrc = '';
   private readonly announcements = new ViewerAnnouncementController(this);
+  /** Memoizes {@link foldHtmlQuotes}'s output so an unrelated re-render (any `@state`/`@property`
+   *  write that isn't `bodyHtml` or the expanded-index set -- `name`, an announcement, a locale
+   *  broadcast, ...) reuses the last folded string instead of re-parsing and re-walking the whole
+   *  sanitized body on every render. Keyed on the two toggle-label strings too: a locale/`.strings`
+   *  change alone (no `bodyHtml`/index change) still flips the "Show/Hide quoted text" button text
+   *  that {@link foldHtmlQuotes} bakes into the returned markup, so the cache must miss when either
+   *  label would render differently. */
+  private foldedHtmlCache: {
+    bodyHtml: string;
+    expandedKey: string;
+    showLabel: string;
+    hideLabel: string;
+    result: string;
+  } | null = null;
 
   protected textContentRoot(): Element | null {
     return this.renderRoot.querySelector('[data-email-text-content]');
@@ -282,6 +296,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     this.generation++;
     this.textQuoteExpanded = false;
     this.expandedHtmlQuoteIndices = [];
+    this.foldedHtmlCache = null;
     this.announcements.disconnect();
     super.disconnectedCallback();
   }
@@ -482,9 +497,34 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     }
   };
 
+  /** Cached wrapper around {@link foldHtmlQuotes} -- see {@link foldedHtmlCache}'s doc comment for
+   *  what the cache key covers and why. A cache hit skips the `DOMParser().parseFromString()` +
+   *  `QUOTE_SELECTOR` walk + `.innerHTML` re-serialization entirely, which otherwise re-ran on
+   *  every render while `fold-quotes` is on, including renders triggered by toggling a single
+   *  quote block (a `expandedHtmlQuoteIndices` write re-renders the whole component, not just the
+   *  clicked block). */
+  private getFoldedHtml(bodyHtml: string): string {
+    const showLabel = this.localize('emailViewerShowQuoted');
+    const hideLabel = this.localize('emailViewerHideQuoted');
+    const expandedKey = this.expandedHtmlQuoteIndices.join(',');
+    const cache = this.foldedHtmlCache;
+    if (
+      cache
+      && cache.bodyHtml === bodyHtml
+      && cache.expandedKey === expandedKey
+      && cache.showLabel === showLabel
+      && cache.hideLabel === hideLabel
+    ) {
+      return cache.result;
+    }
+    const result = foldHtmlQuotes(bodyHtml, this.localize.bind(this), this.expandedHtmlQuoteIndices, this.ownerDocument);
+    this.foldedHtmlCache = { bodyHtml, expandedKey, showLabel, hideLabel, result };
+    return result;
+  }
+
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
-      case 'loaded': return html`<div data-email-text-content>${this.renderHeaders(this.fetchState.email, this.fetchState.fromAddress, this.fetchState.toAddresses)}<div part="body">${this.fetchState.email.bodyHtml !== null ? html`<div part="body-html" @click=${this.onBodyClick}>${unsafeHTML(this.foldQuotes ? foldHtmlQuotes(this.fetchState.email.bodyHtml, this.localize.bind(this), this.expandedHtmlQuoteIndices, this.ownerDocument) : this.fetchState.email.bodyHtml)}</div>` : this.renderTextBody(this.fetchState.email.bodyText ?? '')}</div></div>${this.renderAttachments(this.fetchState.email.attachments)}`;
+      case 'loaded': return html`<div data-email-text-content>${this.renderHeaders(this.fetchState.email, this.fetchState.fromAddress, this.fetchState.toAddresses)}<div part="body">${this.fetchState.email.bodyHtml !== null ? html`<div part="body-html" @click=${this.onBodyClick}>${unsafeHTML(this.foldQuotes ? this.getFoldedHtml(this.fetchState.email.bodyHtml) : this.fetchState.email.bodyHtml)}</div>` : this.renderTextBody(this.fetchState.email.bodyText ?? '')}</div></div>${this.renderAttachments(this.fetchState.email.attachments)}`;
       case 'loading': return html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
       case 'error': return html`<div part="error">${this.fetchState.message}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeEmail') })}</p>`;

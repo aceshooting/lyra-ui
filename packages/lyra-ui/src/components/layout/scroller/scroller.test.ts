@@ -3,6 +3,11 @@ import "./scroller.js";
 import type { LyraScroller } from "./scroller.class.js";
 import { styles } from "./scroller.styles.js";
 
+/** `lr-scroll` and the edge recompute are coalesced through one `requestAnimationFrame` tick, so a
+ *  synthetic `scroll` dispatch settles a frame later rather than synchronously. */
+const nextFrame = (): Promise<void> =>
+  new Promise((resolve) => requestAnimationFrame(() => resolve()));
+
 describe("<lr-scroller>", () => {
   it("defaults the upstream without-* flags to false", async () => {
     const el = await fixture<LyraScroller>(
@@ -33,6 +38,7 @@ describe("<lr-scroller>", () => {
       writable: true,
     });
     viewport.dispatchEvent(new Event("scroll"));
+    await nextFrame();
     await el.updateComplete;
     expect(start.hidden).to.be.false;
     expect(end.hidden).to.be.false;
@@ -327,6 +333,7 @@ describe("<lr-scroller>", () => {
       writable: true,
     });
     viewport.dispatchEvent(new Event("scroll"));
+    await nextFrame();
     await el.updateComplete;
     const calls: ScrollToOptions[] = [];
     viewport.scrollBy = ((options: ScrollToOptions) => {
@@ -367,6 +374,7 @@ describe("<lr-scroller>", () => {
       writable: true,
     });
     viewport.dispatchEvent(new Event("scroll"));
+    await nextFrame();
     await el.updateComplete;
     const moveCalls: ScrollToOptions[] = [];
     const edgeCalls: ScrollToOptions[] = [];
@@ -442,13 +450,61 @@ describe("<lr-scroller>", () => {
       writable: true,
     });
     viewport.dispatchEvent(new Event("scroll"));
+    await nextFrame();
     viewport.scrollLeft = 30;
     viewport.dispatchEvent(new Event("scroll"));
+    await nextFrame();
 
     expect(details).to.have.length(2);
     expect(details.map((detail) => detail.scrollLeft)).to.deep.equal([20, 30]);
     expect(details.every((detail) => !detail.scrollStart && !detail.scrollEnd))
       .to.be.true;
+  });
+
+  it("coalesces a burst of native scroll events into one lr-scroll per animation frame", async () => {
+    const el = await fixture<LyraScroller>(html`
+      <lr-scroller label="Items" style="inline-size: 100px;">
+        <div style="inline-size: 500px;">wide content</div>
+      </lr-scroller>
+    `);
+    const viewport = el.shadowRoot!.querySelector(
+      '[part="viewport"]'
+    ) as HTMLElement;
+    Object.defineProperty(viewport, "scrollWidth", { configurable: true, value: 500 });
+    Object.defineProperty(viewport, "clientWidth", { configurable: true, value: 100 });
+    Object.defineProperty(viewport, "scrollLeft", {
+      configurable: true,
+      value: 20,
+      writable: true,
+    });
+    // Settle away from both edges first, so the burst below can only produce position-change
+    // emissions -- an edge-state transition emits on its own, independently of this coalescing.
+    viewport.dispatchEvent(new Event("scroll"));
+    await nextFrame();
+    await el.updateComplete;
+    await nextFrame();
+
+    const positions: number[] = [];
+    el.addEventListener("lr-scroll", (event) => {
+      positions.push((event as CustomEvent<{ scrollLeft: number }>).detail.scrollLeft);
+    });
+
+    // One fling: a dozen native scroll ticks inside a single frame. Uncoalesced this emitted a
+    // dozen CustomEvents (and did a dozen scrollWidth/clientWidth layout reads); lr-virtual-list's
+    // identically-named lr-scroll already contracts at most one per frame.
+    for (let step = 1; step <= 12; step += 1) {
+      viewport.scrollLeft = 20 + step * 5;
+      viewport.dispatchEvent(new Event("scroll"));
+    }
+    expect(positions, "nothing is emitted before the frame boundary").to.have.length(0);
+    await nextFrame();
+    expect(positions).to.deep.equal([80]);
+
+    // A later, separate frame still reports.
+    viewport.scrollLeft = 100;
+    viewport.dispatchEvent(new Event("scroll"));
+    await nextFrame();
+    expect(positions).to.deep.equal([80, 100]);
   });
 });
 

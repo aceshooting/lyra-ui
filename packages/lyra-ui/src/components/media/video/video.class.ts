@@ -19,7 +19,7 @@ import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './video.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_duration, LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_videoCaptions, LYRA_DEFAULT_videoCaptionsOff, LYRA_DEFAULT_videoEnterFullscreen, LYRA_DEFAULT_videoExitFullscreen, LYRA_DEFAULT_videoExitPictureInPicture, LYRA_DEFAULT_videoMute, LYRA_DEFAULT_videoPictureInPicture, LYRA_DEFAULT_videoPlaybackSpeed, LYRA_DEFAULT_videoPlayerLabel, LYRA_DEFAULT_videoUnmute, LYRA_DEFAULT_videoVolume } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_videoCaptions, LYRA_DEFAULT_videoCaptionsOff, LYRA_DEFAULT_videoEnterFullscreen, LYRA_DEFAULT_videoExitFullscreen, LYRA_DEFAULT_videoExitPictureInPicture, LYRA_DEFAULT_videoMute, LYRA_DEFAULT_videoPictureInPicture, LYRA_DEFAULT_videoPlaybackSpeed, LYRA_DEFAULT_videoPlayerLabel, LYRA_DEFAULT_videoUnmute, LYRA_DEFAULT_videoVolume } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -46,6 +46,8 @@ export interface LyraVideoEventMap {
   play: Event;
   timeupdate: Event;
   volumechange: Event;
+  blur: CustomEvent<undefined>;
+  focus: CustomEvent<undefined>;
 }
 
 interface ThumbnailCue {
@@ -200,6 +202,8 @@ function unsupportedPromise(message: string): Promise<never> {
  *   custom timeline also dispatches this event immediately.
  * @event {Event} volumechange - Relayed native video event; non-bubbling, non-composed, and
  *   non-cancelable.
+ * @event focus - Re-dispatched from the internal play/pause control as a bubbling, composed event.
+ * @event blur - Re-dispatched from the internal play/pause control as a bubbling, composed event.
  * @csspart base - Alias on the same root node as `video-wrapper`.
  * @csspart caption - Active native caption text.
  * @csspart caption-overlay - Caption positioning layer.
@@ -233,7 +237,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    duration: LYRA_DEFAULT_duration,
+    avPlayerPosition: LYRA_DEFAULT_avPlayerPosition,
     pause: LYRA_DEFAULT_pause,
     play: LYRA_DEFAULT_play,
     playbackPosition: LYRA_DEFAULT_playbackPosition,
@@ -327,6 +331,38 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     const media = this.mediaController.element;
     return media?.localName === 'video' ? media as HTMLVideoElement : undefined;
   }
+
+  /** The play/pause control: this component's primary interactive affordance, and the target the
+   *  host's own focus/blur/click forward to. Absent while `controls="none"`. */
+  private get playControl(): HTMLButtonElement | null {
+    return this.renderRoot.querySelector<HTMLButtonElement>('[data-control="play"]');
+  }
+
+  /** Focus the play/pause control. A `controls="none"` player renders none, so this is a no-op
+   *  there — the bare host has no focusable area of its own. */
+  override focus(options?: FocusOptions): void {
+    this.playControl?.focus(options);
+  }
+
+  /** Blur the play/pause control. */
+  override blur(): void {
+    this.playControl?.blur();
+  }
+
+  /** Activate the play/pause control, so a host-level `.click()` is not a silent no-op. */
+  override click(): void {
+    this.playControl?.click();
+  }
+
+  private onControlFocus = (event: FocusEvent): void => {
+    event.stopPropagation();
+    this.emit('focus');
+  };
+
+  private onControlBlur = (event: FocusEvent): void => {
+    event.stopPropagation();
+    this.emit('blur');
+  };
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -857,6 +893,8 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
               data-control="play"
               aria-label=${this.localize(this.playing ? 'pause' : 'play')}
               @click=${this.togglePlay}
+              @focus=${this.onControlFocus}
+              @blur=${this.onControlBlur}
             ></button>
             ${this.renderDecorativeIconLayer(this.renderPlaySlots())}
           </span>
@@ -874,6 +912,10 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
               step="any"
               .value=${String(this.currentTime)}
               aria-label=${this.localize('playbackPosition')}
+              aria-valuetext=${this.localize('avPlayerPosition', undefined, {
+                current: formatTime(this.currentTime, this.effectiveLocale),
+                duration: formatTime(this.duration, this.effectiveLocale),
+              })}
               @input=${this.onTimelineInput}
             >
             <span part="timeline-track">

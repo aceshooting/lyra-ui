@@ -4,6 +4,10 @@ import { live } from 'lit/directives/live.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
 import { nextId } from '../../../internal/a11y.js';
+import {
+  acquireAnnouncementSink,
+  type AnnouncementSink,
+} from '../../../internal/announcer.js';
 import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './emoji-picker.styles.js';
 import { loadEmojiDataCached } from './emoji-data-loader.js';
@@ -12,7 +16,7 @@ import { loadEmojiDataCached } from './emoji-data-loader.js';
 import type { EmojiPickerItem, EmojiPickerGroup } from './emoji-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_emojiPickerEmpty, LYRA_DEFAULT_emojiPickerGridLabel, LYRA_DEFAULT_emojiPickerGroupActivities, LYRA_DEFAULT_emojiPickerGroupAnimalsNature, LYRA_DEFAULT_emojiPickerGroupComponent, LYRA_DEFAULT_emojiPickerGroupFlags, LYRA_DEFAULT_emojiPickerGroupFoodDrink, LYRA_DEFAULT_emojiPickerGroupObjects, LYRA_DEFAULT_emojiPickerGroupPeopleBody, LYRA_DEFAULT_emojiPickerGroupSmileysEmotion, LYRA_DEFAULT_emojiPickerGroupSymbols, LYRA_DEFAULT_emojiPickerGroupTravelPlaces, LYRA_DEFAULT_emojiPickerSearchLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_open, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_emojiPickerEmpty, LYRA_DEFAULT_emojiPickerGridLabel, LYRA_DEFAULT_emojiPickerGroupActivities, LYRA_DEFAULT_emojiPickerGroupAnimalsNature, LYRA_DEFAULT_emojiPickerGroupComponent, LYRA_DEFAULT_emojiPickerGroupFlags, LYRA_DEFAULT_emojiPickerGroupFoodDrink, LYRA_DEFAULT_emojiPickerGroupObjects, LYRA_DEFAULT_emojiPickerGroupPeopleBody, LYRA_DEFAULT_emojiPickerGroupSmileysEmotion, LYRA_DEFAULT_emojiPickerGroupSymbols, LYRA_DEFAULT_emojiPickerGroupTravelPlaces, LYRA_DEFAULT_emojiPickerLoadError, LYRA_DEFAULT_emojiPickerSearchLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_open, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { EmojiPickerItem, EmojiPickerGroup };
@@ -76,6 +80,13 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * convenience auto-loader for a default set — see `emoji-data-loader.ts` and the class doc there for
  * exactly what that covers.
  *
+ * The auto-loader fails *closed and visibly*: when the optional `emoji-picker-element-data` peer
+ * cannot be loaded, the grid renders a distinct localized `[part="load-error"]` surface in place of
+ * the ordinary `[part="empty"]` message, so a skipped install is distinguishable at a glance from a
+ * genuine zero-match search or a deliberate `groups = []` opt-out, and announces the same message
+ * once through the document's shared assertive live region. Assigning `groups` afterwards clears
+ * it.
+ *
  * Keyboard model: the grid is a roving-tabindex listbox (a single Tab stop — only the active emoji
  * is tabbable). Arrow keys move the active option (Left/Right follow reading direction and swap
  * under RTL; Up/Down move by one visual row, measured from the live wrap layout), Home/End jump to
@@ -125,7 +136,13 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * @csspart emoji - Each emoji's own `<button>`; its box and glyph both scale with the `size`
  *   property (`--lr-emoji-picker-item-size`/`-glyph-size`), while its interactive box remains
  *   floored at the shared `--lr-icon-button-size`.
- * @csspart empty - The empty-state message, shown when the search matches nothing.
+ * @csspart empty - The empty-state message, shown when the search matches nothing or a consumer
+ *   deliberately opted out with `groups = []`.
+ * @csspart load-error - The peer-load failure surface, shown in place of `empty` when the optional
+ *   `emoji-picker-element-data` peer was consulted and did not resolve. It never appears for a
+ *   zero-match search or a deliberate `groups = []`, and a later `groups` assignment clears it. The
+ *   same message is announced once through the shared light-DOM assertive sink rather than through
+ *   a shadow-root `role="alert"`, which announces unreliably.
  * @csspart virtual-spacer - The full-height scroll spacer that gives the grid its scrollbar while
  *   only the visible rows exist in the DOM. Rendered on the windowed path only.
  * @csspart virtual-row - One windowed row, absolutely positioned at the `--lr-emoji-picker-row-height`
@@ -182,6 +199,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     emojiPickerGroupSmileysEmotion: LYRA_DEFAULT_emojiPickerGroupSmileysEmotion,
     emojiPickerGroupSymbols: LYRA_DEFAULT_emojiPickerGroupSymbols,
     emojiPickerGroupTravelPlaces: LYRA_DEFAULT_emojiPickerGroupTravelPlaces,
+    emojiPickerLoadError: LYRA_DEFAULT_emojiPickerLoadError,
     emojiPickerSearchLabel: LYRA_DEFAULT_emojiPickerSearchLabel,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     item: LYRA_DEFAULT_item,
@@ -194,6 +212,13 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
 
   private _groups: EmojiPickerGroup[] = [];
   private groupsWereSet = false;
+  /** The third state `groups` alone cannot express: the optional `emoji-picker-element-data` peer
+   *  was consulted and did not resolve, as opposed to "not loaded yet" or "loaded, and empty". */
+  @state() private peerLoadFailed = false;
+  /** Live region for the peer-load failure. A shadow-root `role="alert"` is unreliable, so the
+   *  message goes through the document's shared light-DOM assertive sink -- the same channel
+   *  `<lr-combobox>` uses for its own `sourceFailed` announcement. */
+  private peerErrorAnnouncementSink?: AnnouncementSink;
 
   /** The full, ungrouped data set to search/render. Consumer-supplied — this component ships no
    *  emoji data of its own. Leaving the property unset allows the optional convenience loader to
@@ -212,6 +237,9 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
         ? { item: this.focusedGridItem ?? this.flatItems[focusedIndex], index: focusedIndex }
         : undefined;
     this.groupsWereSet = true;
+    // A consumer assignment always supersedes a failed auto-load, including a deliberate `[]`
+    // opt-out: from here on the empty grid is the consumer's decision, not a missing install.
+    this.peerLoadFailed = false;
     this._groups = Array.isArray(value) ? value : [];
     this.requestUpdate('groups', old);
   }
@@ -268,9 +296,19 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
         this.ownerRealmGeneration !== generation ||
         !this.isConnected ||
         this.ownerDocument !== ownerDocument ||
-        !loaded ||
         this.groupsWereSet
       ) {
+        return;
+      }
+      if (!loaded) {
+        // Fail closed and SAY so. Leaving `groups` at its `[]` default rendered the picker's
+        // ordinary "no emoji found" state -- byte-identical to a genuine zero-match search and to
+        // a consumer's deliberate `groups = []` opt-out -- so a skipped `emoji-picker-element-data`
+        // install was indistinguishable from working software, diagnosable only by a one-time
+        // console.warn nobody sees. Mirrors <lr-combobox>'s `sourceFailed` treatment of the same
+        // shape.
+        this.peerLoadFailed = true;
+        this.announcePeerLoadFailure();
         return;
       }
       this.groups = loaded;
@@ -805,7 +843,26 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.releasePeerErrorAnnouncementSink();
     this.resetOwnerRealmResources();
+  }
+
+  /** Announces the peer-load failure once, through the owning document's shared assertive sink. */
+  private announcePeerLoadFailure(): void {
+    if (!this.isConnected) return;
+    if (this.peerErrorAnnouncementSink?.element.ownerDocument !== this.ownerDocument) {
+      this.releasePeerErrorAnnouncementSink();
+      this.peerErrorAnnouncementSink = acquireAnnouncementSink('assertive', {
+        document: this.ownerDocument,
+        source: this,
+      });
+    }
+    this.peerErrorAnnouncementSink?.announce(this.localize('emojiPickerLoadError'));
+  }
+
+  private releasePeerErrorAnnouncementSink(): void {
+    this.peerErrorAnnouncementSink?.release();
+    this.peerErrorAnnouncementSink = undefined;
   }
 
   adoptedCallback(): void {
@@ -907,7 +964,9 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
             @focusin=${this.onGridFocusIn}
           >
             ${items.length === 0
-              ? html`<div part="empty">${this.localize('emojiPickerEmpty')}</div>`
+              ? this.peerLoadFailed
+                ? html`<div part="load-error">${this.localize('emojiPickerLoadError')}</div>`
+                : html`<div part="empty">${this.localize('emojiPickerEmpty')}</div>`
               : this.isVirtualized
                 ? this.renderVirtualRows()
                 : this.filteredGroups.map(

@@ -94,7 +94,10 @@ export interface LyraSpanWaterfallEventMap {
  * @csspart empty - The empty-state message shown when `spans` is empty.
  * @csspart live-region - The internal focus/status-announcement live region.
  * @cssprop [--lr-span-waterfall-name-width=8rem] - Width of the name gutter column.
- * @cssprop [--lr-span-waterfall-stripe-speed] - Animation duration for a `running` span's striped bar; defaults to `--lr-transition-ambient`.
+ * @cssprop [--lr-span-waterfall-stripe-speed=var(--lr-duration-ambient)] - Animation duration for a
+ *   `running` span's striped bar. The fallback is the bare-duration `--lr-duration-ambient`, not the
+ *   `--lr-transition-ambient` duration+easing shorthand, which would be invalid in an
+ *   `animation-duration` slot.
  * @cssprop [--lr-span-waterfall-row-active-bg=var(--lr-color-brand-quiet)] - Background of the active
  *   (`activeSpanId`) row. Shadow Parts forbids an attribute selector after `::part()`, so the active
  *   row could otherwise only be restyled by hijacking the library-wide `--lr-color-brand-quiet` token.

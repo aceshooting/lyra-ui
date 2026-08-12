@@ -41,6 +41,169 @@ function literalString(node) {
   return undefined;
 }
 
+/**
+ * True for a `this.localize(...)`-shaped callee: a non-computed MemberExpression whose property
+ * is `localize`. Mirrors `literalLocalizeCalls()` in check-default-strings.mjs exactly.
+ */
+function isLocalizeMethodCallee(callee) {
+  return (
+    callee?.type === 'MemberExpression' &&
+    !callee.computed &&
+    callee.property?.type === 'Identifier' &&
+    callee.property.name === 'localize'
+  );
+}
+
+/** True for a bare `resolveLyraString(...)` call (src/internal/localization-runtime.ts), whose
+ *  key is its second argument -- `resolveLyraString(host, key, overrides?, fallback?, ...)`. */
+function isResolveLyraStringCallee(callee) {
+  return callee?.type === 'Identifier' && callee.name === 'resolveLyraString';
+}
+
+/**
+ * True for a BARE `localize(...)` identifier call. Shared helper modules take the bound function as
+ * a parameter and call it directly rather than through `this` -- e.g. `code-block-shared.ts`'s
+ * `codeBlockCopyLabel(localize, justCopied)` returning `localize('copyCode')`. Its key sits at
+ * argument 0, exactly like the method form; missing this shape silently drops every message a
+ * component resolves through such a helper.
+ */
+function isLocalizeIdentifierCallee(callee) {
+  return callee?.type === 'Identifier' && callee.name === 'localize';
+}
+
+/**
+ * Collects every literal reachable from a key-argument position, following the one legitimate
+ * non-literal shape this repo uses for that position: a ternary of literals, e.g.
+ * `this.localize(expanded ? 'jsonCollapseLabel' : 'jsonExpandLabel')` (json-viewer.class.ts).
+ */
+function collectKeyLiterals(node, sink) {
+  const value = literalString(node);
+  if (value !== undefined) {
+    sink.add(value);
+    return;
+  }
+  if (node?.type === 'ConditionalExpression') {
+    collectKeyLiterals(node.consequent, sink);
+    collectKeyLiterals(node.alternate, sink);
+  }
+}
+
+/**
+ * Strict, call-scoped counterpart of the broad literal walk below: a literal only counts as a
+ * reachable catalog key when it is the key argument of an actual
+ * `this.localize(...)`/`resolveLyraString(...)` call -- never merely a string literal that
+ * textually collides with a catalog key name (a type-union member, an object-literal tag, a Lit
+ * `changed.has('propName')` check, ...).
+ */
+function collectLocalizeCallKeys(program, catalogKeys, found) {
+  visitAst(program, (node) => {
+    if (node.type !== 'CallExpression') return;
+    let keyArgIndex;
+    if (isLocalizeMethodCallee(node.callee) || isLocalizeIdentifierCallee(node.callee)) keyArgIndex = 0;
+    else if (isResolveLyraStringCallee(node.callee)) keyArgIndex = 1;
+    else return;
+    const argument = node.arguments?.[keyArgIndex];
+    if (!argument) return;
+    const keys = new Set();
+    collectKeyLiterals(argument, keys);
+    for (const key of keys) if (catalogKeys.has(key)) found.add(key);
+  });
+}
+
+/** Adds every binding name a parameter pattern introduces (plain, defaulted, rest, destructured). */
+function collectParameterNames(pattern, sink) {
+  if (!pattern || typeof pattern !== 'object') return;
+  switch (pattern.type) {
+    case 'Identifier':
+      sink.add(pattern.name);
+      return;
+    case 'AssignmentPattern':
+      collectParameterNames(pattern.left, sink);
+      return;
+    case 'RestElement':
+      collectParameterNames(pattern.argument, sink);
+      return;
+    case 'ArrayPattern':
+      for (const element of pattern.elements ?? []) collectParameterNames(element, sink);
+      return;
+    case 'ObjectPattern':
+      for (const property of pattern.properties ?? []) {
+        collectParameterNames(property.value ?? property.argument, sink);
+      }
+      return;
+    default:
+      return;
+  }
+}
+
+/**
+ * True for the one module whose non-literal `localize` key is pure plumbing rather than a real
+ * lookup: `LyraElement.localize(key, ...)` forwards its own `key` parameter into
+ * `resolveLyraString(this, key, ...)`. Every component inherits that method, so counting it as a
+ * dynamic key would mark EVERY graph dynamic, switch the broad literal walk back on library-wide,
+ * and re-admit exactly the incidental literals this narrowing exists to remove.
+ *
+ * Deliberately just this one file. A component-local forwarder is NOT plumbing -- e.g.
+ * `document-compare.class.ts`'s `versionLabel(version, fallbackKey)` and `kbd.class.ts`'s
+ * `parseShortcut(..., (key) => this.localize(key))` both take the key as a parameter, but their
+ * real key literals sit at the call sites, so those graphs must stay "dynamic" and get the broad
+ * walk or the messages silently vanish and the raw key name renders to the user.
+ */
+function isLocalizeForwarderModule(file) {
+  return file.endsWith(path.join('internal', 'lyra-element.ts'));
+}
+
+/**
+ * True when this module contains at least one `this.localize(...)`/`resolveLyraString(...)` call
+ * whose key argument does NOT resolve to literals -- a genuinely dynamic key such as
+ * `this.localize(FILE_SIZE_UNIT_KEYS[unit])` (file-icon/file-input/attachment-chip/email-viewer),
+ * `this.localize(key)` over a class-file key map (citation-badge), or a key forwarded through a
+ * component-local helper (document-compare, kbd). That is the one shape whose key cannot be read
+ * off the call expression, so it is what makes the broad literal walk necessary. The sole exemption
+ * is the base-class forwarder -- see isLocalizeForwarderModule() above.
+ */
+function hasDynamicLocalizeKey(program, file) {
+  let dynamic = false;
+  const exemptForwardedParameters = isLocalizeForwarderModule(file);
+  const walk = (node, parameters) => {
+    if (dynamic || !node || typeof node !== 'object') return;
+    if (Array.isArray(node)) {
+      for (const child of node) walk(child, parameters);
+      return;
+    }
+    let scope = parameters;
+    if (
+      node.type === 'FunctionDeclaration' ||
+      node.type === 'FunctionExpression' ||
+      node.type === 'ArrowFunctionExpression'
+    ) {
+      scope = new Set(parameters);
+      for (const parameter of node.params ?? []) collectParameterNames(parameter, scope);
+    }
+    if (node.type === 'CallExpression') {
+      let keyArgIndex;
+      if (isLocalizeMethodCallee(node.callee) || isLocalizeIdentifierCallee(node.callee)) keyArgIndex = 0;
+      else if (isResolveLyraStringCallee(node.callee)) keyArgIndex = 1;
+      if (keyArgIndex !== undefined) {
+        const argument = node.arguments?.[keyArgIndex];
+        if (argument) {
+          const keys = new Set();
+          collectKeyLiterals(argument, keys);
+          const forwardedParameter =
+            exemptForwardedParameters && argument.type === 'Identifier' && scope.has(argument.name);
+          if (keys.size === 0 && !forwardedParameter) dynamic = true;
+        }
+      }
+    }
+    for (const [key, value] of Object.entries(node)) {
+      if (key === 'start' || key === 'end') continue;
+      if (value && typeof value === 'object') walk(value, scope);
+    }
+  };
+  walk(program, new Set());
+  return dynamic;
+}
+
 function propertyName(property) {
   if (property?.computed) return undefined;
   if (property?.key?.type === 'Identifier') return property.key.name;
@@ -150,14 +313,31 @@ function isRuntimeHelper(rootFile, candidate, sourceRoot) {
 
 /**
  * Collect catalog keys that can reach one component class through its authored runtime import
- * graph. Dynamic calls such as `localize(FILE_SIZE_UNIT_KEYS[unit])` do not expose a literal at
- * the call expression, so the key map in the helper module has to be considered as well. Class,
- * story, test and style imports are deliberate graph boundaries: another class owns its own
- * slice, while non-runtime sources must never pull messages into a component bundle.
+ * graph. Class, story, test and style imports are deliberate graph boundaries: another class owns
+ * its own slice, while non-runtime sources must never pull messages into a component bundle.
+ *
+ * Key collection is call-scoped (collectLocalizeCallKeys()) for the root class file AND for helper
+ * modules -- a literal that merely textually collides with a catalog key name never counts. The one
+ * exception is the shape that genuinely hides its key from the call expression: a dynamic argument
+ * such as `this.localize(FILE_SIZE_UNIT_KEYS[unit])` or `this.localize(key)`. When (and only when)
+ * some module in this graph contains such a call, EVERY scanned module in the graph -- the root
+ * class file included -- falls back to the broad literal walk, so the key map feeding that dynamic
+ * call is picked up wherever it happens to live. Restricting that fallback to helper modules is not
+ * enough: the map is just as often a module-level constant in the class file itself.
+ *
+ * Without that condition every helper in the graph leaked its incidental literals: `internal/a11y.ts`
+ * re-exports `accessibility-visibility.ts`, whose `visibility === 'collapse'`,
+ * `localName !== 'details'` and `hasAttribute('open')` checks made `collapse`/`details`/`open` look
+ * like reachable message keys for every component that touches a11y helpers -- e.g.
+ * `lr-typing-indicator`, which only ever localizes `thinking`.
  */
 async function reachableCatalogKeys(rootFile, catalogKeys, sourceRoot, sourceCache) {
   const found = new Set();
   const visited = new Set();
+  // Phase 1: walk the graph once, parsing each reachable module and recording whether any of them
+  // needs the broad walk. Parsed programs are kept so phase 2 never re-parses.
+  const programs = [];
+  let graphHasDynamicKey = false;
   const visitFile = async (file) => {
     if (visited.has(file) || !isRuntimeHelper(rootFile, file, sourceRoot)) return;
     visited.add(file);
@@ -171,15 +351,8 @@ async function reachableCatalogKeys(rootFile, catalogKeys, sourceRoot, sourceCac
     sourceCache.set(file, source);
     const clean = withoutGeneratedBlocks(source);
     const program = parseProgram(file, clean);
-    // A class may re-export a runtime key map (attachment-chip.class.ts does this for file-size
-    // units). Traverse that class's exports/imports, but do not inherit the nested component's own
-    // message literals: that class owns its own generated slice.
-    if (file === rootFile || !file.endsWith('.class.ts')) {
-      visitAst(program, (node) => {
-        const value = literalString(node);
-        if (value !== undefined && catalogKeys.has(value)) found.add(value);
-      });
-    }
+    programs.push({ file, program });
+    if (!graphHasDynamicKey && hasDynamicLocalizeKey(program, file)) graphHasDynamicKey = true;
     for (const specifier of runtimeImports(program)) {
       for (const candidate of dependencyCandidates(file, specifier)) {
         await visitFile(candidate);
@@ -187,6 +360,27 @@ async function reachableCatalogKeys(rootFile, catalogKeys, sourceRoot, sourceCac
     }
   };
   await visitFile(rootFile);
+
+  // Phase 2: collect keys, now that we know whether the broad walk is warranted at all.
+  //
+  // A nested class file contributes nothing either way: it may be traversed because it re-exports a
+  // runtime key map (attachment-chip.class.ts does this for file-size units), but its own message
+  // literals belong to its own generated slice, never to this one.
+  for (const { file, program } of programs) {
+    if (file !== rootFile && file.endsWith('.class.ts')) continue;
+    if (graphHasDynamicKey) {
+      // The broad walk covers the ROOT class file too, not just helpers: a key map feeding a
+      // dynamic call frequently lives in the class file itself (lr-citation-badge's
+      // `STATUS_MESSAGE_KEY` -> `this.localize(key)`), and skipping the root there silently drops
+      // every one of those messages, which surfaces as the raw key name rendering in the UI.
+      visitAst(program, (node) => {
+        const value = literalString(node);
+        if (value !== undefined && catalogKeys.has(value)) found.add(value);
+      });
+    } else {
+      collectLocalizeCallKeys(program, catalogKeys, found);
+    }
+  }
   return [...found].sort();
 }
 

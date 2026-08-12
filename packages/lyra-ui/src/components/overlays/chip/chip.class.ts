@@ -12,7 +12,7 @@ import { variants } from '../../../internal/variants.styles.js';
 import { styles } from './chip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -129,11 +129,9 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
     remove: LYRA_DEFAULT_remove,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -345,6 +343,17 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     this.requestUpdate();
   }
 
+  /** Accessible name for the real toggle control. A host `aria-label` wins; otherwise the chip's
+   *  own label text names it. An icon-only toggleable chip (a colour swatch standing in for a
+   *  chart series, a bare status dot) has neither, and a focusable control with no name at all is
+   *  announced as a nameless "button" — so it falls back to the generic localized action the same
+   *  way the remove button falls back to `remove`. */
+  private get accessibleToggleLabel(): string {
+    const hostLabel = this.getAttribute('aria-label');
+    if (hostLabel !== null) return hostLabel;
+    return this.cachedLabelText || this.localize('select');
+  }
+
   private get accessibleRemoveLabel(): string {
     const hostLabel = this.getAttribute('aria-label');
     if (hostLabel !== null) return hostLabel;
@@ -392,7 +401,6 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     // *current* value, for `aria-pressed`.
     const toggleMode = this.toggleable && !this.removable;
     const pressed = this.selected && !this.removable;
-    const hostLabel = this.getAttribute('aria-label');
     return html`
       <span
         part="base"
@@ -408,7 +416,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
           ? html`<button
               part="toggle-button"
               type="button"
-              aria-label=${hostLabel !== null ? hostLabel : this.cachedLabelText || nothing}
+              aria-label=${this.accessibleToggleLabel}
               aria-pressed=${pressed ? 'true' : 'false'}
               @click=${this.onToggleClick}
             ></button>`

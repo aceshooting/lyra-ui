@@ -65,7 +65,10 @@ Highlight backgrounds are independently themeable with
 `--lr-docx-viewer-highlight-success-background`,
 `--lr-docx-viewer-highlight-warning-background`,
 `--lr-docx-viewer-highlight-danger-background`, and
-`--lr-docx-viewer-highlight-neutral-background`, defaulting to the matching quiet color tokens.
+`--lr-docx-viewer-highlight-neutral-background`, defaulting to the matching quiet color tokens --
+except neutral, which defaults to `var(--lr-color-surface-raised)`: `[part='content']` paints no
+background of its own and therefore shows `[part='base']`'s `--lr-color-surface`, so a neutral
+highlight falling back to that same token would render as unhighlighted.
 `--lr-docx-viewer-highlight-active-background` and
 `--lr-docx-viewer-highlight-active-outline` style the active host highlight.
 `--lr-docx-viewer-search-match-background`,

@@ -21,7 +21,7 @@ import {
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_checkboxGroupRequired, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_checkboxGroupRequired, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -116,11 +116,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     checkboxGroupRequired: LYRA_DEFAULT_checkboxGroupRequired,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
-    open: LYRA_DEFAULT_open,
-    restore: LYRA_DEFAULT_restore,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -143,6 +139,18 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
    * either way is a tag rename. Scales the group's label type size and the gaps around and between
    * its options off the same `--lr-form-control-*` values the controls themselves use, and
    * propagates the selected tier to every owned checkbox so the aggregate control stays coherent.
+   *
+   * **Deliberate divergence from the mirrored upstream attribute, stated here because it changes
+   * what a bare migrated tag does.** Upstream describes its own `size` as applying to every item
+   * *when present*, i.e. an unset group leaves each child's individually-authored `size` alone.
+   * Here the group is always authoritative: `size` has a real `'m'` default rather than an absent
+   * sentinel, and the tier is (re-)pushed onto every owned `<lr-checkbox>` on connect, on every
+   * slot change, and again whenever a child's own `size` attribute is mutated afterwards. A group
+   * of uniformly-sized options is the shape this control exists to produce — one visually
+   * emphasized option inside an otherwise default-sized group reads as a rendering bug, and a
+   * per-option tier that survives until the next slot change and then silently snaps back would be
+   * worse than either consistent behaviour. Migrating markup that relied on per-child sizes should
+   * split the odd option out of the group, or size the whole group.
    */
   size: LyraSize = 'm';
 

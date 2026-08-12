@@ -696,7 +696,13 @@ own heading-detection also drives the dialog's accessible name; `description`, i
 a slotted `<p>`. `tone: 'danger'` fills the confirm button with `--lr-color-danger` instead of
 `--lr-color-brand`, for destructive actions. Confirm/cancel buttons are plain inline-styled
 `<button>` elements (no shared button component exists in this library yet), but every color value
-used is still a `--lr-*` token reference, never a raw literal.
+used is still a `--lr-*` token reference, never a raw literal. They carry the same interaction
+states as every other control in the library: a hover/pressed fill mixed toward
+`--lr-color-mix-partner` by `--lr-color-mix-hover`/`--lr-color-mix-active`, and a
+`--lr-focus-ring-width`/`--lr-focus-ring-color`/`--lr-focus-ring-offset` `:focus-visible` ring. An
+inline `style` attribute cannot express a pseudo-class, so those rules ship in a small `<style>`
+element mounted inside the transient dialog (and removed with it), targeting the buttons through
+their `data-lr-confirm-action` attribute.
 
 **Known gotchas:**
 - Every dismissal path (confirm button, cancel button, Escape, backdrop click) funnels through
@@ -790,6 +796,12 @@ entirely while empty), `label` (non-interactive wrapper around the default slot)
 around the `end` slot; hidden entirely while empty, the same `end` csspart name `<lr-badge>` uses),
 `toggle-button` (the real native toggle control, rendered over the label in toggle mode),
 `remove-button` (the remove (×) affordance, only rendered while `removable`)
+
+The toggle control's accessible name comes from a host `aria-label` first, then the chip's own
+default-slot text. An icon-only toggleable chip (a colour swatch standing in for a chart series, a
+bare status dot) has neither, so it falls back to the localized `select` message rather than
+shipping an unnamed focusable button — the same generic fallback the remove button already makes to
+`remove`.
 
 **Themeable custom properties:** `--lr-chip-accent`, `--lr-chip-bg`, `--lr-chip-border`
 (component-local trio swapped per `variant` rather than repeating background/color/border per part
@@ -1496,9 +1508,17 @@ presence-based, so an explicitly empty value remains empty rather than invoking 
 **Themeable custom properties:** `--lr-progress-track-height` (default
 `var(--lr-progress-height, var(--lr-size-1rem))`; `--lr-progress-height` is the legacy fallback),
 `--lr-progress-track-color` (default `var(--lr-color-brand-quiet)`),
-`--lr-progress-indicator-color` (default `var(--lr-color-brand)`), and
+`--lr-progress-indicator-color` (default `var(--lr-progress-indicator-variant-color)`), and
 `--lr-progress-label-color` (default `var(--lr-color-text)`). Upstream aliases are `--height` and
 `--track-height`, plus `--track-color`, `--indicator-color`, and `--label-color`.
+
+`--lr-progress-indicator-variant-color` is the palette slot the active `variant` feeds: it resolves
+to that variant's loud fill from the shared semantic grid (`var(--lr-color-fill-loud)`), falling back
+to `var(--lr-color-brand)` on an element that has not updated yet. It sits *inside*
+`--lr-progress-indicator-color` and the upstream `--indicator-color` alias in the fallback chain, so
+setting either of those still wins outright and the indicator renders exactly as it did before
+`variant` support existed. Set the variant-color slot instead when you want to retheme one semantic
+tone while leaving the rest of the grid alone.
 
 **Additional API surface:**
 

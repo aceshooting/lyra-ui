@@ -55,7 +55,9 @@ promise/rejection (before the media mounts it returns an already-resolved promis
 error state and emits `lr-render-error`. `seek(seconds)` sets `currentTime` and forces an immediate
 `lr-time-change`. `search(query)` resolves the match count; `searchNext()`/`searchPrevious()` wrap
 and reveal the active match in the virtualized transcript without seeking playback; `clearSearch()`
-resets the query and match state.
+resets the query and match state. `focus(options?)`, `blur()`, and `click()` forward to the native
+`[part='media']` element, which carries `controls` and is therefore the player's primary focusable
+affordance.
 
 **Events:** `lr-play`, `lr-pause`, `lr-load` (`detail: { duration, kind }`), `lr-time-change`
 (`detail: { currentTime }`, throttled to at most 4/s while playing plus one extra per `seek()`),
@@ -66,7 +68,8 @@ found }`), `lr-search-change` (`detail: { query, matchCount, activeIndex }`), an
 `play`, `timeupdate`, and `volumechange`
 events are also relayed exactly once from the host as native `Event` instances. Like the original
 media notifications, these relays are non-bubbling, non-composed, and non-cancelable. The richer
-`lr-*` notifications above remain unchanged.
+`lr-*` notifications above remain unchanged. The native media element's `focus`/`blur` are
+additionally bridged as bubbling, composed host events.
 
 **CSS parts:** `base`, `media` (the native `<audio>`/`<video>` element), `toolbar`, `rate-select`,
 `timeline` (click-to-seek and arrow-key seeking), `timeline-marker` (one per `time-range` highlight;

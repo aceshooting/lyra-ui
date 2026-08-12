@@ -33,7 +33,7 @@ import {
 import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_graphCommunity, LYRA_DEFAULT_graphDataList, LYRA_DEFAULT_graphDiagram, LYRA_DEFAULT_graphExpandableItem, LYRA_DEFAULT_graphItemAnnouncement, LYRA_DEFAULT_graphLink, LYRA_DEFAULT_graphMissingLibrary, LYRA_DEFAULT_graphNode, LYRA_DEFAULT_graphNodeFocused, LYRA_DEFAULT_graphNodesHidden, LYRA_DEFAULT_graphSelectionCount, LYRA_DEFAULT_graphTypedNode, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_graphCommunity, LYRA_DEFAULT_graphDataList, LYRA_DEFAULT_graphDiagram, LYRA_DEFAULT_graphExpandableItem, LYRA_DEFAULT_graphItemAnnouncement, LYRA_DEFAULT_graphLink, LYRA_DEFAULT_graphMissingLibrary, LYRA_DEFAULT_graphNode, LYRA_DEFAULT_graphNodeFocused, LYRA_DEFAULT_graphNodesHidden, LYRA_DEFAULT_graphSelectionCount, LYRA_DEFAULT_graphTypedNode, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -358,8 +358,6 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     graphCommunity: LYRA_DEFAULT_graphCommunity,
     graphDataList: LYRA_DEFAULT_graphDataList,
     graphDiagram: LYRA_DEFAULT_graphDiagram,
@@ -374,8 +372,6 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     graphTypedNode: LYRA_DEFAULT_graphTypedNode,
     loading: LYRA_DEFAULT_loading,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -2594,8 +2590,22 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     else this.gEl.removeAttribute('data-edge-labels-hidden');
   }
 
+  /** The roving-tabindex/keyboard-cursor index space concatenates three item kinds in one order:
+   *  nodes, then links, then community hulls. These two helpers are the single definition of where
+   *  each later segment starts. Every consumer -- the total count, the identity/text
+   *  decompositions, the reverse lookup, and both render branches' offscreen cursor items --
+   *  derives from them, so adding a fourth kind or reordering the three is one edit instead of six
+   *  that can silently fall out of step and point keyboard focus at the wrong item. */
+  private linkIndexBase(): number {
+    return this.simNodes.length;
+  }
+
+  private communityIndexBase(): number {
+    return this.linkIndexBase() + this.simLinks.length;
+  }
+
   private graphItemCount(): number {
-    return this.simNodes.length + this.simLinks.length + this.visibleCommunities().length;
+    return this.communityIndexBase() + this.visibleCommunities().length;
   }
 
   private normalizedGraphItem(index = this.activeGraphItem): number {
@@ -2605,16 +2615,15 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   private graphItemIdentity(index: number): GraphItemIdentity | undefined {
     if (index < 0) return undefined;
-    if (index < this.simNodes.length) {
+    if (index < this.linkIndexBase()) {
       const node = this.simNodes[index];
       return node ? { kind: 'node', id: node.id } : undefined;
     }
-    const linkIndex = index - this.simNodes.length;
-    if (linkIndex < this.simLinks.length) {
-      const link = this.simLinks[linkIndex];
+    if (index < this.communityIndexBase()) {
+      const link = this.simLinks[index - this.linkIndexBase()];
       return link ? { kind: 'link', id: this.linkKey(link) } : undefined;
     }
-    const community = this.visibleCommunities()[linkIndex - this.simLinks.length]?.community;
+    const community = this.visibleCommunities()[index - this.communityIndexBase()]?.community;
     return community ? { kind: 'community', id: community.id } : undefined;
   }
 
@@ -2622,24 +2631,22 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (identity.kind === 'node') return this.simNodes.findIndex((node) => node.id === identity.id);
     if (identity.kind === 'link') {
       const index = this.simLinks.findIndex((link) => this.linkKey(link) === identity.id);
-      return index < 0 ? -1 : this.simNodes.length + index;
+      return index < 0 ? -1 : this.linkIndexBase() + index;
     }
     const index = this.visibleCommunities().findIndex((entry) => entry.community.id === identity.id);
-    return index < 0 ? -1 : this.simNodes.length + this.simLinks.length + index;
+    return index < 0 ? -1 : this.communityIndexBase() + index;
   }
 
   private graphItemText(index: number): string {
-    if (index < this.simNodes.length) {
+    if (index < this.linkIndexBase()) {
       const node = this.simNodes[index];
       return node ? this.localize('graphNode', undefined, { label: this.nodeAccessibleText(node) }) : '';
     }
-    const linkIndex = index - this.simNodes.length;
-    if (linkIndex < this.simLinks.length) {
-      const link = this.simLinks[linkIndex];
+    if (index < this.communityIndexBase()) {
+      const link = this.simLinks[index - this.linkIndexBase()];
       return link ? this.linkAccessibleText(link) : '';
     }
-    const hullIndex = linkIndex - this.simLinks.length;
-    const entry = this.visibleCommunities()[hullIndex];
+    const entry = this.visibleCommunities()[index - this.communityIndexBase()];
     return entry
       ? this.localize('graphCommunity', undefined, {
           label: entry.community.label ?? entry.community.id,
@@ -2812,7 +2819,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
               `,
             )}
             ${this.simLinks.map((l, li) => {
-              const i = this.simNodes.length + li;
+              const i = this.linkIndexBase() + li;
               return html`
                 <!-- hit-area-exempt: see the node cursor-item above -- same offscreen
                      sr-only virtual-cursor button, no visible/pointer-clickable box. -->
@@ -2828,7 +2835,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
               `;
             })}
             ${this.visibleCommunities().map((entry, hi) => {
-              const i = this.simNodes.length + this.simLinks.length + hi;
+              const i = this.communityIndexBase() + hi;
               const label = this.localize('graphCommunity', undefined, {
                 label: entry.community.label ?? entry.community.id,
                 count: getNumberFormat(this.effectiveLocale).format(entry.members.length),
@@ -2885,7 +2892,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
           </defs>
           <g transform="">
             ${this.visibleCommunities().map((entry, hullIndex) => {
-              const itemIndex = this.simNodes.length + this.simLinks.length + hullIndex;
+              const itemIndex = this.communityIndexBase() + hullIndex;
               const hull = this.communityHull(entry.members);
               const fill = sanitizeNodeColor(entry.community.color);
               const label = this.localize('graphCommunity', undefined, {
@@ -2915,7 +2922,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
               </g>`;
             })}
             ${this.simLinks.map((l, linkIndex) => {
-              const itemIndex = this.simNodes.length + linkIndex;
+              const itemIndex = this.linkIndexBase() + linkIndex;
               const coordinates = this.linkCoordinates(l);
               const color = sanitizeNodeColor(l.color);
               const dash = normalizeLinkDash(l.dash);

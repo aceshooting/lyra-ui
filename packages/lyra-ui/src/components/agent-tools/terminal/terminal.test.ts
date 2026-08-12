@@ -3,6 +3,23 @@ import './terminal.js';
 import type { LyraTerminal } from './terminal.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import type { LyraHighlight } from '../../viewers/document-viewer/anchors.js';
+
+/** Reference oracle mirroring the *original* `highlightForLine()` implementation exactly (first
+ *  match in array order wins any overlap) -- kept independent of the production code under test
+ *  so the regression tests below actually prove the optimized `resolvedHighlightLines()` still
+ *  computes the same per-line winner, not merely that it agrees with itself. */
+function bruteForceHighlightForLine(
+  highlights: LyraHighlight[],
+  lineNumber: number,
+): LyraHighlight | undefined {
+  return highlights.find(
+    (h) =>
+      h.anchor.kind === 'line-range' &&
+      lineNumber >= h.anchor.start &&
+      lineNumber <= (h.anchor.end ?? h.anchor.start),
+  );
+}
 
 function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
@@ -395,6 +412,122 @@ describe('lr-terminal', () => {
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
     const owners = [...list.shadowRoot!.querySelectorAll<HTMLElement>('[role="button"]')];
     expect(owners.map((line) => line.getAttribute('data-line-number'))).to.deep.equal(['1', '4']);
+  });
+
+  it('keeps array-order highlight priority for overlapping ranges even when start order disagrees', async () => {
+    // Regression guard for the resolvedHighlightLines() perf rewrite: a naive "sort by start"
+    // implementation of the same optimization would pick the wider/earlier-starting highlight as
+    // the winner on the overlap -- but the original `.find()`-based behavior always prefers
+    // whichever highlight is first in `this.highlights` array order, regardless of start value.
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write(Array.from({ length: 10 }, (_, i) => `line ${i + 1}`).join('\n'));
+    el.highlights = [
+      { id: 'narrow-later-start', anchor: { kind: 'line-range', start: 3, end: 6 }, tone: 'danger' },
+      { id: 'wide-earlier-start', anchor: { kind: 'line-range', start: 1, end: 10 }, tone: 'warning' },
+    ];
+    await el.updateComplete;
+
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const toneOf = (n: number) =>
+      list.shadowRoot!.querySelector(`[data-line-number="${n}"]`)!.getAttribute('data-highlight-tone');
+    for (const n of [3, 4, 5, 6]) expect(toneOf(n), `line ${n}`).to.equal('danger');
+    for (const n of [1, 2, 7, 8, 9, 10]) expect(toneOf(n), `line ${n}`).to.equal('warning');
+
+    const owners = [...list.shadowRoot!.querySelectorAll<HTMLElement>('[role="button"]')];
+    expect(owners.map((line) => line.getAttribute('data-line-number'))).to.deep.equal(['1', '3']);
+  });
+
+  it('matches the brute-force per-line highlight owner at scale (many lines, many overlapping highlights)', async () => {
+    // Exercises resolvedHighlightLines() -- the O(lines + highlights) replacement for the old
+    // O(lines * highlights) per-render scan -- at a scale where a subtle clamping/priority bug in
+    // the rewrite would plausibly show up but a handful of hand-picked lines would not.
+    const el = (await fixture(html`<lr-terminal max-scrollback="3000"></lr-terminal>`)) as LyraTerminal;
+    const lineCount = 3000;
+    el.write(Array.from({ length: lineCount }, (_, i) => `line ${i + 1}`).join('\n'));
+    await el.updateComplete;
+
+    // Deterministic, purposely NOT sorted by start -- array index and start position disagree for
+    // most of these, the same condition the priority test above targets, just at scale.
+    const highlights: LyraHighlight[] = Array.from({ length: 400 }, (_, i) => {
+      const start = ((i * 37) % lineCount) + 1;
+      const span = (i % 11) + 1; // 1..11 lines
+      const end = Math.min(lineCount, start + span - 1);
+      return {
+        id: `h${i}`,
+        anchor: { kind: 'line-range' as const, start, end },
+        tone: (['accent', 'success', 'warning', 'danger', 'neutral'] as const)[i % 5],
+      };
+    });
+    el.highlights = highlights;
+    await el.updateComplete;
+
+    const priv = el as unknown as {
+      resolvedHighlightLines(): {
+        perLine: Map<number, LyraHighlight>;
+        owners: Map<LyraHighlight, number>;
+      };
+      lines: { number: number }[];
+    };
+    const { perLine, owners } = priv.resolvedHighlightLines();
+
+    for (const line of priv.lines) {
+      const expected = bruteForceHighlightForLine(highlights, line.number);
+      expect(perLine.get(line.number)?.id, `perLine at line ${line.number}`).to.equal(expected?.id);
+    }
+
+    for (const h of highlights) {
+      const expectedOwnerLine = priv.lines.find(
+        (line) => bruteForceHighlightForLine(highlights, line.number)?.id === h.id,
+      )?.number;
+      expect(owners.get(h), `owner line of ${h.id}`).to.equal(expectedOwnerLine);
+    }
+  });
+
+  it('renders per-line match/active-match state via O(1) lookups, combined with highlight tone, correctly across every rendered line', async () => {
+    // Exercises renderLine()'s finding-2 rewrite (a precomputed Set<lineNumber> + a single
+    // active-match line number, instead of a per-row this.searchMatches.some() scan) together
+    // with finding-1's highlight map, checking every one of 12 lines against an independently
+    // reasoned expectation. Search state is poked directly (bypassing search()/searchNext(),
+    // which themselves scroll the view via activeId and would otherwise make which lines are
+    // actually mounted depend on virtual-list's own scroll-into-view timing) so this test stays
+    // about renderLine()'s lookup wiring, not virtualization/scrolling.
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    const lineCount = 12;
+    el.write(Array.from({ length: lineCount }, (_, i) => `line ${i + 1}`).join('\n'));
+    await el.updateComplete;
+
+    el.highlights = [
+      { id: 'first', anchor: { kind: 'line-range', start: 3, end: 6 }, tone: 'danger' },
+      { id: 'second', anchor: { kind: 'line-range', start: 5, end: 8 }, tone: 'warning' },
+    ];
+    const matchedLines = [2, 5, 9, 12];
+    const priv = el as unknown as {
+      searchQuery: string;
+      searchMatches: { lineNumber: number }[];
+      searchActiveIndex: number;
+      requestUpdate(): void;
+    };
+    priv.searchQuery = 'needle';
+    priv.searchMatches = matchedLines.map((lineNumber) => ({ lineNumber }));
+    priv.searchActiveIndex = 2; // active match is line 9
+    priv.requestUpdate();
+    await el.updateComplete;
+
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    for (let n = 1; n <= lineCount; n++) {
+      const row = list.shadowRoot!.querySelector(`[data-line-number="${n}"]`) as HTMLElement;
+      // A derived primitive, never the node itself: handing chai a live DOM node as
+      // actual/expected hangs the whole file in the runner's message serialization.
+      expect(row != null, `line ${n} rendered`).to.equal(true);
+
+      const expectedMatch = !matchedLines.includes(n) ? null : n === 9 ? 'active' : '';
+      expect(row.getAttribute('data-match'), `line ${n} data-match`).to.equal(expectedMatch);
+
+      // Array-order priority: 'first' (danger) wins lines 5-6 over 'second' (warning), which
+      // matches only lines 7-8.
+      const expectedTone = n >= 3 && n <= 6 ? 'danger' : n >= 7 && n <= 8 ? 'warning' : null;
+      expect(row.getAttribute('data-highlight-tone'), `line ${n} tone`).to.equal(expectedTone);
+    }
   });
 
   it('retints an accent-tone highlighted line via --lr-terminal-highlight-accent-bg, decoupled from the shared --lr-color-brand-quiet token used by the toolbar-button hover state', async () => {
@@ -1112,4 +1245,128 @@ it('searchNext/searchPrevious resolve a boolean, matching the shared viewer sear
   expect(await el.search('__definitely_absent__')).to.equal(0);
   expect(await el.searchNext(), 'no matches to move to').to.be.false;
   expect(await el.searchPrevious(), 'no matches to move to').to.be.false;
+});
+
+describe('compact / frame escape hatches', () => {
+  // A terminal is routinely nested inside another bordered container (an lr-agent-run panel, a
+  // message bubble) -- the same embedded-in-a-transcript positioning its agent-tools siblings
+  // lr-result-card, lr-stack-trace, lr-task-list, and lr-thinking-panel all expose `compact` +
+  // `frame="plain"` for. Without them the outer border/background doubles with no opt-out.
+  const LOG = 'first line\nsecond line\nthird line';
+
+  function base(el: LyraTerminal): HTMLElement {
+    return el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  }
+
+  function toolbar(el: LyraTerminal): HTMLElement {
+    return el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+  }
+
+  /** The rendered lines live inside <lr-virtual-list>'s own shadow root (see the class doc's
+   *  `line` csspart note), and the list's initial range/row measurement is still settling right
+   *  after a write -- the same wait idiom the hover tests above use. */
+  async function firstLine(el: LyraTerminal): Promise<HTMLElement> {
+    await aTimeout(100);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    return list.shadowRoot!.querySelector('[data-line-number="1"]') as HTMLElement;
+  }
+
+  it('defaults to compact=false and frame="card", keeping the card chrome', async () => {
+    const el = (await fixture(html`<lr-terminal .content=${LOG}></lr-terminal>`)) as LyraTerminal;
+    expect(el.compact).to.be.false;
+    expect(el.frame).to.equal('card');
+    expect(el.hasAttribute('compact')).to.be.false;
+    expect(el.getAttribute('frame')).to.equal('card');
+    const style = getComputedStyle(base(el));
+    expect(style.borderTopStyle).to.equal('solid');
+    expect(Number.parseFloat(style.borderTopWidth)).to.be.greaterThan(0);
+    expect(Number.parseFloat(style.borderTopLeftRadius)).to.be.greaterThan(0);
+    expect(style.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('tightens the toolbar padding and gap under compact, behind retunable cssprops', async () => {
+    const regular = (await fixture(
+      html`<lr-terminal downloadable .content=${LOG}></lr-terminal>`,
+    )) as LyraTerminal;
+    const compact = (await fixture(
+      html`<lr-terminal compact downloadable .content=${LOG}></lr-terminal>`,
+    )) as LyraTerminal;
+    expect(compact.hasAttribute('compact')).to.be.true;
+
+    const regularStyle = getComputedStyle(toolbar(regular));
+    const compactStyle = getComputedStyle(toolbar(compact));
+    expect(Number.parseFloat(compactStyle.paddingBlockStart)).to.be.lessThan(
+      Number.parseFloat(regularStyle.paddingBlockStart),
+    );
+    expect(Number.parseFloat(compactStyle.paddingInlineStart)).to.be.lessThan(
+      Number.parseFloat(regularStyle.paddingInlineStart),
+    );
+    expect(Number.parseFloat(compactStyle.columnGap)).to.be.lessThan(
+      Number.parseFloat(regularStyle.columnGap),
+    );
+
+    // Behind inline var() fallbacks, so a transcript can retune every nested terminal at once
+    // without restating the rule.
+    compact.style.setProperty('--lr-terminal-compact-toolbar-padding', '1px 2px');
+    compact.style.setProperty('--lr-terminal-compact-toolbar-gap', '3px');
+    const retuned = getComputedStyle(toolbar(compact));
+    expect(retuned.paddingBlockStart).to.equal('1px');
+    expect(retuned.paddingInlineStart).to.equal('2px');
+    expect(retuned.columnGap).to.equal('3px');
+
+    // compact is a density knob, not a chrome knob -- the card border and background stay.
+    expect(getComputedStyle(base(compact)).borderTopStyle).to.equal('solid');
+    expect(getComputedStyle(base(compact)).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it("tightens each rendered line's inline padding under compact, behind a retunable cssprop", async () => {
+    const regular = (await fixture(html`<lr-terminal .content=${LOG}></lr-terminal>`)) as LyraTerminal;
+    const compact = (await fixture(
+      html`<lr-terminal compact .content=${LOG}></lr-terminal>`,
+    )) as LyraTerminal;
+    const regularPadding = Number.parseFloat(
+      getComputedStyle(await firstLine(regular)).paddingInlineStart,
+    );
+    const compactLine = await firstLine(compact);
+    expect(Number.parseFloat(getComputedStyle(compactLine).paddingInlineStart)).to.be.lessThan(
+      regularPadding,
+    );
+
+    compact.style.setProperty('--lr-terminal-compact-line-padding-inline', '4px');
+    expect(getComputedStyle(compactLine).paddingInlineStart).to.equal('4px');
+  });
+
+  it('drops the border, radius, and background under frame="plain", keeping the toolbar divider', async () => {
+    const el = (await fixture(
+      html`<lr-terminal frame="plain" downloadable .content=${LOG}></lr-terminal>`,
+    )) as LyraTerminal;
+    const style = getComputedStyle(base(el));
+    expect(Number.parseFloat(style.borderTopWidth)).to.equal(0);
+    expect(Number.parseFloat(style.borderTopLeftRadius)).to.equal(0);
+    expect(style.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    // The toolbar/log divider is interior structure, not outer chrome -- same call task-list and
+    // thinking-panel make for their own header/body divider.
+    expect(Number.parseFloat(getComputedStyle(toolbar(el)).borderBlockEndWidth)).to.be.greaterThan(0);
+  });
+
+  it('restores the card chrome when frame goes back to "card"', async () => {
+    const el = (await fixture(html`<lr-terminal .content=${LOG}></lr-terminal>`)) as LyraTerminal;
+    el.frame = 'plain';
+    await el.updateComplete;
+    expect(Number.parseFloat(getComputedStyle(base(el)).borderTopWidth)).to.equal(0);
+    el.frame = 'card';
+    await el.updateComplete;
+    expect(Number.parseFloat(getComputedStyle(base(el)).borderTopWidth)).to.be.greaterThan(0);
+  });
+
+  it('is accessible in the populated compact and plain states', async () => {
+    const compact = await fixture(
+      html`<lr-terminal compact downloadable .content=${LOG}></lr-terminal>`,
+    );
+    await expect(compact).to.be.accessible();
+    const plain = await fixture(
+      html`<lr-terminal frame="plain" downloadable .content=${LOG}></lr-terminal>`,
+    );
+    await expect(plain).to.be.accessible();
+  });
 });

@@ -13,7 +13,7 @@ import { styles } from './json-viewer.styles.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_circularReference, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyJson, LYRA_DEFAULT_details, LYRA_DEFAULT_jsonArray, LYRA_DEFAULT_jsonCollapseLabel, LYRA_DEFAULT_jsonCopyLabel, LYRA_DEFAULT_jsonExpandLabel, LYRA_DEFAULT_jsonItemCount, LYRA_DEFAULT_jsonKeyCount, LYRA_DEFAULT_jsonObject, LYRA_DEFAULT_jsonValue, LYRA_DEFAULT_jsonViewerLimit, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_viewerSearchActiveMatch } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_circularReference, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyJson, LYRA_DEFAULT_jsonArray, LYRA_DEFAULT_jsonCollapseLabel, LYRA_DEFAULT_jsonCopyLabel, LYRA_DEFAULT_jsonExpandLabel, LYRA_DEFAULT_jsonItemCount, LYRA_DEFAULT_jsonKeyCount, LYRA_DEFAULT_jsonObject, LYRA_DEFAULT_jsonValue, LYRA_DEFAULT_jsonViewerLimit, LYRA_DEFAULT_viewerSearchActiveMatch } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -170,10 +170,8 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     circularReference: LYRA_DEFAULT_circularReference,
-    collapse: LYRA_DEFAULT_collapse,
     copy: LYRA_DEFAULT_copy,
     copyJson: LYRA_DEFAULT_copyJson,
-    details: LYRA_DEFAULT_details,
     jsonArray: LYRA_DEFAULT_jsonArray,
     jsonCollapseLabel: LYRA_DEFAULT_jsonCollapseLabel,
     jsonCopyLabel: LYRA_DEFAULT_jsonCopyLabel,
@@ -183,8 +181,6 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     jsonObject: LYRA_DEFAULT_jsonObject,
     jsonValue: LYRA_DEFAULT_jsonValue,
     jsonViewerLimit: LYRA_DEFAULT_jsonViewerLimit,
-    open: LYRA_DEFAULT_open,
-    search: LYRA_DEFAULT_search,
     viewerSearchActiveMatch: LYRA_DEFAULT_viewerSearchActiveMatch,
   };
   // GENERATED DEFAULT-STRING SLICE: END

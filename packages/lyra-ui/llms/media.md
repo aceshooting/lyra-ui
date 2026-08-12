@@ -153,7 +153,7 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
   arms/seal/emblem, e.g. `es`, `pt`, `sv`) ship **three** fidelity tiers, selected via the `variant`
   property (`flagUrl(code, { variant })` under the hood): `"compact"` — a tiny WebP raster for
   icon-scale use (menus, language pickers, dense lists); `"standard"` — the default, the
-  icon-optimized vector for card/row sizes, ~65% smaller on average than the pristine source for the
+  icon-optimized vector for card/row sizes, ~84% smaller on average than the pristine source for the
   65 affected codes with no visible fidelity loss at that scale; `"detailed"` — the pristine
   full-fidelity vector, for hero-scale display where the extra illustrative detail is actually
   visible. The other 184 codes resolve to the same file regardless of `variant` — a safe no-op.
@@ -188,6 +188,10 @@ tick and manual step); internal `focus`/`blur` are bridged as bubbling, composed
 **Slots:** none.
 
 **CSS parts:** `base`, `play-button`, `slider`
+
+The `slider` carries `aria-valuetext` — a localized `Step {index} of {total}` (key
+`playbackStepPosition`, both numbers formatted with the component's effective locale) — so a screen
+reader announces "Step 4 of 10" rather than the bare zero-based index the range input holds.
 
 **Themeable custom properties:** `--lr-playback-icon-size` (default
 `calc(var(--lr-icon-button-size) * 0.35)` — the play/pause glyph's size; applied as the button's
@@ -227,7 +231,8 @@ dimming at `length <= 1`), `--lr-focus-ring-*`.
 - `interval-ms` is clamped to the 16ms floor and the browser's finite timer ceiling: a non-finite or
   lower value ticks at 16ms, while an oversized value uses the timer ceiling. Each distinct invalid
   value is warned once (deduplicated per value, not a single once-ever flag).
-- No `aria-valuetext`/visible "N of M" position label on the range input.
+- No *visible* "N of M" position label beside the range input (the `aria-valuetext` above covers
+  the screen-reader case only).
 - Calling `play()`/`pause()` programmatically (not via the button) gives no `aria-live`
   announcement of the Play/Pause state change.
 
@@ -542,7 +547,17 @@ radius of `[part='base']`; `--lr-file-input-compact-padding` (default `var(--lr-
 `var(--lr-space-2xs)`) — the gap between the dropzone's slotted children while `compact`; and
 `--lr-file-input-compact-font-size` (default `var(--lr-font-size-sm)`) — the label's font size while
 `compact`. `--lr-file-input-font-size` (default `var(--lr-form-control-font-size)`) controls the
-dropzone text size. The compact gap falls back to `--lr-file-input-gap` when its compact-specific
+label and selected-filename text size.
+
+`size` retunes the whole dropzone, not just its label: `--lr-file-input-dropzone-font-size`
+(default `var(--lr-font-size-md-sm)`) for the instructional text,
+`--lr-file-input-dropzone-icon-size` (default `var(--lr-font-size-xl)`) for `[part='dropzone-icon']`,
+`--lr-file-input-dropzone-padding` (default `var(--lr-space-l)`) for the dropzone's own padding, and
+`--lr-file-input-detail-font-size` (default `var(--lr-font-size-sm)`) for the secondary text (hint,
+validation error, each file's formatted size). Each documented default is the `m`/`medium` tier, and
+each is re-declared per `size` tier — so an unset or default-size control renders exactly as before,
+while `size="xl"` scales the dropzone coherently instead of enlarging the label alone. `compact`
+still overrides the dropzone padding and font size independently of the tier. The compact gap falls back to `--lr-file-input-gap` when its compact-specific
 property is unset. The compact properties apply only while `compact` is set, so they are the way to tune a dense dropzone
 without re-pointing shared spacing tokens for everything else on the page. The drag accept/reject
 highlight on `[part='base'][data-drag-state='accept'|'reject']` is independently overridable too:
@@ -629,9 +644,13 @@ remains the sole interaction surface.
 `after`, `divider`, `handle` (the full interaction wrapper), and `input` (the transparent native
 range input).
 
-**CSS custom properties:** `--divider-width` (default `var(--lr-size-1px)`) controls the dividing
-line's thickness; `--handle-size` (default `var(--lr-icon-button-size)`) sizes the visible handle in
-both axes. The `dragging` CSS custom state is present only while a pointer gesture is active and is
+**CSS custom properties:** `--lr-image-comparer-divider-width` (default
+`var(--divider-width, var(--lr-size-1px))`) controls the dividing line's thickness, and
+`--lr-image-comparer-handle-size` (default `var(--handle-size, var(--lr-icon-button-size))`) sizes
+the visible handle in both axes. Those namespaced names are the ones to override: the bare
+Shoelace-compat `--divider-width`/`--handle-size` are retained as their fallback source, but an
+unprefixed custom property inherits, so setting one high up the tree silently retunes every other
+element below that reads a property of the same generic name. The `dragging` CSS custom state is present only while a pointer gesture is active and is
 cleared on pointer cancellation, blur, or disconnect.
 
 ```html
@@ -675,14 +694,18 @@ allocated inline size with a 16:9 aspect ratio by default (override `aspect-rati
 
 **Methods:** `zoomIn()` selects the nearest configured level above the current value;
 `zoomOut()` selects the nearest below it. The toolbar also accepts `+`/`=` and `-`/`_` while one
-of its controls has focus.
+of its controls has focus. `focus(options?)`, `blur()`, and `click()` forward to the internal
+iframe — the component's primary interactive surface, still programmatically focusable under
+`without-interaction` — rather than to the two-button zoom toolbar, which has no single primary
+action.
 
 **Slots:** `zoom-in-icon` and `zoom-out-icon` replace the decorative control glyphs. Their
 flattened subtrees are always inert and hidden from assistive technology, so use an SVG or glyph
 rather than a second interactive control; the native zoom buttons remain the sole focus and pointer
 actions.
 
-**Events:** native `load` and `error`, relayed exactly once from the current iframe generation as
+**Events:** internal `focus`/`blur` from the iframe are bridged as bubbling, composed host events;
+native `load` and `error` are relayed exactly once from the current iframe generation as
 non-bubbling, non-composed `Event` instances. Navigation/source-policy changes replace the iframe,
 so a late event from an earlier document is ignored; detached frames do not notify.
 
@@ -743,9 +766,15 @@ origin. The viewport accepts `+`/`=`, `-`/`_`, and `0`, without consuming keys f
 
 **Slots:** default — inspected content, ignored while `src` renders an image.
 
-**Events:** `lr-zoom-change` (`detail: { zoom }`).
+`focus(options?)`, `blur()`, and `click()` forward to the scrollable `viewport`, which is the
+component's own keyboard target — a bare host `.focus()` would otherwise be a silent no-op.
 
-**CSS parts:** `base`, `viewport`, `content`, `controls`, `zoom-out`, `zoom-in`, and `reset`.
+**Events:** `lr-zoom-change` (`detail: { zoom }`); internal `focus`/`blur` from the viewport are
+bridged as bubbling, composed host events.
+
+**CSS parts:** `base`, `viewport`, `content`, `controls`, `zoom-out`, `zoom-in`, and `reset`. The
+`reset` button's visible text is the live zoom percentage, locale-formatted and recomputed from
+`zoom` on every render (not a fixed "100%").
 
 **Themeable custom properties:** `--lr-pan-zoom-min-block-size` (default `var(--lr-size-10rem)`)
 and the read-only `--lr-pan-zoom-zoom`. The former `--lr-zoomable-frame-min-block-size` and
@@ -1365,7 +1394,10 @@ Declaratively animates one slotted element through the native Web Animations API
   exists); writable and forwarded when one exists. Non-finite numeric assignments are ignored.
 
 **Methods:** `start()` (sugar for `play = true` — named `start` because `play` is already a
-property), `pause()` (`play = false`), `finish()`, `cancel()`.
+property), `pause()` (`play = false`), `finish()`, `cancel()`. `cancel()` leaves the target reverted
+to its own CSS: the `play = false` that the resulting `lr-cancel` sets never re-pauses the now-idle
+`Animation`, which per the Web Animations API would un-cancel it back to keyframe zero and freeze the
+target there.
 
 **Events:** `lr-start` (a new animation was created and playback began/restarted), `lr-finish`
 (natural end, including the reduced-motion instant-finish path), `lr-cancel` (the public `cancel()`
@@ -1721,7 +1753,9 @@ promise/rejection (before the media mounts it returns an already-resolved promis
 error state and emits `lr-render-error`. `seek(seconds)` sets `currentTime` and forces an immediate
 `lr-time-change`. `search(query)` resolves the match count; `searchNext()`/`searchPrevious()` wrap
 and reveal the active match in the virtualized transcript without seeking playback; `clearSearch()`
-resets the query and match state.
+resets the query and match state. `focus(options?)`, `blur()`, and `click()` forward to the native
+`[part='media']` element, which carries `controls` and is therefore the player's primary focusable
+affordance.
 
 **Events:** `lr-play`, `lr-pause`, `lr-load` (`detail: { duration, kind }`), `lr-time-change`
 (`detail: { currentTime }`, throttled to at most 4/s while playing plus one extra per `seek()`),
@@ -1732,7 +1766,8 @@ found }`), `lr-search-change` (`detail: { query, matchCount, activeIndex }`), an
 `play`, `timeupdate`, and `volumechange`
 events are also relayed exactly once from the host as native `Event` instances. Like the original
 media notifications, these relays are non-bubbling, non-composed, and non-cancelable. The richer
-`lr-*` notifications above remain unchanged.
+`lr-*` notifications above remain unchanged. The native media element's `focus`/`blur` are
+additionally bridged as bubbling, composed host events.
 
 **CSS parts:** `base`, `media` (the native `<audio>`/`<video>` element), `toolbar`, `rate-select`,
 `timeline` (click-to-seek and arrow-key seeking), `timeline-marker` (one per `time-range` highlight;
@@ -1828,12 +1863,14 @@ instead of browser-name-gated.
 finite, clamped media state; `requestFullscreen()` and `exitFullscreen()` preserve the platform
 promise/rejection and reject with `NotSupportedError` when the capability is absent. `load()` is a
 Lyra extension that re-clones current light-DOM sources/tracks and restarts native resource
-selection under a fresh event generation.
+selection under a fresh event generation. `focus(options?)`, `blur()`, and `click()` forward to the
+play/pause control (absent, and therefore a no-op, under `controls="none"`).
 
 **Events:** native `ended`, `error`, `loadedmetadata`, `pause`, `play`, `timeupdate`, and
 `volumechange`, relayed exactly once from the host as native `Event` instances. They remain
 non-bubbling, non-composed, and non-cancelable. Scrubbing the custom timeline also dispatches an
-immediate host `timeupdate`, before a browser's eventual native seek notification.
+immediate host `timeupdate`, before a browser's eventual native seek notification. The internal
+play/pause control's `focus`/`blur` are additionally bridged as bubbling, composed host events.
 
 **Slots:** the default slot accepts direct `<source>` and `<track>` children;
 `controls-after-play`, `controls-start`, `exit-fullscreen-icon`, `fullscreen-icon`, `mute-icon`,
@@ -1850,6 +1887,11 @@ composition slots and may intentionally contain interactive controls.
 `caption-overlay`, `controls`, `controls-overlay`, `poster-overlay`, `poster-play-button`,
 `progress`, `thumbnail`, `timeline`, `timeline-indicator`, `timeline-thumb`, `timeline-track`,
 `video`, and `video-title-overlay`.
+
+The `progress` range input carries `aria-valuetext` as well as `aria-label` — a localized
+`{current} of {duration}` (key `avPlayerPosition`, shared with `lr-av-player`) built from the same
+locale-formatted clock times the visible elapsed/duration labels show, so a screen reader announces
+"1:07 of 5:00" instead of raw seconds.
 
 **Themeable custom properties:** `--controls-background` (default
 `var(--lr-color-overlay-strong)`), `--controls-color` (default `var(--lr-color-text)`), and
@@ -1899,9 +1941,12 @@ first.
 **Methods:** `goTo(index)` selects a finite integer direct-child index; invalid, fractional, and
 disabled indexes are inert. Calling it for the current index still emits `lr-video-change`, matching
 the mirrored contract. `next()` and `previous()` select the next or previous enabled child when one
-exists.
+exists. `focus(options?)`, `blur()`, and `click()` forward to the playlist row that currently owns
+the roving tab stop (falling back to the first enabled row), which is otherwise unreachable from
+outside the shadow root.
 
-**Events:** `lr-video-change`, bubbling and composed but non-cancelable, with exact detail
+**Events:** internal `focus`/`blur` from a playlist row are bridged as bubbling, composed host
+events. `lr-video-change` is bubbling and composed but non-cancelable, with exact detail
 `{ previousIndex, currentIndex, video }`. `video` is a fresh frozen plain-data snapshot with exact
 shape `{ title, poster, sources, tracks }`, not the live child element. `sources` contains frozen
 `{ src, type, media }` records for the child's direct `src` and `<source>` declarations; `tracks`

@@ -366,3 +366,63 @@ it('renders the interim marker visually hidden, not as visible text', async () =
   expect(rect.width, 'sr-only marker width').to.be.at.most(1);
   expect(rect.height, 'sr-only marker height').to.be.at.most(1);
 });
+
+/** The shared, light-DOM live region `acquireAnnouncementSink()` mounts in the host document.
+ *  A region rendered inside a component's own shadow root is not reliably announced (JAWS with
+ *  Firefox ignores one outright), so the announcement has to be observable *here*, not in the
+ *  component's shadow tree. */
+function politeSink(): HTMLElement | null {
+  return document.querySelector<HTMLElement>('[data-lr-live-region="polite"]');
+}
+
+function sinkMessages(): string[] {
+  return [...(politeSink()?.children ?? [])].map((child) => child.textContent!.trim());
+}
+
+it('keeps its own shadow role="log" non-live -- a shadow-root live region is not reliably announced', async () => {
+  const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
+  el.entries = [{ id: 'turn-1', text: 'final' }];
+  await el.updateComplete;
+  const log = el.shadowRoot!.querySelector('[part="log"]') as HTMLElement;
+  expect(log.getAttribute('role')).to.equal('log');
+  expect(log.getAttribute('aria-live')).to.equal('off');
+});
+
+it('announces a caption finalizing through the shared light-DOM live region, exactly once', async () => {
+  const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
+  await el.updateComplete;
+  expect(politeSink() !== null, 'the sink mounts on connect, ahead of any text').to.equal(true);
+
+  el.entries = [{ id: 'turn-1', speaker: 'You', text: 'partial', interim: true }];
+  await el.updateComplete;
+  expect(sinkMessages(), 'an interim caption is never announced').to.deep.equal([]);
+
+  el.entries = [{ id: 'turn-1', speaker: 'You', text: 'final text' }];
+  await el.updateComplete;
+  expect(sinkMessages()).to.deep.equal(['final text']);
+
+  // A later, unrelated update must not re-announce an entry already spoken.
+  el.entries = [
+    { id: 'turn-1', speaker: 'You', text: 'final text' },
+    { id: 'turn-2', speaker: 'You', text: 'next', interim: true },
+  ];
+  await el.updateComplete;
+  expect(sinkMessages()).to.deep.equal(['final text']);
+});
+
+it('never announces the entries it was mounted with -- only captions that finalize afterwards', async () => {
+  const el = (await fixture(html`
+    <lr-transcript-feed
+      .entries=${[
+        { id: 'turn-1', text: 'already said' },
+        { id: 'turn-2', text: 'also already said' },
+      ] as LyraTranscriptEntry[]}
+    ></lr-transcript-feed>
+  `)) as LyraTranscriptFeed;
+  await el.updateComplete;
+  expect(sinkMessages()).to.deep.equal([]);
+
+  el.entries = [...el.entries, { id: 'turn-3', text: 'brand new' }];
+  await el.updateComplete;
+  expect(sinkMessages()).to.deep.equal(['brand new']);
+});

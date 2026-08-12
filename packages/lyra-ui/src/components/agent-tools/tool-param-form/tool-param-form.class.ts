@@ -26,7 +26,7 @@ import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldMustBeBoolean, LYRA_DEFAULT_fieldMustBeInteger, LYRA_DEFAULT_fieldMustBeNumber, LYRA_DEFAULT_fieldMustBeOneOf, LYRA_DEFAULT_fieldMustBeString, LYRA_DEFAULT_fieldMustEqual, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_schemaMustBeObject, LYRA_DEFAULT_schemaPropertiesMustBeFlat, LYRA_DEFAULT_toolParamMissingProperty, LYRA_DEFAULT_unsupportedFieldType, LYRA_DEFAULT_valueMustBeSerializable } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldMustBeBoolean, LYRA_DEFAULT_fieldMustBeInteger, LYRA_DEFAULT_fieldMustBeNumber, LYRA_DEFAULT_fieldMustBeOneOf, LYRA_DEFAULT_fieldMustBeString, LYRA_DEFAULT_fieldMustEqual, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_schemaMustBeObject, LYRA_DEFAULT_schemaPropertiesMustBeFlat, LYRA_DEFAULT_toolParamMissingProperty, LYRA_DEFAULT_unsupportedFieldType, LYRA_DEFAULT_valueMustBeSerializable } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -211,8 +211,6 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     fieldMustBeBoolean: LYRA_DEFAULT_fieldMustBeBoolean,
     fieldMustBeInteger: LYRA_DEFAULT_fieldMustBeInteger,
     fieldMustBeNumber: LYRA_DEFAULT_fieldMustBeNumber,
@@ -221,8 +219,6 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     fieldMustEqual: LYRA_DEFAULT_fieldMustEqual,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
-    restore: LYRA_DEFAULT_restore,
     schemaMustBeObject: LYRA_DEFAULT_schemaMustBeObject,
     schemaPropertiesMustBeFlat: LYRA_DEFAULT_schemaPropertiesMustBeFlat,
     toolParamMissingProperty: LYRA_DEFAULT_toolParamMissingProperty,

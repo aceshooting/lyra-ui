@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { LyraSelectionToolbar, SelectionAction } from './selection-toolbar.class.js';
 import './selection-toolbar.js';
+import '../../forms/button/button.js';
 
 const meta: Meta = {
   title: 'Selection Toolbar',
@@ -89,6 +90,30 @@ export const ControlledActionRefreshFocus: Story = {
           (event.currentTarget as LyraSelectionToolbar).actions = ['ask'];
         }}
       ></lr-selection-toolbar>
+    </div>
+  `,
+};
+
+export const SlottedExtraAction: Story = {
+  name: 'Slotted extra action',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The `actions` slot renders after the four built-ins, inside the same `role="toolbar"` element and roving-tabindex group — so a product-specific action such as "Translate" joins Home/End/Arrow navigation without reimplementing the toolbar.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="min-block-size: 12rem; max-inline-size: 40rem;">
+      <p>Tab into the toolbar, then use Arrow/Home/End: Translate is the last stop.</p>
+      <lr-selection-toolbar
+        open
+        text="A selection with one product-specific extra action."
+        .rect=${new DOMRect(60, 150, 280, 28)}
+      >
+        <lr-button slot="actions" size="xs" appearance="plain">Translate</lr-button>
+      </lr-selection-toolbar>
     </div>
   `,
 };

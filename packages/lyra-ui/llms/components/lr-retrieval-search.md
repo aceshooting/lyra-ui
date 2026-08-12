@@ -18,7 +18,9 @@
 Query bar for a retrieval/RAG surface: query text, an active filter/scope chip row, a
 vector/keyword/hybrid mode selector, and loading/error/empty feedback. Emits `RetrievalQuery` on
 submit. Fully controlled; performs no retrieval itself. Composes `lr-input type="search"`,
-`lr-segmented`, `lr-chip`/`lr-chip-group`, `lr-spinner`, and a compact `lr-empty`.
+`lr-segmented`, `lr-chip`/`lr-chip-group`, `lr-spinner`, and a compact `lr-empty`. The query field,
+the mode selector and the submit button are all left on the shared `--lr-form-control-height` ladder
+at the same size tier, so the toolbar row renders as one flush line.
 
 **Properties:**
 - `query: string = ''` — the query text. The internal `lr-input` updates it optimistically as the

@@ -9,7 +9,7 @@ import { composedContains, deepActiveElement } from '../../../internal/overlay-m
 import { styles } from './random-content.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_items, LYRA_DEFAULT_open, LYRA_DEFAULT_randomContentPause, LYRA_DEFAULT_randomContentResume } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_randomContentPause, LYRA_DEFAULT_randomContentResume } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -18,6 +18,7 @@ export type LyraRandomContentMode = 'unique' | 'random' | 'sequence';
 
 export interface LyraRandomContentEventMap {
   'lr-content-change': CustomEvent<{ items: HTMLElement[] }>;
+  'lr-pause-change': CustomEvent<boolean>;
 }
 
 /**
@@ -64,6 +65,10 @@ export interface LyraRandomContentEventMap {
  * @event lr-content-change - The displayed selection changed (first render, `randomize()`,
  * a slot-change-triggered reselection, or an autoplay tick). `detail: { items }` is the exact
  * array of elements now shown, in display order. Not emitted when the eligible pool is empty.
+ * @event lr-pause-change - Fired when `paused` changes via the built-in pause/resume button, so a
+ * host mirroring or persisting that state stays in sync. Never fired for a host's own `paused`
+ * write. `detail: boolean` (the new `paused` value). Same name and shape as
+ * `<lr-poll-status>`'s identical affordance.
  * @csspart base - The wrapping element around the default slot.
  * @csspart pause-button - The autoplay pause/resume action.
  * @cssprop [--lr-animation-duration=300ms] - Mapped duration of the entrance animation.
@@ -83,10 +88,6 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    items: LYRA_DEFAULT_items,
-    open: LYRA_DEFAULT_open,
     randomContentPause: LYRA_DEFAULT_randomContentPause,
     randomContentResume: LYRA_DEFAULT_randomContentResume,
   };
@@ -598,8 +599,13 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     else queueMicrotask(finishFocusOut);
   };
 
+  // Emits only for the built-in button, never for a host's own `paused` write -- a controlled
+  // binding that mirrors `paused` back into this element would otherwise echo forever. Same
+  // contract and event name as <lr-poll-status>'s identical pause/resume affordance, so one host
+  // handler serves both siblings.
   private togglePaused = (): void => {
     this.paused = !this.paused;
+    this.emit('lr-pause-change', this.paused);
   };
 
   override render(): TemplateResult {

@@ -369,3 +369,38 @@ export const NarrowAllocation: Story = {
     `;
   },
 };
+
+/** An option can carry an optional `icon`: arbitrary Lit content rendered into the composed
+ *  `<lr-option>`'s own `start` slot as inert, `aria-hidden` chrome. It is a visual cue only — the
+ *  option's accessible name stays its `label`. */
+export const OptionIcons: Story = {
+  render: () => {
+    const dot = (color: string) => html`<span
+      style="display:inline-block;inline-size:var(--lr-space-s);block-size:var(--lr-space-s);border-radius:var(--lr-radius-pill);background:${color}"
+    ></span>`;
+    const filters: FilterBarFilterDefinition[] = [
+      {
+        id: 'status',
+        label: 'Status',
+        type: 'select',
+        placeholder: 'Any status',
+        options: [
+          { value: 'open', label: 'Open', icon: dot('var(--lr-color-success)') },
+          { value: 'in-progress', label: 'In progress', icon: dot('var(--lr-color-warning)') },
+          { value: 'closed', label: 'Closed', icon: dot('var(--lr-color-text-quiet)') },
+        ],
+      },
+      {
+        id: 'owner',
+        label: 'Owner',
+        type: 'combobox',
+        placeholder: 'Any owner',
+        options: [
+          { value: 'ada', label: 'Ada Lovelace', icon: dot('var(--lr-color-brand)') },
+          { value: 'grace', label: 'Grace Hopper', icon: dot('var(--lr-color-brand)') },
+        ],
+      },
+    ];
+    return html`<lr-filter-bar style="max-width: 48rem" .filters=${filters}></lr-filter-bar>`;
+  },
+};

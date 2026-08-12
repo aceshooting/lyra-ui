@@ -68,11 +68,14 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text-quiet);
   }
+  /* No inset here: the cluster is the third stacked child of the column-flex, center-aligned page
+     button and is positioned entirely by that flow. An inset on a position: static box has no
+     effect at all, so a trailing-edge offset declared here would be silently inert -- and giving
+     it effect (position: relative) would push a deliberately centered row off-centre. */
   lr-virtual-list::part(heat) {
     display: flex;
     align-items: center;
     gap: var(--lr-space-2xs);
-    inset-inline-end: var(--lr-space-xs);
   }
   lr-virtual-list::part(heat-dot) {
     inline-size: var(--lr-size-6px);

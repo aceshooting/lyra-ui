@@ -1,4 +1,5 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './swatch-picker.js';
 import type { LyraSwatchPicker } from './swatch-picker.js';
 import { styles } from './swatch-picker.styles.js';
@@ -583,5 +584,128 @@ describe('lr-swatch-picker', () => {
     )) as LyraSwatchPicker;
     expect(el.getAttribute('size')).to.equal('s');
     expect(el.size).to.equal('s');
+  });
+
+  describe('disabled', () => {
+    const disabledPicker = async () => {
+      const el = (await fixture(
+        html`<lr-swatch-picker disabled value="blue" .options=${options()}></lr-swatch-picker>`,
+      )) as LyraSwatchPicker;
+      await el.updateComplete;
+      return el;
+    };
+
+    it('defaults to enabled and reflects the attribute both ways', async () => {
+      const el = (await fixture(
+        html`<lr-swatch-picker .options=${options()}></lr-swatch-picker>`,
+      )) as LyraSwatchPicker;
+      expect(el.disabled).to.equal(false);
+      expect(swatches(el).every((button) => !button.disabled)).to.equal(true);
+      el.disabled = true;
+      await el.updateComplete;
+      expect(el.hasAttribute('disabled')).to.equal(true);
+      expect(swatches(el).every((button) => button.disabled)).to.equal(true);
+    });
+
+    it('disables every rendered swatch button and removes them from the tab sequence', async () => {
+      const el = await disabledPicker();
+      const buttons = swatches(el);
+      expect(buttons.length).to.equal(3);
+      expect(buttons.every((button) => button.disabled)).to.equal(true);
+      // A disabled <button> is not focusable, so the roving stop cannot be reached either.
+      buttons[0]!.focus();
+      expect(el.shadowRoot!.activeElement === buttons[0]).to.equal(false);
+    });
+
+    it('ignores arrow/Home/End navigation while disabled', async () => {
+      const el = await disabledPicker();
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      let changes = 0;
+      el.addEventListener('lr-change', () => changes++);
+      for (const key of ['ArrowRight', 'ArrowLeft', 'Home', 'End']) {
+        base.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, composed: true }));
+      }
+      await el.updateComplete;
+      expect(el.value).to.equal('blue');
+      expect(changes).to.equal(0);
+    });
+
+    it('makes host click() inert while disabled', async () => {
+      const el = await disabledPicker();
+      let changes = 0;
+      el.addEventListener('lr-change', () => changes++);
+      el.click();
+      await el.updateComplete;
+      expect(changes).to.equal(0);
+      expect(el.value).to.equal('blue');
+    });
+
+    it('dims the swatches and shows a not-allowed cursor', async () => {
+      const el = await disabledPicker();
+      const button = swatches(el)[0]!;
+      const style = getComputedStyle(button);
+      expect(Number(style.opacity) < 1, 'swatch must be dimmed').to.equal(true);
+      expect(style.cursor).to.equal('not-allowed');
+    });
+
+    it('drops the hover lift while disabled', async () => {
+      // Rendered result, not stylesheet text: a hover rule that never fires is invisible to a
+      // text match. The third (unselected) swatch is used so the aria-checked scale can't mask it.
+      const enabled = (await fixture(
+        html`<lr-swatch-picker value="blue" .options=${options()}></lr-swatch-picker>`,
+      )) as LyraSwatchPicker;
+      await enabled.updateComplete;
+      const restingTransform = getComputedStyle(
+        swatches(enabled)[2]!.querySelector('[part="swatch-fill"]') as HTMLElement,
+      ).transform;
+
+      const hoverFillTransform = async (el: LyraSwatchPicker) => {
+        const button = swatches(el)[2]!;
+        const box = button.getBoundingClientRect();
+        await sendMouse({
+          type: 'move',
+          position: [Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2)],
+        });
+        // Real timers (fake ones don't work under wtr): let the scale transition actually start
+        // before sampling, with plenty of margin over --lr-transition-fast.
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        return getComputedStyle(button.querySelector('[part="swatch-fill"]') as HTMLElement)
+          .transform;
+      };
+
+      try {
+        expect(await hoverFillTransform(enabled), 'enabled hover must lift').to.not.equal(
+          restingTransform,
+        );
+        await resetMouse();
+        const el = await disabledPicker();
+        expect(await hoverFillTransform(el), 'disabled hover must not lift').to.equal(
+          restingTransform,
+        );
+      } finally {
+        await resetMouse();
+      }
+    });
+
+    it('unset-regression: an enabled picker still selects by keyboard and click', async () => {
+      const el = (await fixture(
+        html`<lr-swatch-picker value="blue" .options=${options()}></lr-swatch-picker>`,
+      )) as LyraSwatchPicker;
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      base.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }),
+      );
+      await el.updateComplete;
+      expect(el.value).to.equal('green');
+      swatches(el)[2]!.click();
+      await el.updateComplete;
+      expect(el.value).to.equal('red');
+    });
+
+    it('is accessible while disabled', async () => {
+      const el = await disabledPicker();
+      await expect(el).to.be.accessible();
+    });
   });
 });

@@ -21,7 +21,7 @@ import { styles } from './tree-item.styles.js';
 import { TREE_MAX_RENDER_DEPTH, type TreeIdentityContext, type TreeItem, type TreeSelection } from './tree-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_open, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Internal slot nested `<lr-tree-item>` children are moved into, so the default slot can stay the
@@ -155,12 +155,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
-    item: LYRA_DEFAULT_item,
-    open: LYRA_DEFAULT_open,
-    restore: LYRA_DEFAULT_restore,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

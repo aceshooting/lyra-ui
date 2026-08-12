@@ -27,8 +27,10 @@ Set `href` to a safe link URL and the root renders as a real `<a part="base" hre
 link styled as a button (e.g. a CTA). Native navigation is then the activation, so the submit/reset
 handling and `type` have no effect in that mode. A disabled link button (its own `disabled` or an
 ancestor `<fieldset disabled>`) renders the anchor with `aria-disabled="true"` and **no `href`**, so
-it is neither focusable nor navigable; an unsafe/unparseable `href` falls back to the native
-`<button>`.
+it is neither focusable nor navigable; it also dims to `--lr-opacity-disabled` with a `not-allowed`
+cursor and no hover/press feedback, exactly like the disabled `<button>` path (an `<a>` can never
+match `:disabled`, so that arm of the styling keys off `aria-disabled` instead). An
+unsafe/unparseable `href` falls back to the native `<button>`.
 
 **Properties:**
 

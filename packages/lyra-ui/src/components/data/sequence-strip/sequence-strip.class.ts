@@ -8,7 +8,7 @@ import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { styles } from './sequence-strip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_items, LYRA_DEFAULT_sequenceStripCategoryCount, LYRA_DEFAULT_sequenceStripEmpty } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_sequenceStripCategoryCount, LYRA_DEFAULT_sequenceStripEmpty } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -73,7 +73,6 @@ export class LyraSequenceStrip extends LyraElement {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    items: LYRA_DEFAULT_items,
     sequenceStripCategoryCount: LYRA_DEFAULT_sequenceStripCategoryCount,
     sequenceStripEmpty: LYRA_DEFAULT_sequenceStripEmpty,
   };

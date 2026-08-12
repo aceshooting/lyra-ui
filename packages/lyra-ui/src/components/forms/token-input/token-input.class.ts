@@ -23,7 +23,7 @@ import {
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_tokenInputEditWithContext, LYRA_DEFAULT_tokenInputRequired } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_tokenInputEditWithContext, LYRA_DEFAULT_tokenInputRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -171,15 +171,8 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
-    open: LYRA_DEFAULT_open,
-    remove: LYRA_DEFAULT_remove,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
-    restore: LYRA_DEFAULT_restore,
-    search: LYRA_DEFAULT_search,
     tokenInputEditWithContext: LYRA_DEFAULT_tokenInputEditWithContext,
     tokenInputRequired: LYRA_DEFAULT_tokenInputRequired,
   };

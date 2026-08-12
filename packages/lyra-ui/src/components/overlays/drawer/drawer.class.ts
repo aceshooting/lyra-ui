@@ -3,11 +3,6 @@ import type { PropertyValues } from 'lit';
 import { LyraDialog } from '../dialog/dialog.class.js';
 import type { RegisteredAnimationSpec } from '../../../internal/registered-animation.js';
 import { styles } from './drawer.styles.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export type LyraDrawerPlacement = 'start' | 'end' | 'top' | 'bottom';
 
@@ -59,16 +54,6 @@ export type LyraDrawerPlacement = 'start' | 'end' | 'top' | 'bottom';
  * @since 4.0.0
  */
 export class LyraDrawer extends LyraDialog {
-  // GENERATED DEFAULT-STRING SLICE: START
-  /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
-  };
-  // GENERATED DEFAULT-STRING SLICE: END
-
   static override styles = [LyraDialog.styles, styles];
 
   /** Which edge the drawer slides in from. `end` by default, matching `wa-drawer`; it used to be

@@ -103,6 +103,47 @@ describe('lr-test-results', () => {
     expect(region.textContent).to.equal('1 ok, 0 ko, 0 skip');
   });
 
+  it('renders correct per-status summary and filter counts across multiple suites (single-pass status-count regression)', async () => {
+    const multiSuites: TestSuiteResult[] = [
+      {
+        id: 's1',
+        name: 'suite one',
+        tests: [
+          { id: 't1', name: 'a', status: 'passed' },
+          { id: 't2', name: 'b', status: 'passed' },
+          { id: 't3', name: 'c', status: 'failed' },
+          { id: 't4', name: 'd', status: 'skipped' },
+        ],
+      },
+      {
+        id: 's2',
+        name: 'suite two',
+        tests: [
+          { id: 't5', name: 'e', status: 'passed' },
+          { id: 't6', name: 'f', status: 'failed' },
+          { id: 't7', name: 'g', status: 'running' },
+          { id: 't8', name: 'h', status: 'running' },
+        ],
+      },
+    ];
+    const el = (await fixture(html`<lr-test-results .suites=${multiSuites}></lr-test-results>`)) as LyraTestResults;
+    await el.updateComplete;
+
+    const countFor = (status: string): string =>
+      el.shadowRoot!.querySelector(`[part="count"][data-status="${status}"]`)!.textContent ?? '';
+    expect(countFor('passed')).to.include('3');
+    expect(countFor('failed')).to.include('2');
+    expect(countFor('skipped')).to.include('1');
+    expect(countFor('running')).to.include('2');
+
+    const filterCountFor = (status: string): string =>
+      el.shadowRoot!.querySelector(`[part="filter-toggle"][data-status="${status}"]`)!.textContent ?? '';
+    expect(filterCountFor('passed')).to.include('3');
+    expect(filterCountFor('failed')).to.include('2');
+    expect(filterCountFor('skipped')).to.include('1');
+    expect(filterCountFor('running')).to.include('2');
+  });
+
   it('renders visible localized counts per status, never color-only', async () => {
     const el = (await fixture(html`<lr-test-results .suites=${suites}></lr-test-results>`)) as LyraTestResults;
     await el.updateComplete;
@@ -315,6 +356,25 @@ describe('lr-test-results', () => {
     const slot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="detail-t2"]');
     expect(slot?.assignedElements().length ?? 0).to.equal(1);
     expect(slot?.assignedElements()[0]?.textContent).to.equal('legacy detail');
+  });
+
+  it('excludes the generic detail-{testId} legacy slot when the test id is duplicated across suites (testIdCounts regression)', async () => {
+    const duplicateSuites: TestSuiteResult[] = [
+      { id: 'suite-one', name: 'One', tests: [{ id: 'dup', name: 'first', status: 'passed' }] },
+      { id: 'suite-two', name: 'Two', tests: [{ id: 'dup', name: 'second', status: 'passed' }] },
+    ];
+    const el = (await fixture(html`
+      <lr-test-results .suites=${duplicateSuites}>
+        <div slot="detail-dup">legacy detail</div>
+      </lr-test-results>
+    `)) as LyraTestResults;
+    await el.updateComplete;
+
+    // Neither row is failed, and `detail-dup` is only eligible as a legacy fallback when the test
+    // id is globally unique -- it is not here, so no `<slot name="detail-dup">` is even mounted
+    // and no expand toggle is rendered for either row.
+    expect(el.shadowRoot!.querySelectorAll('slot[name="detail-dup"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="test-expand-toggle"]').length).to.equal(0);
   });
 
   it('discovers detail content appended after mount for a previously non-expandable test', async () => {

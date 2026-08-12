@@ -567,6 +567,15 @@ jump-to-latest action of its own.
 
 **CSS parts:** `base`, `header`, `label`, `duration`, `toggle`, `body`
 
+`[part="body"]` is unconditionally `tabindex="0"`: it is a capped-height, independently scrollable
+region whose content (plain text, a non-interactive `<lr-streaming-text>`) is often not focusable
+itself, so without its own tab stop a keyboard user could never scroll it — the same convention
+`<lr-code-block>`'s `[part="body"]` and `<lr-virtual-list>`'s `[part="base"]` follow. It therefore
+carries both affordances that go with a real tab stop: an inward `--lr-focus-ring-*` outline while
+`:focus-visible` (inward so the region's own `overflow` cannot clip it), and a subtler
+`--lr-color-border` outline on pointer hover, so a mouse user also sees that the transcript is a
+separately scrollable region.
+
 **Themeable custom properties:** `--lr-thinking-panel-max-block-size` (default
 `var(--lr-size-16rem)`, i.e. `16rem` — consumer-overridable cap on how tall `[part="body"]` grows
 before it scrolls internally; not
@@ -1254,7 +1263,9 @@ cannot leave the component with no `tabindex="0"` stop.
 
 **Themeable custom properties:** `--lr-span-waterfall-name-width` (default `8rem`),
 `--lr-span-waterfall-stripe-speed` (a `running` span's striped-bar animation duration; defaults to
-`--lr-transition-ambient`), and `--lr-span-waterfall-row-active-bg` (default
+`--lr-duration-ambient` — the bare-duration token, not the `--lr-transition-ambient`
+duration+easing shorthand, which is invalid in an `animation-duration` slot), and
+`--lr-span-waterfall-row-active-bg` (default
 `var(--lr-color-brand-quiet)`) — the background of the active (`activeSpanId`) row.
 Status-scoped bar hooks are `--lr-span-waterfall-success-color` (default
 `var(--lr-color-success)`), `--lr-span-waterfall-error-color` (default
@@ -1350,7 +1361,15 @@ codes. `maxScrollback: number = 5000` (attribute `max-scrollback`), `follow: boo
 (reflected) and `downloadable: boolean = false` (reflected) toggle the toolbar buttons, `filename:
 string = 'terminal.log'`, `announceOutput: boolean = false` (attribute `announce-output`),
 `accessibleLabel: string = ''` (attribute `aria-label`), `highlights: LyraHighlight[] = []` (attribute:
-false), and `activeHighlightId: string | null = null` (attribute: false). `anchorKinds:
+false), and `activeHighlightId: string | null = null` (attribute: false).
+`compact: boolean = false` (reflected) — tightens `[part="toolbar"]`'s padding and gap and each
+rendered line's inline padding for a terminal embedded in an already-padded transcript row, the same
+convention `<lr-task-list>` and `<lr-thinking-panel>` use; purely a density knob, the card border and
+background stay. `frame: LyraFrame = 'card'` (reflected) — container treatment in the library-wide
+`frame` vocabulary (`'card' | 'plain'`); `'plain'` removes `[part="base"]`'s border, corner radius,
+and raised surface so a terminal nested inside a container that already draws a border (an agent-run
+panel, a message bubble) doesn't double it, while keeping the toolbar/log divider and whichever
+regular or compact padding applies. `anchorKinds:
 LyraAnchor['kind'][] = ['line-range']` is readonly — a scrollback buffer addresses positions by line number, so `line-range` is the
 only kind `scrollToAnchor()` resolves; `page`/`text-quote`/`region` belong to the paginated document
 viewers, not here. `<lr-terminal>` is not registered in the document-renderer registry, so this field
@@ -1395,7 +1414,13 @@ viewport's block size; not declared on `:host`, so it is inherited from the host
 `--lr-terminal-highlight-warning-bg` (default `var(--lr-color-warning-quiet)`),
 `--lr-terminal-highlight-danger-bg` (default `var(--lr-color-danger-quiet)`), and
 `--lr-terminal-highlight-neutral-bg` (default `var(--lr-color-surface)`) — the background of a
-`highlights[]` entry of the matching `tone`. Each is decoupled from the identical shared token it
+`highlights[]` entry of the matching `tone`. `--lr-terminal-compact-toolbar-padding` (default
+`var(--lr-space-2xs) var(--lr-space-xs)`) and `--lr-terminal-compact-toolbar-gap` (default
+`var(--lr-space-2xs)`) retune `[part="toolbar"]`'s padding and button gap while `compact`, and
+`--lr-terminal-compact-line-padding-inline` (default `var(--lr-space-xs)`) retunes each rendered
+line's inline padding while `compact` — all three sit behind inline `var()` fallbacks, so a
+transcript can retune every nested terminal at once without restating the rules. Each highlight
+background is decoupled from the identical shared token it
 falls back to (e.g. `accent`'s `--lr-color-brand-quiet` is also the copy/download-button hover tint)
 so retinting one tone doesn't repaint the other surface reading that token, and from any
 `::part('line')` stylesheet override — the background is applied inline, so a stylesheet rule can't
@@ -2353,19 +2378,38 @@ unless explicitly enabled in `resource.permissions`.
   title precedence is host `aria-label`, `label`, resource title, then the localized fallback.
 
 **Methods:** `postHostContext(context: unknown): void` posts host state into the active frame;
-`postToolResult(requestId: string, result?: unknown, error?: string): void` resolves a prior tool
-request. Both are no-ops before a frame exists.
+`postToolResult(requestId: string, result?: unknown, error?: string, frameGeneration?: number): void`
+resolves a prior tool request. Both are no-ops before a frame exists.
 
 **Exported types:** `McpAppResource`, `McpAppCsp`, `McpAppPermissions`,
 `McpAppToolCallDetail`, and `LyraMcpAppEventMap`.
 
-**Events:** `lr-mcp-ready` (`{ uri }`), `lr-mcp-tool-call` (`{ requestId?, name, args }`),
-`lr-mcp-send-message` (`{ message }`), `lr-mcp-open-link` (`{ href }`), `lr-mcp-log`
+**Events:** `lr-mcp-ready` (`{ uri }`), `lr-mcp-tool-call`
+(`{ requestId?, name, args, frameGeneration }`), `lr-mcp-send-message` (`{ message }`),
+`lr-mcp-open-link` (`{ href }`), `lr-mcp-log`
 (`{ level, value }`), and `lr-mcp-resize` (`{ height }`). These are host-authorized requests; the
 component does not execute tools, send messages, or navigate itself.
 
 Changing `resource` mounts a fresh iframe/window generation; messages from the prior
 `contentWindow` are ignored even when two opaque-origin inline documents otherwise look alike.
+
+The host-to-frame direction is correlated the same way. `lr-mcp-tool-call`'s
+`detail.frameGeneration` is an opaque id for the frame generation that raised the request; passing
+it back as `postToolResult()`'s fourth argument makes the component drop a reply whose generation no
+longer matches the mounted frame. That matters because a tool call is inherently asynchronous — the
+host does real work (an API call, a filesystem read) before replying, and a conversation UI can swap
+`resource` on the same element meanwhile, so an uncorrelated reply would otherwise be delivered into
+a completely unrelated app. The argument is optional and additive: omitting it means "no correlation
+available" and posts to whichever frame is currently mounted, exactly as before.
+
+```ts
+element.addEventListener('lr-mcp-tool-call', async (event) => {
+  const { requestId, name, args, frameGeneration } = event.detail;
+  if (!requestId) return;
+  const result = await runTool(name, args);
+  element.postToolResult(requestId, result, undefined, frameGeneration);
+});
+```
 Changing only `height`/`maxHeight` updates frame geometry without returning an already-ready frame
 to its loading state. The initial host context reports `effectiveLocale`, so inherited/document
 locale and per-element locale overrides follow the same precedence as the rest of Lyra UI.

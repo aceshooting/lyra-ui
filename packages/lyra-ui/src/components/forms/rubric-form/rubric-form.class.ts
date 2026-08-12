@@ -26,7 +26,7 @@ import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_rubricSkip, LYRA_DEFAULT_rubricSubmit, LYRA_DEFAULT_rubricSubmitAndNext, LYRA_DEFAULT_unsupportedFieldType } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_rubricSkip, LYRA_DEFAULT_rubricSubmit, LYRA_DEFAULT_rubricSubmitAndNext, LYRA_DEFAULT_unsupportedFieldType } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface RubricKeyOption {
@@ -171,12 +171,8 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
-    restore: LYRA_DEFAULT_restore,
     rubricSkip: LYRA_DEFAULT_rubricSkip,
     rubricSubmit: LYRA_DEFAULT_rubricSubmit,
     rubricSubmitAndNext: LYRA_DEFAULT_rubricSubmitAndNext,

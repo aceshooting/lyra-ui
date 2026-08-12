@@ -42,7 +42,7 @@ import {
 } from '../../../internal/option-selection.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_comboboxCreate, LYRA_DEFAULT_comboboxLabel, LYRA_DEFAULT_comboboxLoadError, LYRA_DEFAULT_comboboxOverflow, LYRA_DEFAULT_comboboxRequired, LYRA_DEFAULT_comboboxSelectedOverflow, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_comboboxCreate, LYRA_DEFAULT_comboboxLabel, LYRA_DEFAULT_comboboxLoadError, LYRA_DEFAULT_comboboxOverflow, LYRA_DEFAULT_comboboxRequired, LYRA_DEFAULT_comboboxSelectedOverflow, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_removeWithContext } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -262,22 +262,16 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     clear: LYRA_DEFAULT_clear,
-    collapse: LYRA_DEFAULT_collapse,
     comboboxCreate: LYRA_DEFAULT_comboboxCreate,
     comboboxLabel: LYRA_DEFAULT_comboboxLabel,
     comboboxLoadError: LYRA_DEFAULT_comboboxLoadError,
     comboboxOverflow: LYRA_DEFAULT_comboboxOverflow,
     comboboxRequired: LYRA_DEFAULT_comboboxRequired,
     comboboxSelectedOverflow: LYRA_DEFAULT_comboboxSelectedOverflow,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     loading: LYRA_DEFAULT_loading,
     noMatches: LYRA_DEFAULT_noMatches,
-    open: LYRA_DEFAULT_open,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
-    restore: LYRA_DEFAULT_restore,
-    search: LYRA_DEFAULT_search,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

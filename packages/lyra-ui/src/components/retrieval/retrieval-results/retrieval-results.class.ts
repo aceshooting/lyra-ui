@@ -12,7 +12,7 @@ import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_open, LYRA_DEFAULT_retrievalResultsSelectRow, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_retrievalResultsSelectRow, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -30,7 +30,7 @@ export interface LyraRetrievalResultsEventMap {
   'lr-chunk-open': CustomEvent<{ id: string; sourceId: string; anchor?: DocumentLocator }>;
 }
 
-export type RetrievalResultsGrouping = 'source' | 'none';
+export type RetrievalResultsGrouping = 'source' | 'custom' | 'none';
 export type RetrievalResultsPresentation = 'compact' | 'expanded';
 
 /** `RetrievalChunk` -> `lr-chunk-inspector`'s own `LyraChunk` display-row shape, per the mapping
@@ -98,8 +98,8 @@ function safeScore(score: number): number {
  * scroll-near-bottom detection while virtualized, or the built-in `[part="load-more"]` button
  * otherwise. Only ever fires while `has-more` is true and `loading` is false.
  * @event lr-chunk-open - A row's title/open button was activated, forwarded verbatim from the
- * per-row `<lr-chunk-inspector>`'s own `lr-chunk-open`. `detail: { id, sourceId }` — the event a
- * host routes into `<lr-document-viewer>`.
+ * per-row `<lr-chunk-inspector>`'s own `lr-chunk-open`. `detail: { id, sourceId, anchor? }` — the
+ * event a host routes into `<lr-document-viewer>`.
  * @csspart base - The outer container and programmatic focus fallback when a controlled
  * collection/state transition removes every focused result action.
  * @csspart error - The neutral, visible error message shown while `error` is non-empty. New
@@ -158,11 +158,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     ...super.defaultStrings,
     chunkInspectorEmpty: LYRA_DEFAULT_chunkInspectorEmpty,
     chunkInspectorLabel: LYRA_DEFAULT_chunkInspectorLabel,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     loadMore: LYRA_DEFAULT_loadMore,
-    loading: LYRA_DEFAULT_loading,
-    open: LYRA_DEFAULT_open,
     retrievalResultsSelectRow: LYRA_DEFAULT_retrievalResultsSelectRow,
     untitledSource: LYRA_DEFAULT_untitledSource,
   };
@@ -189,8 +185,23 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   @property() sort: 'score' | 'none' = 'score';
 
   /** `'source'` buckets rows under a header per `source.id` (always rendered through the internal
-   *  `<lr-virtual-list>`, regardless of `virtualize-at`); `'none'` (default) is a flat ranked list. */
+   *  `<lr-virtual-list>`, regardless of `virtualize-at`); `'custom'` buckets them under whatever key
+   *  `groupBy` returns; `'none'` (default) is a flat ranked list. */
   @property() grouping: RetrievalResultsGrouping = 'none';
+
+  /** `grouping="custom"`: derives an arbitrary group id for every visible chunk (a date bucket, a
+   *  relevance tier, a domain-specific bucket). Left unset, `'custom'` degrades to a flat list
+   *  rather than inventing a key, so the built-in dedup/sort/virtualization pipeline stays usable
+   *  either way. Mirrors `<lr-thread-list>`'s identical escape hatch. */
+  @property({ attribute: false }) groupBy?: (chunk: RetrievalChunk) => string;
+
+  /** `grouping="custom"`: renders a group's header label from its id and the chunks in it. Left
+   *  unset, the group id is shown verbatim. */
+  @property({ attribute: false }) groupLabel?: (id: string, chunks: RetrievalChunk[]) => string;
+
+  /** `grouping="custom"`: explicit group-id order, or a comparator. Ids missing from an array
+   *  follow in their first-seen order. */
+  @property({ attribute: false }) groupOrder?: string[] | ((a: string, b: string) => number);
 
   /** `'expanded'` (default) shows each chunk's full `<lr-chunk-inspector>` row (score bar, text
    *  preview with its own expand toggle) plus any `metadata`; `'compact'` shows title + score bar
@@ -230,6 +241,11 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   private focusRestoreGeneration = 0;
   private isMounting = true;
   private errorAnnouncementSink?: AnnouncementSink;
+  // Memoizes `computeProcessedChunks()` (dedup-build + sort + group) for the current render cycle.
+  // `willUpdate()` refreshes it exactly once whenever an input it actually depends on (`chunks`,
+  // `dedupe`, `sort`, `grouping`) changed, so `updated()` and `render()` each read the same
+  // already-computed result instead of independently repeating the full dedup/sort/group work.
+  private processedChunksCache?: { chunks: RetrievalChunk[]; groups: VirtualListGroup[] };
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -277,11 +293,28 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    // Only the dedup/sort/group inputs actually affect the dedup-build + sort + group pipeline --
+    // an unrelated update (e.g. `selectedIds`, `presentation`) leaves the cache as-is.
+    if (
+      this.processedChunksCache === undefined ||
+      changed.has('chunks') ||
+      changed.has('dedupe') ||
+      changed.has('sort') ||
+      changed.has('grouping') ||
+      changed.has('groupBy') ||
+      changed.has('groupLabel') ||
+      changed.has('groupOrder')
+    ) {
+      this.processedChunksCache = this.computeProcessedChunks();
+    }
     if (
       !changed.has('chunks') &&
       !changed.has('dedupe') &&
       !changed.has('sort') &&
       !changed.has('grouping') &&
+      !changed.has('groupBy') &&
+      !changed.has('groupLabel') &&
+      !changed.has('groupOrder') &&
       !changed.has('presentation') &&
       !changed.has('selectable') &&
       !changed.has('virtualizeAt') &&
@@ -382,26 +415,61 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     return [...byId.values()];
   }
 
+  // Reads the memoized result `willUpdate()` refreshes -- always fresh by the time `updated()` or
+  // `render()` runs, since `willUpdate()` always runs first in the same update cycle. The
+  // `??=` fallback only matters before the component's first `willUpdate()` has ever run (e.g. a
+  // direct call from a test), so it can never observably return stale data.
   private get processedChunks(): { chunks: RetrievalChunk[]; groups: VirtualListGroup[] } {
+    return (this.processedChunksCache ??= this.computeProcessedChunks());
+  }
+
+  private computeProcessedChunks(): { chunks: RetrievalChunk[]; groups: VirtualListGroup[] } {
     const deduped = this.dedupedChunks;
     const sorted = this.sort === 'score' ? [...deduped].sort((a, b) => safeScore(b.score) - safeScore(a.score)) : deduped;
-    if (this.grouping !== 'source') return { chunks: sorted, groups: [] };
+    if (this.grouping === 'source') {
+      return this.bucketed(sorted, (chunk) => chunk.source.id, (_id, groupChunks) =>
+        groupChunks[0]!.source.name || this.localize('untitledSource'),
+      );
+    }
+    // An unset groupBy degrades to the flat list rather than collapsing every row into one invented
+    // bucket, so switching grouping on before the callback is wired changes nothing visible.
+    if (this.grouping === 'custom' && this.groupBy) {
+      const groupBy = this.groupBy;
+      return this.bucketed(sorted, groupBy, (id, groupChunks) => this.groupLabel?.(id, groupChunks) ?? id);
+    }
+    return { chunks: sorted, groups: [] };
+  }
 
-    const bySource = new Map<string, RetrievalChunk[]>();
-    const order: string[] = [];
+  /** Group-id order: a comparator sorts the first-seen ids; an explicit array leads, with any
+   *  first-seen id it omits following in its own order (never dropped, which would silently hide
+   *  rows). */
+  private orderedGroupKeys(grouped: Map<string, RetrievalChunk[]>): string[] {
+    const firstSeen = [...grouped.keys()];
+    if (this.grouping !== 'custom' || !this.groupOrder) return firstSeen;
+    if (typeof this.groupOrder === 'function') return firstSeen.sort(this.groupOrder);
+    const ordered = [...new Set(this.groupOrder)].filter((id) => grouped.has(id));
+    const listed = new Set(ordered);
+    return [...ordered, ...firstSeen.filter((id) => !listed.has(id))];
+  }
+
+  private bucketed(
+    sorted: RetrievalChunk[],
+    keyOf: (chunk: RetrievalChunk) => string,
+    labelOf: (id: string, chunks: RetrievalChunk[]) => string,
+  ): { chunks: RetrievalChunk[]; groups: VirtualListGroup[] } {
+    const grouped = new Map<string, RetrievalChunk[]>();
     for (const chunk of sorted) {
-      const key = chunk.source.id;
-      if (!bySource.has(key)) {
-        bySource.set(key, []);
-        order.push(key);
-      }
-      bySource.get(key)!.push(chunk);
+      const key = keyOf(chunk);
+      const existing = grouped.get(key);
+      if (existing) existing.push(chunk);
+      else grouped.set(key, [chunk]);
     }
     const rows: RetrievalChunk[] = [];
     const groups: VirtualListGroup[] = [];
-    for (const key of order) {
-      const groupChunks = bySource.get(key)!;
-      groups.push({ key, label: groupChunks[0]!.source.name || this.localize('untitledSource'), startIndex: rows.length });
+    for (const key of this.orderedGroupKeys(grouped)) {
+      const groupChunks = grouped.get(key);
+      if (!groupChunks || groupChunks.length === 0) continue;
+      groups.push({ key, label: labelOf(key, groupChunks), startIndex: rows.length });
       rows.push(...groupChunks);
     }
     return { chunks: rows, groups };
@@ -523,7 +591,10 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
       return html`<div part="base" tabindex="-1"><lr-empty part="empty"><span slot="heading">${this.localize('chunkInspectorEmpty')}</span></lr-empty></div>`;
     }
 
-    const useVirtualList = this.grouping === 'source' || processed.chunks.length > this.effectiveVirtualizeAt;
+    // Any grouped render goes through the virtual list regardless of `virtualize-at` -- it owns the
+    // sticky group headers -- so this reads the computed groups rather than re-testing `grouping`,
+    // which would have to be extended again for every new grouping mode.
+    const useVirtualList = processed.groups.length > 0 || processed.chunks.length > this.effectiveVirtualizeAt;
     return html`
       <div part="base" role="group" tabindex="-1" aria-label=${label}>
         ${useVirtualList

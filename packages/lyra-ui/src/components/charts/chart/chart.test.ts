@@ -4267,6 +4267,63 @@ describe('coverage: legend/tooltip/table label fallbacks and misc guards', () =>
     expect((el as any).buildConfig().options.plugins.legend.position).to.equal('right');
   });
 
+  it('renders the DOM legend on the physical side each legend-position names, in both directions', async () => {
+    const wrapper = await fixture(
+      html`<div style="inline-size: 640px"><lr-chart legend-position="start"></lr-chart></div>`,
+    );
+    const el = wrapper.querySelector('lr-chart') as LyraChart;
+    el.labels = ['A'];
+    el.datasets = [{ label: 'x', data: [1] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null, 'chart.js never initialized', {
+      timeout: 5000,
+    });
+    await el.updateComplete;
+
+    // A rendered comparison, not the stylesheet text or the (never-drawn) canvas legend config:
+    // the CSS grid mirrors its own column order under RTL, so only the painted geometry proves
+    // which physical edge the legend actually landed on.
+    const legendStart = (): number =>
+      (el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement).getBoundingClientRect().left;
+    const plotStart = (): number =>
+      (el.shadowRoot!.querySelector('[part="plot"]') as HTMLElement).getBoundingClientRect().left;
+    const setPosition = async (value: string): Promise<void> => {
+      el.legendPosition = value as typeof el.legendPosition;
+      await el.updateComplete;
+    };
+
+    expect(legendStart() < plotStart(), 'ltr + start must paint the legend at the left').to.equal(
+      true,
+    );
+    await setPosition('end');
+    expect(legendStart() > plotStart(), 'ltr + end must paint the legend at the right').to.equal(
+      true,
+    );
+    await setPosition('left');
+    expect(legendStart() < plotStart(), 'ltr + left must paint the legend at the left').to.equal(
+      true,
+    );
+    await setPosition('right');
+    expect(legendStart() > plotStart(), 'ltr + right must paint the legend at the right').to.equal(
+      true,
+    );
+
+    wrapper.setAttribute('dir', 'rtl');
+    await aTimeout(0);
+    await setPosition('start');
+    expect(legendStart() > plotStart(), 'rtl + start must paint the legend at the right').to.equal(
+      true,
+    );
+    await setPosition('end');
+    expect(legendStart() < plotStart(), 'rtl + end must paint the legend at the left').to.equal(
+      true,
+    );
+    await setPosition('left');
+    expect(legendStart() < plotStart(), 'rtl + left must stay physically left').to.equal(true);
+    await setPosition('right');
+    expect(legendStart() > plotStart(), 'rtl + right must stay physically right').to.equal(true);
+  });
+
   it('tableStackTotalLabel() falls back to localized primary/secondary axis names when no explicit axis label is set', () => {
     const el = document.createElement('lr-chart') as LyraChart;
     expect((el as any).tableStackTotalLabel('y', 2)).to.equal('Primary axis total');

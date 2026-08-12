@@ -89,4 +89,44 @@ export const styles = css`
   [part='lock'][aria-pressed='true'] {
     color: var(--lr-flow-controls-lock-active-color, var(--lr-color-brand));
   }
+  /* The default slot's own contract: a consumer's button joins the cluster and is "styled by the
+     same group". None of the rules above can deliver that -- every one of them is either a
+     [part='...'] selector (a light-DOM button carries no part attribute) or a descendant selector
+     inside a shadow stylesheet, and per CSS Scoping neither form ever matches slotted content
+     wherever it visually renders. ::slotted() is the only selector that crosses that boundary, and
+     it takes a COMPOUND argument, so each state goes inside the parentheses rather than after
+     them. It matches only the slotted element itself, never its descendants, which is exactly the
+     scope wanted here: the button's box, not the consumer's own icon markup inside it. */
+  ::slotted(button) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    padding: 0;
+    border: none;
+    border-radius: var(--lr-radius);
+    background: transparent;
+    color: var(--lr-color-text);
+    font: inherit;
+    cursor: pointer;
+  }
+  ::slotted(button:hover:not(:disabled)) {
+    background: var(--lr-color-surface-hover, var(--lr-color-border));
+  }
+  ::slotted(button:active:not(:disabled)) {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-surface-hover, var(--lr-color-border)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
+  ::slotted(button:disabled) {
+    opacity: var(--lr-opacity-disabled);
+    cursor: not-allowed;
+  }
+  ::slotted(button:focus-visible) {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
 `;

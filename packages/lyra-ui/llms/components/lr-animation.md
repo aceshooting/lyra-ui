@@ -50,7 +50,10 @@ Declaratively animates one slotted element through the native Web Animations API
   exists); writable and forwarded when one exists. Non-finite numeric assignments are ignored.
 
 **Methods:** `start()` (sugar for `play = true` — named `start` because `play` is already a
-property), `pause()` (`play = false`), `finish()`, `cancel()`.
+property), `pause()` (`play = false`), `finish()`, `cancel()`. `cancel()` leaves the target reverted
+to its own CSS: the `play = false` that the resulting `lr-cancel` sets never re-pauses the now-idle
+`Animation`, which per the Web Animations API would un-cancel it back to keyframe zero and freeze the
+target there.
 
 **Events:** `lr-start` (a new animation was created and playback began/restarted), `lr-finish`
 (natural end, including the reduced-motion instant-finish path), `lr-cancel` (the public `cancel()`

@@ -37,7 +37,12 @@ otherwise available direction.
 **Events:** none dispatched directly — each button calls the resolved canvas's own `zoomIn()`/
 `zoomOut()`/`fit()`, or toggles its `locked` property.
 
-**Slots:** default — extra host buttons appended to the cluster, styled by the same group.
+**Slots:** default — extra host buttons appended to the cluster, styled by the same group. A slotted
+`<button>` is matched by a `::slotted(button)` rule that gives it the built-in controls' treatment:
+the shared `--lr-icon-button-size` hit-area floor, the chrome-less transparent box, and the same
+hover/press/disabled/focus-visible affordances. Only the slotted element itself is styled — markup
+the consumer nests inside it is left alone — so an icon or label child keeps whatever the host
+page gives it.
 
 **CSS parts:** `base` (the `role="group"` wrapper; drops its floating-surface chrome under
 `frame="plain"`), `zoom-in`, `zoom-out`, `fit`, `lock` (omitted when `hideLock`).

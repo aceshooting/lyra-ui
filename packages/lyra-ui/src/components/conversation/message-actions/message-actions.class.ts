@@ -8,7 +8,7 @@ import { styles } from './message-actions.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_edit, LYRA_DEFAULT_editMessage, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_messageActionsLabel, LYRA_DEFAULT_open, LYRA_DEFAULT_regenerateResponse, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_editMessage, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_messageActionsLabel, LYRA_DEFAULT_regenerateResponse } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -87,16 +87,10 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    details: LYRA_DEFAULT_details,
-    edit: LYRA_DEFAULT_edit,
     editMessage: LYRA_DEFAULT_editMessage,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     messageActionsLabel: LYRA_DEFAULT_messageActionsLabel,
-    open: LYRA_DEFAULT_open,
     regenerateResponse: LYRA_DEFAULT_regenerateResponse,
-    restore: LYRA_DEFAULT_restore,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

@@ -9,7 +9,7 @@ import { styles } from './node-palette.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_items, LYRA_DEFAULT_nodePaletteDragHint, LYRA_DEFAULT_nodePaletteEmpty, LYRA_DEFAULT_nodePaletteLabel, LYRA_DEFAULT_nodePalettePlaceholder, LYRA_DEFAULT_nodePaletteResultCount, LYRA_DEFAULT_open, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_nodePaletteDragHint, LYRA_DEFAULT_nodePaletteEmpty, LYRA_DEFAULT_nodePaletteLabel, LYRA_DEFAULT_nodePalettePlaceholder, LYRA_DEFAULT_nodePaletteResultCount, LYRA_DEFAULT_reorderItemMoved, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -30,6 +30,11 @@ export interface PaletteItem {
 export interface LyraNodePaletteEventMap {
   'lr-palette-place': CustomEvent<{ type: string }>;
   'lr-select': CustomEvent<{ item: PaletteItem }>;
+  /** A keyboard reorder *request*, only while `reorderable`. `fromIndex`/`toIndex` index into the
+   *  host's own `items` array, so applying it is a plain splice; `category` names the group the
+   *  move stayed inside (`null` for the ungrouped bucket). This component never reorders `items`
+   *  itself, so nothing consults `defaultPrevented` and the event is deliberately not cancelable. */
+  'lr-reorder': CustomEvent<{ type: string; category: string | null; fromIndex: number; toIndex: number }>;
   focus: CustomEvent<undefined>;
   blur: CustomEvent<undefined>;
 }
@@ -42,6 +47,12 @@ export interface LyraNodePaletteEventMap {
  * `lr-flow-minimap`/`lr-flow-controls`/`lr-flow-run-overlay`) — it only needs to agree with a
  * `droppable` canvas on the `FLOW_PALETTE_MIME_TYPE` drag payload shape.
  *
+ * Set `reorderable` to opt into keyboard reordering of the catalog itself: Ctrl/Cmd+ArrowUp/
+ * ArrowDown on the focused item emits `lr-reorder` — a *request*, exactly like every other event
+ * here. `items` stays host-owned; nothing moves until the host applies the reported indices and
+ * reassigns it. The move is scoped to the item's own category group, matching the group-first
+ * rendering order, and mirrors `<lr-tree>`'s already-shipped `reorderable`/`lr-reorder` contract.
+ *
  * @customElement lr-node-palette
  * @slot header - Content above the search field (e.g. a heading or tabs).
  * @slot footer - Content below the list.
@@ -49,6 +60,12 @@ export interface LyraNodePaletteEventMap {
  *   alternative to dragging). `detail: { type }`.
  * @event lr-select - Emitted alongside `lr-palette-place` on both gestures, carrying the full
  *   item. `detail: { item }`.
+ * @event lr-reorder - `detail: { type, category, fromIndex, toIndex }` — Ctrl/Cmd+ArrowUp/ArrowDown
+ *   on the focused item requests moving it past its neighbour **inside its own category group**, so
+ *   a reorder can never turn into a recategorization. `fromIndex`/`toIndex` index into `items`
+ *   itself, so the host applies the move with a plain splice. Only fired while `reorderable`, never
+ *   at a group boundary, and never cancelable — this component does not mutate `items`. Success is
+ *   announced only once the re-rendered group order confirms the host applied it.
  * @event focus - Re-dispatched when the internal search field gains focus.
  * @event blur - Re-dispatched when the internal search field loses focus.
  * @csspart base - The root wrapper.
@@ -69,16 +86,12 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    details: LYRA_DEFAULT_details,
-    items: LYRA_DEFAULT_items,
     nodePaletteDragHint: LYRA_DEFAULT_nodePaletteDragHint,
     nodePaletteEmpty: LYRA_DEFAULT_nodePaletteEmpty,
     nodePaletteLabel: LYRA_DEFAULT_nodePaletteLabel,
     nodePalettePlaceholder: LYRA_DEFAULT_nodePalettePlaceholder,
     nodePaletteResultCount: LYRA_DEFAULT_nodePaletteResultCount,
-    open: LYRA_DEFAULT_open,
+    reorderItemMoved: LYRA_DEFAULT_reorderItemMoved,
     search: LYRA_DEFAULT_search,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -87,6 +100,12 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
 
   @property({ attribute: false }) items: PaletteItem[] = [];
   @property() label = '';
+  /**
+   * Opts into Ctrl/Cmd+ArrowUp/ArrowDown keyboard reordering (see the class doc). Defaults to
+   * `false`: unset, no `lr-reorder` is ever emitted and Ctrl/Cmd+Arrow keeps behaving exactly like
+   * a plain Arrow press.
+   */
+  @property({ type: Boolean, reflect: true }) reorderable = false;
   /** Overrides the listbox's computed accessible name. Wins over `label` and the localized
    *  default. Attribute-reflects from a host-level `aria-label` so a plain-markup consumer gets
    *  ARIA-name forwarding without setting a JS property. */
@@ -110,29 +129,60 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
    *  `<lr-chat-message>`/`<lr-branch-picker>`'s identical `isMounting` gate. */
   private isMounting = true;
 
+  // `filtered`/`categorized`/`rovingList` are each memoized off the inputs they actually read
+  // (`items` reference + folded query + locale for `filtered`; the `filtered` array reference
+  // itself for `categorized`/`rovingList`, which are always called with `this.filtered`). Within
+  // a single Lit update cycle those inputs never change between willUpdate()/render()/updated(),
+  // so the second and third call each cycle are cache hits instead of full re-scans -- see
+  // `lastRenderedRovingList` below for the keydown-handler side of this (no per-keystroke
+  // recomputation at all).
+  private filteredCache: { items: PaletteItem[]; query: string; locale: string; result: PaletteItem[] } | null =
+    null;
+  private categorizedCache: {
+    filtered: PaletteItem[];
+    result: { category: string | null; items: PaletteItem[] }[];
+  } | null = null;
+  private rovingListCache: { filtered: PaletteItem[]; result: PaletteItem[] } | null = null;
+
   private get filtered(): PaletteItem[] {
-    const q = this.queryText.trim().toLocaleLowerCase(this.effectiveLocale);
-    if (!q) return this.items;
-    return this.items.filter((item) =>
-      [item.label, item.category ?? '', ...(item.keywords ?? [])]
-        .join(' ')
-        .toLocaleLowerCase(this.effectiveLocale)
-        .includes(q),
-    );
+    const locale = this.effectiveLocale;
+    const q = this.queryText.trim().toLocaleLowerCase(locale);
+    const cache = this.filteredCache;
+    if (cache && cache.items === this.items && cache.query === q && cache.locale === locale) {
+      return cache.result;
+    }
+    const result = !q
+      ? this.items
+      : this.items.filter((item) =>
+          [item.label, item.category ?? '', ...(item.keywords ?? [])]
+            .join(' ')
+            .toLocaleLowerCase(locale)
+            .includes(q),
+        );
+    this.filteredCache = { items: this.items, query: q, locale, result };
+    return result;
   }
 
   private categorized(filtered: PaletteItem[]): { category: string | null; items: PaletteItem[] }[] {
+    const cache = this.categorizedCache;
+    if (cache && cache.filtered === filtered) return cache.result;
     const groups = new Map<string | null, PaletteItem[]>();
     for (const item of filtered) {
       const key = item.category ?? null;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(item);
     }
-    return Array.from(groups, ([category, groupItems]) => ({ category, items: groupItems }));
+    const result = Array.from(groups, ([category, groupItems]) => ({ category, items: groupItems }));
+    this.categorizedCache = { filtered, result };
+    return result;
   }
 
   private rovingList(filtered = this.filtered): PaletteItem[] {
-    return this.categorized(filtered).flatMap((group) => group.items).filter((item) => !item.disabled);
+    const cache = this.rovingListCache;
+    if (cache && cache.filtered === filtered) return cache.result;
+    const result = this.categorized(filtered).flatMap((group) => group.items).filter((item) => !item.disabled);
+    this.rovingListCache = { filtered, result };
+    return result;
   }
 
   /** Enabled items in the order represented by the currently committed item elements. */
@@ -236,6 +286,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
       this.pendingFocusIndex = null;
       this.itemElements()[Math.min(pendingFocusIndex, this.lastRenderedRovingList.length - 1)]?.focus();
     }
+    if (changed.has('items')) this.confirmPendingReorder();
     const wasMounting = this.isMounting;
     this.isMounting = false;
     if (!wasMounting && (changed.has('queryText') || changed.has('items'))) {
@@ -266,7 +317,10 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   private onFieldKeyDown = (e: KeyboardEvent): void => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      if (this.rovingList().length === 0) return;
+      // Reads the roving list as last rendered rather than recomputing it -- see the cache note
+      // above `filteredCache`. `lastRenderedRovingList` is refreshed in updated() on every cycle,
+      // so it is always current by the time a user can press a key.
+      if (this.lastRenderedRovingList.length === 0) return;
       this.activeIndex = 0;
       this.focusItem(0);
     }
@@ -279,7 +333,17 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   }
 
   private onItemKeyDown(e: KeyboardEvent, rovingIndex: number, item: PaletteItem): void {
-    const list = this.rovingList();
+    // Same rationale as onFieldKeyDown above: reuse the list already built for the last render
+    // instead of recomputing it on every arrow-key press.
+    const list = this.lastRenderedRovingList;
+    // Ctrl/Cmd+ArrowUp/ArrowDown reorders instead of navigating, matching <lr-tree>'s own contract.
+    // ArrowUp/ArrowDown are not direction-sensitive, so this branch is deliberately not RTL-swapped:
+    // "down" always means later in the group.
+    if (this.reorderable && (e.ctrlKey || e.metaKey) && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault();
+      this.requestReorder(item, e.key === 'ArrowDown' ? 1 : -1);
+      return;
+    }
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       this.activeIndex = Math.min(list.length - 1, rovingIndex + 1);
@@ -304,6 +368,62 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
       e.preventDefault();
       this.place(item);
     }
+  }
+
+  /** The rendered items of one category group, disabled entries included: a reorder moves the
+   *  focused item past the neighbour a user can actually see, which is not the same list the
+   *  roving-tabindex order walks. */
+  private groupItemsFor(category: string | null): PaletteItem[] {
+    return this.categorized(this.filtered).find((group) => group.category === category)?.items ?? [];
+  }
+
+  private pendingReorder?: {
+    item: PaletteItem;
+    category: string | null;
+    neighbor: PaletteItem;
+    wasBefore: boolean;
+  };
+
+  private requestReorder(item: PaletteItem, delta: 1 | -1): void {
+    const category = item.category ?? null;
+    const group = this.groupItemsFor(category);
+    const position = group.indexOf(item);
+    const neighbor = position < 0 ? undefined : group[position + delta];
+    if (!neighbor) return; // already at the group's own boundary -- a move here would recategorize
+    const fromIndex = this.items.indexOf(item);
+    const toIndex = this.items.indexOf(neighbor);
+    if (fromIndex < 0 || toIndex < 0) return;
+    this.pendingReorder = { item, category, neighbor, wasBefore: delta === 1 };
+    this.emit('lr-reorder', { type: item.type, category, fromIndex, toIndex });
+  }
+
+  /** Announce a move only once the re-rendered group proves the host accepted the request -- the
+   *  same "confirm, don't assume" contract `<lr-tree>`'s own reorder announcement follows. Relative
+   *  order is the test rather than an absolute index, so a host that applies the move *and* other
+   *  edits in the same reassignment still confirms. */
+  private confirmPendingReorder(): void {
+    const pending = this.pendingReorder;
+    if (!pending) return;
+    const group = this.groupItemsFor(pending.category);
+    const position = group.indexOf(pending.item);
+    const neighborPosition = group.indexOf(pending.neighbor);
+    if (position < 0 || neighborPosition < 0) {
+      this.pendingReorder = undefined;
+      return;
+    }
+    // The request was "swap past this neighbour", so the accepted state is simply the two having
+    // traded sides. Anything else means the host has not applied it (yet).
+    if ((position < neighborPosition) === pending.wasBefore) return;
+    this.pendingReorder = undefined;
+    const numberFormat = getNumberFormat(this.effectiveLocale);
+    const text = this.localize('reorderItemMoved', undefined, {
+      index: numberFormat.format(position + 1),
+      total: numberFormat.format(group.length),
+    });
+    // A discrete, user-initiated action, so it bypasses the result-count throttle window rather
+    // than collapsing into it -- but only once this update has settled: a forced flush from inside
+    // updated() writes the mirrored live text mid-cycle and schedules a second update.
+    void this.updateComplete.then(() => this.announcer.announce(text, { force: true }));
   }
 
   private place(item: PaletteItem): void {

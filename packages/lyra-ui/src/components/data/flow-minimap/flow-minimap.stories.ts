@@ -121,3 +121,35 @@ export const NarrowAllocation: Story = {
     </div>
   `,
 };
+
+const sprawlingNodes: FlowNode[] = [
+  { id: 'start', position: { x: 0, y: 0 }, data: { label: 'Start' } },
+  { id: 'far', position: { x: 6000, y: 4200 }, data: { label: 'Far' } },
+];
+
+export const HugeCanvasViewportFloor: Story = {
+  name: 'Huge canvas (viewport-rect floor)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Node bounds far larger than the visible viewport. The viewport rectangle is floored at ' +
+          '--lr-flow-minimap-viewport-min-size so it stays a usable drag target; the second map ' +
+          'opts out with 0 and shows the raw, near-invisible ratio.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+      <lr-flow-canvas style="width:24rem;height:16rem" .nodes=${sprawlingNodes}>
+        <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+      </lr-flow-canvas>
+      <lr-flow-canvas
+        style="width:24rem;height:16rem;--lr-flow-minimap-viewport-min-size:0"
+        .nodes=${sprawlingNodes}
+      >
+        <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+      </lr-flow-canvas>
+    </div>
+  `,
+};

@@ -12,7 +12,7 @@ import { styles } from './callout.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_calloutAnnouncementWithContext, LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_calloutAnnouncementWithContext, LYRA_DEFAULT_close } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -86,9 +86,6 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     ...super.defaultStrings,
     calloutAnnouncementWithContext: LYRA_DEFAULT_calloutAnnouncementWithContext,
     close: LYRA_DEFAULT_close,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

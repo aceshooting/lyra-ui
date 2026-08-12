@@ -1465,7 +1465,11 @@ Does **not** reset or restart the autoplay timer.
 
 **Events:** `lr-content-change` (`detail: { items: HTMLElement[] }` — the exact elements now shown,
 in display order). Fires on first render, on `randomize()`, on a real slot-content change, and on
-each autoplay tick; never when the eligible pool is empty.
+each autoplay tick; never when the eligible pool is empty. `lr-pause-change` (`detail: boolean` —
+the new `paused` value) fires only when the built-in pause/resume button toggles `paused`, so a
+host mirroring or persisting that state stays in sync; a programmatic `paused` write stays silent,
+so a controlled binding can't echo itself. Same event name and payload shape as `<lr-poll-status>`'s
+identical affordance, so one handler serves both.
 
 **Slots:** default — the candidate pool. Direct **element** children are eligible. When a wrapper
 places a forwarding `<slot>` directly in the pool, its flattened projected elements become the

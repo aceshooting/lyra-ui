@@ -954,6 +954,76 @@ describe('size', () => {
   });
 });
 
+describe('disabled chrome', () => {
+  const chrome = (el: LyraCheckboxGroup) => ({
+    legend: el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement,
+    hint: el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement,
+    error: el.shadowRoot!.querySelector('[part="error"]') as HTMLElement,
+  });
+
+  it('dims its own legend/hint/error while disabled', async () => {
+    const el = (await fixture(html`
+      <lr-checkbox-group label="Topics" hint="Pick any" error-text="Required" disabled>
+        <lr-checkbox value="a">Alpha</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    await el.updateComplete;
+    const parts = chrome(el);
+    expect(Number(getComputedStyle(parts.legend).opacity) < 1, 'legend').to.equal(true);
+    expect(Number(getComputedStyle(parts.hint).opacity) < 1, 'hint').to.equal(true);
+    expect(Number(getComputedStyle(parts.error).opacity) < 1, 'error').to.equal(true);
+  });
+
+  it('dims that same chrome when disablement comes only from an ancestor fieldset', async () => {
+    // :host([disabled]) can never see a fieldset cascade -- only the UA-computed :disabled does.
+    const form = (await fixture(html`
+      <form>
+        <fieldset>
+          <lr-checkbox-group label="Topics" hint="Pick any">
+            <lr-checkbox value="a">Alpha</lr-checkbox>
+          </lr-checkbox-group>
+        </fieldset>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+    const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+    await el.updateComplete;
+    expect(Number(getComputedStyle(chrome(el).legend).opacity)).to.equal(1);
+
+    fieldset.disabled = true;
+    await el.updateComplete;
+    expect(Number(getComputedStyle(chrome(el).legend).opacity) < 1, 'legend').to.equal(true);
+    expect(Number(getComputedStyle(chrome(el).hint).opacity) < 1, 'hint').to.equal(true);
+  });
+
+  it('does not compound the dimming onto each already-dimmed option', async () => {
+    // Each <lr-checkbox> dims itself; a host-wide opacity would multiply with that and drive the
+    // options to a quarter of full contrast.
+    const el = (await fixture(html`
+      <lr-checkbox-group label="Topics" disabled>
+        <lr-checkbox value="a">Alpha</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    await el.updateComplete;
+    const options = el.shadowRoot!.querySelector('[part~="options"]') as HTMLElement;
+    expect(Number(getComputedStyle(el).opacity)).to.equal(1);
+    expect(Number(getComputedStyle(options).opacity)).to.equal(1);
+  });
+
+  it('restores full-strength chrome once re-enabled', async () => {
+    const el = (await fixture(html`
+      <lr-checkbox-group label="Topics" hint="Pick any" disabled>
+        <lr-checkbox value="a">Alpha</lr-checkbox>
+      </lr-checkbox-group>
+    `)) as LyraCheckboxGroup;
+    await el.updateComplete;
+    el.disabled = false;
+    await el.updateComplete;
+    expect(Number(getComputedStyle(chrome(el).legend).opacity)).to.equal(1);
+    expect(Number(getComputedStyle(chrome(el).hint).opacity)).to.equal(1);
+  });
+});
+
 describe('orientation and mapped aliases', () => {
   it('defaults vertical, reflects orientation, and exports form-control-input on the options node', async () => {
     const el = (await fixture(html`

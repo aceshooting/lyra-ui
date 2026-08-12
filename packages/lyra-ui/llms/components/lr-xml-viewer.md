@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -42,17 +42,33 @@ every element's tag name, attribute names/values, and own text (empty/whitespace
 active, matches are recomputed, the active index is clamped to the new result set, and a fresh
 `lr-search-change` announces that state.
 
+**Highlights:** host-supplied `highlights` are first-class here, not carried and ignored. Every entry
+whose anchor is a `node-path` this document resolves tints its element row — `[part='node']` gains
+`data-highlight` carrying the entry's `tone` (`accent` when omitted) — and adds a focusable
+`[part='highlight-action']` button that emits `lr-highlight-activate`. The button's accessible name
+is the entry's own `label` when supplied, otherwise a localized "Highlight n of m". `activeHighlightId`
+adds `data-active-highlight` to the matching row. Entries are deduplicated by `id`; an entry whose
+anchor kind or path this document cannot resolve is dropped whole rather than painted at some
+coarser granularity, and an entry inside a collapsed subtree paints once that subtree is expanded.
+
 **Events:** `lr-copy` — `detail: { text }`. `lr-search-change` — `detail: { query, matchCount,
 activeIndex }`. `lr-render-error` — `detail: { error }`, fetching or parsing failed, including a
 parse error or exceeding the node cap. `lr-anchor-result` — non-cancelable; `detail: { found:
 boolean }`, fired after an `anchor` assignment or a `scrollToAnchor()` call is applied.
+`lr-highlight-activate` — non-cancelable; `detail: { id }`, fired when a highlight's
+`[part='highlight-action']` button is activated by click or Enter/Space.
 
 **CSS parts:** `base`, `toolbar` (the whole-document copy button row, only when `copyable`),
 `copy-button` (the whole-document one, or a per-node one), `tree`, `node` (`data-active` while it's
-the resolved anchor target, `data-match`, `data-active-match`), `tag` (`data-match`), `attribute`,
+the resolved anchor target, `data-match`, `data-active-match`, `data-highlight` carrying a resolved
+highlight's tone, `data-active-highlight`), `tag` (`data-match`), `attribute` (`data-active` while a
+`node-path` anchor's trailing `'@attrName'` segment addresses that specific attribute — so a citation
+pointing at one attribute value of a multi-attribute element stays identifiable in the rendered
+tree, rather than resolving indistinguishably from the bare element path),
 `attribute-name`, `attribute-value` (`data-match`), `text` (`data-match`), `comment`, `cdata`, `pi`,
 `toggle` (an element's expand/collapse button, hidden but present for row alignment on leaf/empty
-elements), `error`, `spinner`.
+elements), `highlight-action` (the focusable button a resolved `highlights` entry adds to its element
+row), `error`, `spinner`.
 
 **Themeable custom properties:** `--lr-xml-viewer-max-height` (default `none`) — maximum block size
 of the scrollable body; also settable via the `max-height` property.
@@ -72,6 +88,18 @@ be recolored without touching the active one. `--lr-xml-viewer-match-bg` (defaul
 `var(--lr-color-warning-quiet)`) — background of a matching `[part='tag']`/`[part='attribute-value']`.
 Both are inline `var()` fallbacks at the point of use, so either can be set on the element or any
 ancestor; unset, they fall back to the same shared tokens the rules used before.
+
+`--lr-xml-viewer-highlight-accent-background` (default `var(--lr-color-brand-quiet)`),
+`--lr-xml-viewer-highlight-success-background` (default `var(--lr-color-success-quiet)`),
+`--lr-xml-viewer-highlight-warning-background` (default `var(--lr-color-warning-quiet)`),
+`--lr-xml-viewer-highlight-danger-background` (default `var(--lr-color-danger-quiet)`) and
+`--lr-xml-viewer-highlight-neutral-background` (default `var(--lr-color-surface-raised)`) are the row
+backgrounds of a resolved `highlights` entry per tone. The neutral default is deliberately
+`--lr-color-surface-raised` and not `--lr-color-surface`: the viewer paints its own surface with the
+latter, so a neutral highlight tinted with it would render as unhighlighted.
+`--lr-xml-viewer-highlight-active-outline` (default `var(--lr-color-brand)`) outlines the entry named
+by `activeHighlightId`, and `--lr-xml-viewer-active-attribute-color` (default `var(--lr-color-brand)`)
+outlines the `[part='attribute']` an attribute-addressing `node-path` anchor resolved to.
 
 `[part='toggle']`'s glyph box stays compact (`1.25rem`) while its *interactive* box takes the shared
 minimum target size as a floor via `--lr-icon-button-size`. That token is a floor, not a fixed size,

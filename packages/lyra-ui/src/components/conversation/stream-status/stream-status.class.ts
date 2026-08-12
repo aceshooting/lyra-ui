@@ -7,7 +7,7 @@ import { finiteDuration, MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
 import { styles } from './stream-status.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_streamRecoverAnnounce, LYRA_DEFAULT_streamStallAnnounce, LYRA_DEFAULT_streamStallClearedAnnounce, LYRA_DEFAULT_streamStalled } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_streamRecoverAnnounce, LYRA_DEFAULT_streamStallAnnounce, LYRA_DEFAULT_streamStallClearedAnnounce, LYRA_DEFAULT_streamStalled } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -133,9 +133,6 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
     streamRecoverAnnounce: LYRA_DEFAULT_streamRecoverAnnounce,
     streamStallAnnounce: LYRA_DEFAULT_streamStallAnnounce,
     streamStallClearedAnnounce: LYRA_DEFAULT_streamStallClearedAnnounce,

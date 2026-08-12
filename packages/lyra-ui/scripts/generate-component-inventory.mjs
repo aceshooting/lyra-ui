@@ -3501,6 +3501,18 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
     'wa-data-grid',
     {
       methodParameterTypeEquivalences: [
+        // `DataGridPinSide` is `'left' | 'right' | 'start' | 'end' | false` -- a strict SUPERSET of
+        // upstream's `'left' | 'right' | false`. `'start'`/`'end'` are additive spelling aliases for
+        // the two directions `'left'`/`'right'` already name (the pinning CSS is logical, so both
+        // spellings mirror identically under `dir="rtl"`), so every call a `wa-data-grid` consumer
+        // can write today remains valid verbatim after the prefix substitution. Reviewed as
+        // parameter widening, which is safe for callers; a narrowing would not be.
+        reviewedMethodParameterTypeEquivalence(
+          'pinColumn',
+          'side',
+          "'left' | 'right' | false",
+          'DataGridPinSide',
+        ),
         reviewedMethodParameterTypeEquivalence(
           'copySelectedRows',
           'options',

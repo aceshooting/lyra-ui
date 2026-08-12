@@ -9,11 +9,6 @@ import {
   type FormatDisplay,
   type RelativeTimeNumeric,
 } from './format-options.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_date } from '../../../internal/default-strings.generated.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export type {
   FormatDisplay as RelativeTimeFormat,
@@ -42,14 +37,6 @@ const UNITS = Object.keys(DIVISORS) as RelativeTimeUnit[];
  * @since 4.0.0
  */
 export class LyraRelativeTime extends LyraElement {
-  // GENERATED DEFAULT-STRING SLICE: START
-  /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    date: LYRA_DEFAULT_date,
-  };
-  // GENERATED DEFAULT-STRING SLICE: END
-
   static override styles = [LyraElement.styles, styles];
   @property() date: string | number | Date = new Date();
   @property() unit: RelativeTimeUnit | 'auto' = 'auto';

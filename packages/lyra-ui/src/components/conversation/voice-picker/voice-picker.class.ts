@@ -30,7 +30,7 @@ import { activeElementIn } from '../../../internal/active-element.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_voice, LYRA_DEFAULT_voicePickerNoVoices, LYRA_DEFAULT_voicePickerPreview, LYRA_DEFAULT_voicePickerRequired, LYRA_DEFAULT_voicePickerStopPreview } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_voice, LYRA_DEFAULT_voicePickerNoVoices, LYRA_DEFAULT_voicePickerPreview, LYRA_DEFAULT_voicePickerRequired, LYRA_DEFAULT_voicePickerStopPreview } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -181,13 +181,9 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     noMatches: LYRA_DEFAULT_noMatches,
     notInCatalog: LYRA_DEFAULT_notInCatalog,
-    open: LYRA_DEFAULT_open,
-    restore: LYRA_DEFAULT_restore,
     voice: LYRA_DEFAULT_voice,
     voicePickerNoVoices: LYRA_DEFAULT_voicePickerNoVoices,
     voicePickerPreview: LYRA_DEFAULT_voicePickerPreview,
@@ -425,10 +421,15 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
         focused?.nodeType === 1 &&
         (focused as Element).matches('[part="trigger"], [part="combobox-input"]');
     }
-    if (!this.hasUpdated) {
+    // Both feed render()'s own shadow output (the `hidden` binding on [part="hint"]/[part="error"]),
+    // so they go through seedFirstRenderState(): a browser-only mount still answers the light-DOM
+    // question before its first render (no flash of the fallback), while a hydrating mount
+    // reproduces the server's childless render first and corrects itself on the next update
+    // instead of failing hydration and losing the whole server-rendered subtree.
+    this.seedFirstRenderState(() => {
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
       this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
-    }
+    });
     if (
       this.hasUpdated &&
       (changed.has('catalog') || changed.has('allowCustom') || changed.has('value'))

@@ -10,6 +10,13 @@ import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js'
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { resolveCanvasColor, seriesPalette } from './chart-colors.js';
+import {
+  createForcedColorPattern,
+  forcedColorEncoding,
+  forcedColorsActive,
+  type ForcedColorEncodingName,
+} from './chart-forced-colors.js';
+import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import {
   resolveOptionalPeerCapability,
@@ -27,7 +34,7 @@ import {
 import { sampleChartTableIndexes } from './chart-table-sampling.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_boxPlot, LYRA_DEFAULT_boxPlotData, LYRA_DEFAULT_boxPlotMax, LYRA_DEFAULT_boxPlotMedian, LYRA_DEFAULT_boxPlotMin, LYRA_DEFAULT_boxPlotMissingLibrary, LYRA_DEFAULT_boxPlotQ1, LYRA_DEFAULT_boxPlotQ3, LYRA_DEFAULT_boxPlotSeriesSummary, LYRA_DEFAULT_boxPlotSummaryEmpty, LYRA_DEFAULT_boxPlotSummaryWithData, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_boxPlot, LYRA_DEFAULT_boxPlotData, LYRA_DEFAULT_boxPlotMax, LYRA_DEFAULT_boxPlotMedian, LYRA_DEFAULT_boxPlotMin, LYRA_DEFAULT_boxPlotMissingLibrary, LYRA_DEFAULT_boxPlotQ1, LYRA_DEFAULT_boxPlotQ3, LYRA_DEFAULT_boxPlotSeriesSummary, LYRA_DEFAULT_boxPlotSummaryEmpty, LYRA_DEFAULT_boxPlotSummaryWithData, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_liteChartMarkSummary, LYRA_DEFAULT_loading } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -92,13 +99,44 @@ interface BoxPlotChartRuntime {
   destroy(): void;
   update(mode?: string): void;
   getDatasetMeta?(index: number): { hidden: boolean | null };
+  getElementsAtEventForMode?(
+    event: Event,
+    mode: string,
+    options: { intersect: boolean },
+    useFinalPosition: boolean,
+  ): Array<{ datasetIndex: number; index: number }>;
   isDatasetVisible(index: number): boolean;
   setDatasetVisibility(index: number, visible: boolean): void;
 }
 
+/** One addressable box: a series/category pair plus the five-number summary it renders. */
+export interface LyraBoxPlotPointDetail {
+  datasetIndex: number;
+  index: number;
+  label: string | undefined;
+  value: BoxPlotPoint | null;
+}
+
 export interface LyraBoxPlotEventMap {
+  'lr-point-click': CustomEvent<LyraBoxPlotPointDetail>;
   'lr-before-legend-visibility-change': CustomEvent<LyraChartLegendVisibilityChangeDetail>;
   'lr-legend-visibility-change': CustomEvent<LyraChartLegendVisibilityChangeDetail>;
+}
+
+/**
+ * A fresh five-number summary for an event detail. Never the caller's own object: the box-plot peer
+ * annotates the point objects it is handed in place (it writes `whiskerMin`/`whiskerMax` onto
+ * them), so emitting the original would leak the peer's internal bookkeeping into a public event
+ * and hand consumers a reference the chart is still writing to.
+ */
+function summaryOf(point: BoxPlotPoint): BoxPlotPoint {
+  return {
+    min: point.min,
+    q1: point.q1,
+    median: point.median,
+    q3: point.q3,
+    max: point.max,
+  };
 }
 
 let boxPlotPlugin: Promise<BoxPlotModule | null> | undefined;
@@ -182,7 +220,8 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  * @customElement lr-box-plot
  * @csspart base - The chart wrapper.
  * @csspart plot - The fixed-height canvas region.
- * @csspart canvas - The box-plot canvas.
+ * @csspart canvas - The box-plot canvas. A keyboard-navigable surface: Arrow keys/Home/End walk
+ *   the individual boxes and Enter/Space activates the current one, mirroring `<lr-chart>`.
  * @csspart legend - The wrapping DOM legend rendered when `legend` is set.
  * @csspart legend-item - A keyboard-operable series visibility toggle.
  * @csspart legend-item-hidden - Added to a `legend-item` while its box series is hidden.
@@ -195,9 +234,22 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  *   more than 1,000 records.
  * @event lr-before-legend-visibility-change - Cancelable proposed DOM legend visibility change.
  * @event lr-legend-visibility-change - Committed DOM legend visibility change.
+ * @event lr-point-click - Fired when pointer input lands on a box, or when Enter/Space activates
+ *   the keyboard-current box. `detail: { datasetIndex: number, index: number, label: string |
+ *   undefined, value: BoxPlotPoint | null }`, where `value` is that box's complete five-number
+ *   summary. Mirrors `<lr-chart>`/`<lr-lite-chart>`'s event of the same name.
  * @slot data-table - An optional consumer-provided complete/paginated accessible table alternative.
  * @cssprop [--lr-chart-height=var(--lr-size-280px)] - Consumer-owned chart height. The `height`
  *   property supplies only a private fallback, so this public token always wins when set.
+ * @cssprop [--lr-chart-canvas-hover-outline-width=var(--lr-border-width-thin)] - Width of the
+ *   `[part='canvas']` hover-state outline (its color is `--lr-chart-grid-color`). Same token and
+ *   default as `<lr-chart>`.
+ * @cssprop [--lr-chart-pattern-step=var(--lr-space-2xs)] - Tile size of the texture painted on
+ *   `[part='legend-swatch']` while `forced-colors: active` matches, where the eight-color series
+ *   ramp collapses onto a repeating system-color cycle and the stripe/crosshatch pattern becomes
+ *   the only channel keeping series apart. Declared on the swatch part rather than the host; the
+ *   stripe width within a tile stays `--lr-border-width-thin`, so a larger step spaces the stripes
+ *   further apart. Shared verbatim with `<lr-chart>` and `<lr-lite-chart>`.
  * @status stable
  * @since 4.0.0
  */
@@ -226,14 +278,13 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     chartTrendDecreasing: LYRA_DEFAULT_chartTrendDecreasing,
     chartTrendFlat: LYRA_DEFAULT_chartTrendFlat,
     chartTrendIncreasing: LYRA_DEFAULT_chartTrendIncreasing,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
+    chartValueLabel: LYRA_DEFAULT_chartValueLabel,
+    liteChartMarkSummary: LYRA_DEFAULT_liteChartMarkSummary,
     loading: LYRA_DEFAULT_loading,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
 
   constructor() {
     super();
@@ -266,6 +317,9 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   @state() private loadFailed = false;
 
   @state() private visible = true;
+  /** Position of the keyboard cursor within `boxDatums()`; clamped on every read, never persisted. */
+  private keyboardDatumIndex = 0;
+  @state() private keyboardDatumAnnouncement = '';
   private intersectionObserver?: IntersectionObserver;
 
   @query('canvas') private canvasEl?: HTMLCanvasElement;
@@ -380,7 +434,9 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   }
 
   private get ownerWindow(): BrowserWindow | undefined {
-    return (this.ownerDocument.defaultView as BrowserWindow | null) ?? undefined;
+    // Optional-chained for the server-render path: @lit-labs/ssr's element shim has no
+    // `ownerDocument`, and every caller already handles `undefined`.
+    return (this.ownerDocument?.defaultView as BrowserWindow | null | undefined) ?? undefined;
   }
 
   private effectiveHiddenDatasetIndexes(): number[] {
@@ -411,6 +467,15 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     if (!this.isConnected) return;
     const wasMounting = this.isMounting;
     this.isMounting = false;
+    // The default empty datum state is part of the first update and must stay silent. Later
+    // keyboard changes are appended once to the light-DOM sink; the shadow copy is aria-hidden.
+    if (
+      changed.has('keyboardDatumAnnouncement') &&
+      changed.get('keyboardDatumAnnouncement') !== undefined &&
+      this.keyboardDatumAnnouncement !== ''
+    ) {
+      this.politeAnnouncementSink?.announce(this.keyboardDatumAnnouncement);
+    }
     if (
       changed.has('loadFailed') &&
       changed.get('loadFailed') !== undefined &&
@@ -491,6 +556,39 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     };
   }
 
+  /** The series color for a box index, honoring an explicit per-series `color` override. */
+  private seriesColor(index: number, palette: string[] = seriesPalette(this)): string {
+    const fallback = palette[index % palette.length] ?? 'transparent';
+    const series = this.boxes[index];
+    return series?.color ? resolveCanvasColor(this, series.color, fallback) : fallback;
+  }
+
+  /**
+   * The forced-colors texture painted over a box's fill, or `undefined` while the user is on a
+   * normal palette. Mirrors `<lr-chart>`'s accommodation for its proportional types: forced-colors
+   * mode collapses the eight-color `--lr-color-chart-*` ramp onto a repeating three-value system
+   * cycle, so series 1/4/7 paint in the same color and only texture keeps them apart. Box-and-
+   * whisker elements read `backgroundColor` straight into `ctx.fillStyle`, so a `CanvasPattern` is
+   * the channel available here — the peer's element has no border-dash or point-style option to
+   * cycle the way a Chart.js line dataset does.
+   */
+  private forcedColorFill(index: number, background: string): CanvasPattern | string {
+    if (!this.ownerWindow || !forcedColorsActive(this.ownerWindow)) return background;
+    return createForcedColorPattern(
+      this.ownerDocument,
+      index,
+      background,
+      this.styleColor('--lr-color-surface', FALLBACK_TOOLTIP_BG),
+    );
+  }
+
+  private styleColor(name: string, fallback: string): string {
+    const view = this.ownerWindow;
+    const cs = view ? view.getComputedStyle(this) : this.style;
+    const value = cs.getPropertyValue(name).trim();
+    return value ? resolveCanvasColor(this, value, fallback) : fallback;
+  }
+
   private buildConfig(): BoxPlotChartConfiguration {
     const theme = this.themeColors();
     const palette = seriesPalette(this);
@@ -500,12 +598,11 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       data: {
         labels: this.labels,
         datasets: this.boxes.map((s, index) => {
-          const fallback = palette[index % palette.length] ?? 'transparent';
-          const color = s.color ? resolveCanvasColor(this, s.color, fallback) : fallback;
+          const color = this.seriesColor(index, palette);
           return {
             label: s.label,
             data: s.data.map((point) => (this.validPoint(point) ? point : null)),
-            backgroundColor: color,
+            backgroundColor: this.forcedColorFill(index, color),
             borderColor: color,
           };
         }),
@@ -515,6 +612,8 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
         responsive: true,
         maintainAspectRatio: false,
         animation: prefersReducedMotion(this.ownerWindow) ? false : undefined,
+        onClick: (event: unknown, _elements: unknown, chart: BoxPlotChartRuntime) =>
+          this.handlePointClick(event, chart),
         plugins: {
           // The normal-flow DOM legend below can wrap long public labels; a canvas legend cannot.
           legend: { display: false, labels: { color: theme.legend } },
@@ -618,6 +717,148 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
           summaries: summaries.join(this.localize('chartSummarySeparator')),
         })
       : this.localize('boxPlotSummaryEmpty');
+  }
+
+  /**
+   * The addressable boxes, in the same series-major order the generated data table lists them.
+   * Built from the table's bounded planner rather than a raw scan so the keyboard alternative can
+   * never turn a very wide consumer data set into an unbounded pass.
+   */
+  private boxDatums(): LyraBoxPlotPointDetail[] {
+    const sample = this.dataTableSample();
+    const datums: LyraBoxPlotPointDetail[] = [];
+    for (const datasetIndex of sample.seriesIndexes) {
+      const series = this.boxes[datasetIndex];
+      if (!series) continue;
+      for (const index of sample.rowIndexes) {
+        const point = series.data[index];
+        if (!this.validPoint(point)) continue;
+        datums.push({
+          datasetIndex,
+          index,
+          label: this.labels[index] || undefined,
+          value: summaryOf(point),
+        });
+      }
+    }
+    return datums;
+  }
+
+  /**
+   * A box's spoken summary. The five numbers are the whole content of a box, so each is labeled
+   * with its own existing localized term and joined through the shared separator — the same
+   * composition `boxPlotDescription()` already uses — then interpolated into the family's mark
+   * summary as that mark's value.
+   */
+  private boxAnnouncement(
+    datum: LyraBoxPlotPointDetail,
+    position: number,
+    total: number,
+  ): string {
+    const numberFormat = getNumberFormat(this.effectiveLocale);
+    const point = datum.value;
+    const parts: Array<[string, number]> = point
+      ? [
+          [this.localize('boxPlotMin'), point.min],
+          [this.localize('boxPlotQ1'), point.q1],
+          [this.localize('boxPlotMedian'), point.median],
+          [this.localize('boxPlotQ3'), point.q3],
+          [this.localize('boxPlotMax'), point.max],
+        ]
+      : [];
+    const summary = parts
+      .filter(([, value]) => Number.isFinite(value))
+      .map(([label, value]) =>
+        this.localize('chartValueLabel', undefined, {
+          label,
+          value: numberFormat.format(value),
+        }),
+      )
+      .join(this.localize('chartSummarySeparator'));
+    return this.localize('liteChartMarkSummary', undefined, {
+      series: this.boxes[datum.datasetIndex]?.label || this.localize('chartSeriesLabel'),
+      label:
+        datum.label ??
+        this.localize('chartPointLabel', undefined, {
+          n: numberFormat.format(datum.index + 1),
+        }),
+      value: summary,
+      index: numberFormat.format(position + 1),
+      total: numberFormat.format(total),
+    });
+  }
+
+  private activateBox(datum: LyraBoxPlotPointDetail): void {
+    const datums = this.boxDatums();
+    const position = datums.findIndex(
+      (candidate) =>
+        candidate.datasetIndex === datum.datasetIndex && candidate.index === datum.index,
+    );
+    if (position >= 0) {
+      this.keyboardDatumIndex = position;
+      this.keyboardDatumAnnouncement = this.boxAnnouncement(datum, position, datums.length);
+    }
+    this.emit('lr-point-click', datum);
+  }
+
+  /**
+   * `options.onClick`, wired in `buildConfig()`. Resolving which single box was clicked needs its
+   * own `getElementsAtEventForMode('nearest', { intersect: true }, true)` lookup, so a click that
+   * lands off every box reports nothing rather than firing for whatever happens to be nearest.
+   */
+  private handlePointClick(event: unknown, chart: BoxPlotChartRuntime): void {
+    // Chart.js hands its own `ChartEvent` wrapper to `onClick`, but `getElementsAtEventForMode()`
+    // types its first parameter as a DOM `Event`; at runtime only `.x`/`.y` are read, which the
+    // wrapper already has, so the cast is a type-only correction.
+    const hit = chart.getElementsAtEventForMode?.(
+      event as Event,
+      'nearest',
+      { intersect: true },
+      true,
+    )?.[0];
+    if (!hit) return;
+    const point = this.boxes[hit.datasetIndex]?.data[hit.index];
+    this.activateBox({
+      datasetIndex: hit.datasetIndex,
+      index: hit.index,
+      label: this.labels[hit.index] || undefined,
+      value: this.validPoint(point) ? summaryOf(point) : null,
+    });
+  }
+
+  private onCanvasFocus(): void {
+    const datums = this.boxDatums();
+    if (!datums.length) return;
+    this.keyboardDatumIndex = Math.min(this.keyboardDatumIndex, datums.length - 1);
+    this.keyboardDatumAnnouncement = this.boxAnnouncement(
+      datums[this.keyboardDatumIndex]!,
+      this.keyboardDatumIndex,
+      datums.length,
+    );
+  }
+
+  private onCanvasKeyDown(event: KeyboardEvent): void {
+    const datums = this.boxDatums();
+    if (!datums.length) return;
+    this.keyboardDatumIndex = Math.min(this.keyboardDatumIndex, datums.length - 1);
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.activateBox(datums[this.keyboardDatumIndex]!);
+      return;
+    }
+    // "Previous"/"next" follow the reading order, so the two arrows swap under RTL.
+    const rtl = this.effectiveDirection === 'rtl';
+    const forward = rtl ? 'ArrowLeft' : 'ArrowRight';
+    const backward = rtl ? 'ArrowRight' : 'ArrowLeft';
+    let next = this.keyboardDatumIndex;
+    if (event.key === forward || event.key === 'ArrowDown') next = Math.min(datums.length - 1, next + 1);
+    else if (event.key === backward || event.key === 'ArrowUp') next = Math.max(0, next - 1);
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = datums.length - 1;
+    else return;
+    event.preventDefault();
+    this.keyboardDatumIndex = next;
+    this.keyboardDatumAnnouncement = this.boxAnnouncement(datums[next]!, next, datums.length);
   }
 
   private validPoint(point: BoxPlotPoint | null | undefined): point is BoxPlotPoint {
@@ -730,12 +971,15 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   private renderLegend(): TemplateResult | typeof nothing {
     if (!this.legend) return nothing;
     const palette = seriesPalette(this);
+    const forced = forcedColorsActive(this.ownerWindow);
     return html`
       <div part="legend" role="group" aria-label=${this.accessibleName(this.localize('boxPlot'))}>
         ${this.boxes.map((series, index) => {
-          const fallback = palette[index % palette.length] ?? 'transparent';
-          const color = series.color ? resolveCanvasColor(this, series.color, fallback) : fallback;
+          const color = this.seriesColor(index, palette);
           const visible = this.legendDatasetVisible(index);
+          const encoding: ForcedColorEncodingName | undefined = forced
+            ? forcedColorEncoding(index).name
+            : undefined;
           return html`
             <button
               part=${visible ? 'legend-item' : 'legend-item legend-item-hidden'}
@@ -743,7 +987,11 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
               aria-pressed=${visible ? 'true' : 'false'}
               @click=${() => this.toggleDataset(index)}
             >
-              <span part="legend-swatch" style="background-color:${color}"></span>
+              <span
+                part="legend-swatch"
+                data-encoding=${encoding ?? nothing}
+                style="background-color:${color}"
+              ></span>
               <span>${series.label}</span>
             </button>
           `;
@@ -778,10 +1026,20 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     return html`
       <div part="base">
         <div part="plot">
-          <canvas part="canvas" role="img" aria-label=${label} aria-describedby=${this.descriptionId}></canvas>
+          <canvas
+            part="canvas"
+            role="application"
+            aria-roledescription=${this.localize('boxPlot')}
+            tabindex="0"
+            aria-label=${label}
+            aria-describedby=${this.descriptionId}
+            @focus=${this.onCanvasFocus}
+            @keydown=${this.onCanvasKeyDown}
+          ></canvas>
         </div>
         ${this.renderLegend()}
         <p part="description" id=${this.descriptionId} class="sr-only">${description}</p>
+        <p class="sr-only" aria-hidden="true">${this.keyboardDatumAnnouncement}</p>
         ${this.dataTruncationMessage()
           ? html`<p part="data-truncation">${this.dataTruncationMessage()}</p>`
           : nothing}

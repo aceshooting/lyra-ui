@@ -267,10 +267,61 @@ describe('lr-csv-viewer', () => {
     it('resolves and scrolls a header-row anchor', async () => {
       const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
       const restore = fetchText(GRID_CSV);
+      const originalMatchMedia = window.matchMedia;
       try {
         el.src = 'https://example.test/people.csv';
         await waitUntil(() => el.shadowRoot!.querySelector('[part="header-row"]') !== null);
+        const cell = el.shadowRoot!.querySelector('[part="header-row"]')!
+          .querySelectorAll('[part~="cell"]')[1] as HTMLElement;
+        const behaviors: (ScrollBehavior | undefined)[] = [];
+        cell.scrollIntoView = ((options?: ScrollIntoViewOptions) => { behaviors.push(options?.behavior); }) as HTMLElement['scrollIntoView'];
+
+        window.matchMedia = (() => ({ matches: false }) as MediaQueryList) as typeof window.matchMedia;
         expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'B1' })).to.be.true;
+        // Pinned so this branch can't silently diverge from <lr-dataset-viewer>'s identical one.
+        expect(behaviors).to.deep.equal(['smooth']);
+
+        window.matchMedia = (() => ({ matches: true }) as MediaQueryList) as typeof window.matchMedia;
+        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'B1' })).to.be.true;
+        expect(behaviors).to.deep.equal(['smooth', 'auto']);
+      } finally {
+        window.matchMedia = originalMatchMedia;
+        restore();
+      }
+    });
+
+    it('reports a failed jump when a concurrent src reassignment lands during the scroll wait', async () => {
+      const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
+      const restore = fetchText(GRID_CSV);
+      try {
+        el.src = 'https://example.test/people.csv';
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+        // One attempt only: the mixin's retry loop would otherwise re-resolve against the newly
+        // loaded document, which is correct behavior but hides this call's own result.
+        (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 0;
+        (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 0;
+
+        // Reassign `src` through the real public setter from inside the await that jumpToCell is
+        // already suspended on -- exactly the citation/file-tab click that lands mid-jump.
+        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+        let swapped = false;
+        Object.defineProperty(list, 'updateComplete', {
+          configurable: true,
+          get: () => {
+            if (swapped) return Promise.resolve(true);
+            swapped = true;
+            return (async () => {
+              el.src = 'https://example.test/other.csv';
+              await el.updateComplete;
+              await aTimeout(0);
+              return true;
+            })();
+          },
+        });
+
+        const found = await el.scrollToAnchor({ kind: 'cell-range', range: 'A2' });
+        expect(swapped, 'the reassignment really landed inside the jump').to.equal(true);
+        expect(found, 'a jump whose document was replaced mid-flight is not a success').to.equal(false);
       } finally { restore(); }
     });
 

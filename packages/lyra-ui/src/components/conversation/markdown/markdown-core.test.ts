@@ -1308,3 +1308,37 @@ Intro **bold**, _em_ and \`inline\` text.
     expect(both[1]).to.equal(both[0]);
   });
 });
+
+it('paints highlighted fenced code from --shiki-dark once the resolved tokens are a dark scheme', async () => {
+  const LIGHT = '#24292f';
+  const DARK = '#e6edf3';
+  // Exactly the shape tokenizeMarkdownHighlight() caches -- Shiki's palette as inert data
+  // attributes, restored to an inline `color:<light>;--shiki-dark:<dark>` after sanitization.
+  const cached = `<pre part="code-block"><code class="language-ts"><span data-lr-shiki-light="${LIGHT}" data-lr-shiki-dark="${DARK}">x</span></code></pre>\n`;
+
+  const wrapper = (await fixture(html`
+    <div style="--lr-theme-color-text-normal:#f2f2f2; --lr-theme-color-surface-default:#1a1a1a;">
+      <lr-markdown-core></lr-markdown-core>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-markdown-core') as LyraMarkdownCore;
+  (el as unknown as { highlightCache: Map<string, string> }).highlightCache.set('ts\nx\n', cached);
+  el.content = '```ts\nx\n```';
+  await waitUntil(
+    () => el.shadowRoot!.querySelector('[part="code-block"] span') !== null,
+    'the cached highlighted block never rendered',
+    { timeout: 4000 },
+  );
+
+  const content = el.shadowRoot!.querySelector('[part="content"]')!;
+  const span = el.shadowRoot!.querySelector('[part="code-block"] span') as HTMLElement;
+  expect(content.getAttribute('data-dark-theme')).to.equal('true');
+  expect(getComputedStyle(span).color).to.not.equal(span.style.color);
+
+  const probe = document.createElement('span');
+  probe.style.color = span.style.getPropertyValue('--shiki-dark').trim();
+  content.appendChild(probe);
+  const expected = getComputedStyle(probe).color;
+  probe.remove();
+  expect(getComputedStyle(span).color).to.equal(expected);
+});

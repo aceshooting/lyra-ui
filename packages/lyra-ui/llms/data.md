@@ -342,11 +342,19 @@ delegated ancestors can observe editor entry and exit without crossing the shado
 
 **CSS parts:** `body`, `cell`, `column-menu`, `column-menu-button`, `columns-menu`, `data-grid`,
 `drag-ghost`, `ellipsis`, `empty`, `expand-button`, `filter-button`, `filter-panel`, `first-button`,
-`footer`, `footer-cell`, `footer-row`, `group-count`, `group-row`, `group-value`, `header`,
-`header-cell`, `last-button`, `live-region`, `loading-overlay`, `next-button`, `no-results`, `page`,
-`page-current`, `page-size`, `pager`, `pager-button`, `pin-indicator`, `previous-button`,
+`first-icon`, `footer`, `footer-cell`, `footer-row`, `group-count`, `group-row`, `group-value`,
+`header`, `header-cell`, `last-button`, `last-icon`, `live-region`, `loading-overlay`,
+`next-button`, `next-icon`, `no-results`, `page`, `page-current`, `page-size`, `pager`,
+`pager-button`, `pin-indicator`, `previous-button`, `previous-icon`,
 `resize-handle`, `row`, `row-detail`, `search`, `select-all-checkbox`, `sort-indicator`,
 `sort-number`, `table`, `toolbar`.
+
+The four pager navigation controls each wrap their glyph in an icon part — `first-icon`,
+`previous-icon`, `next-icon`, `last-icon` — rendered as real chevron SVGs rather than literal
+`«`/`‹`/`›`/`»` text, so they mirror under `dir="rtl"` instead of pointing the wrong way. `first-icon`
+and `last-icon` hold two overlapping chevrons so the pair reads as one doubled glyph. This matches
+`<lr-pagination>`'s identical treatment; style the glyph through the icon part and the control
+through `first-button`/`previous-button`/`next-button`/`last-button` (or the shared `pager-button`).
 
 `[part="live-region"]` is a visually-hidden, `aria-hidden` **mirror** of the last polite
 announcement — a styling and inspection surface, with no live-region role of its own. The
@@ -1117,7 +1125,7 @@ Dependency-free SVG radial, full-circle ring, or linear meter (no charting libra
 - no automatic color-threshold/variant logic is built in. Set `--lr-gauge-fill` per instance (or
   reactively from application state) when the value should select a success/warning/danger color.
 - no documented component-specific sizing custom property; host size is fixed em values
-  (`8em`/`12em` radial, `12em`/`1.5em` linear) — resize via plain CSS `width`/`height` on the
+  (`8em` radial/ring, `12em`/`1.5em` linear) — resize via plain CSS `width`/`height` on the
   element instead.
 - Divide-by-zero guarded (`max - min || 1`), and radial/linear share one component via the `type`
   attribute.
@@ -2236,6 +2244,11 @@ success, danger, and warning colors respectively. Their expanded names are
 `--lr-flow-minimap-node-pending-color`, `--lr-flow-minimap-node-running-color`,
 `--lr-flow-minimap-node-success-color`, `--lr-flow-minimap-node-error-color`, and
 `--lr-flow-minimap-node-denied-color`.
+`--lr-flow-minimap-viewport-min-size` (default `var(--lr-size-1-5rem)`, i.e. WCAG 2.2 SC 2.5.8's
+24px minimum target size) is the smallest rendered size the draggable `viewport` rectangle may take
+along either axis. It is deliberately not declared on `:host`, so setting it on any ancestor — the
+canvas, a page theme wrapper — reaches the minimap. Set it to `0` to opt out and render the exact
+viewport-to-content ratio instead.
 
 **Optional peer deps:** none.
 
@@ -2254,6 +2267,13 @@ success, danger, and warning colors respectively. Their expanded names are
   event to wire up. A completed drag consumes only the browser-synthesized click following its
   `pointerup`; a canceled or lost-capture drag leaves the next genuine map click available for
   click-to-center navigation.
+- On a canvas whose node bounds dwarf the visible viewport — the case the minimap exists for — the
+  raw viewport rectangle would collapse to a couple of physical pixels, leaving the only
+  pointer-drag handle for panning effectively unclickable. It is therefore floored at
+  `--lr-flow-minimap-viewport-min-size`, growing symmetrically about its own centre so it still
+  points at the part of the graph the viewport shows. Keyboard panning and the drag math read the
+  canvas viewport directly and are unaffected, so a floored rectangle is a display floor, not a
+  change to what a gesture does.
 
 **Additional API surface:**
 
@@ -2290,7 +2310,12 @@ otherwise available direction.
 **Events:** none dispatched directly — each button calls the resolved canvas's own `zoomIn()`/
 `zoomOut()`/`fit()`, or toggles its `locked` property.
 
-**Slots:** default — extra host buttons appended to the cluster, styled by the same group.
+**Slots:** default — extra host buttons appended to the cluster, styled by the same group. A slotted
+`<button>` is matched by a `::slotted(button)` rule that gives it the built-in controls' treatment:
+the shared `--lr-icon-button-size` hit-area floor, the chrome-less transparent box, and the same
+hover/press/disabled/focus-visible affordances. Only the slotted element itself is styled — markup
+the consumer nests inside it is left alone — so an icon or label child keeps whatever the host
+page gives it.
 
 **CSS parts:** `base` (the `role="group"` wrapper; drops its floating-surface chrome under
 `frame="plain"`), `zoom-in`, `zoom-out`, `fit`, `lock` (omitted when `hideLock`).
@@ -2408,6 +2433,16 @@ number; tone?: 'brand' | 'success' | 'warning' | 'danger' | 'neutral'; color?: s
 - `variant: 'ring' | 'bar' = 'bar'` (reflected)
 - `label: string = ''` — overall accessible caption, e.g. `"128K context window"`. Also rendered
   visually (`[part="label"]`) when set.
+- `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders a static
+  `[part="legend"]` key below the meter, one swatch/label pair per `segments` entry, each swatch
+  painted from that segment's resolved `color`/`tone`. Without it a segment's own label is exposed
+  only through a hover `title` (desktop-only, undiscoverable) and the visually-hidden breakdown
+  list, so a meter split across more than two or three categories reads as unlabeled colour to a
+  sighted user. Non-interactive: it toggles nothing and emits nothing, mirroring
+  `lr-sequence-strip`'s `showLegend` rather than the interactive `lr-graph-legend`. The whole
+  subtree is `aria-hidden`, since `segment-list` already exposes the same names. Under
+  `variant="ring"` the host stops being a fixed square so the key flows below the ring instead of
+  being clipped.
 
 Accessible summaries, segment tooltips, and ring titles format quantities using `effectiveLocale`.
 A host `aria-label` overrides the generated meter summary and is preserved across reactive updates.
@@ -2419,10 +2454,14 @@ A host `aria-label` overrides the generated meter summary and is preserved acros
 **CSS parts:** `base` (a `<div>` for `bar`, an `<svg>` for `ring`), `semantic` (the visually hidden
 meter semantics), `track` (the unfilled/empty capacity), `segment` (one occupied segment — carries
 `data-tone` and, for custom colors, `--lr-context-meter-segment-color`), `segment-list` (the hidden
-category list), `segment-item` (one hidden category/value entry), and `label`
+category list), `segment-item` (one hidden category/value entry), `label`, and — only under
+`showLegend` — `legend`, `legend-item`, `legend-swatch` (carrying the same `data-tone` and custom
+color hook as `segment`) and `legend-label`
 
 **Themeable custom properties:** `--lr-context-meter-segment-color` is set per segment when its
-`color` field is supplied; otherwise the component consumes shared tokens
+`color` field is supplied, and is read by both `segment` and its matching `legend-swatch` so the
+two can never disagree. `--lr-context-meter-legend-swatch-size` (default `var(--lr-size-0-625rem)`)
+sizes a legend chip on both axes. Otherwise the component consumes shared tokens
 `--lr-space-xs`, `--lr-color-text-quiet`, `--lr-font`, `--lr-radius`, `--lr-color-border`,
 `--lr-color-surface` (the bar variant's inter-segment seam), `--lr-color-brand`,
 `--lr-color-success`, `--lr-color-warning`, `--lr-color-danger`, `--lr-transition-base`.

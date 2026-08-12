@@ -1,4 +1,5 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { LitElement, type PropertyValues } from 'lit';
 import './confirm-bar.js';
 import type { LyraConfirmBar } from './confirm-bar.js';
 import type { LyraButton } from '../../forms/button/button.class.js';
@@ -570,4 +571,81 @@ describe('async pending decisions', () => {
     expect((el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).loading).to.be.true;
     await expect(el).to.be.accessible();
   });
+
+  it('hands focus to [part="status"] when entering the pending state, never dropping it to <body>', async () => {
+    // `?loading` on the just-activated button makes lr-button's internal native <button> genuinely
+    // `disabled`, and the browser blurs a focused element the moment it becomes disabled. Keyboard
+    // activation (Tab, then Enter/Space) always leaves that button focused when `decide()` runs, so
+    // without an explicit handoff the user is silently dropped to <body> for the whole duration of
+    // the host's async work -- contradicting the component's own documented focus contract.
+    for (const which of ['approve', 'deny'] as const) {
+      const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
+      el.addEventListener(which === 'approve' ? 'lr-approve' : 'lr-deny', (e) => e.preventDefault());
+      const button = el.shadowRoot!.querySelector(`[part="${which}-button"]`) as LyraButton;
+      button.focus();
+      await el.updateComplete;
+      button.click();
+      await el.updateComplete;
+
+      expect(el.pending, `${which} entered the pending state`).to.equal(
+        which === 'approve' ? 'approved' : 'denied',
+      );
+      const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
+      expect(
+        el.shadowRoot!.activeElement === status,
+        `${which} moved focus to [part="status"], not <body>`,
+      ).to.equal(true);
+      expect(document.activeElement === el, `${which} kept focus inside the component`).to.equal(true);
+    }
+  });
+});
+
+it('keeps a default (non-compact) bar from collapsing in a shrink-to-fit flex row', async () => {
+  // `container-type: inline-size` strips content-based intrinsic sizing, so an inline-size query
+  // container placed in a shrink-to-fit context needs a contain-intrinsic-inline-size fallback or
+  // it collapses to a sliver. The compact variant sets `container: none` and is unaffected.
+  const wrapper = (await fixture(html`
+    <div style="display: flex; align-items: flex-start;">
+      <lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-confirm-bar') as LyraConfirmBar;
+  await el.updateComplete;
+  expect(el.getBoundingClientRect().width).to.be.greaterThan(100);
+  const approve = el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton;
+  expect(approve.getBoundingClientRect().width).to.be.greaterThan(0);
+});
+
+it('chains willUpdate()/updated() to super so a mixin layered under LyraElement would still run', async () => {
+  // No shared mixin overrides either hook today, so the only way to prove the chain is live
+  // (rather than grepping source text for the call) is to patch the base-class hooks a future
+  // mixin would extend and confirm they actually fire.
+  const proto = LitElement.prototype as unknown as Record<string, unknown>;
+  const hooks = ['willUpdate', 'updated'] as const;
+  const saved = hooks.map((hook) => ({
+    hook,
+    hadOwn: Object.prototype.hasOwnProperty.call(LitElement.prototype, hook),
+    original: proto[hook] as ((changed: PropertyValues) => void) | undefined,
+  }));
+  // Recorded per tag name, never as a bare boolean: this component's own shadow root mounts
+  // <lr-button>/<lr-live-region>, which are LitElement subclasses too and would trip a shared flag
+  // regardless of whether lr-confirm-bar itself chained anything.
+  const calledBy: Record<string, Set<string>> = { willUpdate: new Set(), updated: new Set() };
+  for (const { hook, original } of saved) {
+    proto[hook] = function (this: LitElement, changed: PropertyValues) {
+      calledBy[hook]!.add(this.localName);
+      original?.call(this, changed);
+    };
+  }
+  try {
+    const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
+    await el.updateComplete;
+    expect(calledBy['willUpdate']!.has('lr-confirm-bar'), 'willUpdate chained to super').to.equal(true);
+    expect(calledBy['updated']!.has('lr-confirm-bar'), 'updated chained to super').to.equal(true);
+  } finally {
+    for (const { hook, hadOwn, original } of saved) {
+      if (hadOwn) proto[hook] = original;
+      else delete proto[hook];
+    }
+  }
 });

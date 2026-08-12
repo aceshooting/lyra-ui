@@ -15,7 +15,7 @@ import { styles } from './chat-composer.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_composerLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_restore, LYRA_DEFAULT_sendMessage, LYRA_DEFAULT_stopGenerating } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_composerLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_sendMessage, LYRA_DEFAULT_stopGenerating } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -156,7 +156,6 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     ...super.defaultStrings,
     composerLabel: LYRA_DEFAULT_composerLabel,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
-    restore: LYRA_DEFAULT_restore,
     sendMessage: LYRA_DEFAULT_sendMessage,
     stopGenerating: LYRA_DEFAULT_stopGenerating,
   };

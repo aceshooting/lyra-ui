@@ -21,11 +21,12 @@ import type {
   TextSelectDetail,
 } from '../../viewers/document-viewer/anchors.js';
 import { styles } from './terminal.styles.js';
+import type { LyraFrame } from '../../../internal/variants.js';
 import type { VirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_open, LYRA_DEFAULT_terminalDownload, LYRA_DEFAULT_terminalHighlightLine, LYRA_DEFAULT_terminalLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_terminalDownload, LYRA_DEFAULT_terminalHighlightLine, LYRA_DEFAULT_terminalLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -132,6 +133,10 @@ export interface LyraTerminalEventMap {
  * most 4,096 characters; an overlong unterminated control sequence is dropped so later chunks
  * resume without an unbounded hidden carry.
  *
+ * `compact` tightens the toolbar and line padding for dense transcript rows, and `frame="plain"`
+ * removes the outer card chrome when a surrounding container already supplies it — the same pair
+ * `lr-result-card`, `lr-stack-trace`, `lr-task-list`, and `lr-thinking-panel` expose.
+ *
  * @customElement lr-terminal
  * @event lr-copy - `detail: { text }` — the copy button copied the SGR-stripped plain text.
  * @event lr-download - `detail: { filename }` — the download button was activated. Cancelable: by
@@ -180,6 +185,12 @@ export interface LyraTerminalEventMap {
  *   line containing a non-active search match.
  * @cssprop [--lr-terminal-search-active-outline-color=var(--lr-color-brand)] - Outline color for
  *   the active search match's line.
+ * @cssprop [--lr-terminal-compact-toolbar-padding=var(--lr-space-2xs) var(--lr-space-xs)] -
+ *   `[part="toolbar"]` padding while `compact`.
+ * @cssprop [--lr-terminal-compact-toolbar-gap=var(--lr-space-2xs)] - Gap between
+ *   `[part="toolbar"]`'s buttons while `compact`.
+ * @cssprop [--lr-terminal-compact-line-padding-inline=var(--lr-space-xs)] - Inline padding of each
+ *   rendered `[part="line"]` while `compact`.
  * @status stable
  * @since 4.0.0
  */
@@ -189,13 +200,10 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     accessibleLabelSeparator: LYRA_DEFAULT_accessibleLabelSeparator,
-    collapse: LYRA_DEFAULT_collapse,
     copied: LYRA_DEFAULT_copied,
     copy: LYRA_DEFAULT_copy,
-    details: LYRA_DEFAULT_details,
     highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
     jumpToLatest: LYRA_DEFAULT_jumpToLatest,
-    open: LYRA_DEFAULT_open,
     terminalDownload: LYRA_DEFAULT_terminalDownload,
     terminalHighlightLine: LYRA_DEFAULT_terminalHighlightLine,
     terminalLabel: LYRA_DEFAULT_terminalLabel,
@@ -217,6 +225,19 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @property({ attribute: false }) highlights: LyraHighlight[] = [];
   @property({ attribute: false }) activeHighlightId: string | null = null;
+
+  /** Tightens the toolbar's padding/gap and each rendered line's inline padding for a terminal
+   *  embedded in an already-padded transcript row -- same convention as `lr-task-list`'s and
+   *  `lr-thinking-panel`'s `compact`. Defaults to `false`, i.e. the full padding. Purely a density
+   *  knob: the card border and background stay, so use `frame="plain"` to drop the chrome. */
+  @property({ type: Boolean, reflect: true }) compact = false;
+
+  /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
+   *  keeps `[part="base"]`'s border, corner radius, and raised surface; `'plain'` removes all
+   *  three so a terminal nested inside a container that already draws a border (an agent-run
+   *  panel, a message bubble) doesn't double it. Plain keeps the toolbar/log divider and whichever
+   *  regular or compact padding applies -- it controls outer chrome only. */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   /** Feature-detectable capability mirror -- the same pattern `DocumentAnchorTarget`-adopting
    *  viewers use for their own `anchorKinds` field. This component isn't document-viewer-registry-
@@ -519,22 +540,40 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   // --- Highlights / anchors ------------------------------------------------
 
-  private highlightForLine(lineNumber: number): LyraHighlight | undefined {
-    return this.highlights.find(
-      (h) =>
-        h.anchor.kind === 'line-range' &&
-        lineNumber >= h.anchor.start &&
-        lineNumber <= (h.anchor.end ?? h.anchor.start),
-    );
-  }
-
-  private resolvedHighlightOwnerLines(): Map<LyraHighlight, number> {
+  /** Resolves, in one O(highlights + covered-lines) pass, both (a) `perLine` -- the same winning
+   *  highlight a per-line `this.highlights.find(...)` scan would have returned for every line
+   *  currently in the buffer, first match in `this.highlights` array order winning any overlap --
+   *  and (b) `owners`, the first (lowest-numbered) line each highlight actually wins, i.e. the one
+   *  `renderLine()` renders as the highlight's single interactive (`role="button"`) owner. Replaces
+   *  what used to be a per-line `.find()` scan of the whole `highlights` array (O(lines ×
+   *  highlights) every render). `this.lines`' numbers are always contiguous (see `appendLine()`),
+   *  so a highlight's `[start, end]` range is
+   *  clamped to the buffer's actual `[minLine, maxLine]` and then walked directly -- an end far
+   *  outside the buffer (or omitted) never costs more than a pass over the lines actually present.
+   *  Highlights are processed in array order and a line already claimed by an earlier (higher
+   *  priority) highlight is skipped, which reproduces `.find()`'s first-match-wins tie-break
+   *  exactly, including when a later-array, wider/earlier-starting highlight would otherwise have
+   *  looked like the "obvious" winner by start position alone. */
+  private resolvedHighlightLines(): {
+    perLine: Map<number, LyraHighlight>;
+    owners: Map<LyraHighlight, number>;
+  } {
+    const perLine = new Map<number, LyraHighlight>();
     const owners = new Map<LyraHighlight, number>();
-    for (const line of this.lines) {
-      const highlight = this.highlightForLine(line.number);
-      if (highlight && !owners.has(highlight)) owners.set(highlight, line.number);
+    if (this.lines.length === 0 || this.highlights.length === 0) return { perLine, owners };
+    const minLine = this.lines[0]!.number;
+    const maxLine = this.lines[this.lines.length - 1]!.number;
+    for (const highlight of this.highlights) {
+      if (highlight.anchor.kind !== 'line-range') continue;
+      const start = Math.max(highlight.anchor.start, minLine);
+      const end = Math.min(highlight.anchor.end ?? highlight.anchor.start, maxLine);
+      for (let lineNumber = start; lineNumber <= end; lineNumber++) {
+        if (perLine.has(lineNumber)) continue;
+        perLine.set(lineNumber, highlight);
+        if (!owners.has(highlight)) owners.set(highlight, lineNumber);
+      }
     }
-    return owners;
+    return { perLine, owners };
   }
 
   private activateHighlight(h: LyraHighlight): void {
@@ -711,11 +750,14 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   private renderLine = (
     line: TerminalLine,
+    highlightByLine: Map<number, LyraHighlight>,
     highlightOwnerLines: Map<LyraHighlight, number>,
+    matchedLineNumbers: Set<number>,
+    activeMatchLineNumber: number | null,
   ): TemplateResult => {
-    const isMatchLine = this.searchMatches.some((m) => m.lineNumber === line.number);
-    const isActiveMatchLine = this.searchMatches[this.searchActiveIndex]?.lineNumber === line.number;
-    const highlight = this.highlightForLine(line.number);
+    const isMatchLine = matchedLineNumbers.has(line.number);
+    const isActiveMatchLine = activeMatchLineNumber !== null && activeMatchLineNumber === line.number;
+    const highlight = highlightByLine.get(line.number);
     const highlightOwner =
       highlight && highlightOwnerLines.get(highlight) === line.number
         ? highlight
@@ -769,7 +811,11 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   override render(): TemplateResult {
     const hasToolbar = this.copyable || this.downloadable;
     const ariaLabel = this.accessibleLabel || this.localize('terminalLabel');
-    const highlightOwnerLines = this.resolvedHighlightOwnerLines();
+    // Computed once per render, then consumed with O(1) lookups inside renderLine() for every
+    // visible row -- rather than each row independently re-scanning `highlights`/`searchMatches`.
+    const { perLine: highlightByLine, owners: highlightOwnerLines } = this.resolvedHighlightLines();
+    const matchedLineNumbers = new Set(this.searchMatches.map((m) => m.lineNumber));
+    const activeMatchLineNumber = this.searchMatches[this.searchActiveIndex]?.lineNumber ?? null;
     return html`
       <div part="base">
         <div part="announcer" class="sr-only" aria-hidden="true"></div>
@@ -800,7 +846,14 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
           <lr-virtual-list
             exportparts="line:line"
             .items=${this.lines}
-            .renderItem=${(item: unknown) => this.renderLine(item as TerminalLine, highlightOwnerLines)}
+            .renderItem=${(item: unknown) =>
+              this.renderLine(
+                item as TerminalLine,
+                highlightByLine,
+                highlightOwnerLines,
+                matchedLineNumbers,
+                activeMatchLineNumber,
+              )}
             .keyFunction=${(item: unknown) => (item as TerminalLine).number}
             .activeId=${this.scrollTargetLineNumber ?? ''}
             row-height=${this.wrap ? 'auto' : '24'}

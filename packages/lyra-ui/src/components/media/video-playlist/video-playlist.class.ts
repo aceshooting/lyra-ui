@@ -16,7 +16,7 @@ import type { LyraVideo, LyraVideoControls } from '../video/video.js';
 import { styles } from './video-playlist.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_videoPlaylistLabel, LYRA_DEFAULT_videoPlaylistUntitled } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_videoPlaylistLabel, LYRA_DEFAULT_videoPlaylistUntitled } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -51,6 +51,8 @@ export interface LyraVideoPlaylistChangeDetail {
 
 export interface LyraVideoPlaylistEventMap {
   'lr-video-change': CustomEvent<LyraVideoPlaylistChangeDetail>;
+  blur: CustomEvent<undefined>;
+  focus: CustomEvent<undefined>;
 }
 
 interface VideoListeners {
@@ -148,6 +150,8 @@ function frozenTrack(
  * @event lr-video-change - Emitted when `goTo()`, `next()`, `previous()`, or automatic advancement
  *   selects a video. Detail is `{ previousIndex, currentIndex, video }`; `video` is a fresh frozen
  *   `{ title, poster, sources, tracks }` data snapshot and contains no live DOM nodes.
+ * @event focus - Re-dispatched from a playlist row as a bubbling, composed event.
+ * @event blur - Re-dispatched from a playlist row as a bubbling, composed event.
  * @csspart base - Deprecated alias on the same root node as `video-playlist`.
  * @csspart video-playlist - Root video-and-playlist layout.
  * @csspart playlist - Playlist sidebar container.
@@ -167,8 +171,6 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    pause: LYRA_DEFAULT_pause,
-    play: LYRA_DEFAULT_play,
     videoPlaylistLabel: LYRA_DEFAULT_videoPlaylistLabel,
     videoPlaylistUntitled: LYRA_DEFAULT_videoPlaylistUntitled,
   };
@@ -724,6 +726,45 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     this.focusItem(next);
   }
 
+  /** The playlist row that currently owns the roving tab stop, falling back to the first enabled
+   *  row while the roving index sits on a disabled/absent one. This is the target the host's own
+   *  focus/blur/click forward to — without it there is no public way to reach a row at all. */
+  private get rovingItem(): HTMLButtonElement | null {
+    const rows = [
+      ...this.renderRoot.querySelectorAll<HTMLButtonElement>('[part~="playlist-item"]'),
+    ];
+    return rows.find((row) => !row.disabled && row.tabIndex === 0)
+      ?? rows.find((row) => !row.disabled)
+      ?? null;
+  }
+
+  /** Focus the playlist row holding the roving tab stop. An empty playlist renders no row, so this
+   *  is a no-op there. */
+  override focus(options?: FocusOptions): void {
+    this.rovingItem?.focus(options);
+  }
+
+  /** Blur the playlist row holding the roving tab stop. */
+  override blur(): void {
+    this.rovingItem?.blur();
+  }
+
+  /** Activate the playlist row holding the roving tab stop, so a host-level `.click()` is not a
+   *  silent no-op. */
+  override click(): void {
+    this.rovingItem?.click();
+  }
+
+  private onItemFocus = (event: FocusEvent): void => {
+    event.stopPropagation();
+    this.emit('focus');
+  };
+
+  private onItemBlur = (event: FocusEvent): void => {
+    event.stopPropagation();
+    this.emit('blur');
+  };
+
   private focusItem(index: number): void {
     if (!this.isEnabled(this.playlistVideos[index]!)) return;
     this.rovingIndex = index;
@@ -787,6 +828,8 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
           ?disabled=${disabled}
           @click=${this.onItemClick}
           @keydown=${this.onItemKeyDown}
+          @focus=${this.onItemFocus}
+          @blur=${this.onItemBlur}
         >
           <span part="playlist-thumbnail" aria-hidden="true">
             ${poster ? html`<img src=${poster} alt="">` : html`

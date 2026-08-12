@@ -8,7 +8,7 @@ import '../../overlays/empty/empty.class.js';
 import { styles } from './retrieval-compare.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_retrievalCompareDenseScore, LYRA_DEFAULT_retrievalCompareEmpty, LYRA_DEFAULT_retrievalCompareFinalScore, LYRA_DEFAULT_retrievalCompareLabel, LYRA_DEFAULT_retrievalCompareOverlap, LYRA_DEFAULT_retrievalCompareRank, LYRA_DEFAULT_retrievalCompareRerankScore, LYRA_DEFAULT_retrievalCompareSparseScore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_retrievalCompareDenseScore, LYRA_DEFAULT_retrievalCompareEmpty, LYRA_DEFAULT_retrievalCompareFinalScore, LYRA_DEFAULT_retrievalCompareLabel, LYRA_DEFAULT_retrievalCompareOverlap, LYRA_DEFAULT_retrievalCompareRank, LYRA_DEFAULT_retrievalCompareRerankScore, LYRA_DEFAULT_retrievalCompareSparseScore } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -54,9 +54,6 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
     retrievalCompareDenseScore: LYRA_DEFAULT_retrievalCompareDenseScore,
     retrievalCompareEmpty: LYRA_DEFAULT_retrievalCompareEmpty,
     retrievalCompareFinalScore: LYRA_DEFAULT_retrievalCompareFinalScore,

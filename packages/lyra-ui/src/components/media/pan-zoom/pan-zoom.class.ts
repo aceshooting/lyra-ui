@@ -31,6 +31,8 @@ function ownsKeyboardInput(event: KeyboardEvent): boolean {
 
 export interface LyraPanZoomEventMap {
   'lr-zoom-change': CustomEvent<{ zoom: number }>;
+  blur: CustomEvent<undefined>;
+  focus: CustomEvent<undefined>;
 }
 
 /**
@@ -44,6 +46,8 @@ export interface LyraPanZoomEventMap {
  * @customElement lr-pan-zoom
  * @slot - Content to inspect; when `src` is set, an image is rendered instead.
  * @event lr-zoom-change - Zoom changed. `detail: { zoom }`.
+ * @event focus - Re-dispatched from the scrollable viewport as a bubbling, composed event.
+ * @event blur - Re-dispatched from the scrollable viewport as a bubbling, composed event.
  * @csspart base - The frame wrapper.
  * @csspart viewport - The scrollable viewport.
  * @csspart content - The transformed content wrapper.
@@ -125,6 +129,35 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
     this.renderRoot.querySelector<HTMLElement>('[part="viewport"]')?.scrollTo({ left: 0, top: 0 });
   }
 
+  private get viewportEl(): HTMLElement | null {
+    return this.renderRoot.querySelector<HTMLElement>('[part="viewport"]');
+  }
+
+  /** Focus the scrollable viewport — the element that owns this component's keyboard zoom. */
+  override focus(options?: FocusOptions): void {
+    this.viewportEl?.focus(options);
+  }
+
+  /** Blur the scrollable viewport. */
+  override blur(): void {
+    this.viewportEl?.blur();
+  }
+
+  /** Activate the scrollable viewport, so a host-level `.click()` is not a silent no-op. */
+  override click(): void {
+    this.viewportEl?.click();
+  }
+
+  private onViewportFocus = (event: FocusEvent): void => {
+    event.stopPropagation();
+    this.emit('focus');
+  };
+
+  private onViewportBlur = (event: FocusEvent): void => {
+    event.stopPropagation();
+    this.emit('blur');
+  };
+
   private onViewportKeyDown = (event: KeyboardEvent): void => {
     if (ownsKeyboardInput(event)) return;
     if (event.key === '+' || event.key === '=') {
@@ -145,7 +178,15 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
     const max = this.safeMaxZoom;
     const label = this.accessibleLabel ?? this.localize('zoomableFrameLabel');
     return html`<div part="base" role="region" aria-label=${label}>
-      <div part="viewport" role="group" aria-label=${label} tabindex="0" @keydown=${this.onViewportKeyDown}>
+      <div
+        part="viewport"
+        role="group"
+        aria-label=${label}
+        tabindex="0"
+        @keydown=${this.onViewportKeyDown}
+        @focus=${this.onViewportFocus}
+        @blur=${this.onViewportBlur}
+      >
         <div
           part="content"
           data-zoom=${String(zoom)}
@@ -157,7 +198,7 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
       <div part="controls" role="toolbar" aria-label=${this.localize('zoomControls')}>
         <button part="zoom-out" type="button" aria-label=${this.localize('zoomOut')} ?disabled=${zoom <= min} @click=${() => this.zoomOut()}>−</button>
         <button part="reset" type="button" aria-label=${this.localize('resetZoom')} @click=${() => this.resetZoom()}>${this.localize('pdfViewerCurrentZoom', undefined, {
-          percent: getNumberFormat(this.effectiveLocale).format(100),
+          percent: getNumberFormat(this.effectiveLocale).format(Math.round(zoom * 100)),
         })}</button>
         <button part="zoom-in" type="button" aria-label=${this.localize('zoomIn')} ?disabled=${zoom >= max} @click=${() => this.zoomIn()}>+</button>
       </div>

@@ -42,3 +42,45 @@ export const ThemedActiveMatch: Story = {
     ></lr-xml-viewer>
   `,
 };
+
+export const Highlights: Story = {
+  name: 'Host-supplied highlights',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Every `highlights` entry whose anchor is a `node-path` this document resolves tints its element row with the entry tone and adds a focusable `highlight-action` button that emits `lr-highlight-activate`. `activeHighlightId` outlines the entry a host is currently showing. Retune each tone through `--lr-xml-viewer-highlight-<tone>-background`, and the active outline through `--lr-xml-viewer-highlight-active-outline`.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-xml-viewer
+      name="feed.rss"
+      .xml=${FEED}
+      active-highlight-id="channel"
+      .highlights=${[
+        { id: 'channel', anchor: { kind: 'node-path', path: [0] }, tone: 'success', label: 'Channel' },
+        { id: 'item', anchor: { kind: 'node-path', path: [0, 1] }, tone: 'warning' },
+      ]}
+    ></lr-xml-viewer>
+  `,
+};
+
+export const AttributeAnchor: Story = {
+  name: 'Attribute-addressing node-path anchor',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "A `node-path` whose trailing segment is `'@attrName'` resolves to one specific attribute of the addressed element, and that one `attribute` pair is outlined with `--lr-xml-viewer-active-attribute-color` — so a citation pointing at a single attribute value of a multi-attribute element stays identifiable in the rendered tree.",
+      },
+    },
+  },
+  render: () => html`
+    <lr-xml-viewer
+      name="feed.rss"
+      .xml=${FEED}
+      .anchor=${{ kind: 'node-path', path: [0, 1, 1, '@href'] }}
+    ></lr-xml-viewer>
+  `,
+};

@@ -24,12 +24,21 @@ Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid
 header row always occupying row 1 (this component always parses with a header row, so the first row
 is never part of the virtualized body); `scrollToAnchor()` scrolls the addressed row into view via
 the virtualized list's `active-id`. `highlights` paint as a `part="cell-highlight"` cell wrapping a
-focusable `part="cell-highlight-action"` native button, keeping the ARIA table tree intact.
+focusable `part="cell-highlight-action"` native button, keeping the ARIA table tree intact. A jump
+whose document is replaced by a concurrent `src` reassignment mid-flight reports `found: false`
+rather than a phantom success, and a header-row target scrolls with the same
+`prefers-reduced-motion`-gated smooth behavior every other row uses.
 
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
 `max-height`); invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
 Host `aria-label` names the table by attribute presence, including an explicitly empty value;
-`name` and the localized row-count caption are fallbacks.
+`name` and the localized row-count caption are fallbacks. The same computed name (host `aria-label`,
+else `name`) also names a persistent `role="region"` landmark on `[part='base']` in *every* fetch
+state — idle, loading, empty, error, loaded — so a landmark-navigating screen-reader user reaches the
+viewer before it has any rows, not only after a successful non-empty load. With neither set,
+`[part='base']` stays a plain wrapper rather than an unnamed region. The outer region carries the
+plain display name while the inner `[part='table']` keeps the richer row-count caption; the two are
+complementary, matching `lr-csv-viewer`/`lr-archive-viewer`'s base-vs-content split.
 `anchorKinds: readonly LyraAnchorKind[] = ['cell-range']` (this viewer's supported `LyraAnchor.kind`
 values for the shared anchor-target contract).
 
@@ -46,7 +55,8 @@ Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
 
-**CSS parts:** `base`, `body`, `table`, `header-row`, `header-cell`, `data-row`, `cell`,
+**CSS parts:** `base` (a persistent `role="region"` named by the host `aria-label` or `name`, in
+every fetch state), `body`, `table`, `header-row`, `header-cell`, `data-row`, `cell`,
 `cell-highlight` (a `role="cell"` covered by a `highlights` entry; wraps the action button),
 `cell-highlight-action` (the native button filling a highlighted cell — focusable, emits
 `lr-highlight-activate` on click or Enter/Space; its complete accessible name uses the localized

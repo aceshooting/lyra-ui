@@ -117,6 +117,84 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(graph.hiddenTypes).to.deep.equal(['person']);
   });
 
+  it('accepts a preset search-query attribute, filtering from the very first render', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        search-query="curie"
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+
+    expect(el.searchQuery).to.equal('curie');
+    expect(el.shadowRoot!.querySelectorAll('[part="search-result"]').length).to.equal(2);
+    const searchInput = el.shadowRoot!.querySelector('[part="search"]') as LyraInput;
+    expect(searchInput.value, 'the preset query is reflected into the visible search box').to.equal('curie');
+  });
+
+  it('emits lr-search-change with the new query when the user types, and stays silent for a host assignment', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+
+    const details: unknown[] = [];
+    el.addEventListener('lr-search-change', (event) => {
+      details.push((event as LyraKnowledgeGraphExplorerEventMap['lr-search-change']).detail);
+    });
+
+    const searchInput = el.shadowRoot!.querySelector('[part="search"]') as LyraInput;
+    const native = searchInput.shadowRoot!.querySelector('input') as HTMLInputElement;
+    native.value = 'curie';
+    native.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+
+    expect(details).to.deep.equal([{ searchQuery: 'curie' }]);
+    expect(el.searchQuery, 'the component applies the query itself before announcing it').to.equal('curie');
+
+    el.searchQuery = 'polonium';
+    await el.updateComplete;
+    expect(details.length, 'a direct host assignment stays silent').to.equal(1);
+  });
+
+  it('bounds the composed graph by an explicit host height instead of its own intrinsic aspect ratio', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        style="block-size: 20rem"
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+
+    const hostBox = el.getBoundingClientRect();
+    const baseBox = el.shadowRoot!.querySelector('[part="base"]')!.getBoundingClientRect();
+    const graphBox = graphEl(el).getBoundingClientRect();
+
+    expect(hostBox.height, 'the fixture height applied').to.be.closeTo(320, 1);
+    expect(baseBox.height, 'the column fills its host rather than its content').to.be.closeTo(hostBox.height, 1);
+    expect(
+      graphBox.bottom - hostBox.bottom,
+      'the graph does not bleed past the host box it was given',
+    ).to.be.at.most(1);
+    expect(graphBox.height, 'and it takes the space the toolbar leaves over').to.be.greaterThan(100);
+  });
+
+  it('still sizes itself from the graph when the host is left unsized', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+
+    expect(el.getBoundingClientRect().height, 'no height collapse without an explicit host height').to.be.greaterThan(
+      100,
+    );
+    expect(graphEl(el).getBoundingClientRect().height).to.be.greaterThan(100);
+  });
+
   it('filters search matches, shows a no-matches state, and dims non-matching nodes/links on lr-graph', async () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>

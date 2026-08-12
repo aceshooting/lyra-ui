@@ -8,7 +8,7 @@ import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { styles } from './zoomable-frame.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_loading, LYRA_DEFAULT_zoomControls, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut, LYRA_DEFAULT_zoomableFrameLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_zoomControls, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut, LYRA_DEFAULT_zoomableFrameLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -130,6 +130,8 @@ function parseZoomLevels(value: unknown): number[] {
 export interface LyraZoomableFrameEventMap {
   load: Event;
   error: Event;
+  blur: CustomEvent<undefined>;
+  focus: CustomEvent<undefined>;
 }
 
 /**
@@ -154,6 +156,8 @@ export interface LyraZoomableFrameEventMap {
  *   and hidden from assistive technology; the native zoom-out button remains the sole action.
  * @event load - Relayed native iframe load event; non-bubbling and non-composed.
  * @event error - Relayed native iframe error event; non-bubbling and non-composed.
+ * @event focus - Re-dispatched from the internal iframe as a bubbling, composed event.
+ * @event blur - Re-dispatched from the internal iframe as a bubbling, composed event.
  * @csspart iframe - The internal `<iframe>` element.
  * @csspart controls - The zoom-controls toolbar.
  * @csspart zoom-in-button - The zoom-in button.
@@ -169,7 +173,6 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    loading: LYRA_DEFAULT_loading,
     zoomControls: LYRA_DEFAULT_zoomControls,
     zoomIn: LYRA_DEFAULT_zoomIn,
     zoomOut: LYRA_DEFAULT_zoomOut,
@@ -210,6 +213,34 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
 
   /** The internal iframe. Readonly by convention; replaced whenever navigation policy changes. */
   @query('iframe') iframe?: HTMLIFrameElement;
+
+  /** Focus the internal iframe — the component's primary interactive surface. `without-interaction`
+   *  drops it out of the tab order but keeps it programmatically focusable, so this still works
+   *  there; the zoom toolbar is a two-button group with no single primary action, so it is
+   *  deliberately not the forwarding target. */
+  override focus(options?: FocusOptions): void {
+    this.iframe?.focus(options);
+  }
+
+  /** Blur the internal iframe. */
+  override blur(): void {
+    this.iframe?.blur();
+  }
+
+  /** Activate the internal iframe, so a host-level `.click()` is not a silent no-op. */
+  override click(): void {
+    this.iframe?.click();
+  }
+
+  private onFrameFocus = (event: FocusEvent): void => {
+    event.stopPropagation();
+    this.emit('focus');
+  };
+
+  private onFrameBlur = (event: FocusEvent): void => {
+    event.stopPropagation();
+    this.emit('blur');
+  };
 
   private navigationGeneration = 0;
   private needsReconnectFrame = false;
@@ -572,6 +603,8 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
       style="--lr-zoomable-frame-zoom: ${zoom}"
       @load=${(event: Event) => this.onFrameEvent('load', event, generation, navigationSignature)}
       @error=${(event: Event) => this.onFrameEvent('error', event, generation, navigationSignature)}
+      @focus=${this.onFrameFocus}
+      @blur=${this.onFrameBlur}
     ></iframe>`;
     return html`${keyed(generation, frame)}${this.renderControls()}`;
   }

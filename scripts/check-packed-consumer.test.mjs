@@ -29,6 +29,7 @@ test('models the raw core ceiling as the reviewed baseline plus the named allowa
     batchFourRemediationAllowanceBytes: 10_000,
     fullReviewRecoveryAllowanceBytes: 10_000,
     fullSweepBatch2Batch3AllowanceBytes: 25_000,
+    fullSweepBatch6Batch10AllowanceBytes: 40_000,
   });
   assert.equal(
       terms.reviewedBaselineBytes +
@@ -36,12 +37,13 @@ test('models the raw core ceiling as the reviewed baseline plus the named allowa
       terms.reviewedRemediationAllowanceBytes +
       terms.batchFourRemediationAllowanceBytes +
       terms.fullReviewRecoveryAllowanceBytes +
-      terms.fullSweepBatch2Batch3AllowanceBytes,
-    3_980_000,
+      terms.fullSweepBatch2Batch3AllowanceBytes +
+      terms.fullSweepBatch6Batch10AllowanceBytes,
+    4_020_000,
   );
   assert.match(
     checkerSource,
-    /maxRawBytes:\s*coreRawBudget\.reviewedBaselineBytes\s*\+\s*coreRawBudget\.stableRootRegistrationAllowanceBytes\s*\+\s*coreRawBudget\.reviewedRemediationAllowanceBytes\s*\+\s*coreRawBudget\.batchFourRemediationAllowanceBytes\s*\+\s*coreRawBudget\.fullReviewRecoveryAllowanceBytes\s*\+\s*coreRawBudget\.fullSweepBatch2Batch3AllowanceBytes\s*,/u,
+    /maxRawBytes:\s*coreRawBudget\.reviewedBaselineBytes\s*\+\s*coreRawBudget\.stableRootRegistrationAllowanceBytes\s*\+\s*coreRawBudget\.reviewedRemediationAllowanceBytes\s*\+\s*coreRawBudget\.batchFourRemediationAllowanceBytes\s*\+\s*coreRawBudget\.fullReviewRecoveryAllowanceBytes\s*\+\s*coreRawBudget\.fullSweepBatch2Batch3AllowanceBytes\s*\+\s*coreRawBudget\.fullSweepBatch6Batch10AllowanceBytes\s*,/u,
     'the core bundle entry must use every reviewed term instead of a second unexplained ceiling',
   );
 });

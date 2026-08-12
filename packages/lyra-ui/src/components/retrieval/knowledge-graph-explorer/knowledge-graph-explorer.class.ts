@@ -22,7 +22,7 @@ import '../../forms/button/button.class.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_graphExplorerFindPath, LYRA_DEFAULT_graphExplorerLabel, LYRA_DEFAULT_graphExplorerPin, LYRA_DEFAULT_graphExplorerPinned, LYRA_DEFAULT_graphExplorerPinnedHeading, LYRA_DEFAULT_graphExplorerSearchPlaceholder, LYRA_DEFAULT_graphExplorerSearchResultsLabel, LYRA_DEFAULT_graphExplorerUnpin, LYRA_DEFAULT_graphExplorerUnpinned, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_graphExplorerFindPath, LYRA_DEFAULT_graphExplorerLabel, LYRA_DEFAULT_graphExplorerPin, LYRA_DEFAULT_graphExplorerPinned, LYRA_DEFAULT_graphExplorerPinnedHeading, LYRA_DEFAULT_graphExplorerSearchPlaceholder, LYRA_DEFAULT_graphExplorerSearchResultsLabel, LYRA_DEFAULT_graphExplorerUnpin, LYRA_DEFAULT_graphExplorerUnpinned, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 function isElementNode(value: EventTarget): value is Element {
@@ -63,6 +63,11 @@ export interface LyraKnowledgeGraphExplorerEventMap {
    *  change` already establishes), so reassigning it back is optional -- useful only for a host
    *  that wants to persist or observe pins elsewhere. */
   'lr-pin-change': CustomEvent<{ pinnedNodeIds: string[] }>;
+  /** The user typed in the toolbar's search box. `detail: { searchQuery }` -- the complete new
+   *  query. The component has already applied it to its own `searchQuery` before emitting, the same
+   *  self-toggle-then-emit contract `lr-pin-change` follows, so reassigning it back is optional and
+   *  a direct host assignment stays silent. */
+  'lr-search-change': CustomEvent<{ searchQuery: string }>;
   'lr-node-click': CustomEvent<{ id: string; x: number; y: number }>;
   'lr-link-click': CustomEvent<{ source: string; target: string; id?: string }>;
   'lr-node-expand': CustomEvent<{ id: string }>;
@@ -131,6 +136,8 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  *   { selectedNodeId: string | null }`. Direct host assignments do not emit.
  * @event lr-path-request - `detail: { sourceId, targetId }`. See the class doc above.
  * @event lr-pin-change - `detail: { pinnedNodeIds }`. See the class doc above.
+ * @event lr-search-change - The user typed in the toolbar's search box. `detail:
+ *   { searchQuery: string }`. Direct host assignments do not emit.
  * @event lr-node-click - Bubbles straight through from the composed `lr-graph`, unmodified.
  * @event lr-link-click - Bubbles straight through from the composed `lr-graph`, unmodified.
  * @event lr-node-expand - Bubbles straight through from `lr-graph` and/or `lr-neighbor-list` (the
@@ -160,9 +167,6 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     graphExplorerFindPath: LYRA_DEFAULT_graphExplorerFindPath,
     graphExplorerLabel: LYRA_DEFAULT_graphExplorerLabel,
@@ -173,10 +177,6 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     graphExplorerSearchResultsLabel: LYRA_DEFAULT_graphExplorerSearchResultsLabel,
     graphExplorerUnpin: LYRA_DEFAULT_graphExplorerUnpin,
     graphExplorerUnpinned: LYRA_DEFAULT_graphExplorerUnpinned,
-    open: LYRA_DEFAULT_open,
-    restore: LYRA_DEFAULT_restore,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
     viewerSearchNoMatches: LYRA_DEFAULT_viewerSearchNoMatches,
   };
@@ -218,7 +218,10 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
    *  always-active search-match dimming -- see the class doc's dedicated paragraph. */
   @property() highlight: KnowledgeGraphHighlight = 'selection';
 
-  @state() private searchQuery = '';
+  /** The search filter applied to node labels/types. Presettable (e.g. to restore a query from a
+   *  URL on load) as well as self-managed on every keystroke in the toolbar's search box. `''`
+   *  (the default) renders no search-result list at all and applies no search dimming. */
+  @property({ attribute: 'search-query' }) searchQuery = '';
   @state() private pinLiveText = '';
   /** Currently pointer-hovered node id, set only while `highlight === 'hover'` (see
    *  `onGraphNodeEnter`/`onGraphNodeLeave`) -- read by `computedDimmedNodeIds`. */
@@ -614,7 +617,17 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
 
   private onSearchInput = (event: CustomEvent<{ value: string }>): void => {
     event.stopPropagation();
-    this.searchQuery = event.detail.value;
+    const value = event.detail.value;
+    if (this.searchQuery === value) return;
+    this.searchQuery = value;
+    // Same self-toggle-then-emit contract as setInternalSelectedNodeId()/togglePin(): only a
+    // component-initiated change announces itself, so a host that assigns the property back in
+    // response cannot start a feedback loop.
+    this.emit('lr-search-change', { searchQuery: value });
+    // Same self-toggle-then-emit contract as setInternalSelectedNodeId()/togglePin(): only a
+    // component-initiated change announces itself, so a host that assigns the property back in
+    // response cannot start a feedback loop.
+
   };
 
   private onEntityActivate = (event: CustomEvent<{ id: string }>): void => {

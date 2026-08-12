@@ -8,7 +8,7 @@
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -33,6 +33,10 @@ trace metadata, and `scores?: { dense?, sparse?, rerank?, final }`.
 Chunks are ordered by effective rank, then score, then input order before the top-k slice. Overlap
 is pairwise Jaccard similarity across those visible chunk ids. Selection is controlled.
 **Slots:** none. **Optional peer deps:** none.
+
+**Themeable custom properties:** `--lr-retrieval-compare-selected-border` (default
+`var(--lr-color-brand)`) — the border color marking a selected `[part~="chunk-selected"]` row, the
+same escape-hatch pattern as `lr-retrieval-results`'s `--lr-retrieval-results-selected-border`.
 
 ```ts
 import '@aceshooting/lyra-ui/components/retrieval/retrieval-compare/retrieval-compare.js';

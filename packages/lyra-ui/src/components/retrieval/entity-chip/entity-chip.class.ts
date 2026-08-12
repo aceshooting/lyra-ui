@@ -6,7 +6,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { styles } from './entity-chip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_entityChipWithType, LYRA_DEFAULT_open, LYRA_DEFAULT_untitledEntity } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_entityChipWithType, LYRA_DEFAULT_untitledEntity } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -49,10 +49,7 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     entityChipWithType: LYRA_DEFAULT_entityChipWithType,
-    open: LYRA_DEFAULT_open,
     untitledEntity: LYRA_DEFAULT_untitledEntity,
   };
   // GENERATED DEFAULT-STRING SLICE: END

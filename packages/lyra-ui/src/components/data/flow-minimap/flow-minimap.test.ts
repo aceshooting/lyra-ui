@@ -889,3 +889,82 @@ describe('.strings overrides (every localize() key)', () => {
     expect(live).to.match(/^MOVED-MARKER x=\S+ y=\S+ z=\S+$/);
   });
 });
+
+describe('viewport-rect minimum pointer target', () => {
+  // `--lr-flow-minimap-viewport-min-size` inherits, so setting it on the canvas wrapper before
+  // mount gives each fixture its floor from the very first render. `0px` disables the floor
+  // outright, which is what makes an exact "unclamped" reference rect available to compare against.
+  const mount = async (spread: number, minSize?: string): Promise<LyraFlowMinimap> => {
+    const style = `width:400px;height:300px${
+      minSize === undefined ? '' : `;--lr-flow-minimap-viewport-min-size:${minSize}`
+    }`;
+    const canvas = (await fixture(html`
+      <lr-flow-canvas style=${style}>
+        <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+      </lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    canvas.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: spread, y: spread } },
+    ];
+    await canvas.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    const minimap = canvas.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+    await minimap.updateComplete;
+    return minimap;
+  };
+
+  /** The harness page's own root font-size is not necessarily 16px, and the floor token is
+   *  rem-based, so every threshold below is derived rather than hardcoded. */
+  const floorPx = (rem: number) =>
+    rem * parseFloat(getComputedStyle(document.documentElement).fontSize);
+
+  const rectOf = (minimap: LyraFlowMinimap) =>
+    minimap.shadowRoot!.querySelector('[part="viewport"]') as SVGGraphicsElement;
+
+  const geometry = (minimap: LyraFlowMinimap) => {
+    const rect = rectOf(minimap);
+    return {
+      x: Number(rect.getAttribute('x')),
+      y: Number(rect.getAttribute('y')),
+      width: Number(rect.getAttribute('width')),
+      height: Number(rect.getAttribute('height')),
+    };
+  };
+
+  it('keeps the draggable rect at a usable size when the content dwarfs the viewport', async () => {
+    // Node bounds ~20000 user units across inside a 12rem x 8rem map: with no floor the rect --
+    // the ONLY pointer-drag affordance for panning -- renders a couple of physical pixels wide.
+    const minimap = await mount(20000);
+    const box = rectOf(minimap).getBoundingClientRect();
+    expect(box.width, 'rect width').to.be.at.least(floorPx(1.5) - 0.5);
+    expect(box.height, 'rect height').to.be.at.least(floorPx(1.5) - 0.5);
+  });
+
+  it('proves the unfloored rect really is unusably small, so the floor is what fixes it', async () => {
+    const minimap = await mount(20000, '0px');
+    const box = rectOf(minimap).getBoundingClientRect();
+    expect(box.width).to.be.below(floorPx(1.5) - 0.5);
+  });
+
+  it('grows the rect symmetrically, leaving its centre on the true viewport centre', async () => {
+    const floored = geometry(await mount(20000));
+    const raw = geometry(await mount(20000, '0px'));
+    expect(floored.width).to.be.greaterThan(raw.width);
+    expect(floored.x + floored.width / 2, 'centre x').to.be.closeTo(raw.x + raw.width / 2, 0.001);
+    expect(floored.y + floored.height / 2, 'centre y').to.be.closeTo(raw.y + raw.height / 2, 0.001);
+  });
+
+  it('unset-regression: leaves a naturally large rect exactly where the raw viewport puts it', async () => {
+    // Content barely larger than the viewport -- the rect already clears the floor, so the clamp
+    // must not move or grow it at all.
+    const floored = geometry(await mount(50));
+    const raw = geometry(await mount(50, '0px'));
+    expect(floored).to.deep.equal(raw);
+  });
+
+  it('honours a consumer-raised --lr-flow-minimap-viewport-min-size', async () => {
+    const wider = rectOf(await mount(20000, '3rem')).getBoundingClientRect();
+    expect(wider.width).to.be.at.least(floorPx(3) - 0.5);
+  });
+});

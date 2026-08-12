@@ -1914,3 +1914,56 @@ describe('back-compat', () => {
     expect(el2.shadowRoot!.querySelector('[part="content"]')!.innerHTML).to.equal(withoutNewProps);
   });
 });
+
+describe('shiki dark-theme signal', () => {
+  type CacheInternals = { highlightCache: Map<string, string> };
+
+  const LIGHT = '#24292f';
+  const DARK = '#e6edf3';
+  // Exactly the shape tokenizeMarkdownHighlight() caches: Shiki's palette encoded as inert data
+  // attributes, which restoreMarkdownHighlightStyles() turns back into an inline
+  // `color:<light>;--shiki-dark:<dark>` after DOMPurify has stripped every style attribute.
+  const CACHED = `<pre part="code-block"><code class="language-ts"><span data-lr-shiki-light="${LIGHT}" data-lr-shiki-dark="${DARK}">x</span></code></pre>\n`;
+
+  async function highlightedSpan(wrapperStyle: string): Promise<{ span: HTMLElement; content: Element }> {
+    const wrapper = (await fixture(html`
+      <div style=${wrapperStyle}><lr-markdown></lr-markdown></div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-markdown') as LyraMarkdown;
+    (el as unknown as CacheInternals).highlightCache.set('ts\nx\n', CACHED);
+    el.content = '```ts\nx\n```';
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="code-block"] span') !== null,
+      'the cached highlighted block never rendered',
+      { timeout: 4000 },
+    );
+    return {
+      span: el.shadowRoot!.querySelector('[part="code-block"] span') as HTMLElement,
+      content: el.shadowRoot!.querySelector('[part="content"]')!,
+    };
+  }
+
+  it('paints highlighted code with Shiki\'s light palette under the default light tokens', async () => {
+    const { span, content } = await highlightedSpan('');
+    expect(content.hasAttribute('data-dark-theme')).to.equal(false);
+    expect(getComputedStyle(span).color).to.equal(span.style.color);
+  });
+
+  it('paints highlighted code from --shiki-dark once the resolved tokens are a dark scheme', async () => {
+    const { span, content } = await highlightedSpan(
+      '--lr-theme-color-text-normal:#f2f2f2; --lr-theme-color-surface-default:#1a1a1a;',
+    );
+    expect(content.getAttribute('data-dark-theme')).to.equal('true');
+    // Read the dark value back off the element rather than hardcoding a serialization: the point
+    // is that the rendered color follows --shiki-dark, not the light inline `color`.
+    const darkValue = span.style.getPropertyValue('--shiki-dark').trim();
+    expect(darkValue).to.equal(DARK);
+    expect(getComputedStyle(span).color).to.not.equal(span.style.color);
+    const probe = document.createElement('span');
+    probe.style.color = darkValue;
+    content.appendChild(probe);
+    const expected = getComputedStyle(probe).color;
+    probe.remove();
+    expect(getComputedStyle(span).color).to.equal(expected);
+  });
+});

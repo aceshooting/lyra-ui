@@ -13,7 +13,7 @@ import { submitOnEnter } from '../../../internal/submit-on-enter.js';
 import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_phoneInputIncomplete, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_phoneInputIncomplete, LYRA_DEFAULT_phoneInputLabel, LYRA_DEFAULT_select, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -202,7 +202,9 @@ function fallbackParse(input: string): PhoneNumberParseResult {
  * property changes are silent. Phone-number text is deliberately LTR while
  * the form chrome and country selector follow the inherited direction. A host
  * `aria-label` names the internal telephone input and wins over every derived
- * or component-specific fallback. Pressing Enter performs the implicit form submission a native
+ * or component-specific fallback; `phone-label`, `label` and `placeholder` follow in that order,
+ * and a field left with none of them still lands on a localized generic name rather than reaching
+ * the accessibility tree unnamed. Pressing Enter performs the implicit form submission a native
  * `<input type="tel">` would (see `internal/submit-on-enter.ts` — the internal input is in a
  * shadow root and has no form owner, so the platform can never do it here).
  *
@@ -285,14 +287,9 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
-    open: LYRA_DEFAULT_open,
     phoneInputIncomplete: LYRA_DEFAULT_phoneInputIncomplete,
-    restore: LYRA_DEFAULT_restore,
-    search: LYRA_DEFAULT_search,
+    phoneInputLabel: LYRA_DEFAULT_phoneInputLabel,
     select: LYRA_DEFAULT_select,
     valueInvalid: LYRA_DEFAULT_valueInvalid,
   };
@@ -529,8 +526,25 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     return this.localize('select', this.countryLabel === 'Select' ? undefined : this.countryLabel);
   }
 
-  private get effectivePhoneLabel(): string | undefined {
-    return this.accessibleLabel || this.phoneLabel || this.label || this.placeholder || undefined;
+  /** The telephone input's accessible name. Every consumer-supplied source wins, in the precedence
+   *  order this component documents; a bare `<lr-phone-input>` with none of them set still lands on
+   *  a localized generic name rather than shipping an unnamed field to the accessibility tree, the
+   *  same last-resort every sibling text-entry primitive has (`lr-input`, `lr-time-input`,
+   *  `lr-otp-input`, `lr-locale-picker`). The visible `[part='form-control-label']` cannot stand in:
+   *  it carries the native `hidden` attribute while there is no label, which removes it from the
+   *  accessibility tree entirely.
+   *
+   *  Deliberately its own `phoneInputLabel` key rather than borrowing `lr-contact-viewer`'s
+   *  identically-worded one: the two read the same in English today, but a locale re-wording
+   *  contact-viewer's field label would otherwise silently re-label this control too. */
+  private get effectivePhoneLabel(): string {
+    return (
+      this.accessibleLabel ||
+      this.phoneLabel ||
+      this.label ||
+      this.placeholder ||
+      this.localize('phoneInputLabel')
+    );
   }
 
   private get incompleteMessage(): string {
@@ -812,7 +826,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
             spellcheck=${this.spellcheck}
             autocapitalize=${this.autocapitalize || nothing}
             autocorrect=${this.autoCorrect || nothing}
-            aria-label=${this.effectivePhoneLabel ?? nothing}
+            aria-label=${this.effectivePhoneLabel}
             aria-describedby=${describedBy || nothing}
             aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
             ?required=${this.required}

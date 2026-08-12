@@ -32,7 +32,7 @@ import {
 import { activeElementIn } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_dashboardCellCollisionRejected, LYRA_DEFAULT_dashboardCellMoved, LYRA_DEFAULT_dashboardCellResized, LYRA_DEFAULT_dashboardGridLabel, LYRA_DEFAULT_details, LYRA_DEFAULT_flowItemAnnouncement, LYRA_DEFAULT_noData, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_dashboardCellCollisionRejected, LYRA_DEFAULT_dashboardCellMoved, LYRA_DEFAULT_dashboardCellResized, LYRA_DEFAULT_dashboardGridLabel, LYRA_DEFAULT_flowItemAnnouncement, LYRA_DEFAULT_noData } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -190,15 +190,12 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
     dashboardCellCollisionRejected: LYRA_DEFAULT_dashboardCellCollisionRejected,
     dashboardCellMoved: LYRA_DEFAULT_dashboardCellMoved,
     dashboardCellResized: LYRA_DEFAULT_dashboardCellResized,
     dashboardGridLabel: LYRA_DEFAULT_dashboardGridLabel,
-    details: LYRA_DEFAULT_details,
     flowItemAnnouncement: LYRA_DEFAULT_flowItemAnnouncement,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

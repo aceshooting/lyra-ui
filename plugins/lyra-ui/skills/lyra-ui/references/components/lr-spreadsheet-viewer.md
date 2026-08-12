@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `xlsx` — see `llms/peers.md`
-- **Themeable via** 11 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -24,9 +24,11 @@ back to a `Sheet!`-prefixed `range`, then the active sheet); `scrollToAnchor()` 
 `<lr-tab-group>`'s active tab first when needed, then scrolls the addressed row/column into view.
 `highlights` paint as a focusable `part="cell-highlight"`.
 
-**Properties:** `src: string = ''` and `name: string = ''`. `anchorKinds: readonly LyraAnchorKind[] =
-['cell-range']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
-contract).
+**Properties:** `src: string = ''` and `name: string = ''`. `maxHeight: string = ''` (attribute
+`max-height`) is a CSS length that caps the scrollable body — setting it writes
+`--lr-spreadsheet-viewer-max-height` inline on `[part="base"]`; invalid CSS `max-height` values are
+ignored. `anchorKinds: readonly LyraAnchorKind[] = ['cell-range']` (this viewer's supported
+`LyraAnchor.kind` values for the shared anchor-target contract).
 
 **Methods:** `search(query)` resolves the match count across every sheet's stringified cell values,
 ordered sheet then row then column, switching tabs as navigation crosses sheets (empty/whitespace
@@ -40,7 +42,8 @@ Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
 
-**CSS parts:** `base`, `tabs`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a
+**CSS parts:** `base`, `body` (the scrollable wrapper around the fetched-state content, capped by
+`max-height`), `tabs`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a
 structural cell covered by a `highlights` entry), `cell-highlight-action` (the native button
 filling a highlighted cell; focusable and emits `lr-highlight-activate`; its complete accessible
 name uses the localized `cellHighlightWithLabel` message with independent `{value}` and `{label}`
@@ -54,7 +57,11 @@ internal `<lr-virtual-list>` and forwarded via
 inline (as `var(--lr-color-warning, var(--lr-color-brand))`) on the cell matching
 `activeHighlightId`, since a `[data-active]` selector can't be chained onto the
 `::part(cell-highlight)` the cell reaches this component's stylesheet through; a custom property
-inherits across that boundary instead.
+inherits across that boundary instead. `--lr-spreadsheet-viewer-highlight-outline-offset` (default
+`calc(-1 * var(--lr-border-width-medium))`) — the outline offset of a highlighted cell.
+`--lr-spreadsheet-viewer-max-height` (default `none`) — maximum block size of `[part="body"]`
+before it scrolls internally; also settable via the `maxHeight` property, which writes this token
+inline on `[part="base"]`.
 
 **Optional peer dependency:** install `xlsx` with `pnpm add https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`. The official CDN matches the
 `.xlsx` and `.xls` MIME types and filename extensions.

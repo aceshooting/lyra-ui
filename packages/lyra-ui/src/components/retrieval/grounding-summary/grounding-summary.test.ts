@@ -328,6 +328,35 @@ it('can shrink to a 320px allocation fully populated', async () => {
   expect(el.getBoundingClientRect().width).to.be.at.most(320);
 });
 
+it('formats the evidence span offsets with the effective locale, not as raw JavaScript numbers', async () => {
+  const el = (await fixture(html`<lr-grounding-summary lang="ar-u-nu-arab"></lr-grounding-summary>`)) as LyraGroundingSummary;
+  el.assessment = ASSESSMENT;
+  el.citations = [{ id: 'cite-1', sourceId: 'doc-1', span: { start: 0, end: 1234 } }];
+  await el.updateComplete;
+
+  const spanText = el.shadowRoot!.querySelector('[part="evidence-span"]')!.textContent ?? '';
+  expect(spanText, 'the offsets use the locale digit system').to.include('١٬٢٣٤');
+  expect(spanText).to.include('٠');
+  expect(spanText.includes('1234'), 'no raw Latin-digit offset survives').to.equal(false);
+});
+
+it('accepts the plain show-claims="false" attribute form, not only a JS property assignment', async () => {
+  const el = (await fixture(
+    html`<lr-grounding-summary show-claims="false"></lr-grounding-summary>`,
+  )) as LyraGroundingSummary;
+  expect(el.showClaims).to.equal(false);
+
+  el.assessment = {
+    supportedClaims: 1,
+    unsupportedClaims: 0,
+    coverage: 1,
+    claims: [{ id: 'claim-1', text: 'A supported claim', status: 'supported', citationIds: ['cite-1'] }],
+  };
+  el.citations = CITATIONS;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('lr-claim-evidence').length).to.equal(0);
+});
+
 it('formats warning and evidence counts with the effective locale', async () => {
   const el = (await fixture(html`<lr-grounding-summary lang="ar-u-nu-arab"></lr-grounding-summary>`)) as LyraGroundingSummary;
   el.assessment = { ...ASSESSMENT, warnings: Array.from({ length: 12 }, () => 'Warning') };

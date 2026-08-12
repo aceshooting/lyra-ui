@@ -192,6 +192,35 @@ describe('lr-pptx-viewer', () => {
     }
   });
 
+  it('keeps the next-slide button reachable within [part="base"] when a long slide-count string would otherwise overflow the nav row', async () => {
+    // A large slide count (or a longer localized "Slide X of Y" phrasing) produces a slide-count
+    // string that can't shrink without min-inline-size: 0, forcing [part='nav'] wider than
+    // [part='base']. Since [part='base'] has overflow: hidden, that overflow gets silently
+    // clipped -- potentially pushing next-button out of the visible/reachable region -- instead of
+    // the slide-count text truncating.
+    const fake = fakeModule(123_456_789);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(
+        html`<lr-pptx-viewer style="inline-size:150px"></lr-pptx-viewer>`,
+      )) as LyraPptxViewer;
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await aTimeout(30);
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const next = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLElement;
+      const baseRect = base.getBoundingClientRect();
+      const nextRect = next.getBoundingClientRect();
+
+      expect(
+        nextRect.right,
+        'next-button must stay within the visible/reachable base region, not be pushed past it by an unshrinkable slide-count string',
+      ).to.be.at.most(baseRect.right + 1);
+    } finally {
+      restore();
+    }
+  });
+
   it('chains updated() to super.updated() so a mixin layered under LyraElement would still run', async () => {
     // No shared mixin actually overrides updated() today, so the only way to prove the chain is
     // live (rather than grepping source text for the call) is to patch the base-class hook itself

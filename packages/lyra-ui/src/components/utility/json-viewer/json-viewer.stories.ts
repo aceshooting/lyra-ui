@@ -118,3 +118,14 @@ export const EmptyContainers: Story = {
     <lr-json-viewer .data=${{ emptyObject: {}, emptyArray: [] }} style="max-width: 32rem;"></lr-json-viewer>
   `,
 };
+
+/** Baseline narrow-allocation coverage: a long, unbroken KEY name (no spaces to wrap on) at 320px. */
+export const Narrow320: Story = {
+  render: () => html`
+    <div style="max-width:320px">
+      <lr-json-viewer
+        .data=${{ aVeryLongUnbrokenPropertyNameWithNoSpacesToWrapOn: 'x' }}
+      ></lr-json-viewer>
+    </div>
+  `,
+};

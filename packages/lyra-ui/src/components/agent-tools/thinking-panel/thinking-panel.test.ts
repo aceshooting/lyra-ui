@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './thinking-panel.js';
 import type { LyraThinkingPanel } from './thinking-panel.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 // MutationObserver callbacks are microtasks and the resulting auto-scroll is
 // coalesced to a single requestAnimationFrame (see thinking-panel.ts's
@@ -616,4 +617,76 @@ it('exposes a component-scoped pending color', async () => {
   `)) as LyraThinkingPanel;
   const pending = el.shadowRoot!.querySelector<HTMLElement>('[part="duration"][data-pending]')!;
   expect(getComputedStyle(pending).color).to.equal('rgb(1, 2, 3)');
+});
+
+describe('the tabbable scroll region\'s own affordances', () => {
+  // [part='body'] is unconditionally tabindex="0" -- a real, always-focusable, independently
+  // scrollable region (the class file cites lr-code-block and lr-virtual-list as sharing this
+  // convention). Both of those pair the tabindex with a :focus-visible outline; without one a
+  // keyboard user tabbing in gets no indication at all, and a mouse user gets no cue that the
+  // region is separately scrollable. Both assertions read the *rendered* computed result rather
+  // than the stylesheet text, so a rule that never actually matches the part still fails.
+  async function panelBody(): Promise<{ el: LyraThinkingPanel; body: HTMLElement }> {
+    const el = (await fixture(html`
+      <lr-thinking-panel expanded>Long reasoning transcript</lr-thinking-panel>
+    `)) as LyraThinkingPanel;
+    const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+    expect(body.getAttribute('tabindex')).to.equal('0');
+    expect(getComputedStyle(body).outlineStyle, 'the resting region draws no ring').to.equal('none');
+    return { el, body };
+  }
+
+  /** Resolves a declaration inside the component's own shadow root, so the expectation is the
+   *  token's real cascaded value rather than a hard-coded px/colour literal. */
+  function resolvedInShadow(el: LyraThinkingPanel, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.append(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  it('draws the shared focus ring on the scroll region while it is keyboard-focused', async () => {
+    const { el, body } = await panelBody();
+    const expectedWidth = resolvedInShadow(el, 'outline-width: var(--lr-focus-ring-width)', 'outline-width');
+    const expectedColor = resolvedInShadow(el, 'outline-color: var(--lr-focus-ring-color)', 'outline-color');
+    const expectedOffset = resolvedInShadow(
+      el,
+      'outline-offset: calc(-1 * var(--lr-focus-ring-offset))',
+      'outline-offset',
+    );
+
+    body.focus();
+    expect(el.shadowRoot!.activeElement === body).to.equal(true);
+    const focused = getComputedStyle(body);
+    expect(focused.outlineStyle).to.equal('solid');
+    expect(focused.outlineWidth).to.equal(expectedWidth);
+    expect(focused.outlineColor).to.equal(expectedColor);
+    // Inward, or the ring is clipped by the region's own overflow-block: auto.
+    expect(focused.outlineOffset).to.equal(expectedOffset);
+    expect(Number.parseFloat(focused.outlineOffset)).to.be.lessThan(0);
+    body.blur();
+  });
+
+  it('previews the same treatment in a plain border colour on pointer hover', async () => {
+    const { el, body } = await panelBody();
+    const expectedColor = resolvedInShadow(el, 'outline-color: var(--lr-color-border)', 'outline-color');
+    const focusRingColor = resolvedInShadow(el, 'outline-color: var(--lr-focus-ring-color)', 'outline-color');
+    body.scrollIntoView({ block: 'center' });
+    const rect = body.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      const hovered = getComputedStyle(body);
+      expect(hovered.outlineStyle, 'hover must give the mouse user a cue of its own').to.equal('solid');
+      expect(hovered.outlineColor).to.equal(expectedColor);
+      // A preview, deliberately not the focus ring's own colour, so the two stay distinguishable.
+      expect(hovered.outlineColor).to.not.equal(focusRingColor);
+    } finally {
+      await resetMouse();
+    }
+  });
 });

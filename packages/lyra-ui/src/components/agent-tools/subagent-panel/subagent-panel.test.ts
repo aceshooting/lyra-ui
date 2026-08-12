@@ -336,6 +336,108 @@ it('re-points roving tabindex to a surviving row when the focused row disappears
   expect((tabbable[0] as HTMLElement).getAttribute('data-run-id')).to.equal('root');
 });
 
+it('tracks roving focus when focus lands directly on a nested action button, bypassing the row (regression)', async () => {
+  // Non-bubbling native "focus" only fires the row's own listener when focus lands on the <li>
+  // itself. Landing focus directly on a nested run-trigger/cancel/retry button (script .focus(),
+  // or Tab-then-click) must still update the tracker -- verified here by checking that a
+  // SUBSEQUENT arrow-key press moves relative to the row that actually owns the focused button,
+  // not from a stale tracked id.
+  const chain: SubagentRun[] = [
+    { id: 'root', label: 'Root', status: 'running' },
+    { id: 'child', parentId: 'root', label: 'Child', status: 'running' },
+    { id: 'grandchild', parentId: 'child', label: 'Grandchild', status: 'running' },
+    { id: 'leaf', parentId: 'grandchild', label: 'Leaf', status: 'running' },
+  ];
+  const el = (await fixture(html`<lr-subagent-panel .runs=${chain}></lr-subagent-panel>`)) as LyraSubagentPanel;
+  await el.updateComplete;
+  const list = el.shadowRoot!.querySelector('[part="list"]') as HTMLElement;
+  const root = el.shadowRoot!.querySelector('[data-run-id="root"]') as HTMLElement;
+  const grandchild = el.shadowRoot!.querySelector('[data-run-id="grandchild"]') as HTMLElement;
+  const leafCancel = el.shadowRoot!.querySelector('[data-run-id="leaf"] [part="cancel"]') as HTMLButtonElement;
+
+  // Skip the row entirely -- focus the nested cancel button directly. (tabindex="-1" only blocks
+  // Tab from reaching it; script-triggered .focus() still works, matching a Tab-then-click flow.)
+  leafCancel.focus();
+  await el.updateComplete;
+
+  list.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, composed: true }));
+  await el.updateComplete;
+
+  // A correctly-updated tracker moves up from "leaf" (index 3) to "grandchild" (index 2). A
+  // tracker still stuck at the default first row ("root", index 0) would instead re-focus root.
+  expect(grandchild.getAttribute('tabindex')).to.equal('0');
+  expect(el.shadowRoot!.activeElement === grandchild).to.equal(true);
+  expect(root.getAttribute('tabindex')).to.equal('-1');
+});
+
+it('excludes nested run-trigger/cancel/retry buttons from the native Tab order (roving tabindex contract)', async () => {
+  const withActionable: SubagentRun[] = [
+    { id: 'active', label: 'Active', status: 'running' },
+    { id: 'broken', label: 'Broken', status: 'error' },
+  ];
+  const el = (await fixture(
+    html`<lr-subagent-panel .runs=${withActionable}></lr-subagent-panel>`,
+  )) as LyraSubagentPanel;
+  await el.updateComplete;
+
+  expect(
+    el.shadowRoot!.querySelector('[data-run-id="active"] [part="run-trigger"]')!.getAttribute('tabindex'),
+  ).to.equal('-1');
+  expect(
+    el.shadowRoot!.querySelector('[data-run-id="active"] [part="cancel"]')!.getAttribute('tabindex'),
+  ).to.equal('-1');
+  expect(
+    el.shadowRoot!.querySelector('[data-run-id="broken"] [part="run-trigger"]')!.getAttribute('tabindex'),
+  ).to.equal('-1');
+  expect(
+    el.shadowRoot!.querySelector('[data-run-id="broken"] [part="retry"]')!.getAttribute('tabindex'),
+  ).to.equal('-1');
+});
+
+it('caches tree ordering and only recomputes it when `runs` changes (regression)', async () => {
+  const nested: SubagentRun[] = [
+    { id: 'root', label: 'Root', status: 'running' },
+    { id: 'child', parentId: 'root', label: 'Child', status: 'running' },
+  ];
+  const el = (await fixture(html`<lr-subagent-panel .runs=${nested}></lr-subagent-panel>`)) as LyraSubagentPanel;
+  await el.updateComplete;
+
+  const original = (el as unknown as { ordered: () => unknown }).ordered.bind(el);
+  let calls = 0;
+  (el as unknown as { ordered: () => unknown }).ordered = () => {
+    calls += 1;
+    return original();
+  };
+
+  const list = el.shadowRoot!.querySelector('[part="list"]') as HTMLElement;
+  // Several keydowns and an unrelated re-render (selectedRunId change, not `runs`) must reuse the
+  // cached ordering rather than recomputing it.
+  list.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+  await el.updateComplete;
+  list.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+  await el.updateComplete;
+  el.selectedRunId = 'child';
+  await el.updateComplete;
+  list.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true }));
+  await el.updateComplete;
+
+  expect(calls, 'ordered() must not be recomputed by keydown handling or unrelated re-renders').to.equal(0);
+  // The cached ordering must still be correct across all of that -- Home moved focus back to root.
+  expect(
+    (el.shadowRoot!.querySelector('[data-run-id="root"]') as HTMLElement).getAttribute('tabindex'),
+  ).to.equal('0');
+
+  // Changing `runs` must recompute exactly once and reflect the new tree correctly.
+  el.runs = [...nested, { id: 'grandchild', parentId: 'child', label: 'Grandchild', status: 'done' }];
+  await el.updateComplete;
+  expect(calls).to.equal(1);
+  const grandchild = el.shadowRoot!.querySelector('[data-run-id="grandchild"]');
+  // A derived primitive, never the node itself: handing chai a live DOM node as actual/expected
+  // hangs the whole file in the runner's message serialization.
+  expect(grandchild !== null).to.equal(true);
+  expect(grandchild!.getAttribute('data-depth')).to.equal('2');
+});
+
 it('allows selected and progress states to be rethemed independently', async () => {
   const el = (await fixture(html`
     <lr-subagent-panel

@@ -74,7 +74,9 @@ Calling `preventDefault()` keeps the current `selected` state unchanged)
 
 **Slots:** default (the chip's label content; inert in toggle mode, so move links/buttons outside a
 toggleable chip), `icon` (optional leading icon or status dot; nothing reserved for it — no extra
-gap — when left empty)
+gap — when left empty), `end` (optional trailing content, typically an icon, placed after the label
+and before the toggle/remove button; nothing reserved for it — no extra gap — when left empty,
+mirroring `<lr-badge>`'s identical `end` slot)
 
 Toggle/remove action names follow the default slot's live visible accessible text through nested
 forwarding slots and assigned-node replacement; decorative `icon` content never leaks into them.
@@ -82,9 +84,16 @@ Hidden, inert, CSS-hidden and `aria-hidden` label branches are excluded. A host 
 presence, so an explicitly empty value remains empty.
 
 **CSS parts:** `base` (the pill's root container), `icon` (wrapper around the `icon` slot; hidden
-entirely while empty), `label` (non-interactive wrapper around the default slot), `toggle-button`
-(the real native toggle control, rendered over the label in toggle mode), `remove-button` (the
-remove (×) affordance, only rendered while `removable`)
+entirely while empty), `label` (non-interactive wrapper around the default slot), `end` (wrapper
+around the `end` slot; hidden entirely while empty, the same `end` csspart name `<lr-badge>` uses),
+`toggle-button` (the real native toggle control, rendered over the label in toggle mode),
+`remove-button` (the remove (×) affordance, only rendered while `removable`)
+
+The toggle control's accessible name comes from a host `aria-label` first, then the chip's own
+default-slot text. An icon-only toggleable chip (a colour swatch standing in for a chart series, a
+bare status dot) has neither, so it falls back to the localized `select` message rather than
+shipping an unnamed focusable button — the same generic fallback the remove button already makes to
+`remove`.
 
 **Themeable custom properties:** `--lr-chip-accent`, `--lr-chip-bg`, `--lr-chip-border`
 (component-local trio swapped per `variant` rather than repeating background/color/border per part

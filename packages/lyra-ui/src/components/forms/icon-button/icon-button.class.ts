@@ -21,7 +21,7 @@ import {
 } from '../../../internal/form-control-labels.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_iconButtonLabel, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_iconButtonLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -153,7 +153,6 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
     ...super.defaultStrings,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     iconButtonLabel: LYRA_DEFAULT_iconButtonLabel,
-    restore: LYRA_DEFAULT_restore,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

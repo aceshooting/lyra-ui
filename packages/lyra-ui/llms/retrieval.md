@@ -251,15 +251,28 @@ with a `droppable` canvas on the `FLOW_PALETTE_MIME_TYPE` drag payload shape.
   `type` is the `FlowNode.type` a placement/drop creates, `category` groups items under
   first-appearance-ordered headings, `disabled` renders an item visible but not draggable/placeable
 - `label: string = ''` — accessible name for the search field/listbox
+- `reorderable: boolean = false` (reflected) — opts into Ctrl/Cmd+ArrowUp/ArrowDown keyboard
+  reordering of the catalog. Unset, no `lr-reorder` is ever emitted and Ctrl/Cmd+Arrow keeps
+  behaving exactly like a plain Arrow press
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the listbox's
   computed accessible name; wins over `label` and the localized default, and attribute-reflects
   from a host-level `aria-label`
 
 **Events:** `lr-palette-place` (`detail: { type }`, a pointer click or Enter/Space — the
 click/keyboard alternative to dragging), `lr-select` (`detail: { item }`, emitted alongside
-`lr-palette-place` on both gestures, carrying the full item), `focus`/`blur` (no detail —
-re-dispatched from the internal search field's own `focus`/`blur`, bubbling and composed unlike
-the native events, since neither bubbles nor crosses the shadow boundary on its own).
+`lr-palette-place` on both gestures, carrying the full item), `lr-reorder`
+(`detail: { type, category, fromIndex, toIndex }`, only while `reorderable`), `focus`/`blur` (no
+detail — re-dispatched from the internal search field's own `focus`/`blur`, bubbling and composed
+unlike the native events, since neither bubbles nor crosses the shadow boundary on its own).
+
+`lr-reorder` is a *request*, the same host-applies-the-mutation contract `lr-tree`'s identical
+`reorderable`/`lr-reorder` pair already uses: Ctrl/Cmd+ArrowUp/ArrowDown on the focused item asks to
+move it past its neighbour **inside its own category group**, so a reorder can never turn into a
+recategorization, and nothing is emitted at a group boundary. `category` is `null` for the
+uncategorized bucket; `fromIndex`/`toIndex` index into `items` itself, so applying the move is a
+plain splice-and-reassign. The palette never reorders `items` on its own, so nothing consults
+`defaultPrevented` and the event is not cancelable. The new position is announced only once the
+re-rendered group order confirms the host applied it.
 
 **Slots:** `header` (content above the search field, e.g. a heading or tabs), `footer` (content
 below the list).
@@ -367,7 +380,7 @@ itself — `lr-entity-activate` is a request a host routes into `lr-graph`'s own
   additions, so a graph node adapts into a `LyraEntity` with no mapping table; `null` renders the
   empty state
 - `types: NodeTypeStyle[] = []` (attribute: false) — the same `lr-graph.nodeTypes`/
-  `lr-graph-legend.types` entry shape, resolving `entity.type` to a label/color/shape for the badge
+  `lr-graph-legend.types` entry shape, resolving `entity.type` to a label/color for the badge
 - `communityLabel: string = ''` (attribute `community-label`) — override text for the community chip
 - `showFocusButton: boolean = true` (attribute `show-focus-button`)
 - `compact: boolean = false` (reflected) — tighter root padding and row gap for dense contexts (a
@@ -619,7 +632,10 @@ opens documents itself.
   name, while string locators remain verbatim
 - `thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 }` (attribute: false) —
   score-bar tier cutoffs
-- `sort: 'score' | 'none' = 'score'`
+- `sort: ChunkInspectorSort = 'score'` — `ChunkInspectorSort = 'score' | 'none'`, exported by this
+  module. The sorted view is memoized on the `chunks`/`sort` pair, so an unrelated update (a new
+  `activeId`, toggling `compact`) hands the internal `lr-virtual-list` the same array reference it
+  already holds instead of forcing a full offset/identity rebuild
 - `activeId: string = ''` (attribute `active-id`)
 - `virtualizeAt: number = 50` (attribute `virtualize-at`)
 - `compact: boolean = false` (reflected) — hides the text preview/toggle, title/score row only
@@ -735,7 +751,12 @@ selected one. All three are inline `var()` fallbacks at the point of use rather 
 declarations, so each can be set on the element *or on any ancestor*:
 `::part(checkbox)[aria-checked='true']` is invalid CSS — Shadow Parts forbids an attribute selector
 after `::part()` — which previously left re-pointing the library-wide `--lr-color-brand` token as
-the only lever, repainting every other brand surface with it. Plus shared tokens otherwise.
+the only lever, repainting every other brand surface with it. `--lr-source-picker-indent-size`
+(default `var(--lr-size-1-25rem)`) — the indent step added to `[part='item']`'s
+`padding-inline-start` per nesting level; the total indent is capped at `--lr-size-8rem` so a deeply
+nested tree cannot push its labels out of view. The component writes each row's own depth inline as
+the plain number `--lr-source-picker-depth`, which is indent plumbing rather than a retheming knob —
+set the step, not the depth. Plus shared tokens otherwise.
 
 **Optional peer deps:** none.
 
@@ -774,7 +795,13 @@ component. Pure projection + event conduit: no fetching, no graph/viewer imports
 - `label: string = ''`
 
 **Events:** `lr-toggle` (`detail: { section, expanded }`, a section header was toggled —
-`section` is `'entities' | 'relationships' | 'communities' | 'chunks'`).
+`section` is `'entities' | 'relationships' | 'communities' | 'chunks'`). Because the panel is a
+conduit, every affordance it renders also reaches a listener on the panel itself, and all four are
+part of its typed event map: `lr-entity-activate` (`detail: { id }`, from an entity chip, community
+card member, or path-strip node), `lr-entity-open` (`detail: { id }`, an entity chip double-click or
+Space), `lr-drill` (`detail: { id }`, a community card's title, drill button, or overflow chip), and
+`lr-relation-activate` (`detail: { relation, sourceId?, targetId? }`, a relationship path-strip
+edge).
 
 **Slots:** none.
 
@@ -1132,7 +1159,11 @@ or mutates graph/document state.
 `lr-chunk-open` (`detail: { id, sourceId, anchor? }`), `lr-expand` (`detail: { id, expanded }`),
 `lr-toggle` (`detail: { section, expanded }`), and `lr-tab-show`
 (`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'
-| 'provenance'` — also the `lr-tab-group` slot/tab ids).
+| 'provenance'` — also the `lr-tab-group` slot/tab ids). The Provenance tab's own controls reach the
+host the same way and are typed here too: `lr-entity-open` (`detail: { id }`, an entity chip
+double-click or Space), `lr-drill` (`detail: { id }`, a community card's title, drill button, or
+overflow chip), and `lr-relation-activate` (`detail: { relation, sourceId?, targetId? }`, a
+relationship path-strip edge).
 
 **Slots:** none.
 
@@ -1353,6 +1384,10 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   and `lr-graph.selectedNodeIds`; `null` shows no selection and keeps the popover closed
 - `pinnedNodeIds: string[] = []` (attribute: false) — exactly two pinned nodes reveals the "Find
   path" action
+- `searchQuery: string = ''` (attribute `search-query`) — the label/type filter applied to the node
+  set, driving `[part="search-results"]` and the search-match dimming forwarded to `lr-graph`.
+  Presettable, so a host can deep-link straight into a filtered view; the toolbar's search box keeps
+  it up to date afterwards
 
 (presentation)
 - `renderer: 'svg' | 'canvas' = 'svg'` — forwarded to `lr-graph.renderer`
@@ -1376,6 +1411,9 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   computes/fetches the path and assigns it back through `path`.
 - `lr-pin-change` (`detail: { pinnedNodeIds: string[] }`) — the complete updated array. Already
   self-applied before emitting, so reassigning back is optional.
+- `lr-search-change` (`detail: { searchQuery: string }`) — the user typed in the toolbar's search
+  box. Already self-applied before emitting, so reassigning back is optional; a direct host
+  assignment to `searchQuery` stays silent.
 - Bubbling straight through from composed children, unmodified: `lr-node-click`
   (`detail: { id, x, y }`), `lr-link-click` (`detail: { source, target, id? }`), `lr-community-click`
   (`detail: { id }`), `lr-node-expand` (`detail: { id }`, from `lr-graph` and/or `lr-neighbor-list`),
@@ -1386,7 +1424,7 @@ nested `lr-neighbor-list` and a pin toggle). Receives no data; an overriding con
 selected entity from `selectedNodeId`/`nodes` itself.
 
 **CSS parts:** `base` (`role="group"`), `toolbar`, `search` (the search `lr-input`), `legend` (the
-composed `lr-graph-legend`), `search-results` (only while the internal search query is non-empty),
+composed `lr-graph-legend`), `search-results` (only while `searchQuery` is non-empty),
 `search-result` (`role="listitem"` wrapping a `<button>`), `search-empty`, `pinned` (only while
 `pinnedNodeIds` is non-empty), `pinned-heading`, `graph` (the composed `lr-graph`), `path` (only
 while `path` is non-empty), `detail-popover`, `detail-card`.
@@ -1397,7 +1435,10 @@ tokens (see above).
 **Optional peer deps:** `lr-graph`'s `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` set, transitively.
 
 **Known gotchas:**
-- The search query is internal `@state`, not a public property.
+- An explicit height on the host bounds the whole explorer: `[part="base"]` fills it and
+  `[part="graph"]` takes whatever the toolbar, search results, pinned row and path strip leave over,
+  rather than the graph sizing itself from its own intrinsic aspect ratio. With no height on the
+  host the column still sizes itself from its content, unchanged.
 - `lr-graph.getNodePosition()` and `lr-node-click`'s `{ x, y }` are graph-*local* drawing
   coordinates, never viewport pixels. For `renderer="svg"` this component resolves the real viewport
   rect from `event.composedPath()`'s `[part="node"]` element; for `renderer="canvas"` (no per-node
@@ -1504,11 +1545,22 @@ Large sets window through an internal `lr-virtual-list`.
 - `selectable: boolean = true` (reflected) — shows a per-row `lr-checkbox`
 - `dedupe: boolean = true` (reflected) — drops duplicate `id`s, keeping the higher `score`
 - `sort: 'score' | 'none' = 'score'` — `'score'` sorts descending; `'none'` preserves given order
-- `grouping: 'source' | 'none' = 'none'` — `'source'` buckets rows under a header per `source.id`
-  (the header text is that source's `name`, or a localized "untitled source" when it has none).
-  Buckets appear in order of first appearance in the already-`sort`ed list, so with the default
+- `grouping: 'source' | 'custom' | 'none' = 'none'` — `'source'` buckets rows under a header per
+  `source.id` (the header text is that source's `name`, or a localized "untitled source" when it has
+  none); `'custom'` buckets them under whatever key `groupBy` returns; `'none'` is a flat ranked
+  list. Buckets appear in order of first appearance in the already-`sort`ed list, so with the default
   `sort="score"` that is best-scoring-chunk order, and with `sort="none"` it is the order the chunks
   arrived in. Grouping **always** virtualizes, regardless of `virtualizeAt`
+- `groupBy?: (chunk: RetrievalChunk) => string` (attribute: false) — `grouping="custom"` only: the
+  group id for each chunk (a date bucket, a relevance tier, a domain-specific bucket). Left unset,
+  `'custom'` degrades to the same flat list `'none'` renders rather than inventing a key, so the
+  built-in dedup/sort/virtualization pipeline stays usable either way. The same escape hatch
+  `lr-thread-list` already exposes
+- `groupLabel?: (id: string, chunks: RetrievalChunk[]) => string` (attribute: false) —
+  `grouping="custom"` only: the group's header text. Left unset, the group id is shown verbatim
+- `groupOrder?: string[] | ((a: string, b: string) => number)` (attribute: false) —
+  `grouping="custom"` only: explicit group-id order, or a comparator over the first-seen ids. Ids an
+  array omits follow after the listed ones in their own first-seen order, never dropped
 - `presentation: 'compact' | 'expanded' = 'expanded'` — `'expanded'` shows each chunk's full row
   (score bar, text preview with its own toggle) plus any `metadata`; `'compact'` shows title + score
   bar only and omits `metadata` entirely
@@ -1534,7 +1586,7 @@ Large sets window through an internal `lr-virtual-list`.
 - `lr-load-more` (`detail: undefined`) — from the virtual list's scroll-near-bottom detection while
   virtualized, or the `[part="load-more"]` button otherwise. Only fires while `hasMore` is true and
   `loading` is false.
-- `lr-chunk-open` (`detail: { id: string; sourceId: string }`) — forwarded verbatim from a row's
+- `lr-chunk-open` (`detail: { id, sourceId, anchor? }`) — forwarded verbatim from a row's
   `lr-chunk-inspector`; the event a host routes into `lr-document-viewer`.
 
 **Slots:** none.
@@ -1592,7 +1644,9 @@ lever, repainting every other brand surface with it. Plus shared tokens otherwis
 Query bar for a retrieval/RAG surface: query text, an active filter/scope chip row, a
 vector/keyword/hybrid mode selector, and loading/error/empty feedback. Emits `RetrievalQuery` on
 submit. Fully controlled; performs no retrieval itself. Composes `lr-input type="search"`,
-`lr-segmented`, `lr-chip`/`lr-chip-group`, `lr-spinner`, and a compact `lr-empty`.
+`lr-segmented`, `lr-chip`/`lr-chip-group`, `lr-spinner`, and a compact `lr-empty`. The query field,
+the mode selector and the submit button are all left on the shared `--lr-form-control-height` ladder
+at the same size tier, so the toolbar row renders as one flush line.
 
 **Properties:**
 - `query: string = ''` — the query text. The internal `lr-input` updates it optimistically as the
@@ -1782,6 +1836,8 @@ be set on the element *or on any ancestor*, and the rule wraps its `[aria-select
 in `:where()` so a consumer's own `::part(tab)` override still wins. They exist because
 `::part(tab)[aria-selected='true']` is invalid CSS — Shadow Parts forbids an attribute selector after
 `::part()`. Left unset, rendering is unchanged.
+
+**Optional peer deps:** none.
 
 ## `lr-claim-evidence`
 

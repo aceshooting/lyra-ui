@@ -877,9 +877,12 @@ it("does not render the collapse or fullscreen buttons unless opted in", async (
   const el = (await fixture(
     html`<lr-widget label="x">content</lr-widget>`
   )) as LyraWidget;
-  expect(el.shadowRoot!.querySelector('[part="collapse-button"]')).to.not.exist;
-  expect(el.shadowRoot!.querySelector('[part="fullscreen-button"]')).to.not
-    .exist;
+  expect(
+    el.shadowRoot!.querySelectorAll('[part="collapse-button"]').length
+  ).to.equal(0);
+  expect(
+    el.shadowRoot!.querySelectorAll('[part="fullscreen-button"]').length
+  ).to.equal(0);
 });
 
 it("toggles collapsed on collapse-button click and emits lr-collapse-change", async () => {
@@ -1097,7 +1100,9 @@ it("toggles fullscreen on fullscreen-button click, locking scroll and adding a b
 
   expect(el.fullscreen).to.be.false;
   expect(document.documentElement.style.overflow).to.equal("");
-  expect(el.shadowRoot!.querySelector('[part="backdrop"]')).to.not.exist;
+  expect(el.shadowRoot!.querySelectorAll('[part="backdrop"]').length).to.equal(
+    0
+  );
 });
 
 it("emits a cancelable lr-fullscreen-request before lr-fullscreen-change, vetoing the toggle when prevented", async () => {
@@ -2029,4 +2034,59 @@ it('tracks slotted sublabel content through slotchange', async () => {
   await new Promise((r) => requestAnimationFrame(() => r(null)));
   await el.updateComplete;
   expect(flags.hasSublabelSlot).to.be.false;
+});
+
+it("fades the edges of the header action and view-toggle rows only while they overflow", async () => {
+  const settle = async (el: LyraWidget): Promise<void> => {
+    for (let i = 0; i < 4; i += 1) {
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+      await el.updateComplete;
+    }
+  };
+  const longAction =
+    "AnExtremelyLongUnbrokenHeaderActionLabelThatMustRemainScrollable".repeat(4);
+  const manyViews = Array.from({ length: 12 }, (_unused, index) => ({
+    id: `v${index}`,
+    label: String.fromCharCode(65 + index),
+  }));
+
+  const overflowing = await fixture<HTMLElement>(html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-widget
+        style="inline-size: 100%;"
+        label="Usage"
+        .views=${manyViews}
+      >
+        <button slot="actions" style="white-space: nowrap;">${longAction}</button>
+        Panel body.
+      </lr-widget>
+    </div>
+  `);
+  const wide = overflowing.querySelector("lr-widget") as LyraWidget;
+  await settle(wide);
+  const actions = wide.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+  const toggles = wide.shadowRoot!.querySelector('[part="view-toggles"]') as HTMLElement;
+
+  expect(actions.scrollWidth, "the fixture must actually overflow the action row")
+    .to.be.greaterThan(actions.clientWidth);
+  expect(toggles.scrollWidth, "the fixture must actually overflow the toggle row")
+    .to.be.greaterThan(toggles.clientWidth);
+  expect(getComputedStyle(actions).maskImage).to.contain("linear-gradient");
+  expect(getComputedStyle(toggles).maskImage).to.contain("linear-gradient");
+
+  const fitting = await fixture<HTMLElement>(html`
+    <div style="inline-size: 640px;">
+      <lr-widget style="inline-size: 100%;" label="Usage" .views=${[{ id: "a", label: "A" }]}>
+        <button slot="actions">Go</button>
+        Panel body.
+      </lr-widget>
+    </div>
+  `);
+  const narrow = fitting.querySelector("lr-widget") as LyraWidget;
+  await settle(narrow);
+  const fittingActions = narrow.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+  const fittingToggles = narrow.shadowRoot!.querySelector('[part="view-toggles"]') as HTMLElement;
+  expect(fittingActions.scrollWidth - fittingActions.clientWidth).to.be.at.most(1);
+  expect(getComputedStyle(fittingActions).maskImage).to.equal("none");
+  expect(getComputedStyle(fittingToggles).maskImage).to.equal("none");
 });

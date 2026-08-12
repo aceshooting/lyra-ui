@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { playIcon, pauseIcon } from '../../../internal/icons.js';
 import { finiteCount, finiteDuration, MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
@@ -8,7 +9,7 @@ import { styles } from './playback.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_playbackStepPosition } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -70,12 +71,10 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
     pause: LYRA_DEFAULT_pause,
     play: LYRA_DEFAULT_play,
     playbackPosition: LYRA_DEFAULT_playbackPosition,
+    playbackStepPosition: LYRA_DEFAULT_playbackStepPosition,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -317,6 +316,10 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
           max=${maxIndex}
           .value=${String(index)}
           aria-label=${this.localize('playbackPosition')}
+          aria-valuetext=${this.localize('playbackStepPosition', undefined, {
+            index: getNumberFormat(this.effectiveLocale).format(index + 1),
+            total: getNumberFormat(this.effectiveLocale).format(finiteCount(this.length)),
+          })}
           ?disabled=${disabled}
           @input=${(e: Event) => this.goTo(Number((e.target as HTMLInputElement).value))}
           @focus=${this.onControlFocus}

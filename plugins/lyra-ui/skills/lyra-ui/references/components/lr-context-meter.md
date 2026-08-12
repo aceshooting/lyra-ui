@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -33,6 +33,16 @@ number; tone?: 'brand' | 'success' | 'warning' | 'danger' | 'neutral'; color?: s
 - `variant: 'ring' | 'bar' = 'bar'` (reflected)
 - `label: string = ''` — overall accessible caption, e.g. `"128K context window"`. Also rendered
   visually (`[part="label"]`) when set.
+- `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders a static
+  `[part="legend"]` key below the meter, one swatch/label pair per `segments` entry, each swatch
+  painted from that segment's resolved `color`/`tone`. Without it a segment's own label is exposed
+  only through a hover `title` (desktop-only, undiscoverable) and the visually-hidden breakdown
+  list, so a meter split across more than two or three categories reads as unlabeled colour to a
+  sighted user. Non-interactive: it toggles nothing and emits nothing, mirroring
+  `lr-sequence-strip`'s `showLegend` rather than the interactive `lr-graph-legend`. The whole
+  subtree is `aria-hidden`, since `segment-list` already exposes the same names. Under
+  `variant="ring"` the host stops being a fixed square so the key flows below the ring instead of
+  being clipped.
 
 Accessible summaries, segment tooltips, and ring titles format quantities using `effectiveLocale`.
 A host `aria-label` overrides the generated meter summary and is preserved across reactive updates.
@@ -44,10 +54,14 @@ A host `aria-label` overrides the generated meter summary and is preserved acros
 **CSS parts:** `base` (a `<div>` for `bar`, an `<svg>` for `ring`), `semantic` (the visually hidden
 meter semantics), `track` (the unfilled/empty capacity), `segment` (one occupied segment — carries
 `data-tone` and, for custom colors, `--lr-context-meter-segment-color`), `segment-list` (the hidden
-category list), `segment-item` (one hidden category/value entry), and `label`
+category list), `segment-item` (one hidden category/value entry), `label`, and — only under
+`showLegend` — `legend`, `legend-item`, `legend-swatch` (carrying the same `data-tone` and custom
+color hook as `segment`) and `legend-label`
 
 **Themeable custom properties:** `--lr-context-meter-segment-color` is set per segment when its
-`color` field is supplied; otherwise the component consumes shared tokens
+`color` field is supplied, and is read by both `segment` and its matching `legend-swatch` so the
+two can never disagree. `--lr-context-meter-legend-swatch-size` (default `var(--lr-size-0-625rem)`)
+sizes a legend chip on both axes. Otherwise the component consumes shared tokens
 `--lr-space-xs`, `--lr-color-text-quiet`, `--lr-font`, `--lr-radius`, `--lr-color-border`,
 `--lr-color-surface` (the bar variant's inter-segment seam), `--lr-color-brand`,
 `--lr-color-success`, `--lr-color-warning`, `--lr-color-danger`, `--lr-transition-base`.

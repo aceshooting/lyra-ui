@@ -182,7 +182,13 @@ export const styles = css`
   [part='highlight-label'] {
     position: absolute;
     inset-block-start: calc(var(--lr-size-1-5em) * -1);
-    inset-inline-start: 0;
+    /* policy-allow(physical-css): the parent [part='highlight'] box is deliberately positioned with
+       physical left/top (see renderHighlights()'s comment -- region rects are physical
+       percent-of-image coordinates over a raster that never mirrors). The parent itself never moves
+       under RTL, so a logical inset here would flip this label to the box's opposite corner while
+       the box stayed put. Matching the parent's physical coordinate system keeps the label anchored
+       to the box's left edge in both directions. */
+    left: 0;
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text);
     background: var(--lr-color-surface);

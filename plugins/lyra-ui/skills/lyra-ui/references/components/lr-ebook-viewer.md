@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `epubjs` — see `llms/peers.md`
-- **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -20,7 +20,9 @@ epub.js renders the reading area into its stable `mount` element, using an inter
 chapter content.
 
 **Properties:** `src: string = ''` and `name: string = ''`. `accessibleLabel: string = ''`
-(attribute `aria-label`) overrides the reading region's accessible name. `location: string = ''`
+(attribute `aria-label`) overrides the reading region's accessible name. `maxHeight: string = ''`
+(attribute `max-height`) caps the `mount` area epub.js renders into; invalid CSS `max-height`
+values, declaration breaks, and `url()` are ignored. `location: string = ''`
 (not reflected — CFIs are long) is
 a CFI or spine href identifying the current reading position: set before the book finishes
 loading it's recorded and applied once ready, set after it applies immediately, and epub.js's own
@@ -54,6 +56,10 @@ non-live shadow content and later loading transitions use the shared document-le
 `mount`, `error` (ordinary visible text; later error transitions use the shared document-level
 assertive sink), and `announcer` (an aria-hidden, non-live shadow mirror retained for styling
 compatibility; search results are appended to the shared document-level polite sink).
+
+**Themeable custom properties:** `--lr-ebook-viewer-max-height` (default `none`) — maximum block
+size of `[part="mount"]` before it scrolls internally; also settable via the `max-height` property,
+which writes this token inline.
 
 The toolbar buttons use the component-specific localized labels `ebookViewerPreviousChapter` and
 `ebookViewerNextChapter` (English: “Previous chapter” / “Next chapter”), so they remain

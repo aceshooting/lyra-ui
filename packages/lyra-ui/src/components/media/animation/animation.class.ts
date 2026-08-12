@@ -10,11 +10,6 @@ import {
 } from '../../../utilities/animation-registry.js';
 import { styles } from './animation.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_duration, LYRA_DEFAULT_play } from '../../../internal/default-strings.generated.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** Curated preset catalog for the `name` property. `slide-in-start`/`slide-in-end`/
  * `slide-out-start`/`slide-out-end` are resolved separately (see `slidePreset()`)
@@ -213,16 +208,6 @@ function resolveTimingToken(el: HTMLElement, preset: 'fast' | 'base' | 'ambient'
  * @since 4.0.0
  */
 export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
-  // GENERATED DEFAULT-STRING SLICE: START
-  /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    cancel: LYRA_DEFAULT_cancel,
-    duration: LYRA_DEFAULT_duration,
-    play: LYRA_DEFAULT_play,
-  };
-  // GENERATED DEFAULT-STRING SLICE: END
-
   static override styles = [LyraElement.styles, styles];
 
   /** Built-in preset or consumer-registered `animation.<name>` key. */
@@ -568,7 +553,15 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
         this.emit('lr-start');
       }
       this.animation.play();
-    } else {
+    } else if (this.animation.playState !== 'idle') {
+      // An idle (canceled) animation is already "not playing", and pause() is not a no-op for it:
+      // per the Web Animations API, pausing an idle animation with a non-negative playback rate
+      // seeks it to time zero and un-cancels it into 'paused', re-applying the effect's first
+      // keyframe. Since the public cancel() deliberately lets the native `cancel` event through,
+      // and that handler sets `play = false`, this branch would otherwise resurrect every
+      // canceled animation on the very next update -- freezing the target on keyframe zero
+      // instead of reverting it. `finished` needs no such guard: its currentTime is already
+      // resolved, so pause() there really is inert.
       this.animation.pause();
     }
   };

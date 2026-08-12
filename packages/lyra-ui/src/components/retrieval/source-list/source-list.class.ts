@@ -7,7 +7,7 @@ import { tag } from '../../../internal/prefix.js';
 import { styles } from './source-list.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_sourceListDefaultLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_sourceListDefaultLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -62,9 +62,6 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
     sourceListDefaultLabel: LYRA_DEFAULT_sourceListDefaultLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END

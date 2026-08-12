@@ -369,7 +369,7 @@
       "name": "--divider-width",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-image-comparer>`** (default: `var(--lr-size-1px)`) — Width of the dividing line.\n\n**`<lr-split-panel>`** (default: `4px`) — Visible divider thickness."
+        "value": "**`<lr-image-comparer>`** (default: `var(--lr-size-1px)`) — Retained Shoelace-compat source for `--lr-image-comparer-divider-width`.\n\n**`<lr-split-panel>`** (default: `4px`) — Visible divider thickness."
       }
     },
     {
@@ -593,7 +593,7 @@
       "name": "--handle-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-image-comparer>`** (default: `var(--lr-icon-button-size)`) — Inline and block size of the visible compare handle."
+        "value": "**`<lr-image-comparer>`** (default: `var(--lr-icon-button-size)`) — Retained Shoelace-compat source for `--lr-image-comparer-handle-size`."
       }
     },
     {
@@ -2098,7 +2098,7 @@
       "name": "--lr-chart-canvas-hover-outline-width",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-border-width-thin)`) — Width of the `[part='canvas']` hover-state outline (its color is `--lr-chart-grid-color`, above)."
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-border-width-thin)`) — Width of the `[part='canvas']` hover-state outline (its color is `--lr-chart-grid-color`, above).\n\n**`<lr-box-plot>`** (default: `var(--lr-border-width-thin)`) — Width of the `[part='canvas']` hover-state outline (its color is `--lr-chart-grid-color`). Same token and default as `<lr-chart>`."
       }
     },
     {
@@ -2154,7 +2154,7 @@
       "name": "--lr-chart-pattern-step",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-space-2xs)`) — Tile size of the texture painted on `[part='legend-swatch']` while `forced-colors: active` matches, where every series collapses to one system color and the stripe/crosshatch pattern becomes the only channel keeping series apart. Declared on the swatch part rather than the host; the stripe width within a tile stays `--lr-border-width-thin`, so a larger step spaces the stripes further apart."
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-space-2xs)`) — Tile size of the texture painted on `[part='legend-swatch']` while `forced-colors: active` matches, where every series collapses to one system color and the stripe/crosshatch pattern becomes the only channel keeping series apart. Declared on the swatch part rather than the host; the stripe width within a tile stays `--lr-border-width-thin`, so a larger step spaces the stripes further apart.\n\n**`<lr-box-plot>`** (default: `var(--lr-space-2xs)`) — Tile size of the texture painted on `[part='legend-swatch']` while `forced-colors: active` matches, where the eight-color series ramp collapses onto a repeating system-color cycle and the stripe/crosshatch pattern becomes the only channel keeping series apart. Declared on the swatch part rather than the host; the stripe width within a tile stays `--lr-border-width-thin`, so a larger step spaces the stripes further apart. Shared verbatim with `<lr-chart>` and `<lr-lite-chart>`.\n\n**`<lr-lite-chart>`** (default: `var(--lr-space-2xs)`) — Tile size of the texture painted on `[part='legend-swatch']` while `forced-colors: active` matches, where the eight-color series ramp collapses onto a repeating system-color cycle and the texture becomes the only channel keeping series apart. Declared on the swatch part rather than the host; the stripe width within a tile stays `--lr-border-width-thin`, so a larger step spaces the stripes further apart. Shared verbatim with `<lr-chart>` and `<lr-box-plot>`."
       }
     },
     {
@@ -2550,6 +2550,20 @@
       }
     },
     {
+      "name": "--lr-claim-evidence-compact-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-claim-evidence>`** (default: `var(--lr-space-xs)`) — Gap between `[part=\"claim-trigger\"]`'s columns while `compact`."
+      }
+    },
+    {
+      "name": "--lr-claim-evidence-compact-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-claim-evidence>`** (default: `var(--lr-space-xs)`) — `[part=\"claim-trigger\"]` padding while `compact`."
+      }
+    },
+    {
       "name": "--lr-code-block-active-line-outline-color",
       "description": {
         "kind": "markdown",
@@ -2564,6 +2578,13 @@
       }
     },
     {
+      "name": "--lr-code-block-highlighted-line-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-code-block>`** (default: `var(--lr-color-warning-quiet)`) — Background color of a line marked by `highlight-lines` or a `line-range` entry in `highlights`, in both the light and dark-theme (shiki) rendering paths. Retints just that background, leaving every other `--lr-color-warning-quiet` surface alone. Inherits, so it can also be set on an ancestor or at the theme level.\n\n**`<lr-code-block-core>`** (default: `var(--lr-color-warning-quiet)`) — Background color of a line marked by `highlight-lines` or a `line-range` entry in `highlights`. Shared with `lr-code-block` (this component reuses its stylesheet), leaving every other `--lr-color-warning-quiet` surface alone."
+      }
+    },
+    {
       "name": "--lr-code-block-max-height",
       "description": {
         "kind": "markdown",
@@ -2575,6 +2596,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-code-block>`** (default: `2`) — Tab width for the rendered code, applied to `pre`. Same default as `--lr-code-editor-tab-size`, so the editable and read-only code surfaces agree; `lr-markdown`/`lr-markdown-core` declare the same token for their own `code-block` part (they are sibling elements, so they cannot inherit this one). Read as a token and never written inline, so a host override survives shiki's own inline `style` on the highlighted `pre`. The default is a `var()` fallback at the point of use rather than a `:host` declaration, so it inherits: set it on the element, a container, or `:root` and it reaches every code surface below. The markdown surface wraps (`white-space: pre-wrap`) while this one does not, so the same value can look different on a wrapped line, where tab stops restart.\n\n**`<lr-code-block-core>`** (default: `2`) — Tab width for the rendered code, applied to `pre`. Shared with `lr-code-block` (this component reuses its stylesheet), `lr-code-editor`, and the markdown viewers' own `code-block` part, so every code surface agrees on a tab's width.\n\n**`<lr-markdown>`, `<lr-markdown-core>`** (default: `2`) — Tab width for a rendered fenced/indented `code-block`. Deliberately the same token (and default) `lr-code-block` and `lr-code-editor` use, so a consumer sets one tab width for every code surface — it is declared here rather than inherited because `lr-code-block` is a sibling element, not an ancestor. A markdown code block wraps (`white-space: pre-wrap`) while `lr-code-block` does not, so the same value can render differently on a wrapped line, where tab stops restart."
+      }
+    },
+    {
+      "name": "--lr-code-editor-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-code-editor>`** (default: `var(--lr-font-size-m)`) — Font size of the gutter's line numbers and the textarea, from the active `size` tier."
       }
     },
     {
@@ -2602,7 +2630,14 @@
       "name": "--lr-code-editor-min-block-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-code-editor>`** (default: `var(--lr-size-8rem)`) — Minimum block size of the editor frame and its textarea."
+        "value": "**`<lr-code-editor>`** (default: `var(--lr-size-8rem)`) — Minimum block size of the editor frame and its textarea. Comes from the active `size` tier by default; assign it directly to override that tier's value."
+      }
+    },
+    {
+      "name": "--lr-code-editor-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-code-editor>`** (default: `var(--lr-space-s)`) — Padding of the gutter (block side only) and the textarea (all sides), from the active `size` tier."
       }
     },
     {
@@ -3558,10 +3593,17 @@
       }
     },
     {
+      "name": "--lr-context-meter-legend-swatch-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-context-meter>`** (default: `var(--lr-size-0-625rem)`) — Inline and block size of a legend swatch."
+      }
+    },
+    {
       "name": "--lr-context-meter-segment-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-context-meter>`** — Per-segment color. Set inline on `[part=\"segment\"]` by the component itself whenever that segment supplies a `color`; unset (and the token unread) otherwise, leaving the `data-tone` palette in charge."
+        "value": "**`<lr-context-meter>`** — Per-segment color. Set inline on `[part=\"segment\"]` by the component itself whenever that segment supplies a `color`; unset (and the token unread) otherwise, leaving the `data-tone` palette in charge. The matching `[part=\"legend-swatch\"]` reads the same property, so a swatch can never disagree with the band it stands for."
       }
     },
     {
@@ -4118,10 +4160,38 @@
       }
     },
     {
+      "name": "--lr-dock-panel-collapse-toggle-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dock-panel>`** (default: `var(--lr-color-brand-quiet)`) — Background of `collapse-toggle` on hover; also feeds its pressed background via `color-mix()`."
+      }
+    },
+    {
+      "name": "--lr-dock-panel-collapse-toggle-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dock-panel>`** (default: `var(--lr-color-brand)`) — Text/icon color of `collapse-toggle` on hover, reused verbatim for its pressed color too."
+      }
+    },
+    {
       "name": "--lr-dock-panel-collapsed-size",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-dock-panel>`** (default: `var(--lr-icon-button-size)`) — The extent the panel keeps along its resize axis while `collapsed` -- enough to still host the toggle button that re-expands it."
+      }
+    },
+    {
+      "name": "--lr-dock-panel-handle-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dock-panel>`** (default: `color-mix(in oklab, var(--lr-dock-panel-handle-hover-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) — Background of `handle` while actively dragged/pressed."
+      }
+    },
+    {
+      "name": "--lr-dock-panel-handle-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dock-panel>`** (default: `var(--lr-color-brand)`) — Background of `handle` on hover and keyboard focus -- scoped separately from `collapse-toggle`'s own hover tokens above even though both default to the same brand token, since the two serve unrelated purposes (drag affordance vs. button feedback)."
       }
     },
     {
@@ -4363,6 +4433,13 @@
       }
     },
     {
+      "name": "--lr-ebook-viewer-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-ebook-viewer>`** (default: `none`) — Maximum block size of the mount area epub.js renders into, before it scrolls internally. Also settable via the `max-height` property."
+      }
+    },
+    {
       "name": "--lr-email-viewer-max-height",
       "description": {
         "kind": "markdown",
@@ -4566,10 +4643,38 @@
       }
     },
     {
+      "name": "--lr-file-input-detail-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-file-input>`** (default: `var(--lr-font-size-sm)`) — Size of the secondary text: the hint, the validation error, and each selected file's formatted size. Retuned per `size` tier."
+      }
+    },
+    {
+      "name": "--lr-file-input-dropzone-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-file-input>`** (default: `var(--lr-font-size-md-sm)`) — Instructional text size inside the dropzone. Retuned per `size` tier; the documented default is the `m`/`medium` tier."
+      }
+    },
+    {
+      "name": "--lr-file-input-dropzone-icon-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-file-input>`** (default: `var(--lr-font-size-xl)`) — `[part=\"dropzone-icon\"]` glyph size. Retuned per `size` tier."
+      }
+    },
+    {
+      "name": "--lr-file-input-dropzone-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-file-input>`** (default: `var(--lr-space-l)`) — Padding inside `[part=\"base\"]` and the stacked dropzone content. Retuned per `size` tier; `compact` overrides it."
+      }
+    },
+    {
       "name": "--lr-file-input-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-file-input>`** (default: `var(--lr-form-control-font-size)`) — Dropzone text size."
+        "value": "**`<lr-file-input>`** (default: `var(--lr-form-control-font-size)`) — Label and selected-filename text size; tracks the shared `size` ladder."
       }
     },
     {
@@ -4773,6 +4878,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-flow-minimap>`** (default: `var(--lr-color-success)`) — Successful-node fill."
+      }
+    },
+    {
+      "name": "--lr-flow-minimap-viewport-min-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-size-1-5rem)`) — Smallest rendered size, in physical pixels, of the draggable `viewport` rectangle along either axis. On a canvas whose node bounds dwarf the visible viewport the raw rectangle collapses to a few pixels, which leaves the only pointer-drag handle for panning effectively unclickable; the floor grows it symmetrically about its own centre so it still points at what the viewport shows. Defaults to WCAG 2.2 SC 2.5.8's 24px minimum target size. Set `0` to opt out and render the exact viewport-to-content ratio instead."
       }
     },
     {
@@ -5578,6 +5690,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-icon>`** — Optional inline and block size override for every canvas."
+      }
+    },
+    {
+      "name": "--lr-image-comparer-divider-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-image-comparer>`** (default: `var(--divider-width, var(--lr-size-1px))`) — Width of the dividing line. The canonical, namespaced override; prefer it over the bare compat name, which inherits and so retunes every element in the subtree reading that generic name."
+      }
+    },
+    {
+      "name": "--lr-image-comparer-handle-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-image-comparer>`** (default: `var(--handle-size, var(--lr-icon-button-size))`) — Inline and block size of the visible compare handle. Canonical, namespaced override."
       }
     },
     {
@@ -6778,6 +6904,41 @@
       }
     },
     {
+      "name": "--lr-page-rail-heat-accent-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page-rail>`** (default: `var(--lr-color-brand)`) — Background of an accent-tone (the default tone) `[part=\"heat-dot\"]` marker."
+      }
+    },
+    {
+      "name": "--lr-page-rail-heat-danger-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page-rail>`** (default: `var(--lr-color-danger)`) — Background of a danger-tone `[part=\"heat-dot-danger\"]` marker."
+      }
+    },
+    {
+      "name": "--lr-page-rail-heat-neutral-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page-rail>`** (default: `var(--lr-color-text-quiet)`) — Background of a neutral-tone `[part=\"heat-dot-neutral\"]` marker."
+      }
+    },
+    {
+      "name": "--lr-page-rail-heat-success-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page-rail>`** (default: `var(--lr-color-success)`) — Background of a success-tone `[part=\"heat-dot-success\"]` marker."
+      }
+    },
+    {
+      "name": "--lr-page-rail-heat-warning-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-page-rail>`** (default: `var(--lr-color-warning)`) — Background of a warning-tone `[part=\"heat-dot-warning\"]` marker."
+      }
+    },
+    {
       "name": "--lr-page-rail-height",
       "description": {
         "kind": "markdown",
@@ -6995,6 +7156,20 @@
       }
     },
     {
+      "name": "--lr-pdf-viewer-search-match-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pdf-viewer>`** (default: `var(--lr-color-warning)`) — Background of the currently active search match."
+      }
+    },
+    {
+      "name": "--lr-pdf-viewer-search-match-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pdf-viewer>`** (default: `var(--lr-color-warning-quiet)`) — Background of a painted, non-active search match."
+      }
+    },
+    {
       "name": "--lr-pdf-viewer-toolbar-button-hover-bg",
       "description": {
         "kind": "markdown",
@@ -7142,6 +7317,13 @@
       }
     },
     {
+      "name": "--lr-pptx-viewer-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pptx-viewer>`** (default: `none`) — Maximum block size of the scrollable renderer output container before it scrolls internally. Also settable via the `max-height` property."
+      }
+    },
+    {
       "name": "--lr-progress-duration",
       "description": {
         "kind": "markdown",
@@ -7152,7 +7334,14 @@
       "name": "--lr-progress-indicator-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-progress-bar>`** (default: `var(--lr-color-brand)`) — Indicator color."
+        "value": "**`<lr-progress-bar>`** (default: `var(--lr-progress-indicator-variant-color)`) — Indicator color, overriding the variant palette below."
+      }
+    },
+    {
+      "name": "--lr-progress-indicator-variant-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-progress-bar>`** (default: `var(--lr-color-fill-loud,var(--lr-color-brand))`) — Palette slot: the active `variant`'s loud fill from the shared semantic grid. Feeds `--lr-progress-indicator-color` above unless that (or the upstream `--indicator-color` alias) is itself set."
       }
     },
     {
@@ -8014,6 +8203,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-result-card>`** (default: `var(--lr-space-xs)`) — `[part=\"header\"]` block/inline padding while `compact`."
+      }
+    },
+    {
+      "name": "--lr-retrieval-compare-selected-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-retrieval-compare>`** (default: `var(--lr-color-brand)`) — Border color marking a selected `[part~=\"chunk\"]` row."
       }
     },
     {
@@ -9298,6 +9494,20 @@
       }
     },
     {
+      "name": "--lr-source-picker-depth",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-source-picker>`** (default: `0`) — Internal indent plumbing, not a retheming knob: the row's own nesting depth, written inline onto `[part=\"item\"]` as a plain number and multiplied by `--lr-source-picker-indent-size` to produce the indent."
+      }
+    },
+    {
+      "name": "--lr-source-picker-indent-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-source-picker>`** (default: `var(--lr-size-1-25rem)`) — Indent step added to `[part=\"item\"]`'s `padding-inline-start` per nesting level. The total indent is capped at `--lr-size-8rem` so a deeply nested tree cannot push its labels out of view."
+      }
+    },
+    {
       "name": "--lr-source-picker-mixed-bg",
       "description": {
         "kind": "markdown",
@@ -9399,7 +9609,7 @@
       "name": "--lr-span-waterfall-stripe-speed",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-span-waterfall>`** — Animation duration for a `running` span's striped bar; defaults to `--lr-transition-ambient`."
+        "value": "**`<lr-span-waterfall>`** (default: `var(--lr-duration-ambient)`) — Animation duration for a `running` span's striped bar. The fallback is the bare-duration `--lr-duration-ambient`, not the `--lr-transition-ambient` duration+easing shorthand, which would be invalid in an `animation-duration` slot."
       }
     },
     {
@@ -9484,6 +9694,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-spreadsheet-viewer>`** (default: `var(--lr-color-brand)`) — Outline color of a highlighted cell. The active highlight sets it inline to `var(--lr-color-warning, var(--lr-color-brand))`."
+      }
+    },
+    {
+      "name": "--lr-spreadsheet-viewer-highlight-outline-offset",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-spreadsheet-viewer>`** (default: `calc(-1 * var(--lr-border-width-medium))`) — Outline offset of a highlighted cell."
+      }
+    },
+    {
+      "name": "--lr-spreadsheet-viewer-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-spreadsheet-viewer>`** (default: `none`) — Maximum block size of `[part=\"body\"]` before it scrolls internally. The `maxHeight` property sets this token inline on `[part=\"base\"]`."
       }
     },
     {
@@ -9659,6 +9883,27 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-stream-status>`** (default: `0.35`) — `indicator` dot opacity. Its unset default is swapped by the reflected `phase`: `0.6` for `connecting`, `1` for `streaming` and `stalled`. Set it on the element or any ancestor; an element value wins."
+      }
+    },
+    {
+      "name": "--lr-stream-status-message-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stream-status>`** (default: `var(--lr-color-warning)`) — `message` text color while `phase=\"stalled\"`. Decoupled from `--lr-stream-status-stalled-border-color` even though both fall back to the same shared token today."
+      }
+    },
+    {
+      "name": "--lr-stream-status-stalled-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stream-status>`** (default: `var(--lr-color-warning-quiet)`) — `base` row background while `phase=\"stalled\"`."
+      }
+    },
+    {
+      "name": "--lr-stream-status-stalled-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stream-status>`** (default: `var(--lr-color-warning)`) — `base` row border color while `phase=\"stalled\"`."
       }
     },
     {
@@ -10324,6 +10569,27 @@
       "description": {
         "kind": "markdown",
         "value": "**Shared design token** — Canonical shared component token for terminal color yellow. Reads `--lr-theme-terminal-color-yellow`."
+      }
+    },
+    {
+      "name": "--lr-terminal-compact-line-padding-inline",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-terminal>`** (default: `var(--lr-space-xs)`) — Inline padding of each rendered `[part=\"line\"]` while `compact`."
+      }
+    },
+    {
+      "name": "--lr-terminal-compact-toolbar-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-terminal>`** (default: `var(--lr-space-2xs)`) — Gap between `[part=\"toolbar\"]`'s buttons while `compact`."
+      }
+    },
+    {
+      "name": "--lr-terminal-compact-toolbar-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-terminal>`** (default: `var(--lr-space-2xs) var(--lr-space-xs)`) — `[part=\"toolbar\"]` padding while `compact`."
       }
     },
     {
@@ -13820,10 +14086,59 @@
       }
     },
     {
+      "name": "--lr-xml-viewer-active-attribute-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-xml-viewer>`** (default: `var(--lr-color-brand)`) — Outline color of the `[part=\"attribute\"]` an attribute-addressing `node-path` anchor resolved to."
+      }
+    },
+    {
       "name": "--lr-xml-viewer-active-match-color",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-xml-viewer>`** (default: `var(--lr-color-warning)`) — Outline color of the `[part=\"node\"]` holding the current search match. Scoped to the active match, so the dashed outline on the other matches keeps the shared warning token."
+      }
+    },
+    {
+      "name": "--lr-xml-viewer-highlight-accent-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-xml-viewer>`** (default: `var(--lr-color-brand-quiet)`) — Row background of an accent-tone (the default tone) `highlights` entry."
+      }
+    },
+    {
+      "name": "--lr-xml-viewer-highlight-active-outline",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-xml-viewer>`** (default: `var(--lr-color-brand)`) — Outline color of the `highlights` entry currently named by `activeHighlightId`."
+      }
+    },
+    {
+      "name": "--lr-xml-viewer-highlight-danger-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-xml-viewer>`** (default: `var(--lr-color-danger-quiet)`) — Row background of a danger-tone `highlights` entry."
+      }
+    },
+    {
+      "name": "--lr-xml-viewer-highlight-neutral-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-xml-viewer>`** (default: `var(--lr-color-surface-raised)`) — Row background of a neutral-tone `highlights` entry. Deliberately not `--lr-color-surface`: the viewer's own ambient background would render a neutral highlight as unhighlighted."
+      }
+    },
+    {
+      "name": "--lr-xml-viewer-highlight-success-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-xml-viewer>`** (default: `var(--lr-color-success-quiet)`) — Row background of a success-tone `highlights` entry."
+      }
+    },
+    {
+      "name": "--lr-xml-viewer-highlight-warning-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-xml-viewer>`** (default: `var(--lr-color-warning-quiet)`) — Row background of a warning-tone `highlights` entry."
       }
     },
     {

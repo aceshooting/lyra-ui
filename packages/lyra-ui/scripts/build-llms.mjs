@@ -333,8 +333,50 @@ function buildPeers(tagFacts) {
   ].join('\n');
 }
 
+/**
+ * README's `| Component | Mirrors | Notes |` (Web Awesome) and `| Shoelace | Lyra | Migration note |`
+ * (Shoelace) mirror tables each carry a free-text note per row -- e.g. the typed `<lr-chart>`
+ * subclasses' "type locked" caveat -- keyed off the upstream tag(s) that row documents. Table
+ * detection mirrors buildMirrorMap (scripts/migrate-wa.mjs), but that helper keeps only the tag
+ * columns for codemod purposes and discards this third column; this parses it back out so a real
+ * per-row caveat can be forwarded into the generated migration disposition instead of silently
+ * dropped for every mapping.
+ */
+function parseReadmeMirrorNotes(readmeText) {
+  const notes = new Map();
+  let mode = null;
+  for (const rawLine of readmeText.split('\n')) {
+    const line = rawLine.trim();
+    if (/^\|\s*Component\s*\|\s*Mirrors\s*\|\s*Notes\s*\|$/.test(line)) {
+      mode = 'wa';
+      continue;
+    }
+    if (/^\|\s*Shoelace\s*\|\s*Lyra\s*\|\s*Migration note\s*\|$/.test(line)) {
+      mode = 'sl';
+      continue;
+    }
+    if (!line.startsWith('|')) {
+      mode = null;
+      continue;
+    }
+    if (!mode) continue;
+    const cells = line.split('|').slice(1, -1).map((cell) => cell.trim());
+    if (cells.length < 3 || !cells[2]) continue;
+    const tagCell = mode === 'sl' ? cells[0] : cells[1];
+    const tags =
+      mode === 'sl'
+        ? [...tagCell.matchAll(/<sl-([a-z0-9-]+)>/g)].map((match) => `sl-${match[1]}`)
+        : [...tagCell.matchAll(/`((?:wa|sl)-[a-z0-9-]+)`/g)].map((match) => match[1]);
+    for (const tag of tags) {
+      if (!notes.has(tag)) notes.set(tag, cells[2]);
+    }
+  }
+  return notes;
+}
+
 export function buildMigration() {
   const inventory = JSON.parse(read('scripts', 'fixtures', 'component-inventory.json'));
+  const readmeNotes = parseReadmeMirrorNotes(read('README.md'));
   const classifications = [
     'exact',
     'rewritten',
@@ -443,9 +485,14 @@ export function buildMigration() {
     const entries = [...defaults, ...inferred];
     return entries.length > 0 ? ` Equivalent surface representation: ${entries.join('; ')}; no source rewrite.` : '';
   };
+  const noteSuffix = (mapping) => {
+    const note = mapping.notes || readmeNotes.get(mapping.upstreamTag);
+    if (!note) return '';
+    return ` ${note}${/[.!?]$/.test(note) ? '' : '.'}`;
+  };
   const disposition = (mapping) => {
     if (mapping.classification === 'exact') {
-      return `Automatic: tag and supported side-effect registration import.${summarizeNormalizations(mapping)}`;
+      return `Automatic: tag and supported side-effect registration import.${summarizeNormalizations(mapping)}${noteSuffix(mapping)}`;
     }
     if (mapping.classification === 'rewritten') {
       return `Automatic: tag/import plus ${summarizeRules(mapping)}.${summarizeNormalizations(mapping)}`;

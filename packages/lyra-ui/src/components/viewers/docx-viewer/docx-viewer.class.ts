@@ -29,7 +29,7 @@ import { styles } from './docx-viewer.styles.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_docxViewerLabel, LYRA_DEFAULT_docxViewerMissingConverter, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_docxViewerLabel, LYRA_DEFAULT_docxViewerMissingConverter, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -94,12 +94,30 @@ function buildTextIndex(root: Element): { text: string; entries: DocxTextIndexEn
 
 /** Resolves an absolute offset into a `buildTextIndex()` corpus back to a `(Text node, local
  *  offset)` point -- a boundary offset shared by two adjacent entries resolves to the end of the
- *  earlier one, which is still a valid `Range` boundary. */
+ *  earlier one, which is still a valid `Range` boundary. `entries` is always in strictly ascending,
+ *  contiguous document order (see `buildTextIndex()`), so this binary-searches for the leftmost
+ *  entry whose `end` reaches `offset` rather than scanning linearly -- called twice per match from
+ *  `paintSearchMatches()`, which can run up to `MAX_DOCX_SEARCH_MATCHES` times per repaint.
+ *
+ *  `entries` may be reused across several `paintSearchMatches()` calls (see `textIndexCache`), so an
+ *  entry's `start`/`end` -- fixed at the moment its index was built -- can outlive DOM changes that
+ *  shrink that same `Text` node's *live* `.data` (e.g. content replaced out from under the component
+ *  between paints). The resolved local offset is re-checked against the node's current
+ *  `.data.length` so a stale entry degrades to "no longer resolves to any text node" (`null`,
+ *  tolerated by every caller) instead of handing back an out-of-range `Range` boundary. */
 function pointAtOffset(entries: DocxTextIndexEntry[], offset: number): { node: Text; offset: number } | null {
-  for (const entry of entries) {
-    if (offset >= entry.start && offset <= entry.end) return { node: entry.node, offset: offset - entry.start };
+  let low = 0;
+  let high = entries.length - 1;
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    if (offset > entries[mid]!.end) low = mid + 1;
+    else high = mid - 1;
   }
-  return null;
+  const entry = entries[low];
+  if (!entry || offset < entry.start) return null;
+  const localOffset = offset - entry.start;
+  if (localOffset > entry.node.data.length) return null;
+  return { node: entry.node, offset: localOffset };
 }
 
 /** Wraps the text covered by `range` in one or more `<mark part="...">` elements, splitting any
@@ -231,8 +249,6 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     anchorJumped: LYRA_DEFAULT_anchorJumped,
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
     documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
     documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
@@ -242,9 +258,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     docxViewerLabel: LYRA_DEFAULT_docxViewerLabel,
     docxViewerMissingConverter: LYRA_DEFAULT_docxViewerMissingConverter,
     highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
-    loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -289,6 +303,13 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   private searchQuery = '';
   private paintedSearchMarks: HTMLElement[] = [];
+
+  /** Memoizes `buildTextIndex()`'s whole-document `TreeWalker` walk across every `search()`/
+   *  `searchNext()`/`searchPrevious()`/`paintSearchMatches()` call within one loaded document's
+   *  lifetime -- invalidated in `updated()` on every `fetchState` transition (a `contentRoot()`
+   *  change), not merely on a new `'loaded'` state, since the corpus is equally stale once the
+   *  content root is gone (idle/loading/error) or about to be replaced. */
+  private textIndexCache: { text: string; entries: DocxTextIndexEntry[] } | null = null;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -343,6 +364,9 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       // listeners first) keeps selection tracking attached to whichever element is live.
       const root = this.contentRoot();
       if (root) (this as unknown as { bindTextSelection(root: Element): void }).bindTextSelection(root);
+      // Any fetchState transition means contentRoot() is either gone or a brand-new element (see
+      // above), so a previously cached text index (see getTextIndex()) can no longer describe it.
+      this.textIndexCache = null;
     }
     if (changed.has('fetchState') || changed.has('highlights') || changed.has('activeHighlightId')) {
       this.repaintHighlights();
@@ -646,7 +670,16 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   // -- search ----------------------------------------------------------------------------------------
 
-  /** Case-insensitive substring search over the rendered content's text (via `buildTextIndex()`).
+  /** Returns `textIndexCache`, building it (`buildTextIndex()`, a whole-document `TreeWalker` walk)
+   *  only the first time it's needed after the cache was last invalidated -- `search()`,
+   *  `searchNext()`, and `searchPrevious()` all resolve against the same loaded document's corpus,
+   *  so none of them need to re-walk it on every call. */
+  private getTextIndex(root: Element): { text: string; entries: DocxTextIndexEntry[] } {
+    this.textIndexCache ??= buildTextIndex(root);
+    return this.textIndexCache;
+  }
+
+  /** Case-insensitive substring search over the rendered content's text (via `getTextIndex()`).
    *  An empty/whitespace-only query, or no loaded content, behaves like `clearSearch()` and resolves
    *  `0`. Every match is painted immediately (see `paintSearchMatches()`), with the first one scrolled
    *  into view. */
@@ -665,7 +698,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       this.emitSearchChange();
       return 0;
     }
-    const { text } = buildTextIndex(root);
+    const { text } = this.getTextIndex(root);
     const haystack = text.toLocaleLowerCase(this.effectiveLocale);
     const needle = trimmed.toLocaleLowerCase(this.effectiveLocale);
     const matches: DocxSearchMatch[] = [];
@@ -735,8 +768,9 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   }
 
   /** Unwraps any previously-painted marks, then re-derives fresh `Range`s from every stored
-   *  `{ start, end }` match against the *current* DOM (`buildTextIndex()`) and wraps each in a
-   *  `<mark part="search-match">`. Matches are wrapped in descending offset order deliberately: two
+   *  `{ start, end }` match against the *current* DOM (`getTextIndex()`, cached per loaded document
+   *  rather than rebuilt on every call -- see `textIndexCache`) and wraps each in a `<mark
+   *  part="search-match">`. Matches are wrapped in descending offset order deliberately: two
    *  matches sharing one text node would otherwise have the earlier match's stored offset
    *  invalidated by the later match's own `splitText()` calls -- processing highest-offset first
    *  only ever truncates the *end* of a shared node, which never shifts an earlier, not-yet-processed
@@ -745,7 +779,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     this.clearSearchPaint();
     const root = this.contentRoot();
     if (!root || this.searchMatches.length === 0) return;
-    const { entries } = buildTextIndex(root);
+    const { entries } = this.getTextIndex(root);
     const marks: HTMLElement[] = [];
     for (let i = this.searchMatches.length - 1; i >= 0; i--) {
       const match = this.searchMatches[i]!; // safe: i in [0, length)

@@ -767,3 +767,71 @@ it('keeps the text editing facade inert before the composed textarea renders', (
   }).to.not.throw();
   expect(detached.value).to.equal('');
 });
+
+it('forwards status, placeholder and submitOnEnter to the composed chat composer', async () => {
+  const el = (await fixture(html`
+    <lr-prompt-input status="busy" placeholder="Ask anything" submit-on-enter="false"></lr-prompt-input>
+  `)) as LyraPromptInput;
+  const composer = el.shadowRoot!.querySelector('lr-chat-composer') as LyraChatComposer;
+  await composer.updateComplete;
+
+  // `status` is not cosmetic: the composer gates Enter-to-submit and its send/stop button on it.
+  expect(composer.status).to.equal('busy');
+  expect(composer.placeholder).to.equal('Ask anything');
+  expect(composer.submitOnEnter).to.equal(false);
+});
+
+it('forwards the unset defaults of status, placeholder and submitOnEnter unchanged', async () => {
+  const el = (await fixture(html`<lr-prompt-input></lr-prompt-input>`)) as LyraPromptInput;
+  const composer = el.shadowRoot!.querySelector('lr-chat-composer') as LyraChatComposer;
+  await composer.updateComplete;
+
+  expect(el.status).to.equal('idle');
+  expect(el.placeholder).to.equal('');
+  expect(el.submitOnEnter).to.equal(true);
+  expect(composer.status).to.equal('idle');
+  expect(composer.placeholder).to.equal('');
+  expect(composer.submitOnEnter).to.equal(true);
+});
+
+it('suppresses Enter-to-submit end to end when submit-on-enter is false, and restores it when true', async () => {
+  const el = (await fixture(html`
+    <lr-prompt-input submit-on-enter="false" value="drafted"></lr-prompt-input>
+  `)) as LyraPromptInput;
+  const composer = el.shadowRoot!.querySelector('lr-chat-composer') as LyraChatComposer;
+  await composer.updateComplete;
+  const textarea = composer.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+
+  let submits = 0;
+  el.addEventListener('lr-submit', () => {
+    submits += 1;
+  });
+  textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }));
+  expect(submits, 'Enter must not submit while submit-on-enter is false').to.equal(0);
+
+  el.submitOnEnter = true;
+  await el.updateComplete;
+  await composer.updateComplete;
+  textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }));
+  expect(submits, 'Enter submits again once submit-on-enter is restored').to.equal(1);
+});
+
+it('gates Enter-to-submit on the forwarded status, so a busy prompt cannot submit again', async () => {
+  const el = (await fixture(html`<lr-prompt-input status="busy" value="drafted"></lr-prompt-input>`)) as LyraPromptInput;
+  const composer = el.shadowRoot!.querySelector('lr-chat-composer') as LyraChatComposer;
+  await composer.updateComplete;
+  const textarea = composer.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+
+  let submits = 0;
+  el.addEventListener('lr-submit', () => {
+    submits += 1;
+  });
+  textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }));
+  expect(submits, 'a busy composer never submits on Enter').to.equal(0);
+
+  el.status = 'idle';
+  await el.updateComplete;
+  await composer.updateComplete;
+  textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }));
+  expect(submits, 'an idle composer submits on Enter').to.equal(1);
+});

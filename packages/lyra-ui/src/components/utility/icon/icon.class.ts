@@ -16,7 +16,7 @@ import {
 import { styles } from './icon.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_iconLoadError, LYRA_DEFAULT_iconSanitizerMissing, LYRA_DEFAULT_iconTooLarge, LYRA_DEFAULT_loading, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_iconLoadError, LYRA_DEFAULT_iconSanitizerMissing, LYRA_DEFAULT_iconTooLarge } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -149,13 +149,9 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     iconLoadError: LYRA_DEFAULT_iconLoadError,
     iconSanitizerMissing: LYRA_DEFAULT_iconSanitizerMissing,
     iconTooLarge: LYRA_DEFAULT_iconTooLarge,
-    loading: LYRA_DEFAULT_loading,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

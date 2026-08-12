@@ -163,7 +163,9 @@ it('ignores a navigation key once every topic has been removed (defensive, via a
   const svg = el.shadowRoot!.querySelector('[part="svg"]')!;
   el.topics = [];
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="svg"]'), 'the empty state replaced the svg').to.equal(null);
+  expect(el.shadowRoot!.querySelector('[part="svg"]') === null, 'the empty state replaced the svg').to.equal(
+    true,
+  );
   expect(() =>
     svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })),
   ).to.not.throw();
@@ -312,6 +314,37 @@ it('does not re-invalidate layout when dir is reassigned the same value', async 
   el.setAttribute('dir', 'rtl'); // identical value -- attributeChangedCallback's oldValue !== value guard must no-op
   await el.updateComplete;
   expect(calls, 'reassigning the same dir value must not trigger a relayout').to.equal(0);
+});
+
+it('draws the focus ring as soon as the widget takes focus, before any arrow key is pressed', async () => {
+  const el = (await fixture(html`<lr-mind-map .topics=${topics}></lr-mind-map>`)) as LyraMindMap;
+  const svg = el.shadowRoot!.querySelector<SVGSVGElement>('[part="svg"]')!;
+  expect(el.shadowRoot!.querySelectorAll('[part="focus-ring"]').length, 'no ring before focus').to.equal(0);
+
+  svg.focus();
+  await el.updateComplete;
+
+  expect(
+    el.shadowRoot!.querySelectorAll('[part="focus-ring"]').length,
+    'a bare Tab into the single tab stop must show a visible focus state',
+  ).to.equal(1);
+  expect((el as unknown as { focusedId: string | null }).focusedId).to.equal('root');
+});
+
+it('leaves an already-established keyboard cursor alone when focus re-enters the widget', async () => {
+  const el = (await fixture(html`<lr-mind-map .topics=${topics}></lr-mind-map>`)) as LyraMindMap;
+  const svg = el.shadowRoot!.querySelector<SVGSVGElement>('[part="svg"]')!;
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })); // focus root
+  await el.updateComplete;
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })); // descend to kg
+  await el.updateComplete;
+  expect((el as unknown as { focusedId: string | null }).focusedId).to.equal('kg');
+
+  svg.focus();
+  await el.updateComplete;
+  expect((el as unknown as { focusedId: string | null }).focusedId, 'refocusing must not reset the cursor').to.equal(
+    'kg',
+  );
 });
 
 it('has a single [part="svg"] tab stop, not per-node tabbing', async () => {

@@ -95,3 +95,32 @@ can resolve within the internal layer instead. This also makes i18n and RTL "jus
 token-driven spacing and sizing hardcode no text direction or font width, so longer/shorter
 translated strings and mirrored RTL layouts reflow correctly without component-specific
 overrides.
+
+### The dark palette has three parallel routes — keep all of them in sync
+
+`src/internal/tokens/palette.styles.ts` declares each dark-mode value **three times**, once per
+activation route: `:host([data-lr-theme='dark'])`, a `:host(...):host-context([data-lr-theme='dark'])`
+pair, and `@media (prefers-color-scheme: dark)`. They carry identical values today, and they must
+stay that way.
+
+The trap is that **`:host-context(X)` matches when the host *itself* matches `X`**, not only when an
+ancestor does. So for `<lr-badge data-lr-theme="dark">` in Chromium the winning declaration is the
+`:host-context` block — later in the sheet *and* more specific — not the plain attribute block.
+Firefox and WebKit do not implement `:host-context()` at all, so there the attribute block governs.
+
+Consequence: **a defect introduced into only one of the two blocks is invisible in one engine.**
+Verified empirically (2026-08-12) while tracing the badge/callout quiet-tier chain — injecting a
+light-mode literal into just one block left the tests green in the other engine; both had to be
+corrupted before a Chromium test went red. When you touch that file, change every route, and when
+you write a dark-mode regression test remember that passing locally on one engine proves less than
+it looks. `check:palette-freshness` covers generation, not cross-route agreement.
+
+A related reading aid: the quiet-tier chain is *fully* token-driven end to end
+(`badge.styles.ts` → `--lr-color-fill-quiet` → `internal/variants.styles.ts` →
+`internal/tokens/palette.styles.ts`). The only literals in it are the OKLCH ramp steps themselves,
+which are mode-independent by design — dark mode changes *which* ramp step a slot points at
+(`--lr-ramp-warning-95` → `--lr-ramp-warning-30`), never the step's own value. `tokens.styles.ts`
+only aliases `--lr-color-<variant>-quiet` onto that grid; the grid itself lives in
+`tokens/palette.styles.ts`. A `var()` chain bottoming out in a second `var()` (e.g. `lr-callout`'s
+`var(--lr-color-fill-quiet, var(--lr-color-brand-fill-quiet))` fallback arm) is not a hardcoded
+literal — read the whole chain before filing one as a bug.

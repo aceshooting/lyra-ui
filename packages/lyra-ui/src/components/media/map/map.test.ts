@@ -1459,6 +1459,39 @@ it('lets inherited CSS properties theme popup-close-button hover and active stat
   }
 });
 
+it('keeps popup anchor tip alignment tied to the physical MapLibre anchor class, not page direction', async () => {
+  // maplibre-gl assigns maplibregl-popup-anchor-left/-right at runtime from physical viewport
+  // collision detection (which side of the map has room for the popup relative to the marker's
+  // screen position) -- it has nothing to do with page text direction. The same anchor class
+  // must therefore produce the same flex-direction (tip alignment) under dir="ltr" and
+  // dir="rtl" alike.
+  const anchorFlexDirection = async (
+    dir: 'ltr' | 'rtl',
+    anchorClass: string,
+  ): Promise<string> => {
+    const wrapper = (await fixture(html`<div dir=${dir}></div>`)) as HTMLElement;
+    const el = document.createElement('lr-map') as LyraMap;
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () =>
+      new Promise(() => {});
+    wrapper.append(el);
+    await el.updateComplete;
+    const popup = document.createElement('div');
+    popup.className = `maplibregl-popup ${anchorClass}`;
+    el.shadowRoot!.append(popup);
+    return getComputedStyle(popup).flexDirection;
+  };
+
+  const leftLtr = await anchorFlexDirection('ltr', 'maplibregl-popup-anchor-left');
+  const leftRtl = await anchorFlexDirection('rtl', 'maplibregl-popup-anchor-left');
+  expect(leftLtr).to.equal('row');
+  expect(leftRtl).to.equal(leftLtr);
+
+  const rightLtr = await anchorFlexDirection('ltr', 'maplibregl-popup-anchor-right');
+  const rightRtl = await anchorFlexDirection('rtl', 'maplibregl-popup-anchor-right');
+  expect(rightLtr).to.equal('row-reverse');
+  expect(rightRtl).to.equal(rightLtr);
+});
+
 it('keeps choropleth and data-layer sources distinct when their public sourceId collides', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;

@@ -3,13 +3,18 @@ import { property, state, query } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { nextId, srOnly } from '../../../internal/a11y.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteAdd, finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { escapeCsvField } from '../../utility/export-button/csv.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.class.js';
 import { styles } from './lite-chart.styles.js';
+import {
+  forcedColorEncoding,
+  forcedColorsActive,
+  type ForcedColorEncodingName,
+} from './chart-forced-colors.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { sanitizeCssColor, sanitizeCssLength } from '../../../internal/safe-css.js';
 import { activeElementIn } from '../../../internal/active-element.js';
@@ -23,7 +28,7 @@ import {
 } from './chart-table-sampling.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_liteChartBarLabel, LYRA_DEFAULT_liteChartCustomMarkSummary, LYRA_DEFAULT_liteChartMarkSummary, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_liteChartBarLabel, LYRA_DEFAULT_liteChartCustomMarkSummary, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -250,13 +255,18 @@ export interface LyraLiteChartEventMap {
  * @csspart axis-label - Each axis tick label.
  * @csspart axis-title - The x/y axis title text, when set.
  * @csspart bar - Each bar rect (type="bar"). Carries `data-selected` and `aria-pressed="true"`
- *   when its category index is in `selectedIndex`.
- * @csspart line - Each series' stroked line path (type="line").
+ *   when its category index is in `selectedIndex`. While `forced-colors: active` matches, its fill
+ *   is a per-series SVG texture instead of a flat color, so series that collapse onto the same
+ *   system color stay distinguishable.
+ * @csspart line - Each series' stroked line path (type="line"). While `forced-colors: active`
+ *   matches, it carries a per-series `stroke-dasharray` for the same reason.
  * @csspart point - Each series' per-point keyboard target (type="line"). Carries
  *   `data-selected` and explicit `aria-pressed` state.
  * @csspart legend - The legend row, when `legend` is set.
  * @csspart legend-item - Each legend entry.
- * @csspart legend-swatch - Each legend entry's color swatch.
+ * @csspart legend-swatch - Each legend entry's color swatch. While `forced-colors: active`
+ *   matches, it carries a `data-encoding` attribute selecting the CSS texture that matches its
+ *   series' plotted encoding.
  * @csspart legend-text - Extra per-item text after the series label, rendered only when `legendText` is set.
  * @csspart live-region - The current mark announcement for keyboard users.
  * @csspart data-list - A visually hidden sampled list of plotted data points (single-series only).
@@ -270,6 +280,12 @@ export interface LyraLiteChartEventMap {
  *   property supplies only a private fallback, so this public token always wins when set.
  * @cssprop [--lr-lite-chart-selected-outline-color=var(--lr-color-brand)] - Stroke for a bar/point whose category index is in `selectedIndex`.
  * @cssprop [--lr-lite-chart-selected-outline-width=var(--lr-size-2px)] - Stroke width for a bar/point whose category index is in `selectedIndex`.
+ * @cssprop [--lr-chart-pattern-step=var(--lr-space-2xs)] - Tile size of the texture painted on
+ *   `[part='legend-swatch']` while `forced-colors: active` matches, where the eight-color series
+ *   ramp collapses onto a repeating system-color cycle and the texture becomes the only channel
+ *   keeping series apart. Declared on the swatch part rather than the host; the stripe width within
+ *   a tile stays `--lr-border-width-thin`, so a larger step spaces the stripes further apart.
+ *   Shared verbatim with `<lr-chart>` and `<lr-box-plot>`.
  * @status stable
  * @since 4.0.0
  */
@@ -284,12 +300,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     chartDataSampled: LYRA_DEFAULT_chartDataSampled,
     chartSeriesLabel: LYRA_DEFAULT_chartSeriesLabel,
     chartTotal: LYRA_DEFAULT_chartTotal,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     liteChartBarLabel: LYRA_DEFAULT_liteChartBarLabel,
     liteChartCustomMarkSummary: LYRA_DEFAULT_liteChartCustomMarkSummary,
     liteChartMarkSummary: LYRA_DEFAULT_liteChartMarkSummary,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -396,6 +409,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  takes precedence. Unset (the default) keeps today's auto-derived (English-fallback) label
    *  exactly. Named `accessible-label` to match the same override on `lr-chart`/`lr-box-plot`. */
   @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
+
+  /** Instance-unique prefix for the forced-colors `<pattern>` ids this chart's marks reference. */
+  private forcedColorPatternId = nextId('lite-chart-pattern');
 
   @state() private plotWidth = 0;
   @state() private plotHeight = 0;
@@ -621,6 +637,101 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   private colorFor(index: number, series: LiteSeries): string {
     return sanitizeCssColor(series.color) ?? DEFAULT_PALETTE[index % DEFAULT_PALETTE.length]!; // safe: modulo a non-empty constant palette
+  }
+
+  /**
+   * Whether the per-series forced-colors encodings apply. Under `forced-colors: active` the
+   * `--lr-color-chart-*` ramp behind `DEFAULT_PALETTE` is remapped onto the small repeating
+   * system-color cycle the platform exposes, so series 1/4/7 (and 2/5/8, 3/6) paint identically.
+   * Texture and line dash are what keep them apart — the SVG counterpart of the CanvasPattern and
+   * `borderDash` cycle `<lr-chart>` applies to its own repeated colors.
+   */
+  private forcedColors(): boolean {
+    // Optional-chained: this is reached from render(), which @lit-labs/ssr runs server-side where
+    // the element shim has no `ownerDocument` -- a bare property access throws there.
+    // forcedColorsActive() already treats a nullish view as "not forced", which is the correct
+    // server-render answer anyway.
+    return forcedColorsActive(this.ownerDocument?.defaultView);
+  }
+
+  /** The paint a mark of `index` uses: a texture reference under forced colors, else the color. */
+  private markPaint(index: number, series: LiteSeries): string {
+    const color = this.colorFor(index, series);
+    return this.type === 'bar' && this.forcedColors()
+      ? `url(#${this.forcedColorPatternId}-${index})`
+      : color;
+  }
+
+  /** The legend swatch's texture key, or `nothing` on a normal palette. */
+  private legendEncoding(index: number): ForcedColorEncodingName | typeof nothing {
+    return this.forcedColors() ? forcedColorEncoding(index).name : nothing;
+  }
+
+  /** `stroke-dasharray` for a line series, or `nothing` on a normal palette. */
+  private markDash(index: number): string | typeof nothing {
+    if (!this.forcedColors()) return nothing;
+    const dash = forcedColorEncoding(index).dash;
+    // The solid encoding has an empty dash list, which is not a valid `stroke-dasharray` value;
+    // `none` is its explicit spelling and keeps that series' line unbroken.
+    return dash.length ? dash.join(' ') : 'none';
+  }
+
+  /**
+   * One `<pattern>` per series, painted only while forced colors are active. Each tile lays the
+   * series' own (system) color down first, then strokes the encoding's texture in the surface
+   * color, mirroring `createForcedColorPattern()`'s canvas tiles shape for shape.
+   */
+  private renderForcedColorPatterns() {
+    // Only bars consume a pattern fill; a line's own dash carries the encoding, and a 4px point
+    // is too small to read one, so anything else would emit defs nothing references.
+    if (this.type !== 'bar' || !this.forcedColors()) return nothing;
+    const size = 8;
+    const half = size / 2;
+    const texture = 'var(--lr-color-surface)';
+    return svg`<defs>
+      ${this.datasets.map((series, index) => {
+        const encoding = forcedColorEncoding(index).name;
+        const shapes = (() => {
+          switch (encoding) {
+            case 'horizontal':
+              return svg`<rect y=${half} width=${size} height="1" fill=${texture}></rect>`;
+            case 'vertical':
+              return svg`<rect x=${half} width="1" height=${size} fill=${texture}></rect>`;
+            case 'diagonal':
+              return svg`<path
+                d=${`M${-half},${size} L${half},0 M${half},${size} L${size + half},0`}
+                stroke=${texture}
+                stroke-width="1"
+              ></path>`;
+            case 'reverse-diagonal':
+              return svg`<path
+                d=${`M${-half},0 L${half},${size} M${half},0 L${size + half},${size}`}
+                stroke=${texture}
+                stroke-width="1"
+              ></path>`;
+            case 'crosshatch':
+              return svg`<rect y=${half} width=${size} height="1" fill=${texture}></rect>
+                <rect x=${half} width="1" height=${size} fill=${texture}></rect>`;
+            case 'dots':
+              return svg`<circle cx=${half} cy=${half} r="1.5" fill=${texture}></circle>`;
+            case 'checker':
+              return svg`<rect width=${half} height=${half} fill=${texture}></rect>
+                <rect x=${half} y=${half} width=${half} height=${half} fill=${texture}></rect>`;
+            default:
+              return nothing;
+          }
+        })();
+        return svg`<pattern
+          id=${`${this.forcedColorPatternId}-${index}`}
+          width=${size}
+          height=${size}
+          patternUnits="userSpaceOnUse"
+        >
+          <rect width=${size} height=${size} fill=${this.colorFor(index, series)}></rect>
+          ${shapes}
+        </pattern>`;
+      })}
+    </defs>`;
   }
 
   /** Dispatches to the host-provided `pointText` formatter when set, otherwise `undefined` (the
@@ -1062,6 +1173,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         if (v == null || !Number.isFinite(v)) return;
         if (this.skipZero && v === 0) return;
         const color = this.colorFor(di, s);
+        const paint = this.markPaint(di, s);
         let rectX: number;
         let y1: number;
         let y2: number;
@@ -1193,7 +1305,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
             <path
               part="bar"
               d=${this.roundedBarPath(rectX, y1, w, h)}
-              fill=${color}
+              fill=${paint}
               style=${styleMap({ color })}
               tabindex=${activeMarkIndex === markIndex ? '0' : '-1'}
               role="button"
@@ -1218,7 +1330,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               y=${y1}
               width=${w}
               height=${h}
-              fill=${color}
+              fill=${paint}
               style=${styleMap({ color })}
               tabindex=${activeMarkIndex === markIndex ? '0' : '-1'}
               role="button"
@@ -1337,7 +1449,12 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           </g>
         `;
       });
-      return svg`<path part="line" d=${d.trim()} stroke=${color}></path>${dots}`;
+      return svg`<path
+        part="line"
+        d=${d.trim()}
+        stroke=${color}
+        stroke-dasharray=${this.markDash(di)}
+      ></path>${dots}`;
     });
   }
 
@@ -1499,6 +1616,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           aria-label=${chartLabel}
           tabindex=${!awaitingFitMeasurement && marksForA11y.length ? '-1' : '0'}
         >
+          ${this.renderForcedColorPatterns()}
           ${grid}
           ${categoryLabels}
           ${marks}
@@ -1587,7 +1705,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               ${this.datasets.map(
                 (s, i) => html`
                   <span part="legend-item">
-                    <span part="legend-swatch" style=${styleMap({ background: this.colorFor(i, s) })}></span>
+                    <span
+                      part="legend-swatch"
+                      data-encoding=${this.legendEncoding(i)}
+                      style=${styleMap({ backgroundColor: this.colorFor(i, s) })}
+                    ></span>
                     ${s.label}${this.legendText
                       ? html`<span part="legend-text">${this.legendText(s.label, i)}</span>`
                       : nothing}

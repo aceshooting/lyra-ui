@@ -24,7 +24,7 @@ import {
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_graphQueryBuilderLabel, LYRA_DEFAULT_graphQueryDeleteWithContext, LYRA_DEFAULT_graphQueryDirectionLabel, LYRA_DEFAULT_graphQueryEndLabel, LYRA_DEFAULT_graphQueryHopRangeInvalid, LYRA_DEFAULT_graphQueryLoadWithContext, LYRA_DEFAULT_graphQueryMaxHopsLabel, LYRA_DEFAULT_graphQueryMinHopsLabel, LYRA_DEFAULT_graphQueryNodeTypeLabel, LYRA_DEFAULT_graphQueryRelationshipTypeLabel, LYRA_DEFAULT_graphQueryRun, LYRA_DEFAULT_graphQuerySaveButton, LYRA_DEFAULT_graphQuerySaveNameLabel, LYRA_DEFAULT_graphQuerySavedQueriesLabel, LYRA_DEFAULT_graphQueryStartLabel, LYRA_DEFAULT_neighborDirectionBoth, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_graphQueryBuilderLabel, LYRA_DEFAULT_graphQueryDeleteWithContext, LYRA_DEFAULT_graphQueryDirectionLabel, LYRA_DEFAULT_graphQueryEndLabel, LYRA_DEFAULT_graphQueryHopRangeInvalid, LYRA_DEFAULT_graphQueryLoadWithContext, LYRA_DEFAULT_graphQueryMaxHopsLabel, LYRA_DEFAULT_graphQueryMinHopsLabel, LYRA_DEFAULT_graphQueryNodeTypeLabel, LYRA_DEFAULT_graphQueryRelationshipTypeLabel, LYRA_DEFAULT_graphQueryRun, LYRA_DEFAULT_graphQuerySaveButton, LYRA_DEFAULT_graphQuerySaveNameLabel, LYRA_DEFAULT_graphQuerySavedQueriesLabel, LYRA_DEFAULT_graphQueryStartLabel, LYRA_DEFAULT_neighborDirectionBoth, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_noData, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Traversal direction relative to the matched node(s): `'out'` (outgoing edges), `'in'`
@@ -267,9 +267,6 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     graphQueryBuilderLabel: LYRA_DEFAULT_graphQueryBuilderLabel,
     graphQueryDeleteWithContext: LYRA_DEFAULT_graphQueryDeleteWithContext,
@@ -290,9 +287,6 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     neighborDirectionIn: LYRA_DEFAULT_neighborDirectionIn,
     neighborDirectionOut: LYRA_DEFAULT_neighborDirectionOut,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
-    restore: LYRA_DEFAULT_restore,
-    search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END

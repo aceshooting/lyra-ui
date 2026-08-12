@@ -1253,6 +1253,63 @@ describe('lr-video public contract', () => {
 });
 
 describe('lr-video control surface', () => {
+  it('announces the timeline position as localized clock time, not raw seconds', async () => {
+    const el = await fixture<LyraVideo>(html`
+      <lr-video lang="ar-EG" .strings=${{ avPlayerPosition: '{current} sur {duration}' }}></lr-video>
+    `);
+    const media = nativeVideo(el);
+    Object.defineProperties(media, {
+      duration: { configurable: true, value: 61 },
+      currentTime: { configurable: true, value: 5, writable: true },
+    });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    media.dispatchEvent(new Event('timeupdate'));
+    await el.updateComplete;
+
+    const progress = el.shadowRoot!.querySelector('[part="progress"]') as HTMLInputElement;
+    expect(progress.getAttribute('aria-valuetext')).to.equal('٠:٠٥ sur ١:٠١');
+
+    const plain = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
+    const plainMedia = nativeVideo(plain);
+    Object.defineProperties(plainMedia, {
+      duration: { configurable: true, value: 61 },
+      currentTime: { configurable: true, value: 5, writable: true },
+    });
+    plainMedia.dispatchEvent(new Event('loadedmetadata'));
+    plainMedia.dispatchEvent(new Event('timeupdate'));
+    await plain.updateComplete;
+    expect(
+      plain.shadowRoot!.querySelector('[part="progress"]')!.getAttribute('aria-valuetext'),
+      'the English fallback renders with no locale registered',
+    ).to.equal('0:05 of 1:01');
+  });
+
+  it('forwards host focus()/blur()/click() to the play control and re-dispatches its focus/blur', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div><lr-video></lr-video></div>`);
+    const el = wrapper.querySelector('lr-video') as LyraVideo;
+    await el.updateComplete;
+    const play = button(el, 'play')!;
+    // Listening on the PARENT: a native focus/blur is composed but does not bubble, so only the
+    // component's own re-dispatched event reaches this listener.
+    const seen: string[] = [];
+    wrapper.addEventListener('focus', () => seen.push('focus'));
+    wrapper.addEventListener('blur', () => seen.push('blur'));
+
+    el.focus();
+    expect(el.shadowRoot!.activeElement === play).to.equal(true);
+
+    let clicks = 0;
+    play.addEventListener('click', () => {
+      clicks += 1;
+    });
+    el.click();
+    expect(clicks).to.equal(1);
+
+    el.blur();
+    expect(el.shadowRoot!.activeElement === null).to.equal(true);
+    expect(seen).to.deep.equal(['focus', 'blur']);
+  });
+
   it('applies the volume slider and playback-rate selector to the media element', async () => {
     const el = await fixture<LyraVideo>(html`<lr-video controls="full"></lr-video>`);
     const media = nativeVideo(el);

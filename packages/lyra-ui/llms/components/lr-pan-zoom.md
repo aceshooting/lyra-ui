@@ -34,9 +34,15 @@ origin. The viewport accepts `+`/`=`, `-`/`_`, and `0`, without consuming keys f
 
 **Slots:** default — inspected content, ignored while `src` renders an image.
 
-**Events:** `lr-zoom-change` (`detail: { zoom }`).
+`focus(options?)`, `blur()`, and `click()` forward to the scrollable `viewport`, which is the
+component's own keyboard target — a bare host `.focus()` would otherwise be a silent no-op.
 
-**CSS parts:** `base`, `viewport`, `content`, `controls`, `zoom-out`, `zoom-in`, and `reset`.
+**Events:** `lr-zoom-change` (`detail: { zoom }`); internal `focus`/`blur` from the viewport are
+bridged as bubbling, composed host events.
+
+**CSS parts:** `base`, `viewport`, `content`, `controls`, `zoom-out`, `zoom-in`, and `reset`. The
+`reset` button's visible text is the live zoom percentage, locale-formatted and recomputed from
+`zoom` on every render (not a fixed "100%").
 
 **Themeable custom properties:** `--lr-pan-zoom-min-block-size` (default `var(--lr-size-10rem)`)
 and the read-only `--lr-pan-zoom-zoom`. The former `--lr-zoomable-frame-min-block-size` and

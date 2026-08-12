@@ -35,6 +35,23 @@
   assert the state-specific part/element actually rendered, then
   `await expect(el).to.be.accessible()` — see the populated axe test in
   `src/components/data/table/table.test.ts` for the pattern.
+- **A test that probes a shared global must scope its evidence to the component under test.**
+  Patching a prototype hook (the `LitElement.prototype.willUpdate`/`updated` trick used to prove a
+  component chains to `super`) and recording a bare `called = true` boolean is vacuous: almost every
+  component mounts other Lit elements in its own shadow root (`lr-button`, `lr-live-region`,
+  `lr-icon`, …), and any one of them trips the flag. Observed for real on 2026-08-12 — a
+  `lr-confirm-bar` super-chain test passed identically with and without the `super` calls, because
+  its nested `lr-button` was doing the calling. Record *which* element called
+  (`calledBy[hook].add(this.localName)`, then assert the tag you care about) or capture the instance
+  and compare identity. The same reasoning applies to any spy on a shared global — `Intl`,
+  `matchMedia`, `ResizeObserver`, `DOMParser`, `fetch`: attribute each call to a caller before
+  asserting on the count.
+- **Prove every regression test discriminates.** A test written against an already-fixed defect is
+  worth nothing, and the failure mode is silent. Temporarily revert the source change, re-run, watch
+  it go red *for the stated reason*, then restore — and prefer reverting via the real source rather
+  than a stubbed shortcut, so the revert exercises the same path the fix does. For a pure refactor
+  with no observable behavior change, no discriminating test is possible; say so explicitly and lean
+  on the existing suite passing unchanged instead of inventing a hollow one.
 - **Adversarial fixtures.** Happy-path fixtures hide recurring bug classes; each interaction
   shape gets its matching hostile fixture:
   - Keyboard activation (Enter/Space) is asserted to act on the element that actually has focus,

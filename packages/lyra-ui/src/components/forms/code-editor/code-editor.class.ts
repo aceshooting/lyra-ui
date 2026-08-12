@@ -10,7 +10,7 @@ import { sanitizeCssResize } from '../../../internal/safe-css.js';
 import type { LyraSize } from '../../../internal/variants.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_codeEditorLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_codeEditorLabel, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -83,7 +83,6 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     ...super.defaultStrings,
     codeEditorLabel: LYRA_DEFAULT_codeEditorLabel,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
-    restore: LYRA_DEFAULT_restore,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

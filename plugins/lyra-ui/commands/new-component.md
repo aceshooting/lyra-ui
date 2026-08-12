@@ -18,7 +18,9 @@ Steps:
 3. From that section, extract: the import path, the required/most common attributes, any default
    slot or named slots, and the primary event(s) a consumer would listen for.
 4. Emit:
-   - The import statement (`import '@aceshooting/lyra-ui/components/<name>/<name>.js';`).
+   - The import statement, copied verbatim from that section's **Import** line
+     (`import '@aceshooting/lyra-ui/components/<lr-tag>.js';`, e.g.
+     `import '@aceshooting/lyra-ui/components/lr-button.js';`).
    - A minimal but realistic HTML usage example using only attributes/slots documented in that
      section — do not add attributes that aren't in the reference, even if they'd be common on a
      similar native/other-library element.

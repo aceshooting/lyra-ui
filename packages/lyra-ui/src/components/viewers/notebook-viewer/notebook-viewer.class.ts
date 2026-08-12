@@ -18,7 +18,7 @@ import { sanitizeCssColor, sanitizeCssLength } from '../../../internal/safe-css.
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_notebookViewerCodeCell, LYRA_DEFAULT_notebookViewerCollapseOutput, LYRA_DEFAULT_notebookViewerErrorOutput, LYRA_DEFAULT_notebookViewerInPrompt, LYRA_DEFAULT_notebookViewerInPromptEmpty, LYRA_DEFAULT_notebookViewerInvalid, LYRA_DEFAULT_notebookViewerLabel, LYRA_DEFAULT_notebookViewerMarkdownCell, LYRA_DEFAULT_notebookViewerRawCell, LYRA_DEFAULT_notebookViewerShowAllOutput, LYRA_DEFAULT_notebookViewerTooManyCells, LYRA_DEFAULT_notebookViewerUnrenderedOutput, LYRA_DEFAULT_notebookViewerUnsupportedVersion, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_notebookViewerCodeCell, LYRA_DEFAULT_notebookViewerCollapseOutput, LYRA_DEFAULT_notebookViewerErrorOutput, LYRA_DEFAULT_notebookViewerInPrompt, LYRA_DEFAULT_notebookViewerInPromptEmpty, LYRA_DEFAULT_notebookViewerInvalid, LYRA_DEFAULT_notebookViewerLabel, LYRA_DEFAULT_notebookViewerMarkdownCell, LYRA_DEFAULT_notebookViewerRawCell, LYRA_DEFAULT_notebookViewerShowAllOutput, LYRA_DEFAULT_notebookViewerTooManyCells, LYRA_DEFAULT_notebookViewerUnrenderedOutput, LYRA_DEFAULT_notebookViewerUnsupportedVersion } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -241,15 +241,12 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     anchorJumped: LYRA_DEFAULT_anchorJumped,
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
     documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
     documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
     documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
     documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
     documentViewerMissingSanitizer: LYRA_DEFAULT_documentViewerMissingSanitizer,
-    loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
     notebookViewerCodeCell: LYRA_DEFAULT_notebookViewerCodeCell,
     notebookViewerCollapseOutput: LYRA_DEFAULT_notebookViewerCollapseOutput,
@@ -264,7 +261,6 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     notebookViewerTooManyCells: LYRA_DEFAULT_notebookViewerTooManyCells,
     notebookViewerUnrenderedOutput: LYRA_DEFAULT_notebookViewerUnrenderedOutput,
     notebookViewerUnsupportedVersion: LYRA_DEFAULT_notebookViewerUnsupportedVersion,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

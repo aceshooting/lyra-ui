@@ -19,7 +19,7 @@ import { styles } from "./carousel.styles.js";
 import type { LyraCarouselItem } from "./carousel-item.class.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_carousel, LYRA_DEFAULT_carouselGoTo, LYRA_DEFAULT_carouselIndicators, LYRA_DEFAULT_carouselLabel, LYRA_DEFAULT_carouselSlide, LYRA_DEFAULT_carouselSlideAnnouncement, LYRA_DEFAULT_carouselSlideAnnouncementSeparator, LYRA_DEFAULT_carouselSlidePosition, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_previous, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_carousel, LYRA_DEFAULT_carouselGoTo, LYRA_DEFAULT_carouselIndicators, LYRA_DEFAULT_carouselLabel, LYRA_DEFAULT_carouselSlide, LYRA_DEFAULT_carouselSlideAnnouncement, LYRA_DEFAULT_carouselSlideAnnouncementSeparator, LYRA_DEFAULT_carouselSlidePosition, LYRA_DEFAULT_next, LYRA_DEFAULT_previous } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -175,12 +175,8 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     carouselSlideAnnouncement: LYRA_DEFAULT_carouselSlideAnnouncement,
     carouselSlideAnnouncementSeparator: LYRA_DEFAULT_carouselSlideAnnouncementSeparator,
     carouselSlidePosition: LYRA_DEFAULT_carouselSlidePosition,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     next: LYRA_DEFAULT_next,
-    open: LYRA_DEFAULT_open,
     previous: LYRA_DEFAULT_previous,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

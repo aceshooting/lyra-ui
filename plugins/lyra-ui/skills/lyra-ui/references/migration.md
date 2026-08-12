@@ -78,35 +78,35 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | From | Lyra target or candidate | Classification | Disposition |
 |---|---|---|---|
 | `<wa-accordion>` | `<lr-accordion>` | `warning-required` | Manual: Lyra preserves legacy direct <lr-details> panels, so the event detail item is a union rather than only LyraAccordionItem; migrated handlers that rely on item-specific members require review. |
-| `<wa-accordion-item>` | `<lr-accordion-item>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<wa-accordion-item>` | `<lr-accordion-item>` | `exact` | Automatic: tag and supported side-effect registration import. Native disclosure and coordinated accordion panels. |
 | `<wa-animated-image>` | `<lr-animated-image>` | `rewritten` | Automatic: tag/import plus events: wa-error → lr-error; events: wa-load → lr-load. |
 | `<wa-animation>` | `<lr-animation>` | `rewritten` | Automatic: tag/import plus events: wa-cancel → lr-cancel; events: wa-finish → lr-finish; events: wa-start → lr-start. |
 | `<wa-avatar>` | `<lr-avatar>` | `rewritten` | Automatic: tag/import plus events: wa-error → lr-error. |
 | `<wa-badge>` | `<lr-badge>` | `rewritten` | Automatic: tag/import plus insert appearance=accent; insert variant=brand. |
-| `<wa-bar-chart>` | `<lr-bar-chart>` | `exact` | Automatic: tag and supported side-effect registration import. |
-| `<wa-breadcrumb>` | `<lr-breadcrumb>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<wa-bar-chart>` | `<lr-bar-chart>` | `exact` | Automatic: tag and supported side-effect registration import. Typed `<lr-chart>` subclasses with `type` locked — same optional peer deps as `<lr-chart>`. |
+| `<wa-breadcrumb>` | `<lr-breadcrumb>` | `exact` | Automatic: tag and supported side-effect registration import. Responsive navigation trail. |
 | `<wa-breadcrumb-item>` | `<lr-breadcrumb-item>` | `warning-required` | Manual: Lyra derives safe rel="noopener noreferrer" behavior from target and does not expose an independently settable rel; migration leaves the use unchanged and reports the security-sensitive difference. |
-| `<wa-bubble-chart>` | `<lr-bubble-chart>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<wa-bubble-chart>` | `<lr-bubble-chart>` | `exact` | Automatic: tag and supported side-effect registration import. Typed `<lr-chart>` subclasses with `type` locked — same optional peer deps as `<lr-chart>`. |
 | `<wa-button>` | `<lr-button>` | `warning-required` | Manual: Lyra derives safe rel="noopener noreferrer" behavior from target and ignores an independently authored rel; migration leaves the use unchanged and reports the security-sensitive difference. |
-| `<wa-button-group>` | `<lr-button-group>` | `exact` | Automatic: tag and supported side-effect registration import. |
-| `<wa-callout>` | `<lr-callout>` | `exact` | Automatic: tag and supported side-effect registration import. |
-| `<wa-card>` | `<lr-card>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<wa-button-group>` | `<lr-button-group>` | `exact` | Automatic: tag and supported side-effect registration import. Responsive semantic grouping for related action controls. |
+| `<wa-callout>` | `<lr-callout>` | `exact` | Automatic: tag and supported side-effect registration import. Dismissible inline status, warning, and error message surface. |
+| `<wa-card>` | `<lr-card>` | `exact` | Automatic: tag and supported side-effect registration import. Generic bordered content container (`header`/`media`/`footer`/`actions` slots) — a direct `<lr-*>` counterpart to `wa-card`. |
 | `<wa-carousel>` | `<lr-carousel>` | `warning-required` | Manual: Lyra accepts arbitrary HTMLElement slides, so its slide-change detail is wider than the upstream carousel-item class; migrated handlers that rely on item-specific members require review. |
-| `<wa-carousel-item>` | `<lr-carousel-item>` | `exact` | Automatic: tag and supported side-effect registration import. |
-| `<wa-chart>` | `<lr-chart>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<wa-carousel-item>` | `<lr-carousel-item>` | `exact` | Automatic: tag and supported side-effect registration import. Optional semantic slide wrapper for carousel content. |
+| `<wa-chart>` | `<lr-chart>` | `exact` | Automatic: tag and supported side-effect registration import. Core Chart.js wrapper (`Series`-based, plus raw `config` passthrough) with bounded `appendData()` streaming and `exportData('csv'. |
 | `<wa-checkbox>` | `<lr-checkbox>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
-| `<wa-checkbox-group>` | `<lr-checkbox-group>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<wa-checkbox-group>` | `<lr-checkbox-group>` | `exact` | Automatic: tag and supported side-effect registration import. Form-associated group of checkboxes with array values and group validation. |
 | `<wa-color-picker>` | `<lr-color-picker>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-hide → lr-hide; events: wa-invalid → lr-invalid; events: wa-show → lr-show. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
 | `<wa-combobox>` | `<lr-combobox>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-clear → lr-clear; events: wa-create → lr-create; events: wa-hide → lr-hide; events: wa-invalid → lr-invalid; events: wa-show → lr-show. |
-| `<wa-comparison>` | `<lr-image-comparer>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<wa-comparison>` | `<lr-image-comparer>` | `exact` | Automatic: tag and supported side-effect registration import. Before/after slotted surfaces with a keyboard-accessible range divider. |
 | `<wa-copy-button>` | `<lr-copy-button>` | `rewritten` | Automatic: tag/import plus events: wa-copy → lr-copy; events: wa-error → lr-error. |
 | `<wa-data-grid>` | `<lr-data-grid>` | `rewritten` | Automatic: tag/import plus events: wa-cell-click → lr-cell-click; events: wa-cell-contextmenu → lr-cell-contextmenu; events: wa-column-move → lr-column-move; events: wa-column-pin → lr-column-pin; events: wa-column-resize → lr-column-resize; events: wa-column-visibility-change → lr-column-visibility-change; events: wa-data-error → lr-data-error; events: wa-data-request → lr-data-request; events: wa-filter-change → lr-filter-change; events: wa-page-change → lr-page-change; events: wa-row-collapse → lr-row-collapse; events: wa-row-expand → lr-row-expand; events: wa-row-select → lr-row-select; events: wa-sort-change → lr-sort-change. |
 | `<wa-date-input>` | `<lr-date-input>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-clear → lr-clear; events: wa-hide → lr-hide; events: wa-invalid → lr-invalid; events: wa-show → lr-show. |
 | `<wa-date-picker>` | `<lr-date-picker>` | `rewritten` | Automatic: tag/import plus events: wa-focus-day → lr-focus-day; events: wa-view-change → lr-view-change. |
 | `<wa-details>` | `<lr-details>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-hide → lr-hide; events: wa-show → lr-show. |
 | `<wa-dialog>` | `<lr-dialog>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-hide → lr-hide; events: wa-show → lr-show. |
-| `<wa-divider>` | `<lr-divider>` | `exact` | Automatic: tag and supported side-effect registration import. |
-| `<wa-doughnut-chart>` | `<lr-doughnut-chart>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<wa-divider>` | `<lr-divider>` | `exact` | Automatic: tag and supported side-effect registration import. Horizontal or vertical semantic separator. |
+| `<wa-doughnut-chart>` | `<lr-doughnut-chart>` | `exact` | Automatic: tag and supported side-effect registration import. Typed `<lr-chart>` subclasses with `type` locked — same optional peer deps as `<lr-chart>`. |
 | `<wa-drawer>` | `<lr-drawer>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-hide → lr-hide; events: wa-show → lr-show. |
 | `<wa-dropdown>` | `<lr-dropdown>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-hide → lr-hide; events: wa-select → lr-select; events: wa-show → lr-show. |
 | `<wa-dropdown-item>` | `<lr-dropdown-item>` | `rewritten` | Automatic: tag/import plus attributes: submenuOpen → submenu-open. |
@@ -119,49 +119,49 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-input>` | `<lr-input>` | `rewritten` | Automatic: tag/import plus events: wa-clear → lr-clear; events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
 | `<wa-intersection-observer>` | `<lr-intersection-observer>` | `rewritten` | Automatic: tag/import plus events: wa-intersect → lr-intersect. |
 | `<wa-known-date>` | `<lr-known-date>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. |
-| `<wa-line-chart>` | `<lr-line-chart>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<wa-line-chart>` | `<lr-line-chart>` | `exact` | Automatic: tag and supported side-effect registration import. Typed `<lr-chart>` subclasses with `type` locked — same optional peer deps as `<lr-chart>`. |
 | `<wa-markdown>` | `<lr-markdown>` | `warning-required` | Manual: The source and target light-DOM Markdown content models and optional-peer runtime requirements are not mechanically equivalent; migration leaves the use unchanged and reports the required review. |
 | `<wa-mutation-observer>` | `<lr-mutation-observer>` | `rewritten` | Automatic: tag/import plus events: wa-mutation → lr-mutation. |
 | `<wa-number-input>` | `<lr-number-input>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
-| `<wa-option>` | `<lr-option>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<wa-option>` | `<lr-option>` | `exact` | Automatic: tag and supported side-effect registration import. Filterable single/multi select, form-associated; options separate live `selected` from attribute-backed/reset `defaultSelected`; `xs`–`xl` sizing; async rich rows and retained selection payloads via `source`/`selectedRows`; virtual scrolling with `max-render`. |
 | `<wa-otp-input>` | `<lr-otp-input>` | `rewritten` | Automatic: tag/import plus events: wa-clear → lr-clear; events: wa-complete → lr-complete; events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
-| `<wa-page>` | `<lr-page>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<wa-page>` | `<lr-page>` | `exact` | Automatic: tag and supported side-effect registration import. Responsive application shell with header, navigation, aside, main, footer, and mobile navigation state under one page-level layout contract. |
 | `<wa-pagination>` | `<lr-pagination>` | `rewritten` | Automatic: tag/import plus events: wa-before-page-change → lr-before-page-change; events: wa-page-change → lr-page-change. |
-| `<wa-pie-chart>` | `<lr-pie-chart>` | `exact` | Automatic: tag and supported side-effect registration import. |
-| `<wa-polar-area-chart>` | `<lr-polar-area-chart>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<wa-pie-chart>` | `<lr-pie-chart>` | `exact` | Automatic: tag and supported side-effect registration import. Typed `<lr-chart>` subclasses with `type` locked — same optional peer deps as `<lr-chart>`. |
+| `<wa-polar-area-chart>` | `<lr-polar-area-chart>` | `exact` | Automatic: tag and supported side-effect registration import. Typed `<lr-chart>` subclasses with `type` locked — same optional peer deps as `<lr-chart>`. |
 | `<wa-popover>` | `<lr-popover>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-hide → lr-hide; events: wa-show → lr-show. Equivalent surface representation: for defaults null ≡ ; no source rewrite. |
 | `<wa-popup>` | `<lr-popup>` | `rewritten` | Automatic: tag/import plus events: wa-reposition → lr-reposition. Equivalent surface representation: autoSizeBoundary is analyzer-inferred for property-only autoSizeBoundary; flipBoundary is analyzer-inferred for property-only flipBoundary; shiftBoundary is analyzer-inferred for property-only shiftBoundary; no source rewrite. |
-| `<wa-progress-bar>` | `<lr-progress-bar>` | `exact` | Automatic: tag and supported side-effect registration import. |
-| `<wa-progress-ring>` | `<lr-progress-ring>` | `exact` | Automatic: tag and supported side-effect registration import. |
-| `<wa-qr-code>` | `<lr-qr-code>` | `exact` | Automatic: tag and supported side-effect registration import. |
-| `<wa-radar-chart>` | `<lr-radar-chart>` | `exact` | Automatic: tag and supported side-effect registration import. |
-| `<wa-radio>` | `<lr-radio>` | `exact` | Automatic: tag and supported side-effect registration import. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
+| `<wa-progress-bar>` | `<lr-progress-bar>` | `exact` | Automatic: tag and supported side-effect registration import. Determinate or indeterminate progress indicators. |
+| `<wa-progress-ring>` | `<lr-progress-ring>` | `exact` | Automatic: tag and supported side-effect registration import. Determinate or indeterminate progress indicators. |
+| `<wa-qr-code>` | `<lr-qr-code>` | `exact` | Automatic: tag and supported side-effect registration import. Canvas QR renderer; needs the optional peer `qrcode`. |
+| `<wa-radar-chart>` | `<lr-radar-chart>` | `exact` | Automatic: tag and supported side-effect registration import. Typed `<lr-chart>` subclasses with `type` locked — same optional peer deps as `<lr-chart>`. |
+| `<wa-radio>` | `<lr-radio>` | `exact` | Automatic: tag and supported side-effect registration import. Equivalent surface representation: name defaults null ≡ ; no source rewrite. Form-associated single-choice controls with roving arrow-key navigation and group validation. |
 | `<wa-radio-group>` | `<lr-radio-group>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
 | `<wa-random-content>` | `<lr-random-content>` | `warning-required` | Manual: Light-DOM candidate eligibility and selection behavior require an explicit compatibility review. Lyra also applies reduced-motion autoplay suppression and renders a visible pause/resume control; migration leaves the use unchanged instead of assuming behavioral equivalence from matching members. |
 | `<wa-rating>` | `<lr-rating>` | `rewritten` | Automatic: tag/import plus events: wa-hover → lr-hover; events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; getSymbol is analyzer-inferred for property-only getSymbol; no source rewrite. |
-| `<wa-relative-time>` | `<lr-relative-time>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<wa-relative-time>` | `<lr-relative-time>` | `exact` | Automatic: tag and supported side-effect registration import. Locale-aware formatting primitives. |
 | `<wa-resize-observer>` | `<lr-resize-observer>` | `rewritten` | Automatic: tag/import plus events: wa-resize → lr-resize. |
-| `<wa-scatter-chart>` | `<lr-scatter-chart>` | `exact` | Automatic: tag and supported side-effect registration import. |
-| `<wa-scroller>` | `<lr-scroller>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<wa-scatter-chart>` | `<lr-scatter-chart>` | `exact` | Automatic: tag and supported side-effect registration import. Typed `<lr-chart>` subclasses with `type` locked — same optional peer deps as `<lr-chart>`. |
+| `<wa-scroller>` | `<lr-scroller>` | `exact` | Automatic: tag and supported side-effect registration import. Responsive overflow surface with optional navigation controls. |
 | `<wa-select>` | `<lr-select>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-clear → lr-clear; events: wa-hide → lr-hide; events: wa-invalid → lr-invalid; events: wa-show → lr-show. |
-| `<wa-skeleton>` | `<lr-skeleton>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<wa-skeleton>` | `<lr-skeleton>` | `exact` | Automatic: tag and supported side-effect registration import. Loading placeholder (pulse/sheen). |
 | `<wa-slider>` | `<lr-slider>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. |
-| `<wa-sparkline>` | `<lr-sparkline>` | `exact` | Automatic: tag and supported side-effect registration import. |
-| `<wa-spinner>` | `<lr-spinner>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<wa-sparkline>` | `<lr-sparkline>` | `exact` | Automatic: tag and supported side-effect registration import. Zero-dependency inline SVG. |
+| `<wa-spinner>` | `<lr-spinner>` | `exact` | Automatic: tag and supported side-effect registration import. Localized indeterminate busy indicator with reduced-motion support. |
 | `<wa-split-panel>` | `<lr-split-panel>` | `rewritten` | Automatic: tag/import plus events: wa-reposition → lr-reposition. |
 | `<wa-switch>` | `<lr-switch>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
-| `<wa-tab>` | `<lr-tab>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<wa-tab>` | `<lr-tab>` | `exact` | Automatic: tag and supported side-effect registration import. Tab strip with `placement` (logical `start`/`end` turn it vertical) and `activation="auto"`/`"manual"`; accepts the upstream `<lr-tab>`/`<lr-tab-panel>` child pairs or this library's own `slot`/`label` panel-attribute shape. |
 | `<wa-tab-group>` | `<lr-tab-group>` | `rewritten` | Automatic: tag/import plus events: wa-tab-hide → lr-tab-hide; events: wa-tab-show → lr-tab-show. |
-| `<wa-tab-panel>` | `<lr-tab-panel>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<wa-tab-panel>` | `<lr-tab-panel>` | `exact` | Automatic: tag and supported side-effect registration import. Tab strip with `placement` (logical `start`/`end` turn it vertical) and `activation="auto"`/`"manual"`; accepts the upstream `<lr-tab>`/`<lr-tab-panel>` child pairs or this library's own `slot`/`label` panel-attribute shape. |
 | `<wa-tag>` | `<lr-tag>` | `rewritten` | Automatic: tag/import plus events: wa-remove → lr-remove. |
 | `<wa-textarea>` | `<lr-textarea>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
 | `<wa-time-input>` | `<lr-time-input>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-clear → lr-clear; events: wa-hide → lr-hide; events: wa-invalid → lr-invalid; events: wa-show → lr-show. |
-| `<wa-toast>` | `<lr-toast>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<wa-toast>` | `<lr-toast>` | `exact` | Automatic: tag and supported side-effect registration import. Stacking notifications. |
 | `<wa-toast-item>` | `<lr-toast-item>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-hide → lr-hide; events: wa-show → lr-show. |
 | `<wa-tooltip>` | `<lr-tooltip>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-hide → lr-hide; events: wa-show → lr-show. Equivalent surface representation: for defaults null ≡ ; no source rewrite. |
 | `<wa-tree>` | `<lr-tree>` | `rewritten` | Automatic: tag/import plus events: wa-selection-change → lr-selection-change. |
 | `<wa-tree-item>` | `<lr-tree-item>` | `rewritten` | Automatic: tag/import plus events: wa-after-collapse → lr-after-collapse; events: wa-after-expand → lr-after-expand; events: wa-collapse → lr-collapse; events: wa-expand → lr-expand; events: wa-lazy-change → lr-lazy-change; events: wa-lazy-load → lr-lazy-load. |
-| `<wa-video>` | `<lr-video>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<wa-video>` | `<lr-video>` | `exact` | Automatic: tag and supported side-effect registration import. Lyra adds load(), validates media and thumbnail URLs, preserves consumer source/track nodes, caps thumbnail VTT input, and rejects unsupported fullscreen requests. These fail-closed additions do not change the documented safe-use contract. |
 | `<wa-video-playlist>` | `<lr-video-playlist>` | `rewritten` | Automatic: tag/import plus events: wa-video-change → lr-video-change. |
 | `<wa-zoomable-frame>` | `<lr-zoomable-frame>` | `warning-required` | Manual: Lyra always renders a sandbox with an `allow-same-origin` default, rejects active and non-embeddable URL schemes, and drops `allow-same-origin` when paired with `allow-scripts`; migration leaves the use unchanged and reports the security-sensitive difference. |
 
@@ -176,19 +176,19 @@ Shoelace relationships are classified independently; a same-suffix tag is never 
 | `<sl-animation>` | `<lr-animation>` | `rewritten` | Automatic: tag/import plus events: sl-cancel → lr-cancel; events: sl-finish → lr-finish; events: sl-start → lr-start. |
 | `<sl-avatar>` | `<lr-avatar>` | `rewritten` | Automatic: tag/import plus events: sl-error → lr-error. |
 | `<sl-badge>` | `<lr-badge>` | `rewritten` | Automatic: tag/import plus insert variant=primary. |
-| `<sl-breadcrumb>` | `<lr-breadcrumb>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<sl-breadcrumb>` | `<lr-breadcrumb>` | `exact` | Automatic: tag and supported side-effect registration import. Responsive navigation trail. |
 | `<sl-breadcrumb-item>` | `<lr-breadcrumb-item>` | `warning-required` | Manual: Lyra derives safe rel="noopener noreferrer" behavior from target and does not expose an independently settable rel; migration leaves the use unchanged and reports the security-sensitive difference. |
 | `<sl-button>` | `<lr-button>` | `warning-required` | Manual: Lyra derives safe rel="noopener noreferrer" behavior from target and ignores an independently authored rel; migration leaves the use unchanged and reports the security-sensitive difference. |
-| `<sl-button-group>` | `<lr-button-group>` | `exact` | Automatic: tag and supported side-effect registration import. |
-| `<sl-card>` | `<lr-card>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<sl-button-group>` | `<lr-button-group>` | `exact` | Automatic: tag and supported side-effect registration import. Responsive semantic grouping for related action controls. |
+| `<sl-card>` | `<lr-card>` | `exact` | Automatic: tag and supported side-effect registration import. Review appearance tokens and dismiss events. |
 | `<sl-carousel>` | `<lr-carousel>` | `warning-required` | Manual: Lyra accepts arbitrary HTMLElement slides, so its slide-change detail is wider than the upstream carousel-item class; migrated handlers that rely on item-specific members require review. |
-| `<sl-carousel-item>` | `<lr-carousel-item>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<sl-carousel-item>` | `<lr-carousel-item>` | `exact` | Automatic: tag and supported side-effect registration import. Optional semantic slide wrapper for carousel content. |
 | `<sl-checkbox>` | `<lr-checkbox>` | `warning-required` | Manual: Lyra uses the checked attribute as the reset default while Shoelace reflects the live checked state; migration leaves the use unchanged and reports the reflection-sensitive CSS, observer, serialization, and property-write difference. |
 | `<sl-color-picker>` | `<lr-color-picker>` | `rewritten` | Automatic: tag/import plus events: sl-blur → lr-blur; events: sl-change → lr-change; events: sl-focus → lr-focus; events: sl-input → lr-input; events: sl-invalid → lr-invalid. Equivalent surface representation: form defaults  ≡ null; size defaults medium ≡ m; no source rewrite. |
 | `<sl-copy-button>` | `<lr-copy-button>` | `rewritten` | Automatic: tag/import plus events: sl-copy → lr-copy; events: sl-error → lr-error. |
 | `<sl-details>` | `<lr-details>` | `rewritten` | Automatic: tag/import plus events: sl-after-hide → lr-after-hide; events: sl-after-show → lr-after-show; events: sl-hide → lr-hide; events: sl-show → lr-show. |
 | `<sl-dialog>` | `<lr-dialog>` | `rewritten` | Automatic: tag/import plus events: sl-after-hide → lr-after-hide; events: sl-after-show → lr-after-show; events: sl-hide → lr-hide; events: sl-initial-focus → lr-initial-focus; events: sl-request-close → lr-request-close; events: sl-show → lr-show. Equivalent surface representation: modal defaults new Modal(this) ≡ { activateExternal: () => { this.externalModalDepth++; if (this.externalModalDepth === 1) this.overlay?.suspend(); }, deactivateExternal: () => { if (this.externalModalDepth === 0) return; this.externalModalDepth--; if (this.externalModalDepth === 0 && this.open && this.modalSurface) { this.overlay?.resume(); queueMicrotask(() => this.focusInitial()); } }, }; no source rewrite. |
-| `<sl-divider>` | `<lr-divider>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<sl-divider>` | `<lr-divider>` | `exact` | Automatic: tag and supported side-effect registration import. Horizontal or vertical semantic separator. |
 | `<sl-drawer>` | `<lr-drawer>` | `rewritten` | Automatic: tag/import plus events: sl-after-hide → lr-after-hide; events: sl-after-show → lr-after-show; events: sl-hide → lr-hide; events: sl-initial-focus → lr-initial-focus; events: sl-request-close → lr-request-close; events: sl-show → lr-show. Equivalent surface representation: modal defaults new Modal(this) ≡ { activateExternal: () => { this.externalModalDepth++; if (this.externalModalDepth === 1) this.overlay?.suspend(); }, deactivateExternal: () => { if (this.externalModalDepth === 0) return; this.externalModalDepth--; if (this.externalModalDepth === 0 && this.open && this.modalSurface) { this.overlay?.resume(); queueMicrotask(() => this.focusInitial()); } }, }; no source rewrite. |
 | `<sl-dropdown>` | `<lr-dropdown>` | `rewritten` | Automatic: tag/import plus events: sl-after-hide → lr-after-hide; events: sl-after-show → lr-after-show; events: sl-hide → lr-hide; events: sl-show → lr-show. |
 | `<sl-format-bytes>` | `<lr-format-bytes>` | `exact` | Automatic: tag and supported side-effect registration import. |
@@ -200,32 +200,32 @@ Shoelace relationships are classified independently; a same-suffix tag is never 
 | `<sl-include>` | `<lr-include>` | `warning-required` | Manual: Lyra intentionally sanitizes included markup and keeps a same-origin default; uses that depend on cross-origin or script-executing behavior require an explicit security warning rather than a silent rename. |
 | `<sl-input>` | `<lr-input>` | `rewritten` | Automatic: tag/import plus events: sl-blur → lr-blur; events: sl-change → lr-change; events: sl-clear → lr-clear; events: sl-focus → lr-focus; events: sl-input → lr-input; events: sl-invalid → lr-invalid. Equivalent surface representation: form defaults  ≡ null; size defaults medium ≡ m; no source rewrite. |
 | `<sl-menu>` | `<lr-menu>` | `rewritten` | Automatic: tag/import plus events: sl-select → lr-select. |
-| `<sl-menu-item>` | `<lr-menu-item>` | `exact` | Automatic: tag and supported side-effect registration import. |
-| `<sl-menu-label>` | `<lr-menu-label>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<sl-menu-item>` | `<lr-menu-item>` | `exact` | Automatic: tag and supported side-effect registration import. Anchored dropdown menu around a consumer-supplied trigger; WAI-ARIA "menu button" pattern with real roving focus (not a listbox). |
+| `<sl-menu-label>` | `<lr-menu-label>` | `exact` | Automatic: tag and supported side-effect registration import. Non-interactive section heading inside `<lr-menu>`; `role="presentation"`, never a focus stop. |
 | `<sl-mutation-observer>` | `<lr-mutation-observer>` | `rewritten` | Automatic: tag/import plus events: sl-mutation → lr-mutation. |
-| `<sl-option>` | `<lr-option>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<sl-option>` | `<lr-option>` | `exact` | Automatic: tag and supported side-effect registration import. `defaultSelected`/the `selected` attribute is the reset default; live `selected` is property-only. Review option and value events. |
 | `<sl-popup>` | `<lr-popup>` | `rewritten` | Automatic: tag/import plus events: sl-reposition → lr-reposition. Equivalent surface representation: autoSizeBoundary is analyzer-inferred for property-only autoSizeBoundary; flipBoundary is analyzer-inferred for property-only flipBoundary; shiftBoundary is analyzer-inferred for property-only shiftBoundary; no source rewrite. |
-| `<sl-progress-bar>` | `<lr-progress-bar>` | `exact` | Automatic: tag and supported side-effect registration import. |
-| `<sl-progress-ring>` | `<lr-progress-ring>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<sl-progress-bar>` | `<lr-progress-bar>` | `exact` | Automatic: tag and supported side-effect registration import. Built-in status copy is localized through Lyra's runtime. |
+| `<sl-progress-ring>` | `<lr-progress-ring>` | `exact` | Automatic: tag and supported side-effect registration import. Determinate or indeterminate progress indicators. |
 | `<sl-qr-code>` | `<lr-qr-code>` | `rewritten` | Automatic: tag/import plus insert background=white; insert fill=black. |
 | `<sl-radio>` | `<lr-radio>` | `rewritten` | Automatic: tag/import plus events: sl-blur → lr-blur; events: sl-focus → lr-focus. Equivalent surface representation: size defaults medium ≡ m; no source rewrite. |
 | `<sl-radio-button>` | `<lr-radio-button>` | `rewritten` | Automatic: tag/import plus events: sl-blur → lr-blur; events: sl-focus → lr-focus. Equivalent surface representation: size defaults medium ≡ m; no source rewrite. |
 | `<sl-radio-group>` | `<lr-radio-group>` | `rewritten` | Automatic: tag/import plus events: sl-change → lr-change; events: sl-input → lr-input; events: sl-invalid → lr-invalid; insert name=option. Equivalent surface representation: form defaults  ≡ null; size defaults medium ≡ m; no source rewrite. |
 | `<sl-range>` | `<lr-slider>` | `rewritten` | Automatic: tag/import plus events: sl-blur → lr-blur; events: sl-change → lr-change; events: sl-focus → lr-focus; events: sl-input → lr-input; events: sl-invalid → lr-invalid; insert tooltip=top. Equivalent surface representation: form defaults  ≡ null; name defaults  ≡ null; no source rewrite. |
 | `<sl-rating>` | `<lr-rating>` | `rewritten` | Automatic: tag/import plus events: sl-change → lr-change; events: sl-hover → lr-hover. Equivalent surface representation: getSymbol is analyzer-inferred for property-only getSymbol; no source rewrite. |
-| `<sl-relative-time>` | `<lr-relative-time>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<sl-relative-time>` | `<lr-relative-time>` | `exact` | Automatic: tag and supported side-effect registration import. Locale-aware formatting primitives. |
 | `<sl-resize-observer>` | `<lr-resize-observer>` | `rewritten` | Automatic: tag/import plus events: sl-resize → lr-resize. |
 | `<sl-select>` | `<lr-select>` | `rewritten` | Automatic: tag/import plus events: sl-after-hide → lr-after-hide; events: sl-after-show → lr-after-show; events: sl-blur → lr-blur; events: sl-change → lr-change; events: sl-clear → lr-clear; events: sl-focus → lr-focus; events: sl-hide → lr-hide; events: sl-input → lr-input; events: sl-invalid → lr-invalid; events: sl-show → lr-show. Equivalent surface representation: form defaults  ≡ null; size defaults medium ≡ m; getTag is analyzer-inferred for property-only getTag; no source rewrite. |
-| `<sl-skeleton>` | `<lr-skeleton>` | `exact` | Automatic: tag and supported side-effect registration import. |
-| `<sl-spinner>` | `<lr-spinner>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<sl-skeleton>` | `<lr-skeleton>` | `exact` | Automatic: tag and supported side-effect registration import. Loading placeholder (pulse/sheen). |
+| `<sl-spinner>` | `<lr-spinner>` | `exact` | Automatic: tag and supported side-effect registration import. Built-in status copy is localized through Lyra's runtime. |
 | `<sl-split-panel>` | `<lr-split-panel>` | `rewritten` | Automatic: tag/import plus events: sl-reposition → lr-reposition. |
 | `<sl-switch>` | `<lr-switch>` | `rewritten` | Automatic: tag/import plus events: sl-blur → lr-blur; events: sl-change → lr-change; events: sl-focus → lr-focus; events: sl-input → lr-input; events: sl-invalid → lr-invalid. Equivalent surface representation: form defaults  ≡ null; size defaults medium ≡ m; no source rewrite. |
 | `<sl-tab>` | `<lr-tab>` | `rewritten` | Automatic: tag/import plus events: sl-close → lr-close. |
 | `<sl-tab-group>` | `<lr-tab-group>` | `rewritten` | Automatic: tag/import plus events: sl-tab-hide → lr-tab-hide; events: sl-tab-show → lr-tab-show. |
-| `<sl-tab-panel>` | `<lr-tab-panel>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<sl-tab-panel>` | `<lr-tab-panel>` | `exact` | Automatic: tag and supported side-effect registration import. Tab strip with `placement` (logical `start`/`end` turn it vertical) and `activation="auto"`/`"manual"`; accepts the upstream `<lr-tab>`/`<lr-tab-panel>` child pairs or this library's own `slot`/`label` panel-attribute shape. |
 | `<sl-tag>` | `<lr-tag>` | `rewritten` | Automatic: tag/import plus events: sl-remove → lr-remove. Equivalent surface representation: size defaults medium ≡ m; no source rewrite. |
 | `<sl-textarea>` | `<lr-textarea>` | `rewritten` | Automatic: tag/import plus events: sl-blur → lr-blur; events: sl-change → lr-change; events: sl-focus → lr-focus; events: sl-input → lr-input; events: sl-invalid → lr-invalid. Equivalent surface representation: form defaults  ≡ null; size defaults medium ≡ m; no source rewrite. |
 | `<sl-tooltip>` | `<lr-tooltip>` | `rewritten` | Automatic: tag/import plus events: sl-after-hide → lr-after-hide; events: sl-after-show → lr-after-show; events: sl-hide → lr-hide; events: sl-show → lr-show. |
 | `<sl-tree>` | `<lr-tree>` | `rewritten` | Automatic: tag/import plus events: sl-selection-change → lr-selection-change. |
 | `<sl-tree-item>` | `<lr-tree-item>` | `rewritten` | Automatic: tag/import plus events: sl-after-collapse → lr-after-collapse; events: sl-after-expand → lr-after-expand; events: sl-collapse → lr-collapse; events: sl-expand → lr-expand; events: sl-lazy-change → lr-lazy-change; events: sl-lazy-load → lr-lazy-load. |
-| `<sl-visually-hidden>` | `<lr-visually-hidden>` | `exact` | Automatic: tag and supported side-effect registration import. |
+| `<sl-visually-hidden>` | `<lr-visually-hidden>` | `exact` | Automatic: tag and supported side-effect registration import. Hides content from sight while leaving it in the accessibility tree; reveals itself while focus is inside, which is what makes it usable for skip links. |

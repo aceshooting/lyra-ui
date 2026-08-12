@@ -149,6 +149,25 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
     line-height: var(--lr-line-height-normal);
   }
+  /* [part='body'] unconditionally carries tabindex="0" (a real, always-focusable, independently
+     scrollable region) -- same convention as lr-code-block's [part='body'] and lr-virtual-list's
+     [part='base'], both cited by name in this component's own class file. Without this rule a
+     keyboard user tabbing into the reasoning transcript gets no visible indicator at all. */
+  [part='body']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    /* Negative (inward) so the ring isn't clipped by this element's own
+       overflow-block:auto -- same reasoning as lr-code-block's identical rule. */
+    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+  }
+  /* Subtler preview of the same treatment for mouse users, who otherwise get no cue that this is a
+     separately scrollable/focusable region. A plain border color, not the focus ring's brand color,
+     so the eventual :focus-visible ring stays visually distinct -- matching lr-virtual-list. */
+  /* no-pressed-state: this is a scroll port, not an activation target -- pressing it activates
+     nothing, and :active would match on any press landing inside the transcript text. */
+  [part='body']:hover:not(:focus-visible) {
+    outline: var(--lr-focus-ring-width) solid var(--lr-color-border);
+    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+  }
   [part='body'][hidden] {
     display: none;
   }

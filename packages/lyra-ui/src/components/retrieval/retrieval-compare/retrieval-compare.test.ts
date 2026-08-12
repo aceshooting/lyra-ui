@@ -119,6 +119,22 @@ it('renders a labeled overlap summary for every pair of result sets', async () =
   ]);
 });
 
+it('scrolls the sets row only on the inline axis and never clips a taller comparison-set column', async () => {
+  const el = (await fixture(html`<lr-retrieval-compare .sets=${sets}></lr-retrieval-compare>`)) as LyraRetrievalCompare;
+  const setsRow = el.shadowRoot!.querySelector('[part="sets"]') as HTMLElement;
+  const style = getComputedStyle(setsRow);
+  expect(style.overflowX).to.equal('auto');
+  // `overflow-y` is authored as `visible` (never `hidden`/`clip`) so a "set" column with extra
+  // chunks is never clipped at the row boundary. The CSS Overflow spec's cross-axis rule then
+  // force-computes that `visible` to `auto` because `overflow-x` is a scrolling value on the same
+  // box (https://www.w3.org/TR/css-overflow-3/#overflow-control) -- `auto` still never clips
+  // content, it only becomes technically scrollable if the row's intrinsic block size is ever
+  // exceeded, which is the same non-clipping guarantee `visible` gives.
+  expect(style.overflowY).to.equal('auto');
+  expect(style.overflowY).not.to.equal('hidden');
+  expect(style.overflowY).not.to.equal('clip');
+});
+
 describe('chunk-selected cssprop escape hatch', () => {
   function resolvedInShadow(el: LyraRetrievalCompare, declaration: string, property: string): string {
     const probe = document.createElement('span');

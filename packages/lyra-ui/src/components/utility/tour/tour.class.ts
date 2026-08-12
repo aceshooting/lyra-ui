@@ -20,7 +20,7 @@ import { styles } from './tour.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_previous, LYRA_DEFAULT_tourDone, LYRA_DEFAULT_tourSkip, LYRA_DEFAULT_tourStepOf } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_next, LYRA_DEFAULT_previous, LYRA_DEFAULT_tourDone, LYRA_DEFAULT_tourSkip, LYRA_DEFAULT_tourStepOf } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -231,10 +231,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     next: LYRA_DEFAULT_next,
-    open: LYRA_DEFAULT_open,
     previous: LYRA_DEFAULT_previous,
     tourDone: LYRA_DEFAULT_tourDone,
     tourSkip: LYRA_DEFAULT_tourSkip,

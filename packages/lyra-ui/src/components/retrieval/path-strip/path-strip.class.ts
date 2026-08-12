@@ -12,7 +12,7 @@ import { activeElementIn } from '../../../internal/active-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_pathNodeStatus, LYRA_DEFAULT_pathRelationStatus, LYRA_DEFAULT_pathStripLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_noData, LYRA_DEFAULT_pathNodeStatus, LYRA_DEFAULT_pathRelationStatus, LYRA_DEFAULT_pathStripLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -48,10 +48,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
     pathNodeStatus: LYRA_DEFAULT_pathNodeStatus,
     pathRelationStatus: LYRA_DEFAULT_pathRelationStatus,
     pathStripLabel: LYRA_DEFAULT_pathStripLabel,

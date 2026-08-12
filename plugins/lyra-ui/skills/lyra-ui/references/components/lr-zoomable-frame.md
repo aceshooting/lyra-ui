@@ -44,14 +44,18 @@ allocated inline size with a 16:9 aspect ratio by default (override `aspect-rati
 
 **Methods:** `zoomIn()` selects the nearest configured level above the current value;
 `zoomOut()` selects the nearest below it. The toolbar also accepts `+`/`=` and `-`/`_` while one
-of its controls has focus.
+of its controls has focus. `focus(options?)`, `blur()`, and `click()` forward to the internal
+iframe — the component's primary interactive surface, still programmatically focusable under
+`without-interaction` — rather than to the two-button zoom toolbar, which has no single primary
+action.
 
 **Slots:** `zoom-in-icon` and `zoom-out-icon` replace the decorative control glyphs. Their
 flattened subtrees are always inert and hidden from assistive technology, so use an SVG or glyph
 rather than a second interactive control; the native zoom buttons remain the sole focus and pointer
 actions.
 
-**Events:** native `load` and `error`, relayed exactly once from the current iframe generation as
+**Events:** internal `focus`/`blur` from the iframe are bridged as bubbling, composed host events;
+native `load` and `error` are relayed exactly once from the current iframe generation as
 non-bubbling, non-composed `Event` instances. Navigation/source-policy changes replace the iframe,
 so a late event from an earlier document is ignored; detached frames do not notify.
 

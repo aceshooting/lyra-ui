@@ -84,17 +84,18 @@ export const styles = css`
   .maplibregl-popup-anchor-bottom-right {
     flex-direction: column-reverse;
   }
+  /*
+   * anchor-left/anchor-right are assigned by MapLibre at runtime from physical viewport
+   * collision detection (which side of the map container has room for the popup relative to
+   * the marker's screen position) -- they are not related to page text direction and must
+   * never be re-mirrored for dir="rtl", or the popup's tip decouples from the marker it points
+   * at.
+   */
   .maplibregl-popup-anchor-left {
     flex-direction: row;
   }
   .maplibregl-popup-anchor-right {
     flex-direction: row-reverse;
-  }
-  :host(:dir(rtl)) .maplibregl-popup-anchor-left {
-    flex-direction: row-reverse;
-  }
-  :host(:dir(rtl)) .maplibregl-popup-anchor-right {
-    flex-direction: row;
   }
   .maplibregl-popup-tip {
     inline-size: 0;

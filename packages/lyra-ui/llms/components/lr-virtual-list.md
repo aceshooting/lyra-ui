@@ -100,9 +100,14 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
 detail shape); `VirtualListGroup { key: string | number; label?: string; startIndex: number }` — the
 shape consumed by `groups` above; `VirtualListScroll { scrollTop: number; viewportHeight: number }` —
 the `lr-scroll` detail shape.
-The package root also exports `groupByRecency(items, options?)`, a DOM-free helper that returns
-non-empty Today/Yesterday/Previous 7 Days/Older buckets, preserves input order within each bucket,
-and accepts a timestamp extractor, reference date, and label overrides.
+`groupByRecency(items, options?)` is a DOM-free helper that returns non-empty
+Today/Yesterday/Previous 7 Days/Older buckets, preserves input order within each bucket, and accepts
+a timestamp extractor, reference date, and label overrides. Import it from its granular subpath —
+the package root re-exports it too, but that entry pulls in the eager registration barrel:
+
+```ts
+import { groupByRecency } from '@aceshooting/lyra-ui/utilities/group-by-recency.js';
+```
 
 **Methods:** `scrollToIndex(index, options?)` — the programmatic counterpart to `active-id`'s
 automatic scroll-into-view, for a host that needs to scroll to a specific row without changing which

@@ -636,3 +636,31 @@ it('is accessible with a populated inline document and visible controls', async 
   `);
   await expect(el).to.be.accessible();
 });
+
+it('forwards host focus()/blur()/click() to the frame and re-dispatches its focus/blur', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div><lr-zoomable-frame .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame></div>
+  `);
+  const el = wrapper.querySelector('lr-zoomable-frame') as LyraZoomableFrame;
+  await el.updateComplete;
+  const frame = frameOf(el);
+  // Listening on the PARENT: a native focus/blur is composed but does not bubble, so only the
+  // component's own re-dispatched event reaches this listener.
+  const seen: string[] = [];
+  wrapper.addEventListener('focus', () => seen.push('focus'));
+  wrapper.addEventListener('blur', () => seen.push('blur'));
+
+  el.focus();
+  expect(el.shadowRoot!.activeElement === frame).to.equal(true);
+
+  let clicks = 0;
+  frame.addEventListener('click', () => {
+    clicks += 1;
+  });
+  el.click();
+  expect(clicks).to.equal(1);
+
+  el.blur();
+  expect(el.shadowRoot!.activeElement === null).to.equal(true);
+  expect(seen).to.deep.equal(['focus', 'blur']);
+});

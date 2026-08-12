@@ -390,6 +390,33 @@ describe('remove affordance', () => {
     expect(btn.getAttribute('aria-label')).to.equal('Remove');
   });
 
+  it('never leaves an icon-only toggleable chip\'s real control unnamed', async () => {
+    const el = (await fixture(
+      html`<lr-chip toggleable><span slot="icon" aria-hidden="true">●</span></lr-chip>`,
+    )) as LyraChip;
+    const btn = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLElement;
+    expect(btn.textContent!.trim(), 'the control has no text of its own to name it').to.equal('');
+    expect(btn.hasAttribute('aria-label')).to.equal(true);
+    expect(btn.getAttribute('aria-label')).to.equal('Select');
+    await expect(el).to.be.accessible();
+  });
+
+  it('localizes the icon-only toggle fallback name through a .strings override', async () => {
+    const el = (await fixture(
+      html`<lr-chip toggleable .strings=${{ select: 'Sélectionner' }}><span slot="icon" aria-hidden="true">●</span></lr-chip>`,
+    )) as LyraChip;
+    const btn = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLElement;
+    expect(btn.getAttribute('aria-label')).to.equal('Sélectionner');
+  });
+
+  it('still prefers the chip\'s own label text over the generic toggle fallback', async () => {
+    const el = (await fixture(
+      html`<lr-chip toggleable><span slot="icon" aria-hidden="true">●</span>Latency</lr-chip>`,
+    )) as LyraChip;
+    const btn = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLElement;
+    expect(btn.getAttribute('aria-label')).to.equal('Latency');
+  });
+
   it('excludes lit-html marker comments from the label when the label is an interpolated expression, not a static string', async () => {
     // A static string child (as every other case in this file uses) never
     // needs a lit-html child-part marker at all, so it can't exercise this --

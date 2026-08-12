@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `@sgratzl/chartjs-chart-boxplot`, `chart.js` — see `llms/peers.md`
-- **Themeable via** 11 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -44,11 +44,25 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 change. Canvas work remains connected/visible-gated, while a rendered DOM legend also refreshes
 its computed color swatches.
 
-**Events:** `lr-before-legend-visibility-change` (cancelable proposed legend toggle) and
-`lr-legend-visibility-change` (accepted commit). Both carry
+**Events:** `lr-point-click`, `lr-before-legend-visibility-change` (cancelable proposed legend
+toggle) and `lr-legend-visibility-change` (accepted commit). The two legend events carry
 `{ datasetIndex: number, visible: boolean, hiddenDatasets: readonly number[] }`, where
 `hiddenDatasets` is the complete sorted, valid next snapshot. Calling `preventDefault()` on the
 proposal leaves state untouched and suppresses the commit event.
+
+`lr-point-click` fires when pointer input lands on a box, or when Enter/Space activates the
+keyboard-current box — the same event name and role `lr-chart` and `lr-lite-chart` expose. Its
+`detail` is `{ datasetIndex: number, index: number, label: string | undefined, value: BoxPlotPoint |
+null }`, where `value` is a fresh copy of that box's five-number summary (never the object you
+passed in `boxes`, which the underlying peer annotates in place). A pointer click that misses every
+box emits nothing rather than reporting the nearest one.
+
+**Per-box keyboard access:** the `canvas` part is a focusable `role="application"` surface.
+Arrow keys walk the boxes one at a time (Left/Right swap under RTL; Up/Down always mean
+previous/next), Home/End jump to the first/last, and Enter or Space activates the current box. Each
+move announces that box's series, category, and complete five-number summary through the shared
+document-level light-DOM polite sink. The walk visits the same bounded, deterministic sample the
+generated data table uses, so a very wide data set stays navigable.
 
 **Slots:** `data-table` — an optional consumer-provided complete, paginated, or virtualized
 accessible table alternative.
@@ -73,7 +87,17 @@ bounded-alternative sampling notice)
 concrete semantic fallbacks rather than retaining a prior canvas paint), but declared in its own stylesheet, not a
 re-export: `lr-box-plot` has no `zoom`, so no `reset-zoom-button` chrome exists here. A `BoxPlotSeries`
 that sets no `color` is assigned an entry from the same `--lr-color-chart-1..8` ramp `lr-chart` uses,
-so `--lr-theme-color-chart-*` retheming reaches box plots too.
+so `--lr-theme-color-chart-*` retheming reaches box plots too. `--lr-chart-pattern-step`
+(default `var(--lr-space-2xs)`) sizes the forced-colors legend texture and
+`--lr-chart-canvas-hover-outline-width` (default `var(--lr-border-width-thin)`) sizes the `canvas`
+hover outline — both the same tokens, with the same defaults, as `lr-chart`.
+
+**Forced colors:** under `forced-colors: active` the eight-color ramp is remapped onto the small
+repeating system-color cycle the platform exposes, so series 1/4/7 (and 2/5/8, 3/6) would otherwise
+paint identically. Each box's fill is therefore textured with a per-series pattern, and its legend
+swatch carries the matching CSS texture — the same eight-way encoding `lr-chart` applies to its own
+repeated colors. Box-and-whisker elements expose no border-dash or point-style option, so texture is
+the only channel here; nothing is opt-in and no author color is substituted.
 
 **Optional peer deps:** `@sgratzl/chartjs-chart-boxplot` plus `chart.js`; Chart.js is obtained
 through the same cached `chart-loader.ts` used by `lr-chart`.

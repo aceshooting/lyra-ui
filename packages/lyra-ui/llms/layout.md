@@ -410,6 +410,11 @@ empty), `label-group` (wrapper around the label and sublabel), `label`, `sublabe
 `view-toggle` (a single view toggle button), `view-icon` (a decorative view glyph), `view-label`
 (a view's visible label), `collapse-button`, `fullscreen-button`, `body`, `backdrop`
 
+Both header rows (`actions` and `view-toggles`) scroll horizontally on their own when the header is
+too narrow for them, and each independently paints a `--lr-scroll-fade-size` edge fade while — and
+only while — it actually overflows, so a clipped row reads as scrollable rather than truncated. The
+overflow is measured, not assumed: a row that fits is left unmasked.
+
 **Themeable custom properties:** `--lr-widget-overlay-color` (default `var(--lr-color-overlay)` —
 the fullscreen backdrop scrim color), `--lr-widget-fullscreen-inset` (default per side
 `max(var(--lr-space-l), <safe-area inset>)` — the fullscreen `[part="base"]` inset; the
@@ -708,7 +713,10 @@ well as full-width layouts.
 - `label: string = ''` — accessible region name; a host `aria-label` is used when set
 
 **Events:** `lr-scroll` with `scrollStart`, `scrollEnd`, `scrollLeft`, and `scrollTop` in the
-detail object.
+detail object. Scroll-driven emissions are coalesced through one `requestAnimationFrame` tick, so a
+fling that fires dozens of native `scroll` events produces at most one `lr-scroll` per frame — the
+same contract `lr-virtual-list`'s identically-named event carries, so the two are interchangeable
+for scroll-linked layout work.
 
 **Slots:** default scrollable content.
 
@@ -1524,9 +1532,14 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
 detail shape); `VirtualListGroup { key: string | number; label?: string; startIndex: number }` — the
 shape consumed by `groups` above; `VirtualListScroll { scrollTop: number; viewportHeight: number }` —
 the `lr-scroll` detail shape.
-The package root also exports `groupByRecency(items, options?)`, a DOM-free helper that returns
-non-empty Today/Yesterday/Previous 7 Days/Older buckets, preserves input order within each bucket,
-and accepts a timestamp extractor, reference date, and label overrides.
+`groupByRecency(items, options?)` is a DOM-free helper that returns non-empty
+Today/Yesterday/Previous 7 Days/Older buckets, preserves input order within each bucket, and accepts
+a timestamp extractor, reference date, and label overrides. Import it from its granular subpath —
+the package root re-exports it too, but that entry pulls in the eager registration barrel:
+
+```ts
+import { groupByRecency } from '@aceshooting/lyra-ui/utilities/group-by-recency.js';
+```
 
 **Methods:** `scrollToIndex(index, options?)` — the programmatic counterpart to `active-id`'s
 automatic scroll-into-view, for a host that needs to scroll to a specific row without changing which
@@ -3202,6 +3215,18 @@ Listbox/option aliases apply to select and combobox filters, while expand-button
 filters. This lets a consumer theme the composed tier from `lr-filter-bar::part(...)` without
 depending on the built-in control type selected by a filter definition. Custom renderers retain
 ownership of their own part forwarding.
+
+A `'select'`/`'combobox'` filter's `options` entries are `FilterBarOption { value, label, icon? }`.
+`icon` is optional Lit content — a status dot, a type glyph, a flag — rendered into the composed
+`<lr-option>`'s own `start` slot as inert, `aria-hidden` chrome, so it never joins the option's
+accessible name:
+
+```ts
+options: [
+  { value: 'open', label: 'Open', icon: html`<lr-icon name="circle"></lr-icon>` },
+  { value: 'closed', label: 'Closed' },
+]
+```
 
 Each filter definition's `type` selects which existing Lyra input renders it — this component
 composes them and never invents a control of its own. `'select'`/`'combobox'` map to their

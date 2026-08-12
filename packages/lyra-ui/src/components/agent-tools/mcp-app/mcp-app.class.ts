@@ -9,7 +9,7 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '../../../interna
 import { styles } from './mcp-app.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_mcpAppLabel, LYRA_DEFAULT_mcpAppLoading, LYRA_DEFAULT_mcpAppUnavailable, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_mcpAppLabel, LYRA_DEFAULT_mcpAppLoading, LYRA_DEFAULT_mcpAppUnavailable } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -43,6 +43,11 @@ export interface McpAppToolCallDetail {
   requestId?: string;
   name: string;
   args: unknown;
+  /** Opaque, monotonically increasing id of the frame generation that raised this request. Every
+   *  valid `resource` replacement tears down the iframe and starts a fresh generation, so a host
+   *  that hands this value back to `postToolResult()` has its (necessarily asynchronous) reply
+   *  dropped instead of delivered into whatever unrelated app is mounted by the time it resolves. */
+  frameGeneration: number;
 }
 
 export interface LyraMcpAppEventMap {
@@ -122,7 +127,11 @@ function permissionPolicy(permissions: McpAppPermissions | undefined): string {
  *
  * @customElement lr-mcp-app
  * @event lr-mcp-ready - The frame loaded. `detail: { uri }`.
- * @event lr-mcp-tool-call - The frame requested a tool. `detail: { requestId?, name, args }`.
+ * @event lr-mcp-tool-call - The frame requested a tool.
+ *   `detail: { requestId?, name, args, frameGeneration }`. `frameGeneration` is an opaque id for
+ *   the frame that raised the request; hand it back to `postToolResult()` so an asynchronous reply
+ *   arriving after `resource` was replaced is dropped rather than delivered into the unrelated app
+ *   now mounted.
  * @event lr-mcp-send-message - The frame requested a conversation message.
  * @event lr-mcp-open-link - The frame requested navigation; the host decides whether to honor it.
  * @event lr-mcp-log - The frame sent a diagnostic value.
@@ -139,12 +148,9 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     mcpAppLabel: LYRA_DEFAULT_mcpAppLabel,
     mcpAppLoading: LYRA_DEFAULT_mcpAppLoading,
     mcpAppUnavailable: LYRA_DEFAULT_mcpAppUnavailable,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -300,6 +306,7 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
             requestId: typeof message['requestId'] === 'string' ? message['requestId'] : undefined,
             name: message['name'],
             args: message['args'],
+            frameGeneration: this.frameGeneration,
           });
         }
         break;
@@ -332,7 +339,14 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     this.post({ channel: 'lyra-mcp-app', version: 1, type: 'host-context', context });
   }
 
-  postToolResult(requestId: string, result?: unknown, error?: string): void {
+  /** Resolves a prior `lr-mcp-tool-call`. Pass that request's `detail.frameGeneration` as the
+   *  fourth argument to correlate the reply with the frame that asked for it: a tool call is
+   *  inherently asynchronous, and `resource` can be replaced (tearing the iframe down and mounting
+   *  an unrelated app) while the host is still doing the work. A mismatched generation is dropped
+   *  rather than posted into that unrelated frame. Omitting the argument keeps the pre-existing
+   *  behavior -- no correlation available, so the reply goes to whichever frame is mounted. */
+  postToolResult(requestId: string, result?: unknown, error?: string, frameGeneration?: number): void {
+    if (frameGeneration !== undefined && frameGeneration !== this.frameGeneration) return;
     this.post({
       channel: 'lyra-mcp-app',
       version: 1,

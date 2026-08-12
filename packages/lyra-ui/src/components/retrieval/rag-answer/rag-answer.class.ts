@@ -7,7 +7,7 @@ import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_ragAnswerCitations, LYRA_DEFAULT_ragAnswerLabel, LYRA_DEFAULT_ragAnswerRetry, LYRA_DEFAULT_ragAnswerSources } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_ragAnswerCitations, LYRA_DEFAULT_ragAnswerLabel, LYRA_DEFAULT_ragAnswerRetry, LYRA_DEFAULT_ragAnswerSources } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -49,9 +49,6 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
     ragAnswerCitations: LYRA_DEFAULT_ragAnswerCitations,
     ragAnswerLabel: LYRA_DEFAULT_ragAnswerLabel,
     ragAnswerRetry: LYRA_DEFAULT_ragAnswerRetry,
@@ -84,8 +81,12 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
       document: this.ownerDocument,
       source: this,
     });
-    const Observer = this.ownerDocument.defaultView?.MutationObserver ?? MutationObserver;
-    this.slotObserver = new Observer((records) => {
+    // A realm without MutationObserver loses only slotted-content change tracking, so bail out
+    // rather than falling back to a bare global identifier that throws a ReferenceError out of
+    // connectedCallback and takes the whole component down with it.
+    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverCtor) return;
+    this.slotObserver = new MutationObserverCtor((records) => {
       if (
         this.isConnected &&
         records.some((record) =>

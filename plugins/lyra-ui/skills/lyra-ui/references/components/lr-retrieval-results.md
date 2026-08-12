@@ -37,11 +37,22 @@ Large sets window through an internal `lr-virtual-list`.
 - `selectable: boolean = true` (reflected) — shows a per-row `lr-checkbox`
 - `dedupe: boolean = true` (reflected) — drops duplicate `id`s, keeping the higher `score`
 - `sort: 'score' | 'none' = 'score'` — `'score'` sorts descending; `'none'` preserves given order
-- `grouping: 'source' | 'none' = 'none'` — `'source'` buckets rows under a header per `source.id`
-  (the header text is that source's `name`, or a localized "untitled source" when it has none).
-  Buckets appear in order of first appearance in the already-`sort`ed list, so with the default
+- `grouping: 'source' | 'custom' | 'none' = 'none'` — `'source'` buckets rows under a header per
+  `source.id` (the header text is that source's `name`, or a localized "untitled source" when it has
+  none); `'custom'` buckets them under whatever key `groupBy` returns; `'none'` is a flat ranked
+  list. Buckets appear in order of first appearance in the already-`sort`ed list, so with the default
   `sort="score"` that is best-scoring-chunk order, and with `sort="none"` it is the order the chunks
   arrived in. Grouping **always** virtualizes, regardless of `virtualizeAt`
+- `groupBy?: (chunk: RetrievalChunk) => string` (attribute: false) — `grouping="custom"` only: the
+  group id for each chunk (a date bucket, a relevance tier, a domain-specific bucket). Left unset,
+  `'custom'` degrades to the same flat list `'none'` renders rather than inventing a key, so the
+  built-in dedup/sort/virtualization pipeline stays usable either way. The same escape hatch
+  `lr-thread-list` already exposes
+- `groupLabel?: (id: string, chunks: RetrievalChunk[]) => string` (attribute: false) —
+  `grouping="custom"` only: the group's header text. Left unset, the group id is shown verbatim
+- `groupOrder?: string[] | ((a: string, b: string) => number)` (attribute: false) —
+  `grouping="custom"` only: explicit group-id order, or a comparator over the first-seen ids. Ids an
+  array omits follow after the listed ones in their own first-seen order, never dropped
 - `presentation: 'compact' | 'expanded' = 'expanded'` — `'expanded'` shows each chunk's full row
   (score bar, text preview with its own toggle) plus any `metadata`; `'compact'` shows title + score
   bar only and omits `metadata` entirely
@@ -67,7 +78,7 @@ Large sets window through an internal `lr-virtual-list`.
 - `lr-load-more` (`detail: undefined`) — from the virtual list's scroll-near-bottom detection while
   virtualized, or the `[part="load-more"]` button otherwise. Only fires while `hasMore` is true and
   `loading` is false.
-- `lr-chunk-open` (`detail: { id: string; sourceId: string }`) — forwarded verbatim from a row's
+- `lr-chunk-open` (`detail: { id, sourceId, anchor? }`) — forwarded verbatim from a row's
   `lr-chunk-inspector`; the event a host routes into `lr-document-viewer`.
 
 **Slots:** none.

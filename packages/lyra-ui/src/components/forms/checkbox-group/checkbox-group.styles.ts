@@ -45,4 +45,16 @@ export const styles = css`
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
+  /* :host(:disabled), never :host([disabled]) -- this is a form-associated custom element, so the
+     UA computes the FACE :disabled state from the group's own disabled attribute OR an ancestor
+     fieldset's cascade, which is exactly what effectiveDisabled already gates the options on. The
+     attribute selector would only ever have matched the first of the two.
+     Dimming lands on the three chrome parts the GROUP renders itself, not on the host: every owned
+     <lr-checkbox> already dims itself, and a host-level opacity would multiply with that and push
+     the options to a quarter of full contrast. */
+  :host(:disabled) [part~='form-control-label'],
+  :host(:disabled) [part='hint'],
+  :host(:disabled) [part='error'] {
+    opacity: var(--lr-opacity-disabled);
+  }
 `;

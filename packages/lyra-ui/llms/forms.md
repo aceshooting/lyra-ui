@@ -1292,8 +1292,10 @@ Set `href` to a safe link URL and the root renders as a real `<a part="base" hre
 link styled as a button (e.g. a CTA). Native navigation is then the activation, so the submit/reset
 handling and `type` have no effect in that mode. A disabled link button (its own `disabled` or an
 ancestor `<fieldset disabled>`) renders the anchor with `aria-disabled="true"` and **no `href`**, so
-it is neither focusable nor navigable; an unsafe/unparseable `href` falls back to the native
-`<button>`.
+it is neither focusable nor navigable; it also dims to `--lr-opacity-disabled` with a `not-allowed`
+cursor and no hover/press feedback, exactly like the disabled `<button>` path (an `<a>` can never
+match `:disabled`, so that arm of the styling keys off `aria-disabled` instead). An
+unsafe/unparseable `href` falls back to the native `<button>`.
 
 **Properties:**
 
@@ -2399,7 +2401,10 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
   value, including the literal string `"false"`, as `true`).
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — forwarded to the internal
   telephone input. Name precedence is host `aria-label`, `phoneLabel`, visible `label`, then
-  `placeholder`.
+  `placeholder`, and finally a localized generic "Phone" name, so a bare `<lr-phone-input>` with
+  none of them set never reaches the accessibility tree unnamed. (The visible label part cannot
+  stand in for it: it carries the native `hidden` attribute while there is no label text, which
+  removes it from the accessibility tree entirely.)
 - `phoneLabel: string = ''` (attribute `phone-label`) — explicit accessible-name override for the
   native telephone input.
 - `countryLabel: string = 'Select'` (attribute `country-label`) — country-selector accessible name;
@@ -2696,6 +2701,13 @@ any ancestor of the `<lr-time-range>` therefore reaches it. (The same technique 
   component's full `[min, max]` domain, so Home/End on the `end` handle can't jump past `start` (and
   vice versa). Pointer-drag is RTL-aware the same way (mirrors the drag ratio under `direction:
 rtl`).
+- **Click-to-seek on the track.** A pointerdown anywhere on `[part="base"]` other than a handle
+  itself jumps whichever handle is nearer the clicked position to that point and continues as the
+  same drag gesture, then focuses that handle so arrow keys carry on from there. It emits `lr-input`
+  on the jump and a single `lr-change` on release, mirrors the ratio under RTL exactly as dragging
+  does, breaks a tie toward the handle that can actually travel toward the click, and does nothing
+  while the control is disabled. This matches `lr-slider[range]`'s identical behavior; a pointerdown
+  that starts on a handle is still a plain handle drag.
 - A disabled handle now gets `aria-disabled="true"` in addition to losing `tabindex` — a
   screen-reader user exploring by virtual cursor no longer hears it announced as a live, adjustable
   slider.
@@ -2762,6 +2774,13 @@ label: string; icon?: unknown; gemstone?: GemstoneKey }`; a valid CSS `color` is
   the selected glow/shine defaults.
 - `label: string = ''` — accessible name copied to the internal `role="radiogroup"`; when empty, a
   host-level `aria-label` is used as a fallback.
+- `disabled: boolean = false` (reflected) — locks the whole picker. Every swatch renders as a real
+  `disabled` `<button>`, so it leaves the tab sequence and cannot be activated; arrow/Home/End
+  navigation and host `click()` become no-ops; and the swatches dim to `--lr-opacity-disabled` with
+  a `not-allowed` cursor and no hover lift. This is the picker's own attribute only: the control is
+  deliberately **not** form-associated (it submits nothing and carries no `name`, validity or reset
+  semantics), so an ancestor `<fieldset disabled>` does not cascade into it — disable the picker
+  itself alongside the fieldset when a form needs both.
 
 **Events:** `lr-change` (`detail: { value }`) — fired only when the selected value actually
 changes via click or keyboard (re-selecting the current swatch is a no-op).
@@ -3813,6 +3832,15 @@ selected value is submitted under `name` and `required` requires at least one se
 `small`/`medium`/`large`. It scales the group's label type size and the gaps around and between its
 options, and propagates the group tier to every owned `<lr-checkbox>`, including children added
 later. Group size is the authoritative aggregate setting.
+
+**Migration note — `size` is authoritative here, unlike upstream.** Web Awesome's checkbox group
+applies its `size` to the items only *when the attribute is present*, so an unset group leaves each
+child's own `size` alone. `<lr-checkbox-group>` instead has a real `'m'` default and re-asserts the
+group tier on connect, on every slot change, and again whenever a child's `size` attribute is
+mutated afterwards — so `<lr-checkbox-group><lr-checkbox size="s">…` renders at the group's tier,
+not `s`. Markup that relied on per-child sizes should split the odd option out of the group, or size
+the whole group.
+
 **Slots:** default checkboxes, `label`, `hint`, `error`.
 **Events:** a user toggle emits exactly one group-owned `input`, then `change`, then `lr-change`;
 all three carry `{ value: string[] }`. The owned child's corresponding events are consumed at the
@@ -3831,6 +3859,11 @@ option children, and falls back to an empty selection for malformed state. Resto
 rather than a no-op under a `<label>`-driven or programmatic click.
 **CSS parts:** `form-control`, `form-control-label`, `options` / `form-control-input`, `hint`,
 `error`.
+**Disabled chrome.** A disabled group — its own `disabled` or an ancestor `<fieldset disabled>` —
+dims `form-control-label`, `hint` and `error` to `--lr-opacity-disabled`. The dimming is keyed off
+the UA-computed `:disabled` state (so the fieldset cascade reaches it) and is deliberately applied
+to those three parts rather than the host: each owned `<lr-checkbox>` already dims itself, and a
+host-level opacity would compound with it.
 **The required marker.** `required` with a non-empty group `label` paints the library's shared
 marker on `[part="form-control-label"]` — here the `<legend>` of the group's fieldset. It is the
 one `::after` rule described under "The required-field marker" above, not a copy of it, so
@@ -4421,7 +4454,9 @@ content, overrides the `errorText` attribute when provided).
 **CSS parts:** `form-control` (the outer wrapper around label, `base`, error and hint),
 `form-control-label` (the visible label), `base`, `search` (`role="combobox"`), `grid`
 (`role="listbox"`, the scroll viewport), `group-label`, `emoji` (each emoji's own `role="option"`
-button), `empty` (shown when the search matches nothing), `hint` (the hint message), `error` (the
+button), `empty` (shown when the search matches nothing, or when a consumer deliberately opted out
+with `groups = []`), `load-error` (the failure surface shown in `empty`'s place when the optional
+peer failed to load), `hint` (the hint message), `error` (the
 error message). The grid scrolls in the block axis and explicitly clips inline overflow, so an
 allocation narrower than one option does not introduce a second scrollbar. While windowing is
 active the rows are wrapped in `virtual-spacer`
@@ -4471,7 +4506,12 @@ windowed row are additionally capped at 20 regardless of available width.
 **Optional peer dependency:** install `emoji-picker-element-data` with
 `pnpm add emoji-picker-element-data` for the built-in auto-loaded default emoji set — omit it and
 supply `groups` directly instead. The loader never throws; a missing or failed peer logs one
-`console.warn` and simply leaves `groups` empty. The adapter buckets the peer's flat entry list by
+`console.warn` and leaves `groups` empty, and the picker then **fails closed and visibly**: the
+grid renders a distinct localized `[part="load-error"]` surface instead of the ordinary
+`[part="empty"]` message, so a skipped install is distinguishable at a glance from a genuine
+zero-match search or a deliberate `groups = []` opt-out, and announces the same message once
+through the document's shared assertive live region (not a shadow-root `role="alert"`, which
+announces unreliably). Assigning `groups` afterwards clears it. The adapter buckets the peer's flat entry list by
 its numeric `group` id and tags each bucket with both the English `label` and the matching
 `labelKey` — `emojiPickerGroupSmileysEmotion`, `emojiPickerGroupPeopleBody`,
 `emojiPickerGroupComponent`, `emojiPickerGroupAnimalsNature`, `emojiPickerGroupFoodDrink`,

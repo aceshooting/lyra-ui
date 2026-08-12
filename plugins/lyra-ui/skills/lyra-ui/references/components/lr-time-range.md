@@ -168,6 +168,13 @@ any ancestor of the `<lr-time-range>` therefore reaches it. (The same technique 
   component's full `[min, max]` domain, so Home/End on the `end` handle can't jump past `start` (and
   vice versa). Pointer-drag is RTL-aware the same way (mirrors the drag ratio under `direction:
 rtl`).
+- **Click-to-seek on the track.** A pointerdown anywhere on `[part="base"]` other than a handle
+  itself jumps whichever handle is nearer the clicked position to that point and continues as the
+  same drag gesture, then focuses that handle so arrow keys carry on from there. It emits `lr-input`
+  on the jump and a single `lr-change` on release, mirrors the ratio under RTL exactly as dragging
+  does, breaks a tie toward the handle that can actually travel toward the click, and does nothing
+  while the control is disabled. This matches `lr-slider[range]`'s identical behavior; a pointerdown
+  that starts on a handle is still a plain handle drag.
 - A disabled handle now gets `aria-disabled="true"` in addition to losing `tabindex` — a
   screen-reader user exploring by virtual cursor no longer hears it announced as a live, adjustable
   slider.

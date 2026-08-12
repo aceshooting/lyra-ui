@@ -2028,3 +2028,55 @@ it('emits a cancelable lr-invalid alias whose cancellation cancels the native in
     true,
   ]);
 });
+
+/**
+ * Mounts `markup` the way a browser mounts a server-rendered page: the parser attaches the
+ * declarative shadow root *before* the custom element upgrades, which is the one signal
+ * `seedFirstRenderState()` uses to tell a hydrating mount from a browser-only one. Mirrors
+ * `src/internal/ssr-hydration.test.ts`'s own helper (a test may not import
+ * `@lit-labs/ssr-client`: that would change how every other element in the suite renders).
+ */
+async function mountServerRendered(markup: string): Promise<LyraVoicePicker> {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement & {
+    setHTMLUnsafe(value: string): void;
+  };
+  container.setHTMLUnsafe(markup);
+  return container.firstElementChild as LyraVoicePicker;
+}
+
+const SERVER_SHADOW = '<template shadowrootmode="open"></template>';
+
+it('renders the hint/error region hidden first and adopts slotted hint content after hydration', async () => {
+  const el = await mountServerRendered(
+    `<lr-voice-picker>${SERVER_SHADOW}<span slot="hint">Pick a voice</span></lr-voice-picker>`,
+  );
+  await el.updateComplete;
+
+  // A server renderer is handed no children at all, so the browser's first render has to agree
+  // with that markup -- seeding the light-DOM read before it fails hydration outright and throws
+  // the whole server-rendered subtree away.
+  expect(
+    el.shadowRoot!.querySelector('[part="hint"]')!.hasAttribute('hidden'),
+    'the first render reproduces the server output',
+  ).to.equal(true);
+
+  await el.updateComplete;
+  expect(
+    el.shadowRoot!.querySelector('[part="hint"]')!.hasAttribute('hidden'),
+    'the deferred seed adopts the slotted hint on the very next update',
+  ).to.equal(false);
+});
+
+it('still seeds slotted hint/error state synchronously on an ordinary browser-only mount', async () => {
+  const el = (await fixture(html`
+    <lr-voice-picker>
+      <span slot="hint">Pick a voice</span>
+      <span slot="error">Nope</span>
+    </lr-voice-picker>
+  `)) as LyraVoicePicker;
+
+  // No flash of the fallback: a browser-only mount answers the light-DOM question before its
+  // first render, exactly as before.
+  expect(el.shadowRoot!.querySelector('[part="hint"]')!.hasAttribute('hidden')).to.equal(false);
+  expect(el.shadowRoot!.querySelector('[part="error"]')!.hasAttribute('hidden')).to.equal(false);
+});

@@ -12,7 +12,7 @@ import '../pan-zoom/pan-zoom.class.js';
 import type { LyraPanZoom } from '../pan-zoom/pan-zoom.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_lightboxImagePosition, LYRA_DEFAULT_lightboxLabel, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_previous } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_close, LYRA_DEFAULT_lightboxImagePosition, LYRA_DEFAULT_lightboxLabel, LYRA_DEFAULT_next, LYRA_DEFAULT_previous } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -186,12 +186,9 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     close: LYRA_DEFAULT_close,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     lightboxImagePosition: LYRA_DEFAULT_lightboxImagePosition,
     lightboxLabel: LYRA_DEFAULT_lightboxLabel,
     next: LYRA_DEFAULT_next,
-    open: LYRA_DEFAULT_open,
     previous: LYRA_DEFAULT_previous,
   };
   // GENERATED DEFAULT-STRING SLICE: END

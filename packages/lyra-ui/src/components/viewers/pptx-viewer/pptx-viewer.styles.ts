@@ -71,7 +71,13 @@ export const styles = css`
   [part='previous-icon'] { transform: rotate(180deg); }
   :host(:dir(rtl)) [part='previous-icon'] { transform: rotate(0deg); }
   :host(:dir(rtl)) [part='next-icon'] { transform: rotate(180deg); }
-  [part='slide-count'] { color: var(--lr-color-text-quiet); white-space: nowrap; }
+  [part='slide-count'] {
+    min-inline-size: 0;
+    overflow: hidden;
+    color: var(--lr-color-text-quiet);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   [part='container'] {
     min-block-size: var(--lr-size-10rem);
     max-block-size: var(--lr-pptx-viewer-max-height);

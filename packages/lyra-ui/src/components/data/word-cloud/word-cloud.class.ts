@@ -25,7 +25,7 @@ import {
 import { styles } from './word-cloud.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_wordCloud, LYRA_DEFAULT_wordCloudLegend, LYRA_DEFAULT_wordCloudWord, LYRA_DEFAULT_wordCloudWordAnnouncement, LYRA_DEFAULT_wordCloudWords } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_noData, LYRA_DEFAULT_wordCloud, LYRA_DEFAULT_wordCloudLegend, LYRA_DEFAULT_wordCloudWord, LYRA_DEFAULT_wordCloudWordAnnouncement, LYRA_DEFAULT_wordCloudWords } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { WordCloudOrientations, WordCloudScale, WordCloudWord };
@@ -113,10 +113,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
     wordCloud: LYRA_DEFAULT_wordCloud,
     wordCloudLegend: LYRA_DEFAULT_wordCloudLegend,
     wordCloudWord: LYRA_DEFAULT_wordCloudWord,

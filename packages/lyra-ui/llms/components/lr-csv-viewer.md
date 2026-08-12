@@ -20,7 +20,8 @@ Fetches CSV text, parses quoted fields with the optional `papaparse` peer, and v
 Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid, 1-based, with the
 header row included whenever `has-header-row` is set; `scrollToAnchor()` scrolls the addressed
 row/column into view via the virtualized list's `active-id`. `highlights` paint as a focusable
-`part="cell-highlight"`.
+`part="cell-highlight"`. A jump whose document is replaced by a concurrent `src` reassignment
+mid-flight reports `found: false` rather than a phantom success.
 
 **Properties:** `src: string = ''` and `name: string = ''`. `hasHeaderRow: boolean = true` (attribute
 `has-header-row`) controls whether the first parsed row is rendered as a sticky header.

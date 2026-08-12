@@ -29,7 +29,10 @@ opens documents itself.
   name, while string locators remain verbatim
 - `thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 }` (attribute: false) —
   score-bar tier cutoffs
-- `sort: 'score' | 'none' = 'score'`
+- `sort: ChunkInspectorSort = 'score'` — `ChunkInspectorSort = 'score' | 'none'`, exported by this
+  module. The sorted view is memoized on the `chunks`/`sort` pair, so an unrelated update (a new
+  `activeId`, toggling `compact`) hands the internal `lr-virtual-list` the same array reference it
+  already holds instead of forcing a full offset/identity rebuild
 - `activeId: string = ''` (attribute `active-id`)
 - `virtualizeAt: number = 50` (attribute `virtualize-at`)
 - `compact: boolean = false` (reflected) — hides the text preview/toggle, title/score row only

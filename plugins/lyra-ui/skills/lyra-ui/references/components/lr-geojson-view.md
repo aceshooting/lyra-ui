@@ -63,6 +63,12 @@ sink), `error` (ordinary visible error text; later transitions use the same asse
 transitions use the shared document-level polite sink). No active live semantics are rendered in
 the viewer's shadow tree.
 
+Those states carry the same visual tones the rest of this family uses rather than plain inherited
+body text: `error` is `--lr-color-danger` (matching `lr-docx-viewer`/`lr-email-viewer`/
+`lr-html-viewer`), `missing-library` is `--lr-color-warning` -- a missing optional peer is a degraded
+but working state, since the `lr-json-viewer` fallback below it still renders the data, not a failure
+-- and `status` is the quiet `--lr-color-text-quiet` metadata tone.
+
 Registered by importing `geojson-view/geojson-view.js` directly — not part of the root barrel, the
 same as `lr-map`/`lr-graph`, since it depends on the same optional `maplibre-gl` peer. Remote
 resources are capped at 25 MB; exceeding it surfaces the localized `documentPreviewResourceTooLarge`

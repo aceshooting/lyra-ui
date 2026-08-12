@@ -12,7 +12,7 @@ import { activeElementIn } from '../../../internal/active-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_highlightLayerLabel, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_items, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_highlightLayerLabel, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -64,13 +64,9 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     highlightLayerLabel: LYRA_DEFAULT_highlightLayerLabel,
     highlightOfTotal: LYRA_DEFAULT_highlightOfTotal,
     highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
-    items: LYRA_DEFAULT_items,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

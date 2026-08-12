@@ -1,7 +1,8 @@
-import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import './message-feedback.js';
 import type { LyraMessageFeedback } from './message-feedback.js';
 import { styles } from './message-feedback.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const reasons = [
   { id: 'wrong', label: 'Factually wrong' },
@@ -543,8 +544,8 @@ it('escalates the submit button from resting to hover to pressed with the shared
   expect(el.shadowRoot!.querySelectorAll('[part="submit-button"]').length).to.equal(1);
 
   const resting = resolveInShadow(el, 'background', 'var(--lr-color-brand)', 'background-color');
-  const hovered = renderedRuleBackground(el, "[part='submit-button']:hover");
-  const pressed = renderedRuleBackground(el, "[part='submit-button']:active");
+  const hovered = renderedRuleBackground(el, ":where([part='submit-button']):hover:where(:not(:disabled))");
+  const pressed = renderedRuleBackground(el, ":where([part='submit-button']):active:where(:not(:disabled))");
 
   // Each step actually moves. The middle assertion is the one that matters most: an :active rule
   // byte-identical to its :hover rule is the same "no pressed state" defect wearing a costume.
@@ -674,4 +675,76 @@ it('blur() releases whichever vote button held focus', async () => {
   expect(el.shadowRoot!.activeElement != null, 'focus follows the current vote').to.equal(true);
   el.blur();
   expect(el.shadowRoot!.activeElement === null).to.equal(true);
+});
+
+it('dims the panel submit button and comment field while pending, and stops both reacting to hover', async () => {
+  const el = (await fixture(
+    html`<lr-message-feedback .reasons=${reasons} commentable></lr-message-feedback>`
+  )) as LyraMessageFeedback;
+  const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
+  down.click();
+  await el.updateComplete;
+  // A host that holds `lr-submit` open while it persists asynchronously leaves the panel visible
+  // and interactive-looking for as long as the write takes -- that is the state under test.
+  el.pending = true;
+  await el.updateComplete;
+
+  const submit = el.shadowRoot!.querySelector('[part="submit-button"]') as HTMLButtonElement;
+  const comment = el.shadowRoot!.querySelector('[part="comment"]') as HTMLTextAreaElement;
+  expect(submit.disabled, 'the submit button is disabled while pending').to.equal(true);
+  expect(comment.disabled, 'the comment field is disabled while pending').to.equal(true);
+
+  // The thumb buttons are disabled by the same state and already carry the shared treatment, so
+  // they are the reference value: whatever --lr-opacity-disabled resolves to in this theme.
+  const dimmed = getComputedStyle(down).opacity;
+  expect(dimmed).to.not.equal('1');
+  expect(getComputedStyle(submit).opacity, 'submit button is dimmed like the thumbs').to.equal(dimmed);
+  expect(getComputedStyle(comment).opacity, 'comment field is dimmed like the thumbs').to.equal(dimmed);
+  expect(getComputedStyle(submit).cursor).to.equal('not-allowed');
+  expect(getComputedStyle(comment).cursor).to.equal('not-allowed');
+});
+
+/** Parks a real pointer over `target`'s centre, first waiting for it to actually be the element
+ *  hit-tested there -- the detail panel opens through a 0fr/1fr grid transition behind
+ *  `overflow: hidden`, so its controls have a non-zero box for several frames before they are
+ *  reachable by a pointer. */
+async function hoverCentre(host: HTMLElement, target: HTMLElement): Promise<void> {
+  const centre = (): [number, number] => {
+    const box = target.getBoundingClientRect();
+    return [Math.round(box.left + box.width / 2), Math.round(box.top + box.height / 2)];
+  };
+  await waitUntil(() => {
+    const box = target.getBoundingClientRect();
+    if (box.width === 0 || box.height === 0) return false;
+    return host.shadowRoot!.elementFromPoint(...centre()) === target;
+  }, 'the target became hit-testable');
+  await sendMouse({ type: 'move', position: centre() });
+}
+
+it('stops the submit button reacting to a real hover the moment it becomes disabled', async () => {
+  const el = (await fixture(
+    html`<lr-message-feedback .reasons=${reasons} commentable></lr-message-feedback>`
+  )) as LyraMessageFeedback;
+  const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
+  down.click();
+  await el.updateComplete;
+
+  const submit = el.shadowRoot!.querySelector('[part="submit-button"]') as HTMLButtonElement;
+  const resting = getComputedStyle(submit).backgroundColor;
+
+  try {
+    await hoverCentre(el, submit);
+    expect(
+      getComputedStyle(submit).backgroundColor,
+      'the pointer really is over the enabled submit button',
+    ).to.not.equal(resting);
+
+    // The pointer never moves; only `pending` flips. :hover keeps matching a disabled control, so
+    // the rule's own :not(:disabled) gate is the only thing that can take the hover fill back off.
+    el.pending = true;
+    await el.updateComplete;
+    expect(getComputedStyle(submit).backgroundColor).to.equal(resting);
+  } finally {
+    await resetMouse();
+  }
 });

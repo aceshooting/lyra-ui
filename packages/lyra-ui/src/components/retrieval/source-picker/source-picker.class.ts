@@ -69,6 +69,12 @@ interface SourceRow {
  *   checked or mixed selection control.
  * @cssprop [--lr-source-picker-mixed-bg=color-mix(in srgb, var(--lr-color-brand) 50%, var(--lr-color-surface))] -
  *   Background of a partially-selected entry's `[part="checkbox"]`.
+ * @cssprop [--lr-source-picker-indent-size=var(--lr-size-1-25rem)] - Indent step added to
+ *   `[part="item"]`'s `padding-inline-start` per nesting level. The total indent is capped at
+ *   `--lr-size-8rem` so a deeply nested tree cannot push its labels out of view.
+ * @cssprop [--lr-source-picker-depth=0] - Internal indent plumbing, not a retheming knob: the row's
+ *   own nesting depth, written inline onto `[part="item"]` as a plain number and multiplied by
+ *   `--lr-source-picker-indent-size` to produce the indent.
  * @status stable
  * @since 4.0.0
  */
@@ -345,7 +351,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
         aria-checked=${state}
         aria-expanded=${row.hasChildren ? (expanded ? 'true' : 'false') : nothing}
         aria-level=${row.depth + 1}
-        style=${styleMap({ paddingInlineStart: `${row.depth * 1.25}rem` })}
+        style=${styleMap({ '--lr-source-picker-depth': String(row.depth) })}
         @click=${() => {
           this.activeId = row.entry.id;
           this.toggleEntry(row.entry);

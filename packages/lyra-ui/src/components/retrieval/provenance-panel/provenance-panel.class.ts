@@ -5,9 +5,10 @@ import { nextId } from '../../../internal/a11y.js';
 import type { LyraMessageKey } from '../../../internal/localization.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
-import type { LyraPathElement } from '../path-strip/path-strip.class.js';
-import type { LyraCommunity } from '../community-card/community-card.class.js';
+import type { LyraPathElement, LyraPathStripEventMap } from '../path-strip/path-strip.class.js';
+import type { LyraCommunity, LyraCommunityCardEventMap } from '../community-card/community-card.class.js';
 import type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';
+import type { LyraEntityChipEventMap } from '../entity-chip/entity-chip.class.js';
 import '../entity-chip/entity-chip.class.js';
 import '../path-strip/path-strip.class.js';
 import '../community-card/community-card.class.js';
@@ -32,7 +33,15 @@ type NodeTypeStyle = { id: string; label: string; color?: string; shape?: 'circl
 
 type Section = 'entities' | 'relationships' | 'communities' | 'chunks';
 
-export interface LyraProvenancePanelEventMap {
+/** The panel is a conduit, so its event map is the union of every affordance it renders: its own
+ *  section toggle plus the entity chips', community cards' and path strips' events, all of which
+ *  are `composed` and therefore reach a host listener on `<lr-provenance-panel>` itself. Declaring
+ *  only `lr-toggle` typed those controls out of existence for anyone building handlers off this
+ *  type. */
+export interface LyraProvenancePanelEventMap
+  extends LyraCommunityCardEventMap,
+    LyraEntityChipEventMap,
+    LyraPathStripEventMap {
   'lr-toggle': CustomEvent<{ section: Section; expanded: boolean }>;
 }
 
@@ -44,6 +53,14 @@ export interface LyraProvenancePanelEventMap {
  *
  * @customElement lr-provenance-panel
  * @event lr-toggle - A section header was toggled. `detail: { section, expanded }`.
+ * @event lr-entity-activate - Surfaced unchanged from an embedded entity chip, community card, or
+ *   relationship path strip. `detail: { id }`.
+ * @event lr-entity-open - Surfaced unchanged from an embedded entity chip (double-click, or Space
+ *   while focused). `detail: { id }`.
+ * @event lr-drill - Surfaced unchanged from an embedded community card's title, drill button, or
+ *   overflow chip. `detail: { id }`.
+ * @event lr-relation-activate - Surfaced unchanged from an embedded relationship path strip's edge.
+ *   `detail: { relation, sourceId, targetId }`.
  * @csspart base - The root wrapper.
  * @csspart section - One section's wrapper.
  * @csspart header - A section's disclosure `<button>`.

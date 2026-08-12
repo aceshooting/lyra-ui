@@ -10,7 +10,7 @@ import { styles } from './branch-picker.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_branchNext, LYRA_DEFAULT_branchPickerLabel, LYRA_DEFAULT_branchPosition, LYRA_DEFAULT_branchPrevious, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_branchNext, LYRA_DEFAULT_branchPickerLabel, LYRA_DEFAULT_branchPosition, LYRA_DEFAULT_branchPrevious } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -49,9 +49,6 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
     branchPickerLabel: LYRA_DEFAULT_branchPickerLabel,
     branchPosition: LYRA_DEFAULT_branchPosition,
     branchPrevious: LYRA_DEFAULT_branchPrevious,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

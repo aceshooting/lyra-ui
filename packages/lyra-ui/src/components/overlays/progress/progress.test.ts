@@ -167,6 +167,29 @@ it('applies mapped progress color, size, and transition aliases to rendered part
   expect(getComputedStyle(ringIndicator).transitionDuration).to.equal('2s');
 });
 
+it('recolors the bar indicator per variant instead of always rendering brand regardless of the attribute', async () => {
+  const brand = (await fixture(html`<lr-progress-bar value="50"></lr-progress-bar>`)) as LyraProgressBar;
+  const neutral = (await fixture(
+    html`<lr-progress-bar variant="neutral" value="50"></lr-progress-bar>`,
+  )) as LyraProgressBar;
+  const success = (await fixture(
+    html`<lr-progress-bar variant="success" value="50"></lr-progress-bar>`,
+  )) as LyraProgressBar;
+  const danger = (await fixture(
+    html`<lr-progress-bar variant="danger" value="50"></lr-progress-bar>`,
+  )) as LyraProgressBar;
+
+  // 'brand' is the property default and must reflect even though no attribute was authored.
+  expect(brand.getAttribute('variant')).to.equal('brand');
+
+  const indicatorColor = (el: LyraProgressBar): string =>
+    getComputedStyle(el.shadowRoot!.querySelector('[part="indicator"]')!).backgroundColor;
+
+  expect(indicatorColor(danger)).to.not.equal(indicatorColor(success));
+  expect(indicatorColor(neutral)).to.not.equal(indicatorColor(brand));
+  expect(indicatorColor(brand)).to.not.equal(indicatorColor(success));
+});
+
 it('locale-formats visible percentage output and forwards live host naming to both progress roles', async () => {
   const bar = (await fixture(
     html`<lr-progress-bar lang="ar" value="25" max="50" show-value aria-label="Upload"></lr-progress-bar>`,

@@ -50,6 +50,15 @@ jump-to-latest action of its own.
 
 **CSS parts:** `base`, `header`, `label`, `duration`, `toggle`, `body`
 
+`[part="body"]` is unconditionally `tabindex="0"`: it is a capped-height, independently scrollable
+region whose content (plain text, a non-interactive `<lr-streaming-text>`) is often not focusable
+itself, so without its own tab stop a keyboard user could never scroll it — the same convention
+`<lr-code-block>`'s `[part="body"]` and `<lr-virtual-list>`'s `[part="base"]` follow. It therefore
+carries both affordances that go with a real tab stop: an inward `--lr-focus-ring-*` outline while
+`:focus-visible` (inward so the region's own `overflow` cannot clip it), and a subtler
+`--lr-color-border` outline on pointer hover, so a mouse user also sees that the transcript is a
+separately scrollable region.
+
 **Themeable custom properties:** `--lr-thinking-panel-max-block-size` (default
 `var(--lr-size-16rem)`, i.e. `16rem` — consumer-overridable cap on how tall `[part="body"]` grows
 before it scrolls internally; not

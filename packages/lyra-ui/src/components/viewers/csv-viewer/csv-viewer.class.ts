@@ -21,7 +21,7 @@ import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_csvViewerLabel, LYRA_DEFAULT_csvViewerUnavailable, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_csvViewerLabel, LYRA_DEFAULT_csvViewerUnavailable, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_noData } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -107,21 +107,16 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
     cellHighlightWithLabel: LYRA_DEFAULT_cellHighlightWithLabel,
-    collapse: LYRA_DEFAULT_collapse,
     csvViewerLabel: LYRA_DEFAULT_csvViewerLabel,
     csvViewerUnavailable: LYRA_DEFAULT_csvViewerUnavailable,
-    details: LYRA_DEFAULT_details,
     documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
     documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
     documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
     documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
     documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
     highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
-    loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
-    search: LYRA_DEFAULT_search,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -322,8 +317,9 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   /** Scrolls raw-grid `(rawRow, col)` into view -- shared by `applyAnchor()` and every search
    *  navigation method, so both stay byte-identical in how a coordinate becomes a scroll. */
   private async jumpToCell(rawRow: number, col: number): Promise<boolean> {
-    if (this.fetchState.kind !== 'loaded') return false;
-    const { rows } = this.fetchState;
+    const loadedState = this.fetchState;
+    if (loadedState.kind !== 'loaded') return false;
+    const { rows } = loadedState;
     if (rawRow < 1 || rawRow > rows.length || col < 0 || col >= columns(rows)) return false;
     const bodyIndex = rawRow - 1 - headerOffset(this.hasHeaderRow);
     if (bodyIndex < 0) {
@@ -334,7 +330,13 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     this.activeRowKey = bodyIndex;
     await this.updateComplete;
     await this.scrollColumnIntoView(col);
-    return true;
+    // `fetchState` is only ever reassigned by load(), so an identity change across the awaits above
+    // means a concurrent `src` reassignment replaced the document mid-jump (a citation/file-tab
+    // click landing on top of a still-resolving jump). The coordinate this call resolved belongs to
+    // the previous document and nothing was scrolled into view for the current one, so report the
+    // failure rather than letting the shared retry loop accept a phantom success and fire
+    // `lr-anchor-result: { found: true }`.
+    return this.fetchState === loadedState;
   }
 
   protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
