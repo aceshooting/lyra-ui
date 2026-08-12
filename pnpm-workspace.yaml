@@ -91,6 +91,7 @@ minimumReleaseAgeExclude:
   - '@changesets/types@7.0.0'
   - '@changesets/write@1.0.0'
   - knip@6.32.2
+  - svelte@5.56.9
 allowBuilds:
   esbuild: true
   rs-module-lexer: true
