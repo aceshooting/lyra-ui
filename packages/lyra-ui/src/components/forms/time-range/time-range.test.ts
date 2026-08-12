@@ -1,4 +1,4 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import './time-range.js';
 import type { LyraTimeRange } from './time-range.js';
@@ -764,8 +764,20 @@ it('dims with opacity/not-allowed cursor when disabled purely via an ancestor fi
 // at each stage is the only assertion that can tell those apart. Colour STRINGS are compared,
 // never elements — a DOM node as chai's actual/expected hangs the whole file.
 it('moves a drag handle’s painted fill on hover, and further again while it is grabbed', async () => {
+  // `--lr-transition-fast: 0s` for the same reason the three sibling paint tests below set it: the
+  // handle fill TRANSITIONS between rest/hover/pressed, so a synchronous read right after a
+  // synthetic pointer event samples a mid-transition colour and `pressed` can still equal
+  // `hovered`. Observed failing exactly that way on Firefox under the parallel full-engine sweep.
+  // The reads below additionally poll rather than snapshot once, mirroring the same fix already
+  // applied to slider.test.ts's thumb hover/active assertions.
   const el = (await fixture(
-    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+    html`<lr-time-range
+      min="0"
+      max="100"
+      start="20"
+      end="80"
+      style="--lr-transition-fast: 0s"
+    ></lr-time-range>`,
   )) as LyraTimeRange;
   await el.updateComplete;
   const handle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
@@ -774,16 +786,20 @@ it('moves a drag handle’s painted fill on hover, and further again while it is
     Math.round(rect.left + rect.width / 2),
     Math.round(rect.top + rect.height / 2),
   ];
-  const rest = getComputedStyle(handle).backgroundColor;
+  const fill = (): string => getComputedStyle(handle).backgroundColor;
+  const rest = fill();
   try {
     await sendMouse({ type: 'move', position: centre });
-    const hovered = getComputedStyle(handle).backgroundColor;
+    await waitUntil(() => fill() !== rest, 'hover must move the fill off its resting colour');
+    const hovered = fill();
     await sendMouse({ type: 'down' });
-    const pressed = getComputedStyle(handle).backgroundColor;
+    await waitUntil(
+      () => fill() !== hovered,
+      'pressed must be visibly stronger than hover, not identical to it',
+    );
+    const pressed = fill();
     const grabbedCursor = getComputedStyle(handle).cursor;
     await sendMouse({ type: 'up' });
-    expect(hovered, 'hover must move the fill off its resting colour').to.not.equal(rest);
-    expect(pressed, 'pressed must be visibly stronger than hover, not identical to it').to.not.equal(hovered);
     expect(pressed).to.not.equal(rest);
     expect(grabbedCursor, 'a grabbed handle shows the closed-hand cursor').to.equal('grabbing');
   } finally {
