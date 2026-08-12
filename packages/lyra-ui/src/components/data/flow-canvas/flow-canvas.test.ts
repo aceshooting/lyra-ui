@@ -2593,6 +2593,28 @@ describe('mouse-hover feedback on nodes and edges', () => {
   });
 });
 
+describe('selected-state must not mask hover/active feedback on a node', () => {
+  // :hover/:active cannot be synthesized in this test runner (no real pointer), so per this
+  // repo's documented exception for genuinely-unsynthesizable pseudo-classes, this asserts
+  // against the stylesheet source order instead of a rendered/computed effect. [part='node']:hover,
+  // [part='node']:active, and [part='node'][data-selected] all resolve to the same specificity
+  // (0,2,0), so whichever is declared LAST always wins regardless of which states are actually
+  // active on the element. [data-selected] must therefore be declared BEFORE :hover and :active,
+  // or hovering/press-dragging an already-selected node would show no outline-color/weight change
+  // from its static selected ring.
+  it('declares [part="node"][data-selected] before [part="node"]:hover and [part="node"]:active', () => {
+    const css = styles.cssText;
+    const selectedIndex = css.search(/\[part='node'\]\[data-selected\]\s*\{/);
+    const hoverIndex = css.search(/\[part='node'\]:hover\s*\{/);
+    const activeIndex = css.search(/\[part='node'\]:active\s*\{/);
+    expect(selectedIndex).to.be.greaterThan(-1);
+    expect(hoverIndex).to.be.greaterThan(-1);
+    expect(activeIndex).to.be.greaterThan(-1);
+    expect(selectedIndex).to.be.lessThan(hoverIndex);
+    expect(selectedIndex).to.be.lessThan(activeIndex);
+  });
+});
+
 describe('focused node z-index lift (perf-virtualized-row-focus-within-zindex)', () => {
   it('raises z-index on a node once focus lands inside it, via :focus-within', async () => {
     const el = (await fixture(

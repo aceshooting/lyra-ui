@@ -239,6 +239,34 @@ describe('lr-radio-button hover and press feedback', () => {
     });
   }
 
+  // A disabled segment renders through a plain <span role="radio"> that can never match
+  // :disabled, so the hover/active tint rules need an explicit :host(:not(:disabled)) guard --
+  // without it a disabled segment still visibly tints under the pointer even though it can't
+  // be activated, contradicting its own not-allowed cursor and opacity.
+  for (const [label, markup] of [
+    ['unchecked', html`<lr-radio-button value="a" disabled style="--lr-transition-fast: 0s">Alpha</lr-radio-button>`],
+    ['checked', html`<lr-radio-button value="a" checked disabled style="--lr-transition-fast: 0s">Alpha</lr-radio-button>`],
+  ] as const) {
+    it(`does not tint a disabled ${label} segment on hover or press`, async () => {
+      const el = await fixture(markup);
+      const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+      const resting = getComputedStyle(base).backgroundColor;
+      try {
+        await sendMouse({ type: 'move', position: centerOf(base) });
+        expect(getComputedStyle(base).backgroundColor, `disabled ${label} hover vs resting`).to.equal(
+          resting,
+        );
+        await sendMouse({ type: 'down' });
+        expect(getComputedStyle(base).backgroundColor, `disabled ${label} press vs resting`).to.equal(
+          resting,
+        );
+      } finally {
+        await sendMouse({ type: 'up' });
+        await resetMouse();
+      }
+    });
+  }
+
   it('themes unchecked and checked pointer-state longhands independently', async () => {
     const unchecked = await fixture(html`
       <lr-radio-button

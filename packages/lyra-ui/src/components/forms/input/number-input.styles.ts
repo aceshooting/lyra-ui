@@ -28,16 +28,16 @@ export const styles = css`
     line-height: var(--lr-line-height-none);
     font-size: var(--lr-input-font-size, var(--_lr-input-font-size-default));
   }
-  [part~='stepper-down']:hover,
-  [part~='stepper-up']:hover {
+  [part~='stepper-down']:not(:disabled):hover,
+  [part~='stepper-up']:not(:disabled):hover {
     color: var(--lr-input-action-hover-color, var(--lr-color-text));
   }
   /* Pressed. A stepper is the one control here a user holds down and repeats, so the press state
      doing more than the hover is not decoration: it is the only confirmation that the auto-repeat
      is running. Same quiet-to-full text step as the hover, plus a fill mixing the page surface
      toward --lr-color-mix-partner at the stronger active share. */
-  [part~='stepper-down']:active,
-  [part~='stepper-up']:active {
+  [part~='stepper-down']:not(:disabled):active,
+  [part~='stepper-up']:not(:disabled):active {
     color: var(--lr-input-action-active-color, var(--lr-input-action-hover-color, var(--lr-color-text)));
     background: var(
       --lr-input-action-active-bg,

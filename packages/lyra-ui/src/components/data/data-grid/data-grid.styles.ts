@@ -218,16 +218,22 @@ export const styles = css`
     background: var(--stripe-background);
   }
 
+  [part~='row'][aria-selected='true'] {
+    background: var(--selected-background);
+  }
+
+  /* MUST stay after the selected-row rule above: both are (0,2,0), so source order alone decides,
+     and the selected row is the one a user is most likely to hover next -- put this before and the
+     single most common hover in a selectable grid would be the one hover with no feedback. */
   [part~='row']:hover {
     background: var(--row-hover-background);
   }
 
+  /* MUST stay after the selected-row rule above: both are (0,2,0), so source order alone decides,
+     and the selected row is the one a user presses to DEselect -- put this first and the single
+     most common press in a selectable grid would be the one press with no feedback. */
   [part~='row']:active {
     background: color-mix(in srgb, var(--accent-color) var(--lr-color-mix-active), transparent);
-  }
-
-  [part~='row'][aria-selected='true'] {
-    background: var(--selected-background);
   }
 
   [part~='cell'] {
@@ -283,6 +289,8 @@ export const styles = css`
     inset-block: 0;
     inset-inline-end: calc(var(--lr-space-xs) * -1);
     inline-size: var(--lr-space-l);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     cursor: col-resize;
     touch-action: none;
   }

@@ -60,7 +60,10 @@ export const styles = css`
 
   [part='bar-track'] {
     position: relative;
-    block-size: var(--lr-size-0-9375rem);
+    /* 1.5rem (24px), not a narrower duration-scaled height -- [part='bar'] is the sole
+       click/keyboard target for lr-span-select and must clear the WCAG 2.5.8 24px minimum
+       target size regardless of how thin a given bar's duration would otherwise render it. */
+    block-size: var(--lr-size-1-5rem);
   }
   [part='bar'] {
     position: absolute;

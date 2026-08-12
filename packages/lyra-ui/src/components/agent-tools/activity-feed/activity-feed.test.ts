@@ -151,6 +151,21 @@ it('toggles expanded and fires lr-toggle on header click', async () => {
   expect((event as CustomEvent).detail).to.deep.equal({ expanded: true });
 });
 
+it('renders a visible focus ring on [part="body"] when it is the tabbable scroll region', async () => {
+  const el = (await fixture(
+    html`<lr-activity-feed expanded .entries=${makeEntries(3)}></lr-activity-feed>`,
+  )) as LyraActivityFeed;
+  const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+  expect(body.getAttribute('tabindex')).to.equal('0');
+  expect(getComputedStyle(body).outlineStyle).to.equal('none');
+  body.focus();
+  expect(el.shadowRoot!.activeElement === body).to.be.true;
+  const focused = getComputedStyle(body);
+  expect(focused.outlineStyle).to.equal('solid');
+  expect(focused.outlineWidth).to.equal('2px'); // --lr-focus-ring-width
+  expect(focused.outlineOffset).to.equal('-2px'); // inset: -1 * --lr-focus-ring-offset
+});
+
 describe('showTimestamps', () => {
   it('shows no timestamp by default, a formatted <time> when show-timestamps is set', async () => {
     const ts = new Date('2024-01-01T10:30:00Z');

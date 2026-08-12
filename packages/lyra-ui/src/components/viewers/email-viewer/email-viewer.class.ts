@@ -2,7 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import {
@@ -209,9 +209,10 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
   /** URL to fetch and parse as an RFC 822 message. */
   @property() src = '';
   /** Display name associated with the message. Used as the accessible name
-   *  of `[part='base']`, falling back to a host `aria-label` and then the
+   *  of `[part='base']` when the host has no `aria-label`, and before the
    *  localized `emailViewerLabel` default, matching the `csvViewerLabel`-
-   *  style sibling document viewers. */
+   *  style sibling document viewers. Host `aria-label` wins by attribute
+   *  presence, including an empty value. */
   @property() name = '';
   /** CSS length that caps the scrollable body. */
   /** A CSS `max-height`; invalid values are ignored. */
@@ -492,7 +493,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
 
   override render(): TemplateResult {
     const maxHeight = sanitizeCssLength(this.maxHeight);
-    return html`<div part="base" role="region" style=${maxHeight ? styleMap({ '--lr-email-viewer-max-height': maxHeight }) : nothing} aria-label=${this.getAttribute('aria-label') || this.name || this.localize('emailViewerLabel')}>${this.renderBody()}${this.renderAnchorLiveRegion()}</div>`;
+    return html`<div part="base" role="region" style=${maxHeight ? styleMap({ '--lr-email-viewer-max-height': maxHeight }) : nothing} aria-label=${hostAriaLabel(this) ?? (this.name || this.localize('emailViewerLabel'))}>${this.renderBody()}${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

@@ -98,6 +98,53 @@ it('gives a mouse user hover feedback on a clickable day cell, matching the keyb
   expect(css).to.match(/\[part='day'\]:hover/);
 });
 
+// Regression test: [part='day'][data-selected='true'] used to be declared AFTER the
+// [part='day']:hover/:active rules, so at equal (0,2,0) specificity source order alone let the
+// static selected fill always win -- hovering or pressing an already-selected day showed no
+// feedback beyond that flat background. Overriding --lr-calendar-day-selected-bg to a value that
+// can't coincide with either state rule's own token/color-mix output makes the masking provable
+// through getComputedStyle instead of by accident.
+it('shows hover and pressed feedback layered on top of an already-selected day, not masked by the static selected fill', async () => {
+  const wrapper = (await fixture(html`
+    <div style="--lr-calendar-day-selected-bg: rgb(9, 9, 9)">
+      <lr-calendar view-date="2026-07-01" value="2026-07-15"></lr-calendar>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-calendar') as LyraCalendar;
+  await el.updateComplete;
+  const day = el.shadowRoot!.querySelector<HTMLElement>('[data-selected="true"]')!;
+  day.scrollIntoView();
+  const restingColor = getComputedStyle(day).backgroundColor;
+  expect(
+    restingColor,
+    'sanity: the selected-bg cssprop must actually apply while resting',
+  ).to.equal('rgb(9, 9, 9)');
+
+  const rect = day.getBoundingClientRect();
+  const position: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+  try {
+    await sendMouse({ type: 'move', position });
+    const hoveredColor = getComputedStyle(day).backgroundColor;
+    expect(
+      hoveredColor,
+      'a hovered selected day must show hover feedback, not just the static selected fill',
+    ).to.not.equal(restingColor);
+
+    await sendMouse({ type: 'down' });
+    const pressedColor = getComputedStyle(day).backgroundColor;
+    expect(
+      pressedColor,
+      'a pressed selected day must show active feedback, not just the static selected fill',
+    ).to.not.equal(restingColor);
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
+});
+
 it('renders the selected-day paint hook and falls back to brand quiet only when the hook is unset', async () => {
   const overriddenWrapper = (await fixture(html`
     <div style="--lr-calendar-day-selected-bg: rgb(1, 2, 3); --lr-theme-color-brand-fill-quiet: rgb(4, 5, 6)">

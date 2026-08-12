@@ -1668,6 +1668,36 @@ describe('selection (J4)', () => {
     expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.contain('1 selected');
   });
 
+  it('does not spuriously announce "0 selected" when an equivalent-but-fresh empty selectedNodeIds/selectedLinkIds array arrives on an unrelated re-render', async () => {
+    // A host that recomputes `.selectedNodeIds=${...}` inline on every render (the ordinary,
+    // correct Lit pattern for a controlled prop -- e.g. <lr-knowledge-graph-explorer>'s own
+    // `.selectedNodeIds=${this.selectedNodeId ? [this.selectedNodeId] : []}`) hands down a BRAND
+    // NEW array reference on every render even while the selection stays empty. Lit's default
+    // reference-based `changed.has()` can't tell that apart from a real selection change.
+    //
+    // The mount-time "0 selected" already stays silent via the `wasMounting` gate (see the test
+    // above this one), but that gate only fires once: an unrelated LATER re-render that re-supplies
+    // an equally-empty-but-fresh array is what regressed -- graphLiveText transitioning from its
+    // untouched '' default to a genuinely new "0 selected" string is what let it slip past the
+    // `changed.has('graphLiveText')` safety net too, doubling up whatever unrelated announcement
+    // (e.g. a search-result count on a composing host) happened to land in that same update.
+    const el = await mountSelectable('single');
+    expect(announcementTexts(), 'mount must stay silent').to.deep.equal([]);
+
+    el.selectedNodeIds = []; // fresh reference, still empty -- no real selection change
+    el.selectedLinkIds = [];
+    await el.updateComplete;
+    expect(announcementTexts(), 'an equivalent empty array reference must not announce').to.deep
+      .equal([]);
+
+    // A genuine selection still announces -- the fix compares values, it doesn't just suppress
+    // the gate outright.
+    el.selectedNodeIds = ['a'];
+    await el.updateComplete;
+    expect(announcementTexts()).to.have.length(1);
+    expect(announcementTexts()[0]).to.contain('1 selected');
+  });
+
   it('keeps the initial item only in the aria-hidden mirror without announcing a mount-time selection', async () => {
     // selectedNodeIds/selectedLinkIds both default to `[]`, a non-undefined default -- Lit marks
     // a property "changed" on the component's very first update whenever it has one, so an

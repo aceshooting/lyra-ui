@@ -426,6 +426,36 @@ describe('lr-commit-card', () => {
     expect(css).to.match(/\[part='copy-button'\]:hover/);
   });
 
+  it('gives files-toggle, file, and copy-button a :focus-visible outline matching their :hover treatment (regression)', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='files-toggle'\]:focus-visible[^{]*\{[^}]*outline:/);
+    expect(css).to.match(/\[part='file'\]:focus-visible[^{]*\{[^}]*outline:/);
+    expect(css).to.match(/\[part='copy-button'\]:focus-visible[^{]*\{[^}]*outline:/);
+  });
+
+  it('renders a real :focus-visible outline on the files-toggle, file row, and copy-button using the shared focus-ring tokens', async () => {
+    const el = (await fixture(html`
+      <lr-commit-card
+        hash="abcdef1"
+        files-collapsed="false"
+        .files=${[{ path: 'a.ts', additions: 1, deletions: 0 }]}
+      ></lr-commit-card>
+    `)) as LyraCommitCard;
+    await el.updateComplete;
+
+    const toggle = el.shadowRoot!.querySelector('[part="files-toggle"]') as HTMLButtonElement;
+    toggle.focus();
+    expect(getComputedStyle(toggle).outlineStyle).to.equal('solid');
+
+    const fileRow = el.shadowRoot!.querySelector('[part="file"]') as HTMLButtonElement;
+    fileRow.focus();
+    expect(getComputedStyle(fileRow).outlineStyle).to.equal('solid');
+
+    const copyButton = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+    copyButton.focus();
+    expect(getComputedStyle(copyButton).outlineStyle).to.equal('solid');
+  });
+
   it('contains a long unbroken file path and keeps its stats visible at 320px', async () => {
     const path = `src/${'IDENTIFIER'.repeat(100)}.ts`;
     const wrapper = (await fixture(html`

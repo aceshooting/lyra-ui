@@ -248,7 +248,8 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   };
 
   override render(): TemplateResult {
-    const ariaLabel = this.getAttribute('aria-label') || this.label || nothing;
+    const hostLabel = this.getAttribute('aria-label');
+    const ariaLabel = hostLabel !== null ? hostLabel : this.label || nothing;
     // WAI-ARIA APG radiogroup: exactly one radio is ever tabbable. That's normally the checked
     // swatch, but a fresh/cleared picker (value === null) has no checked swatch -- fall back to
     // the most recently preserved live-palette position, initially the first swatch, so the

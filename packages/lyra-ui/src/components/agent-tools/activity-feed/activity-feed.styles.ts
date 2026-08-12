@@ -89,6 +89,10 @@ export const styles = css`
     overscroll-behavior: contain;
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
+  [part='body']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+  }
   [part='body'][hidden] {
     display: none;
   }

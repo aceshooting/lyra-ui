@@ -463,6 +463,13 @@ describe('lr-highlight-layer', () => {
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Calque de surlignage');
   });
 
+  it('retains an explicit empty group aria-label instead of falling back to the localized default', async () => {
+    const el = await fixture<LyraHighlightLayer>(
+      html`<lr-highlight-layer aria-label="" .items=${ITEMS}></lr-highlight-layer>`,
+    );
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
+  });
+
   it('gives an interactive rect a hover state matching its focus-visible affordance', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='rect-target'\]:hover/);

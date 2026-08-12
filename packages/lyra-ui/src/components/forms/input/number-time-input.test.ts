@@ -2,6 +2,12 @@ import { fixture, expect, html } from '@open-wc/testing';
 import type { LyraNumberInput } from './number-input.class.js';
 import './number-input.js';
 import './native-time-input.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+
+const centerOf = (node: Element): [number, number] => {
+  const rect = node.getBoundingClientRect();
+  return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+};
 
 it('inherits the shared input radius in number and native-time subclasses', async () => {
   const wrapper = await fixture<HTMLElement>(html`
@@ -86,6 +92,37 @@ describe('lr-number-input steppers', () => {
     const readonlyEl = (await fixture(html`<lr-number-input readonly label="b"></lr-number-input>`)) as LyraNumberInput;
     expect(upOf(readonlyEl).disabled).to.be.true;
     expect(downOf(readonlyEl).disabled).to.be.true;
+  });
+
+  it('does not paint a hover affordance on a disabled stepper', async () => {
+    const el = (await fixture(html`<lr-number-input disabled value="4" label="Qty"></lr-number-input>`)) as LyraNumberInput;
+    const up = upOf(el);
+    const resting = getComputedStyle(up).color;
+    try {
+      await sendMouse({ type: 'move', position: centerOf(up) });
+      const hovered = getComputedStyle(up).color;
+      expect(hovered, 'disabled stepper-up hover vs resting color').to.equal(resting);
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('does not paint a press affordance on a disabled stepper', async () => {
+    const el = (await fixture(html`<lr-number-input disabled value="4" label="Qty"></lr-number-input>`)) as LyraNumberInput;
+    const down = downOf(el);
+    const restingColor = getComputedStyle(down).color;
+    const restingBackground = getComputedStyle(down).backgroundColor;
+    try {
+      await sendMouse({ type: 'move', position: centerOf(down) });
+      await sendMouse({ type: 'down' });
+      const pressedColor = getComputedStyle(down).color;
+      const pressedBackground = getComputedStyle(down).backgroundColor;
+      expect(pressedColor, 'disabled stepper-down active vs resting color').to.equal(restingColor);
+      expect(pressedBackground, 'disabled stepper-down active vs resting background').to.equal(restingBackground);
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
   });
 
   it('renders no steppers when opted out with steppers="false", and restores the browser spin buttons with without-spin-buttons="false"', async () => {

@@ -806,9 +806,28 @@ describe('lr-input', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('gives the password-toggle button a :hover treatment', () => {
+  it('gives the password-toggle button a :hover treatment, guarded by :not(:disabled)', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='password-toggle'\]:hover\s*\{[^}]+\}/);
+    expect(css).to.match(/\[part='password-toggle'\]:not\(:disabled\):hover\s*\{[^}]+\}/);
+  });
+
+  it('gives the clear-button the same :hover treatment, also guarded by :not(:disabled)', () => {
+    // A disabled password-toggle/clear-button must not out-hover the input-wrapper's own
+    // :host(:disabled) dimming -- mirrors button.styles.ts's established
+    // `[part~='base']:not(:disabled):hover` pattern.
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='clear-button'\]:not\(:disabled\):hover\s*\{[^}]+\}/);
+  });
+
+  it('guards the shared password-toggle/clear-button :active press feedback with :not(:disabled)', () => {
+    // Without the guard, a disabled action button still paints the pressed fill/text-color under
+    // a real pointerdown, contradicting the input-wrapper's own :host(:disabled) opacity dimming
+    // for the very same button. Mirrors button.styles.ts's established
+    // `[part~='base']:not(:disabled):active` pattern.
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(
+      /\[part='password-toggle'\]:not\(:disabled\):active,\s*\[part='clear-button'\]:not\(:disabled\):active\s*\{[^}]+\}/,
+    );
   });
 
   it('resets native appearance unconditionally for search, and restyles (not suppresses) the time picker indicator', () => {

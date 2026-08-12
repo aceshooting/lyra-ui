@@ -109,7 +109,11 @@ export interface LyraCheckboxEventMap {
  * @slot - Label text, rendered next to the box. Clicking it toggles the
  * checkbox, the same as clicking a native checkbox's associated `<label>`.
  * If left empty, set `aria-label` on the host so the control still has an accessible name. Host
- * `aria-label` is forwarded by presence, including an explicitly empty value.
+ * `aria-label` is forwarded by presence, including an explicitly empty value. Only non-focusable
+ * content should be slotted here: this slot renders inside `[part="base checkbox"]`, which carries
+ * `role="checkbox"` -- axe-core's `nested-interactive` rule forbids a focusable descendant of that
+ * role (e.g. a Terms-of-Service `<a href>`), the same reason `lr-conversation-item` documents for
+ * its own `excerpt`/`meta` slots.
  * @slot hint - Web Awesome-compatible supporting text.
  * @slot help-text - Shoelace-compatible supporting text; the same surface as `hint`.
  * @slot error - Custom error content on the owned error surface.

@@ -455,6 +455,33 @@ describe('lr-browser-frame', () => {
     expect(css).to.match(/\[part='take-over-button'\]:hover/);
     expect(css).to.match(/\[part='stop-button'\]:hover/);
   });
+
+  it('gives take-over-button and stop-button a themed focus-visible ring', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    for (const part of ['take-over-button', 'stop-button']) {
+      expect(css, `${part} must get focus-visible`).to.match(
+        new RegExp(`\\[part='${part}'\\]:focus-visible[^{]*\\{[^}]*outline:`),
+      );
+    }
+    expect(css).to.match(/\[part='take-over-button'\]:focus-visible[^{]*\{[^}]*var\(--lr-focus-ring-width\)/);
+    expect(css).to.match(/\[part='take-over-button'\]:focus-visible[^{]*\{[^}]*var\(--lr-focus-ring-color\)/);
+    expect(css).to.match(/\[part='take-over-button'\]:focus-visible[^{]*\{[^}]*var\(--lr-focus-ring-offset\)/);
+  });
+
+  it('renders a visible focus-visible outline on the take-over and stop buttons', async () => {
+    const el = (await fixture(html`<lr-browser-frame></lr-browser-frame>`)) as LyraBrowserFrame;
+    await el.updateComplete;
+    const takeOverButton = el.shadowRoot!.querySelector('[part="take-over-button"]') as HTMLButtonElement;
+    const stopButton = el.shadowRoot!.querySelector('[part="stop-button"]') as HTMLButtonElement;
+
+    takeOverButton.focus();
+    const takeOverOutline = getComputedStyle(takeOverButton).outlineStyle;
+    stopButton.focus();
+    const stopOutline = getComputedStyle(stopButton).outlineStyle;
+
+    expect(takeOverOutline).to.equal('solid');
+    expect(stopOutline).to.equal('solid');
+  });
 });
 
 it('clamps ping coordinates and never lets them reach the declaration list verbatim', async () => {

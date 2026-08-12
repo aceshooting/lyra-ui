@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 22 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 22 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -91,9 +91,12 @@ wrapper aliases, so either name survives the nested shadow boundary; `edit-butto
 `var(--lr-color-overlay)` — the backdrop scrim color, the same shared token `<lr-dialog>` and
 `<lr-tool-select-dialog>` read), `--lr-tool-approval-dialog-mono-font` (default
 `var(--lr-font-mono)`, the library's shared monospace stack — used by both `tool-name` and the
-raw-JSON editor), and `--lr-tool-approval-dialog-invalid-border-color` (default
+raw-JSON editor), `--lr-tool-approval-dialog-invalid-border-color` (default
 `var(--lr-color-danger)` — border color of the invalid raw-JSON editor, independently retunable
-without changing error text or other danger-coloured surfaces), plus shared tokens
+without changing error text or other danger-coloured surfaces), and
+`--lr-tool-approval-dialog-hover-border-color` (default `var(--lr-color-brand)` — border color of
+the raw-JSON args editor on hover, giving mouse users the same "this is editable" affordance every
+other text-entry surface in the library provides), plus shared tokens
 `--lr-space-xs/-s/-m/-l`, `--lr-color-surface`, `--lr-color-border`, `--lr-radius`,
 `--lr-shadow`, `--lr-color-brand`, `--lr-color-on-brand`, `--lr-color-danger`,
 `--lr-color-text`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.

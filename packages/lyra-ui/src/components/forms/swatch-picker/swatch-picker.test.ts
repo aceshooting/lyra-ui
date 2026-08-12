@@ -244,6 +244,15 @@ describe('lr-swatch-picker', () => {
     ).to.equal('Author label');
   });
 
+  it('honors an explicit empty host aria-label instead of falling back to the label prop', async () => {
+    const el = (await fixture(
+      html`<lr-swatch-picker label="Accent" aria-label="" .options=${options()}></lr-swatch-picker>`,
+    )) as LyraSwatchPicker;
+    expect(
+      (el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).getAttribute('aria-label'),
+    ).to.equal('');
+  });
+
   it('renders a custom icon in place of the plain circle when the option provides one', async () => {
     const withIcon = [
       { value: 'blue', color: '#0969da', label: 'Blue' },

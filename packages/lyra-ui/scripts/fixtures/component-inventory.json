@@ -113388,6 +113388,12 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-tool-approval-dialog-hover-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
             "name": "--lr-tool-approval-dialog-invalid-border-color",
             "deprecated": null,
             "hasDefault": true,

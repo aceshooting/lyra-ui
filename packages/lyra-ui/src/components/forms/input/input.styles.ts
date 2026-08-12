@@ -186,10 +186,10 @@ export const styles = css`
     line-height: var(--lr-line-height-none);
     font-size: var(--lr-font-size-m);
   }
-  [part='password-toggle']:hover {
+  [part='password-toggle']:not(:disabled):hover {
     color: var(--lr-input-action-hover-color, var(--lr-color-text));
   }
-  [part='clear-button']:hover {
+  [part='clear-button']:not(:disabled):hover {
     color: var(--lr-input-action-hover-color, var(--lr-color-text));
   }
   /* Pressed: the hover's quiet-to-full text step PLUS a fill, mixing the page surface toward
@@ -197,8 +197,8 @@ export const styles = css`
      two sit inside a text field whose own hover already moves the field border, so a fill at
      rest-or-hover would compete with it, while a fill under the thumb only while the pointer is
      down cannot. */
-  [part='password-toggle']:active,
-  [part='clear-button']:active {
+  [part='password-toggle']:not(:disabled):active,
+  [part='clear-button']:not(:disabled):active {
     color: var(--lr-input-action-active-color, var(--lr-input-action-hover-color, var(--lr-color-text)));
     background: var(
       --lr-input-action-active-bg,

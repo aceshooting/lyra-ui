@@ -40,6 +40,16 @@ describe("<lr-reorder-list>", () => {
     expect(base.getAttribute("aria-label")).to.equal("Author steps");
   });
 
+  it("honors an explicitly empty host aria-label instead of falling back to the label prop", async () => {
+    const el = await fixture<LyraReorderList>(html`
+      <lr-reorder-list label="Visible steps" aria-label="">
+        <lr-reorder-item>Row</lr-reorder-item>
+      </lr-reorder-list>
+    `);
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute("aria-label")).to.equal("");
+  });
+
   it("marks the first item atStart and the last item atEnd after initial slotchange", async () => {
     const el = await fixture<LyraReorderList>(threeItems);
     const items = itemsOf(el);

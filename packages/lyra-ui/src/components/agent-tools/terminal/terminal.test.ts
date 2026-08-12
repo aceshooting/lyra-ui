@@ -980,6 +980,46 @@ describe('lr-terminal', () => {
     }
   });
 
+  // These :focus-visible assertions are real-input-modality sensitive (Chromium tracks a
+  // page-global "last focus trigger" and only matches :focus-visible on a programmatic .focus()
+  // when that trigger isn't mouse/touch), so they run BEFORE the sendMouse `{ type: 'down' }`
+  // press below: that command is a real, trusted mousedown on a focusable <button>, which is
+  // exactly the kind of interaction that flips the page's modality to mouse for the rest of this
+  // file's test run. Ordered this way, this suite never depends on that flag getting reset.
+  for (const part of ['copy-button', 'download-button', 'jump-to-latest']) {
+    it(`gives ${part} a visible :focus-visible outline, matching its :hover/:active treatment`, async () => {
+      const el = (await fixture(html`<lr-terminal downloadable></lr-terminal>`)) as LyraTerminal;
+      // jump-to-latest only renders once the viewport has stopped following the tail -- see the
+      // hover/press test below for why `follow` is set only after this settling delay.
+      el.write('a\nb\nc');
+      await el.updateComplete;
+      await aTimeout(100);
+      el.follow = false;
+      await el.updateComplete;
+      const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLButtonElement;
+      expect((button) != null, `${part} must be rendered for this fixture`).to.equal(true);
+      button.focus();
+      expect(getComputedStyle(button).outlineStyle, `${part} :focus-visible outlineStyle`).to.equal('solid');
+      expect(getComputedStyle(button).outlineWidth, `${part} :focus-visible outlineWidth`).to.equal('2px');
+    });
+  }
+
+  it('gives an interactive (highlight-owning) line a visible :focus-visible outline', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write('a\nb\nc');
+    // No tone: a toned highlight sets its background inline (styleMap), which would mask the
+    // CSS hover/focus-visible background below it under the same specificity rules the class
+    // doc's `lineStateStyle` comment already spells out for this component.
+    el.highlights = [{ id: 'h1', anchor: { kind: 'line-range', start: 2, end: 2 } }];
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const line = list.shadowRoot!.querySelector('[data-line-number="2"]') as HTMLElement;
+    expect(line.getAttribute('tabindex')).to.equal('0');
+    line.focus();
+    expect(getComputedStyle(line).outlineStyle, 'line :focus-visible outlineStyle').to.equal('solid');
+    expect(getComputedStyle(line).outlineWidth, 'line :focus-visible outlineWidth').to.equal('2px');
+  });
+
   for (const part of ['copy-button', 'download-button', 'jump-to-latest']) {
     it(`tints ${part} on hover, and further again while pressed`, async () => {
       const el = (await fixture(html`<lr-terminal downloadable></lr-terminal>`)) as LyraTerminal;
@@ -1025,6 +1065,29 @@ describe('lr-terminal', () => {
       }
     });
   }
+
+  it('tints an interactive (highlight-owning) line on hover', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write('a\nb\nc');
+    el.highlights = [{ id: 'h1', anchor: { kind: 'line-range', start: 2, end: 2 } }];
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const line = (): HTMLElement => list.shadowRoot!.querySelector('[data-line-number="2"]') as HTMLElement;
+    line().scrollIntoView({ block: 'center' });
+    const rect = line().getBoundingClientRect();
+    const centre: [number, number] = [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
+    const rest = getComputedStyle(line()).backgroundColor;
+    try {
+      await sendMouse({ type: 'move', position: centre });
+      const hovered = getComputedStyle(line()).backgroundColor;
+      expect(hovered, 'hover must move the fill off its resting colour').to.not.equal(rest);
+    } finally {
+      await resetMouse();
+    }
+  });
 });
 
 it('searchNext/searchPrevious resolve a boolean, matching the shared viewer search contract', async () => {

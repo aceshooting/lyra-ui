@@ -1,4 +1,5 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './time-input.js';
 import type { LyraTimeInput } from './time-input.class.js';
 
@@ -1043,5 +1044,87 @@ describe('lr-time-input validity, value coercion, and slots', () => {
       el.shadowRoot!.querySelector('[part="error"]')!.id,
       el.shadowRoot!.querySelector('[part="hint"]')!.id,
     ]);
+  });
+});
+
+// A segment is <span part="segment" role="spinbutton">, which can never itself match :disabled --
+// only the host's own disabled content attribute (or an ancestor <fieldset disabled>'s cascade)
+// does, the same way lr-time-range's handles are gated. Driven through the real pointer rather
+// than the stylesheet text, the same way lr-checkbox's/lr-time-range's hover-feedback tests are:
+// reading the painted background back is the only assertion that can tell a guarded rule from an
+// unguarded one that happens not to be reached by keyboard-only coverage. Colour STRINGS are
+// compared, never elements -- a DOM node as chai's actual/expected hangs the whole file.
+describe('lr-time-input disabled segment hover/press feedback', () => {
+  const centerOf = (node: Element): [number, number] => {
+    const rect = node.getBoundingClientRect();
+    return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+  };
+
+  it('does not tint a segment on hover or press while disabled', async () => {
+    const el = await fixture<LyraTimeInput>(
+      html`<lr-time-input disabled value="10:00" style="--lr-transition-fast: 0s"></lr-time-input>`,
+    );
+    const target = segment(el, 'hour');
+    const resting = getComputedStyle(target).backgroundColor;
+    try {
+      await sendMouse({ type: 'move', position: centerOf(target) });
+      expect(getComputedStyle(target).backgroundColor, 'hover must not tint a disabled segment').to.equal(
+        resting,
+      );
+      await sendMouse({ type: 'down' });
+      expect(getComputedStyle(target).backgroundColor, 'press must not tint a disabled segment').to.equal(
+        resting,
+      );
+      await sendMouse({ type: 'up' });
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('does not tint a segment on hover or press while disabled purely via an ancestor fieldset', async () => {
+    const form = await fixture<HTMLFormElement>(html`
+      <form>
+        <fieldset disabled>
+          <lr-time-input value="10:00" style="--lr-transition-fast: 0s"></lr-time-input>
+        </fieldset>
+      </form>
+    `);
+    const el = form.querySelector('lr-time-input') as LyraTimeInput;
+    await el.updateComplete;
+    const target = segment(el, 'hour');
+    const resting = getComputedStyle(target).backgroundColor;
+    try {
+      await sendMouse({ type: 'move', position: centerOf(target) });
+      expect(
+        getComputedStyle(target).backgroundColor,
+        'hover must not tint a segment disabled via an ancestor fieldset',
+      ).to.equal(resting);
+      await sendMouse({ type: 'down' });
+      expect(
+        getComputedStyle(target).backgroundColor,
+        'press must not tint a segment disabled via an ancestor fieldset',
+      ).to.equal(resting);
+      await sendMouse({ type: 'up' });
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('still tints a segment on hover and press while enabled (control)', async () => {
+    const el = await fixture<LyraTimeInput>(
+      html`<lr-time-input value="10:00" style="--lr-transition-fast: 0s"></lr-time-input>`,
+    );
+    const target = segment(el, 'hour');
+    const resting = getComputedStyle(target).backgroundColor;
+    try {
+      await sendMouse({ type: 'move', position: centerOf(target) });
+      const hovered = getComputedStyle(target).backgroundColor;
+      expect(hovered, 'hover must move the fill off its resting colour').to.not.equal(resting);
+      await sendMouse({ type: 'down' });
+      expect(getComputedStyle(target).backgroundColor, 'press vs hover').to.not.equal(hovered);
+      await sendMouse({ type: 'up' });
+    } finally {
+      await resetMouse();
+    }
   });
 });

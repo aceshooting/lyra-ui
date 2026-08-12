@@ -1331,6 +1331,16 @@ it("honors a host-level aria-label attribute over both the default and an explic
   );
 });
 
+it("honors an explicit empty host-level aria-label instead of falling back to the localized default", async () => {
+  const el = (await fixture(html`
+    <lr-menu aria-label="">
+      <button slot="trigger" aria-label="Actions">⋮</button>
+      <lr-menu-item value="rename">Rename</lr-menu-item>
+    </lr-menu>
+  `)) as LyraMenu;
+  expect(list(el).getAttribute("aria-label")).to.equal("");
+});
+
 describe("public show()/hide()", () => {
   const withApply = () => html`
     <lr-menu label="Filters">

@@ -446,6 +446,13 @@ describe('lr-email-viewer', () => {
     expect(unnamed.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('region');
   });
 
+  it('preserves an explicitly empty host aria-label ahead of name', async () => {
+    const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer name="message.eml" aria-label=""></lr-email-viewer>`);
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.hasAttribute('aria-label')).to.be.true;
+    expect(base.getAttribute('aria-label')).to.equal('');
+  });
+
   it('supports a .strings override for the emailViewerLabel fallback', async () => {
     const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer .strings=${{ emailViewerLabel: 'Visionneuse de courriels' }}></lr-email-viewer>`);
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Visionneuse de courriels');

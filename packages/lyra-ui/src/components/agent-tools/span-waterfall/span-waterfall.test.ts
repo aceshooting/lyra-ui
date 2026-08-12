@@ -139,6 +139,16 @@ describe('lr-span-waterfall', () => {
     expect(first.getAttribute('tabindex')).to.equal('-1');
   });
 
+  it('keeps every bar at or above the 24px WCAG 2.5.8 pointer-target floor', async () => {
+    const el = (await fixture(html`<lr-span-waterfall .spans=${SPANS}></lr-span-waterfall>`)) as LyraSpanWaterfall;
+    await el.updateComplete;
+    const bars = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="bar"]')];
+    expect(bars.length).to.be.greaterThan(0);
+    for (const bar of bars) {
+      expect(bar.getBoundingClientRect().height, bar.getAttribute('data-id') ?? '').to.be.at.least(24);
+    }
+  });
+
   it('marks the bar matching activeSpanId with aria-current', async () => {
     const el = (await fixture(
       html`<lr-span-waterfall .spans=${SPANS} active-span-id="llm"></lr-span-waterfall>`,

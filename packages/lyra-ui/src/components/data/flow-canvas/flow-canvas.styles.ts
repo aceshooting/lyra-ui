@@ -166,6 +166,19 @@ export const styles = css`
   :host([orientation='horizontal']:dir(rtl)) [part='node'] ::slotted(*) {
     transform: scaleX(-1);
   }
+  /* MUST stay before :hover/:active below: all three resolve to the same specificity (0,2,0),
+     so whichever is declared last always wins regardless of which states are actually active on
+     the element. Declaring the static selected ring first lets the pointer-feedback rules below
+     still read on top of it when a selected node is hovered or press-dragged. */
+  [part='node'][data-selected] {
+    outline: var(--lr-size-2px) solid
+      var(
+        --lr-flow-canvas-node-selected-outline-color,
+        var(--lr-flow-canvas-node-current-outline-color, var(--lr-color-brand))
+      );
+    outline-offset: var(--lr-size-2px);
+    border-radius: var(--lr-radius);
+  }
   [part='node']:hover {
     outline: var(--lr-size-1px) solid
       var(--lr-flow-canvas-node-hover-outline-color, var(--lr-color-border-strong));
@@ -194,15 +207,6 @@ export const styles = css`
   [part='edge']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
-  }
-  [part='node'][data-selected] {
-    outline: var(--lr-size-2px) solid
-      var(
-        --lr-flow-canvas-node-selected-outline-color,
-        var(--lr-flow-canvas-node-current-outline-color, var(--lr-color-brand))
-      );
-    outline-offset: var(--lr-size-2px);
-    border-radius: var(--lr-radius);
   }
   [part='edge'][aria-pressed='true'] {
     stroke-width: 2.5;

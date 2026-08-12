@@ -215,6 +215,14 @@ export const styles = css`
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
+  /* Negative offset (matches [part='textarea']:focus-visible in code-editor.styles.ts), not the
+     usual positive one -- the grid's own gap is only --lr-emoji-picker-gap-default (2px), the same
+     as --lr-focus-ring-offset, so a positive offset would let the ring bleed into the neighboring
+     cell instead of staying legible around the focused one. */
+  [part='emoji']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(var(--lr-focus-ring-offset) * -1);
+  }
   [part='empty'] {
     flex-basis: 100%;
     padding: var(--lr-space-m);

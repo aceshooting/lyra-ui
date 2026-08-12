@@ -5,7 +5,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { loadHtmlSanitizer } from './dompurify-loader.js';
 import { styles } from './html-viewer.styles.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
@@ -161,7 +161,7 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
 
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
-      case 'loaded': return html`<div part="html" role="document" aria-label=${this.getAttribute('aria-label') || this.name || this.localize('htmlViewerLabel')}>${unsafeHTML(this.fetchState.markup)}</div>`;
+      case 'loaded': return html`<div part="html" role="document" aria-label=${hostAriaLabel(this) ?? (this.name || this.localize('htmlViewerLabel'))}>${unsafeHTML(this.fetchState.markup)}</div>`;
       case 'loading': return html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
       case 'error': return html`<div part="error">${this.fetchState.message}</div>`;
       case 'idle':

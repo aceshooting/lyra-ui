@@ -107,6 +107,26 @@ describe('lr-artifact-panel', () => {
     expect(getComputedStyle(next).minBlockSize).to.equal('40px');
   });
 
+  it('gives the view/restore/copy/download header buttons the WCAG 24px minimum hit area', async () => {
+    const el = (await fixture(html`
+      <lr-artifact-panel
+        .versions=${[{ id: 'v1' }, { id: 'v2' }]}
+        active-version-id="v1"
+        copy-text="hello"
+        download-src="https://example.com/f.md"
+      >
+        <pre slot="code">code</pre>
+      </lr-artifact-panel>
+    `)) as LyraArtifactPanel;
+    await el.updateComplete;
+    for (const part of ['view-button', 'restore-button', 'copy-button', 'download-button']) {
+      const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+      expect(button !== null, `${part} should render`).to.be.true;
+      expect(getComputedStyle(button).minBlockSize, `${part} minBlockSize`).to.equal('24px');
+      expect(button.getBoundingClientRect().height, `${part} rendered height`).to.be.at.least(24);
+    }
+  });
+
   it('mirrors the version-previous/version-next chevron glyphs under RTL', async () => {
     const ltr = (await fixture(html`
       <lr-artifact-panel .versions=${[{ id: 'v1' }, { id: 'v2' }, { id: 'v3' }]}></lr-artifact-panel>

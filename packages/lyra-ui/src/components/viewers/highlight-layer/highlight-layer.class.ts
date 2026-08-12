@@ -9,9 +9,10 @@ import { maxPairedAnimationEndMs } from './highlight-layer-timing.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizePercentRect, type SafePercentRect } from '../../../internal/safe-css.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_highlightLayerLabel, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_items } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_highlightLayerLabel, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_items, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -63,10 +64,13 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
     highlightLayerLabel: LYRA_DEFAULT_highlightLayerLabel,
     highlightOfTotal: LYRA_DEFAULT_highlightOfTotal,
     highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
     items: LYRA_DEFAULT_items,
+    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -277,7 +281,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
     const renderedIndexes = this.itemIndexesWithRects();
     const renderedPosition = new Map(renderedIndexes.map((itemIndex, position) => [itemIndex, position]));
     const useActionList = this.interactive && renderedIndexes.length > 1;
-    const ariaLabel = this.getAttribute('aria-label') || this.localize('highlightLayerLabel');
+    const ariaLabel = hostAriaLabel(this) ?? this.localize('highlightLayerLabel');
     return html`
       <div part="base" role="group" aria-label=${ariaLabel}>
         ${this.items.map((item, index) => {

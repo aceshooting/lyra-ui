@@ -238,9 +238,10 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    *  specific (e.g. "Row actions") when a page has more than one menu.
    *  Localized (`menuLabel`) when left at its default. A host-level
    *  `aria-label` attribute takes precedence over both this prop and the
-   *  localized default, matching `lr-select`/`lr-model-select`'s
-   *  established `this.getAttribute('aria-label') || <computed default>`
-   *  precedence (see `effectiveLabel`). */
+   *  localized default — including an explicit empty `aria-label=""` —
+   *  matching `lr-select`/`lr-model-select`'s established
+   *  `this.getAttribute('aria-label') ?? <computed default>` precedence
+   *  (see `effectiveLabel`). */
   @property() label = "Menu";
 
   /** Extends the Escape-closes-and-refocuses-trigger behavior to keydown
@@ -1170,7 +1171,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    *  requiring `label` itself to be set. */
   private get effectiveLabel(): string {
     return (
-      this.getAttribute("aria-label") ||
+      this.getAttribute("aria-label") ??
       this.localize("menuLabel", this.label === "Menu" ? undefined : this.label)
     );
   }

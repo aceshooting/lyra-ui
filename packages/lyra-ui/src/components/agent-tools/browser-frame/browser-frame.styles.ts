@@ -68,6 +68,11 @@ export const styles = css`
   [part='stop-button']:active {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
+  [part='take-over-button']:focus-visible,
+  [part='stop-button']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
   [part='viewport'] {
     position: relative;
     aspect-ratio: var(--lr-browser-frame-aspect-ratio, 16 / 9);

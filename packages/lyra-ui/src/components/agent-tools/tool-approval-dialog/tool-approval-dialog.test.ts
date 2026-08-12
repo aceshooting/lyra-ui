@@ -4,6 +4,8 @@ import type { LyraToolApprovalDialog } from './tool-approval-dialog.js';
 import type { LyraJsonViewer } from '../../utility/json-viewer/json-viewer.js';
 import type { LyraButton } from '../../forms/button/button.class.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { styles } from './tool-approval-dialog.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const ARGS = { query: 'solar inverters', max_results: 5 };
 
@@ -180,6 +182,64 @@ describe('editing', () => {
     setTextareaValue(el, '{"query":"fixed"}');
     await el.updateComplete;
     expect(getComputedStyle(textarea(el)).borderColor).to.equal('rgb(40, 50, 60)');
+  });
+
+  it('gives the args-editor textarea hover feedback matching the keyboard focus-visible cue', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='args-editor'\]:hover\s*\{[^}]*border-color:/);
+  });
+
+  it('themes the args-editor hover border through a component hook when no decision is pending', async () => {
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog
+        open
+        tool-name="web_search"
+        .args=${ARGS}
+        style="--lr-tool-approval-dialog-hover-border-color: rgb(1, 2, 3)"
+      ></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    editButton(el).click();
+    await el.updateComplete;
+    const ta = textarea(el);
+    const rect = ta.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      expect(getComputedStyle(ta).borderTopColor).to.equal('rgb(1, 2, 3)');
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('does not apply the args-editor hover border tint while a decision is pending (gated on pending, not disabled)', async () => {
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog
+        open
+        tool-name="web_search"
+        .args=${ARGS}
+        style="--lr-tool-approval-dialog-hover-border-color: rgb(1, 2, 3); --lr-color-border: rgb(40, 50, 60)"
+      ></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    editButton(el).click();
+    await el.updateComplete;
+    el.addEventListener('lr-approve', (event) => event.preventDefault(), { once: true });
+    approveButton(el).click();
+    await el.updateComplete;
+    expect(el.pending).to.equal('approve');
+
+    const ta = textarea(el);
+    const rect = ta.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      expect(getComputedStyle(ta).borderTopColor).to.equal('rgb(40, 50, 60)');
+    } finally {
+      await resetMouse();
+    }
   });
 
   it('announces each newly invalid edit once through the shared assertive light-DOM sink', async () => {

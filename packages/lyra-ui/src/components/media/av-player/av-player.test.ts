@@ -983,6 +983,13 @@ describe('hover feedback for click-to-seek/clickable parts', () => {
   });
 });
 
+describe('focus-visible feedback for keyboard-operable parts', () => {
+  it('gives the seek/scrub timeline a :focus-visible outline, since it is a real role="slider" keyboard target', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='timeline'\]:focus-visible[^{]*\{[^}]*outline:/);
+  });
+});
+
 describe('timeline click-to-seek', () => {
   it('clicking the timeline seeks proportionally to the click position', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;

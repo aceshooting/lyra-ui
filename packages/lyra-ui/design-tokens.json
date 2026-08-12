@@ -4566,7 +4566,6 @@
               "status": "retained"
             },
             "evidence": [
-              "src/components/agent-tools/span-waterfall/span-waterfall.styles.ts",
               "src/components/data/stat/stat.styles.ts",
               "src/components/forms/date-picker/date-picker.styles.ts",
               "src/components/overlays/badge/badge.styles.ts"

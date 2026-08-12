@@ -926,6 +926,82 @@ it("selects eligible rows, maintains selectedRows, and emits keys and rows", asy
   expect(event.detail.selectedKeys).to.deep.equal([1]);
 });
 
+// [part~='row']:hover and [part~='row'][aria-selected='true'] are both (0,2,0), so only source
+// order decides which one wins -- and until now that was the selected rule, making a hover on an
+// already-selected row a visual no-op. Rendered assertion only: the selector is exactly the kind
+// of thing that reads correct and matches nothing. The row's background-color transitions (120ms
+// default), so each read waits out a margined settle time rather than sampling mid-transition.
+it("shows a hover fill on an already-selected row, distinct from the resting selected fill", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      selectable="single"
+      row-key="id"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  element.selectedRows = [rows[0]!];
+  await element.updateComplete;
+  const selected = element.shadowRoot!.querySelector(
+    '[part~="row"][aria-selected="true"]'
+  ) as HTMLElement;
+  selected.scrollIntoView();
+  await delay(200);
+  const resting = getComputedStyle(selected).backgroundColor;
+  const rect = selected.getBoundingClientRect();
+  const position: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+  try {
+    await sendMouse({ type: "move", position });
+    await delay(200);
+    expect(getComputedStyle(selected).backgroundColor).to.not.equal(resting);
+  } finally {
+    await resetMouse();
+  }
+});
+
+// [part~='row']:active and [part~='row'][aria-selected='true'] are both (0,2,0), so only source
+// order makes the pressed fill win -- and the selected row is precisely the one a user presses to
+// deselect. Nothing but a rendered assertion catches a reordering of those two rules. The row's
+// background-color transitions (120ms default), so each read waits out a margined settle time
+// rather than sampling mid-transition.
+it("shows a pressed fill on an already-selected row", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      selectable="single"
+      row-key="id"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  element.selectedRows = [rows[0]!];
+  await element.updateComplete;
+  const selected = element.shadowRoot!.querySelector(
+    '[part~="row"][aria-selected="true"]'
+  ) as HTMLElement;
+  selected.scrollIntoView();
+  await delay(200);
+  const resting = getComputedStyle(selected).backgroundColor;
+  const rect = selected.getBoundingClientRect();
+  const position: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+  try {
+    await sendMouse({ type: "move", position });
+    await sendMouse({ type: "down" });
+    await delay(200);
+    expect(getComputedStyle(selected).backgroundColor).to.not.equal(resting);
+  } finally {
+    await sendMouse({ type: "up" });
+    await resetMouse();
+  }
+});
+
 it("paginates client rows, clamps navigation, and reports page-size changes", async () => {
   const element = await dataGrid(html`
     <lr-data-grid
@@ -1520,6 +1596,22 @@ it("commits keyboard resize, rolls back pointer cancellation, and reorders with 
   );
   await rtl.updateComplete;
   expect(rtl.columnOrder).to.deep.equal(["team", "name", "score"]);
+});
+
+it("gives the resize-handle the shared minimum hit area", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      resizable
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const handle = header(element, "name").querySelector(
+    '[part="resize-handle"]'
+  ) as HTMLElement;
+  expect(getComputedStyle(handle).minInlineSize).to.equal("40px");
+  expect(getComputedStyle(handle).minBlockSize).to.equal("40px");
 });
 
 it("leaves disabled sort, resize, and movement capabilities inert", async () => {

@@ -12952,6 +12952,13 @@
       }
     },
     {
+      "name": "--lr-tool-approval-dialog-hover-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-approval-dialog>`** (default: `var(--lr-color-brand)`) — Border color of the raw-JSON args editor on hover."
+      }
+    },
+    {
       "name": "--lr-tool-approval-dialog-invalid-border-color",
       "description": {
         "kind": "markdown",

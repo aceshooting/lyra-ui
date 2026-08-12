@@ -166,6 +166,7 @@ export interface LyraToolApprovalDialogEventMap {
  * @cssprop [--lr-tool-approval-dialog-overlay-color=var(--lr-color-overlay)] - Backdrop scrim color.
  * @cssprop [--lr-tool-approval-dialog-mono-font=var(--lr-font-mono)] - Font family for the tool name and the raw-JSON args editor.
  * @cssprop [--lr-tool-approval-dialog-invalid-border-color=var(--lr-color-danger)] - Border color of an invalid raw-JSON editor.
+ * @cssprop [--lr-tool-approval-dialog-hover-border-color=var(--lr-color-brand)] - Border color of the raw-JSON args editor on hover.
  * @status stable
  * @since 4.0.0
  */

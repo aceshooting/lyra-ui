@@ -41,6 +41,14 @@ export const styles = css`
   /* Negative outline-offset so the ring doesn't visually collide with [data-today='true']'s own
      outline below -- source order makes the focus ring win for a focused today cell, which is the
      correct behavior while focused. */
+  [part='day'][data-selected='true'] {
+    background: var(--lr-calendar-day-selected-bg, var(--lr-color-brand-quiet));
+  }
+  /* MUST stay before the :hover/:active rules below: both this and [part='day']:hover/:active are
+     equal specificity (0,2,0), so source order alone decides, and hovering or pressing an
+     already-selected day needs to layer its own feedback rather than have the static selected fill
+     win outright. Mirrors env-list.styles.ts's [aria-pressed='true']-before-:active fix for the
+     same masking shape. */
   [part='day']:hover {
     background: var(--lr-color-brand-quiet);
   }
@@ -58,7 +66,6 @@ export const styles = css`
   [part='day'] { display: flex; flex-direction: column; align-items: stretch; min-block-size: var(--lr-calendar-day-min-block-size); padding: var(--lr-space-xs); border-block-start: 0; border-inline-start: 0; text-align: start; }
   [part='day'][data-outside='true'] { color: var(--lr-calendar-day-outside-color, var(--lr-color-text-quiet)); background: var(--lr-calendar-day-outside-bg, var(--lr-color-surface)); }
   [part='day'][data-today='true'] { outline: var(--lr-border-width-medium) solid var(--lr-calendar-day-today-outline-color, var(--lr-color-brand)); outline-offset: calc(var(--lr-border-width-medium) * -1); }
-  [part='day'][data-selected='true'] { background: var(--lr-calendar-day-selected-bg, var(--lr-color-brand-quiet)); }
   [part='date'] { font-weight: var(--lr-font-weight-semibold); }
   [part='event'] { overflow: hidden; box-sizing: border-box; inline-size: 100%; min-inline-size: var(--lr-size-1-5rem); min-block-size: var(--lr-size-1-5rem); margin-block-start: var(--lr-space-2xs); padding: var(--lr-space-2xs); border: 0; border-radius: var(--lr-radius); background: var(--lr-color-brand); color: var(--lr-color-on-brand); font: inherit; font-size: var(--lr-font-size-sm); text-align: start; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
   /* An event chip's fill is per-event data (CalendarEvent.color) written as an inline

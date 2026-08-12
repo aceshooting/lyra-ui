@@ -100,6 +100,19 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* Gives mouse users the same 'this is interactive' cue the :focus-visible ring above already
+     gives keyboard users -- mirrors lr-textarea's [part='textarea']:hover pattern, gated via
+     :host(:not([pending])) rather than :not(:disabled) since this raw <textarea> is not a
+     form-associated control and carries no disabled state of its own; a decision in flight
+     (pending reflected) freezes it to readonly instead, so hover shouldn't relight it. */
+  /* no-pressed-state: pressing inside a text surface places a caret, it does not actuate anything.
+     The mousedown that would match :active is the same gesture that focuses the field, so a pressed
+     treatment would render for one frame between the hover border and the focus ring and read as a
+     flicker; focus is this control's real "you are acting on me" state (mirrors lr-textarea's
+     identical reasoning for its own [part='textarea']). */
+  :host(:not([pending])) [part='args-editor']:hover {
+    border-color: var(--lr-tool-approval-dialog-hover-border-color, var(--lr-color-brand));
+  }
   [part='args-editor'][aria-invalid='true'] {
     border-color: var(--lr-tool-approval-dialog-invalid-border-color, var(--lr-color-danger));
   }

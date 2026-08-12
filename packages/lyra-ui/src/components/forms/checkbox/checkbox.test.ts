@@ -1167,6 +1167,19 @@ it('is accessible in an indeterminate, labeled state', async () => {
   await expect(el).to.be.accessible();
 });
 
+// The class doc's default @slot warning exists specifically because [part="base checkbox"] carries
+// role="checkbox" and wraps the label slot -- axe-core's nested-interactive rule forbids a
+// focusable descendant of that role, the same contract lr-conversation-item documents (and tests)
+// for its own meta/excerpt slots. A consumer who ignores that prose and slots a real focusable
+// control (e.g. a Terms-of-Service link) must actually trip the violation, or the documented
+// limitation is untested and could silently stop being true.
+it('a focusable element slotted into the default label trips axe nested-interactive', async () => {
+  const el = (await fixture(
+    html`<lr-checkbox>Accept the <a href="/terms">Terms of Service</a></lr-checkbox>`,
+  )) as LyraCheckbox;
+  await expect(el).to.not.be.accessible();
+});
+
 it('publishes --lr-checkbox-label-indent and drives the real label offset from it', async () => {
   const el = (await fixture(html`<lr-checkbox value="a">A</lr-checkbox>`)) as LyraCheckbox;
   await el.updateComplete;

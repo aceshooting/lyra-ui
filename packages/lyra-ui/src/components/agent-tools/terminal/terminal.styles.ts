@@ -41,6 +41,11 @@ export const styles = css`
   [part='download-button']:active {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
+  [part='copy-button']:focus-visible,
+  [part='download-button']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
   [part='viewport'] {
     position: relative;
     block-size: var(--lr-terminal-height, var(--lr-size-20rem));
@@ -64,6 +69,29 @@ export const styles = css`
     overflow-wrap: anywhere;
     padding-inline: var(--lr-space-s);
     line-height: var(--lr-line-height-normal);
+  }
+  /* Only an interactive (highlight-owning) line ever carries tabindex="0" -- see renderLine() in
+     terminal.class.ts -- so :focus-visible below already resolves to just those lines with no
+     extra scoping needed: a non-interactive line is never focusable in the first place. :hover
+     can't be scoped the same way -- every line shares this one part name, and ::part() forbids a
+     trailing attribute selector (see the renderItem note above), so this is a plain pointer-hover
+     preview across all lines rather than an attribute-gated one. Reuses the same
+     --lr-color-brand-quiet token as the toolbar buttons' own hover fill above: a toned highlight's
+     background is set inline via styleMap (see lineStateStyle()'s comment in terminal.class.ts) and
+     always wins specificity over this rule, so the two never visibly compete. */
+  lr-virtual-list::part(line):hover {
+    background: var(--lr-color-brand-quiet);
+  }
+  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
+     --lr-color-mix-partner, matching this file's own [part='copy-button']/[part='download-button']
+     :active pattern above -- a highlight-owning line is a real activatable target (renderLine()
+     wires @click/@keydown), not a passive hover-only preview. */
+  lr-virtual-list::part(line):active {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  lr-virtual-list::part(line):focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   :host(:not([wrap])) lr-virtual-list::part(line) {
     white-space: pre;
@@ -100,5 +128,9 @@ export const styles = css`
   }
   [part='jump-to-latest']:active {
     background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  [part='jump-to-latest']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
 `;

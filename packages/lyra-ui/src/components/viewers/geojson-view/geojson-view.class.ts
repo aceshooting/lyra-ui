@@ -11,7 +11,7 @@ import {
   resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { setMapCanvasReadyCallback } from '../../../internal/map-canvas-ready.js';
 import { loadMaplibre } from '../../media/map/map-loader.js';
 import {
@@ -472,7 +472,7 @@ export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
   }
 
   private get effectiveLabel(): string {
-    return this.getAttribute('aria-label') || this.name || this.localize('geojsonViewLabel');
+    return hostAriaLabel(this) ?? (this.name || this.localize('geojsonViewLabel'));
   }
 
   private featureCountStatus(featureCount: number): string {

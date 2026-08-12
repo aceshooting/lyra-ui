@@ -379,6 +379,26 @@ describe('aria-label forwarding', () => {
     expect(el.shadowRoot!.querySelector('lr-map')!.getAttribute('label')).to.equal('Host zones');
   });
 
+  it('preserves an explicit empty host aria-label on the base region instead of falling back to name', async () => {
+    const el = (await fixture(
+      html`<lr-geojson-view name="Named zones" aria-label=""></lr-geojson-view>`,
+    )) as LyraGeojsonView;
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.hasAttribute('aria-label')).to.be.true;
+    expect(base.getAttribute('aria-label')).to.equal('');
+  });
+
+  it('preserves an explicit empty host aria-label on the nested map label prop instead of falling back to name', async () => {
+    stubFetch(FEATURE_COLLECTION);
+    const el = (await fixture(
+      html`<lr-geojson-view name="Named zones" aria-label="" src=${GEOJSON_URL}></lr-geojson-view>`,
+    )) as LyraGeojsonView;
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-map') !== null, 'map branch never rendered', { timeout: 2000 });
+    const map = el.shadowRoot!.querySelector('lr-map')!;
+    expect(map.hasAttribute('label')).to.be.true;
+    expect(map.getAttribute('label')).to.equal('');
+  });
+
   it('keeps the outer region until the lazy map is ready, then makes its canvas the sole named region', async () => {
     stubFetch(FEATURE_COLLECTION);
     const el = (await fixture(

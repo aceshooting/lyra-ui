@@ -876,6 +876,11 @@ it('resets the native search-cancel glyph on the search field', () => {
   expect(css).to.match(/\[part='search'\]::-webkit-search-cancel-button/);
 });
 
+it('gives the emoji grid buttons a focus-visible ring, matching their existing hover/active feedback', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='emoji'\]:focus-visible\s*\{[^}]*outline:[^}]*outline-offset:[^}]*\}/);
+});
+
 describe('windowed geometry fallbacks', () => {
   it('falls back to the token-mirrored default geometry when the measurement probe is unavailable, ignoring any token override', async () => {
     const el = document.createElement('lr-emoji-picker') as LyraEmojiPicker;

@@ -220,6 +220,19 @@ function diamondPath(r: number): string {
   return `M 0 ${-d} L ${d} 0 L 0 ${d} L ${-d} 0 Z`;
 }
 
+/** Value equality for a controlled id-array prop (`selectedNodeIds`/`selectedLinkIds`). A host
+ *  that recomputes `.selectedNodeIds=${...}` inline on every render -- the ordinary, correct Lit
+ *  pattern for a controlled prop, e.g. `<lr-knowledge-graph-explorer>`'s own
+ *  `.selectedNodeIds=${this.selectedNodeId ? [this.selectedNodeId] : []}` -- hands down a fresh
+ *  array reference even when the actual selection hasn't changed. Lit's default reference-based
+ *  `changed.has()` can't tell that apart from a real change, so `willUpdate()` below compares
+ *  values here instead of trusting `changed.has()` alone before re-announcing the selection count. */
+function sameIds(a: readonly string[] | undefined, b: readonly string[] | undefined): boolean {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  return a.every((id, index) => id === b[index]);
+}
+
 export interface LyraGraphEventMap {
   'lr-node-click': CustomEvent<{ id: string; x: number; y: number }>;
   'lr-link-click': CustomEvent<{ source: string; target: string; id?: string }>;
@@ -1796,7 +1809,21 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // Same reasoning as rebuildSimulation() above -- assigning graphLiveText from updated() would
     // schedule a whole extra update pass instead of landing in the render this update is already
     // about to perform.
-    if ((changed.has('selectedNodeIds') || changed.has('selectedLinkIds')) && !wasMounting) {
+    //
+    // Compares values (via sameIds()), not just changed.has(): a host that recomputes
+    // `.selectedNodeIds=${...}`/`.selectedLinkIds=${...}` inline on every render (the ordinary,
+    // correct Lit pattern for a controlled prop) hands down a fresh array reference on every
+    // unrelated re-render even when the actual selection never changed. Trusting changed.has()
+    // alone re-announced "N selected" on every such re-render -- e.g. a live-region assertion
+    // count observably doubling whenever this graph's own initial d3 load had already settled
+    // (graphAnnouncementsReady) by the time an unrelated host re-render landed.
+    const selectedNodeIdsChanged =
+      changed.has('selectedNodeIds') &&
+      !sameIds(changed.get('selectedNodeIds') as string[] | undefined, this.selectedNodeIds);
+    const selectedLinkIdsChanged =
+      changed.has('selectedLinkIds') &&
+      !sameIds(changed.get('selectedLinkIds') as string[] | undefined, this.selectedLinkIds);
+    if ((selectedNodeIdsChanged || selectedLinkIdsChanged) && !wasMounting) {
       this.graphLiveText = this.localize('graphSelectionCount', undefined, {
         count: getNumberFormat(this.effectiveLocale).format(
           this.selectedNodeIds.length + this.selectedLinkIds.length,

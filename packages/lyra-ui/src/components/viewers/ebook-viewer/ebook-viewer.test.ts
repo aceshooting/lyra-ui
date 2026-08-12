@@ -200,6 +200,13 @@ describe('lr-ebook-viewer', () => {
     expect((el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement).disabled).to.be.true;
   });
 
+  it('preserves an explicitly empty host aria-label ahead of name on the region owner', async () => {
+    const el = (await fixture(html`<lr-ebook-viewer name="Named book" aria-label=""></lr-ebook-viewer>`)) as LyraEbookViewer;
+    const mount = el.shadowRoot!.querySelector('[part="mount"]')!;
+    expect(mount.hasAttribute('aria-label')).to.be.true;
+    expect(mount.getAttribute('aria-label')).to.equal('');
+  });
+
   it('gives the page-turn buttons the shared minimum hit area', async () => {
     const el = (await fixture(html`<lr-ebook-viewer></lr-ebook-viewer>`)) as LyraEbookViewer;
     const previous = el.shadowRoot!.querySelector('[part="previous-button"]') as HTMLElement;

@@ -11,7 +11,7 @@ import {
 } from '../../../internal/resource-loader.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { chevronIcon } from '../../../internal/icons.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { Announcer } from '../../../internal/announcer.js';
 import { announceSearchResult } from '../../../internal/viewer-search.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
@@ -727,7 +727,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
             <span part="next-icon" aria-hidden="true">${chevronIcon()}</span>
           </button>
         </div>
-        <div part="mount" role="region" aria-label=${this.accessibleLabel || this.name || this.localize('ebookViewerRegionLabel')} ${ref(this.mountRef)}></div>
+        <div part="mount" role="region" aria-label=${hostAriaLabel(this) ?? (this.name || this.localize('ebookViewerRegionLabel'))} ${ref(this.mountRef)}></div>
         ${this.renderStatus()}
         <div part="announcer" class="sr-only" aria-hidden="true"></div>
         ${this.renderAnchorLiveRegion()}

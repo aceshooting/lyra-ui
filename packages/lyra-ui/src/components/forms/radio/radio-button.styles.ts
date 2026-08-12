@@ -52,7 +52,15 @@ export const buttonChromeStyles = css`
     margin-inline-start: calc(-1 * var(--lr-border-width-thin));
   }
 
-  [part~='button']:hover {
+  /* :host(:not(:disabled)), not a bare selector -- the interactive element is a plain
+     <span role="radio"> that can never match :disabled itself, so without this guard a
+     disabled segment still visibly tinted on hover/press, contradicting its own
+     not-allowed cursor and reduced opacity. This is a form-associated custom element
+     (static formAssociated = true, inherited from LyraRadio), so the UA computes :disabled
+     the same way it does for a native control -- from the host's own disabled attribute or
+     an ancestor <fieldset disabled>'s cascade -- matching [part~='circle']'s guard in the
+     sibling radio.styles.ts exactly. */
+  :host(:not(:disabled)) [part~='button']:hover {
     background: var(--lr-radio-button-hover-bg, var(--lr-color-brand-quiet));
     border-color: var(--lr-radio-button-hover-border-color, var(--lr-color-brand));
   }
@@ -60,7 +68,7 @@ export const buttonChromeStyles = css`
      colour). This rule used to be byte-identical to the :hover above, which is a pressed state only
      on paper -- a segment that looks exactly the same held down as hovered tells the user nothing
      about whether their click landed. */
-  [part~='button']:active {
+  :host(:not(:disabled)) [part~='button']:active {
     background: var(--lr-radio-button-active-bg, color-mix(in oklab, var(--lr-radio-button-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
     border-color: var(--lr-radio-button-active-border-color, var(--lr-radio-button-hover-border-color, var(--lr-color-brand)));
   }
@@ -87,11 +95,11 @@ export const buttonChromeStyles = css`
      rules land on would read as a DESELECTION -- but it still has to move, and the press still has
      to out-read the hover. Both mix the loud fill toward --lr-color-mix-partner, which follows the
      text colour, so the on-brand label stays legible at either share. */
-  [part~='checked']:hover {
+  :host(:not(:disabled)) [part~='checked']:hover {
     background: var(--lr-radio-button-checked-hover-bg, color-mix(in oklab, var(--lr-radio-button-checked-bg, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
     border-color: var(--lr-radio-button-checked-hover-border-color, var(--lr-radio-button-checked-border-color, var(--lr-color-brand)));
   }
-  [part~='checked']:active {
+  :host(:not(:disabled)) [part~='checked']:active {
     background: var(--lr-radio-button-checked-active-bg, color-mix(in oklab, var(--lr-radio-button-checked-bg, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
     border-color: var(--lr-radio-button-checked-active-border-color, var(--lr-radio-button-checked-hover-border-color, var(--lr-radio-button-checked-border-color, var(--lr-color-brand))));
   }

@@ -9251,6 +9251,7 @@ export type LyraToolApprovalDialogSvelteProps = LyraSvelteElementProps<
   | 'lr-approve'
   | 'lr-close'
   | 'lr-deny',
+  | '--lr-tool-approval-dialog-hover-border-color'
   | '--lr-tool-approval-dialog-invalid-border-color'
   | '--lr-tool-approval-dialog-mono-font'
   | '--lr-tool-approval-dialog-overlay-color',

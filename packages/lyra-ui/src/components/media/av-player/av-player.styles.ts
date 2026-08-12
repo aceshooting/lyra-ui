@@ -85,6 +85,10 @@ export const styles = css`
     border-color: var(--lr-color-brand);
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
+  [part='timeline']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
   [part='timeline'] canvas {
     display: block;
     inline-size: 100%;

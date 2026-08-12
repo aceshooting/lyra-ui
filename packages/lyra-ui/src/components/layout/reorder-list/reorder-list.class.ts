@@ -2,13 +2,14 @@ import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
 import { property, query } from "lit/decorators.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { tag } from "../../../internal/prefix.js";
+import { hostAriaLabel } from "../../../internal/a11y.js";
 import type { LyraReorderItem } from "./reorder-item.class.js";
 import type { LyraLiveRegion } from "../../utility/live-region/live-region.class.js";
 import { getNumberFormat } from "../../../internal/intl-cache.js";
 import { styles } from "./reorder-list.styles.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_reorderItemMoved } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open, LYRA_DEFAULT_reorderItemMoved } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -70,6 +71,9 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    open: LYRA_DEFAULT_open,
     reorderItemMoved: LYRA_DEFAULT_reorderItemMoved,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -316,7 +320,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
       <div
         part="base"
         role="list"
-        aria-label=${this.getAttribute("aria-label") || this.label || nothing}
+        aria-label=${hostAriaLabel(this) ?? (this.label || nothing)}
         @lr-move-request=${this.onMoveRequest}
         @keydown=${this.onKeyDown}
       >
