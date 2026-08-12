@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil, oneEvent } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './media-card.js';
 import '../../conversation/chat-message/chat-message.js';
@@ -787,7 +787,14 @@ describe('active-state cssprops', () => {
     try {
       await sendMouse({ type: 'move', position: centerOf(target) });
       await sendMouse({ type: 'down' });
-      expect(target.matches(':active'), 'the physical pointer puts the card action in its active state').to.be.true;
+      // Polled, not asserted once: WebKit does not always have :active applied by the time the
+      // synthetic mousedown promise resolves (observed failing exactly here on the safari lane while
+      // passing on Chromium and Firefox in the same run). Same treatment slider.test.ts's thumb and
+      // time-range.test.ts's handle paint assertions already carry.
+      await waitUntil(
+        () => target.matches(':active'),
+        'the physical pointer puts the card action in its active state',
+      );
       const style = getComputedStyle(target);
       return { borderTopColor: style.borderTopColor, backgroundColor: style.backgroundColor };
     } finally {
