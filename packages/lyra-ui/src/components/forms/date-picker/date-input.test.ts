@@ -98,6 +98,18 @@ it('supports size="2xs": tighter padding/font-size than the default m tier', () 
   );
 });
 
+it('inherits the theme-wide form-control radius at a compact size tier', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-theme-form-control-radius: 17px">
+      <lr-date-input size="xs"></lr-date-input>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-date-input') as LyraDateInput;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+  expect(getComputedStyle(input).borderTopLeftRadius).to.equal('17px');
+});
+
 it('opens the calendar popover and commits a picked date at a non-default size, keeping the toggle buttons\' touch target', async () => {
   // Exercises the popup/toggle at a non-default size tier: the field's own
   // padding/font-size shrink under size="s", but positioning, keyboard

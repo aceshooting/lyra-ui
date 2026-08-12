@@ -22,7 +22,7 @@ export const styles = css`
        here rather than re-assigned per :host([size='…']) block -- mirrors lr-button's identical
        --lr-button-gap/--lr-button-radius. */
     --lr-combobox-gap: var(--lr-space-xs);
-    --lr-combobox-radius: var(--lr-radius);
+    --lr-combobox-radius: var(--lr-form-control-radius);
     /* --lr-combobox-trigger-height is intentionally NOT declared here. It is a consumer-facing
        escape hatch consumed only through the two var() fallbacks on [part='combobox'] below;
        declaring any value for it (even 'auto') would make those fallback arms unreachable and

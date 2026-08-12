@@ -26,6 +26,14 @@ describe('registerToolRenderer / getDefaultToolRendererRegistry', () => {
     expect(getDefaultToolRendererRegistry().get('get_weather')).to.equal(second);
     expect(getDefaultToolRendererRegistry().size).to.equal(1);
   });
+
+  it('allows direct callers to omit the optional render context', () => {
+    const def: ToolRendererDefinition = {
+      render: (result, args, context) => context === undefined ? `${String(result)}:${String(args)}` : 'contextual',
+    };
+
+    expect(def.render!('weather', 'Brussels')).to.equal('weather:Brussels');
+  });
 });
 
 describe('clearToolRenderers', () => {

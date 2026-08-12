@@ -138,7 +138,7 @@ export const Lifecycle: StoryObj = {
     docs: {
       description: {
         story:
-          'Opening emits `lr-show` (cancelable), then `lr-toggle`, then `lr-after-show`; closing mirrors it. The `animating` CSS state exists until that settled boundary. `await details.show()` and `await details.hide()` settle after the matching `lr-after-*` event. Because the native `<details>` toggle is intercepted, a vetoed `lr-show` cannot leave the panel visually expanded.',
+          'Opening emits `lr-show` (cancelable), then `lr-toggle`, then `lr-after-show`; closing mirrors it. The `lr-toggle` detail includes `source`: `user` for summary activation, `programmatic` for the API or `open`, and `peer` for a named sibling close. The `animating` CSS state exists until that settled boundary. `await details.show()` and `await details.hide()` settle after the matching `lr-after-*` event. Because the native `<details>` toggle is intercepted, a vetoed `lr-show` cannot leave the panel visually expanded.',
       },
     },
   },

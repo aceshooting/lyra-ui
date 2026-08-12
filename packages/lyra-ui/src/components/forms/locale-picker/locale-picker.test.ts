@@ -35,6 +35,17 @@ it('inherits public trigger geometry from an ancestor across a size tier', async
   expect(getComputedStyle(expand).minInlineSize).to.equal('22px');
 });
 
+it('inherits the theme-wide form-control radius at a compact size tier', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-theme-form-control-radius: 17px">
+      <lr-locale-picker size="xs" .locales=${['en', 'fr']}></lr-locale-picker>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-locale-picker') as LyraLocalePicker;
+  await el.updateComplete;
+  expect(getComputedStyle(trigger(el)).borderTopLeftRadius).to.equal('17px');
+});
+
 it('uses the scoped selected-option font weight inherited from an ancestor', async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div style="--lr-locale-picker-option-selected-font-weight: 350">

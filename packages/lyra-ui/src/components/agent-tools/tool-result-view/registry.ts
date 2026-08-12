@@ -68,11 +68,12 @@ export interface ToolRendererDefinition {
    *
    * The 3rd `context` argument (see `ToolRenderContext`) is a back-compat-preserving addition --
    * it's the last positional parameter, so every pre-existing 2-arg `render(result, args)`
-   * function stays assignable unchanged. Use `context.reportStatus()` to signal a non-throwing
+   * function stays assignable unchanged. Direct callers can omit it; use
+   * `context?.reportStatus()` to signal a non-throwing
    * failure (or any other `ToolResultStatus`) while still rendering real content, instead of
    * throwing and losing that content to the `<lr-json-viewer>` fallback.
    */
-  render?: (result: unknown, args: unknown, context: ToolRenderContext) => unknown;
+  render?: (result: unknown, args: unknown, context?: ToolRenderContext) => unknown;
   /** Facade/shape-based dispatch predicate -- see the module doc's dispatch order. */
   matches?: (payload: unknown) => boolean;
   /**

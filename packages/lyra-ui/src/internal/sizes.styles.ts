@@ -14,11 +14,11 @@ import { css } from 'lit';
 // `l` are the names the rest of this library already uses. Neither is normalised away in JS -- the
 // CSS simply matches both, so no component pays for the alias.
 //
-// The heights chain through `--lr-theme-form-control-height-*` like every other design value in the
-// library, so an application can compact the whole control scale from one place. Their defaults are
-// the scale `lr-button`, `lr-input`, `lr-select`, `lr-combobox` and `lr-date-input` already shared,
-// so a control of any of those types sits at the same height as its neighbours in a toolbar row at
-// every tier.
+// Heights chain through `--lr-theme-form-control-height-*` and corner radii through
+// `--lr-theme-form-control-radius`, so an application can retune the whole control scale from one
+// place. Their defaults are the scale `lr-button`, `lr-input`, `lr-select`, `lr-combobox` and
+// `lr-date-input` already shared, so a control of any of those types sits at the same height and
+// corner language as its neighbours in a toolbar row at every tier.
 export const sizes = css`
   :host {
     --lr-form-control-height-2xs: var(--lr-theme-form-control-height-2xs, 1.25rem);
@@ -35,21 +35,21 @@ export const sizes = css`
     --lr-form-control-padding-inline: var(--lr-space-m);
     --lr-form-control-padding-block: var(--lr-space-xs);
     --lr-form-control-gap: var(--lr-space-2xs);
-    --lr-form-control-radius: var(--lr-radius);
+    --lr-form-control-radius: var(--lr-theme-form-control-radius, var(--lr-radius));
   }
   :host([size='2xs']) {
     --lr-form-control-height: var(--lr-form-control-height-2xs);
     --lr-form-control-font-size: var(--lr-font-size-2xs);
     --lr-form-control-padding-inline: var(--lr-space-2xs);
     --lr-form-control-padding-block: 0;
-    --lr-form-control-radius: var(--lr-radius-xs);
+    --lr-form-control-radius: var(--lr-theme-form-control-radius, var(--lr-radius-xs));
   }
   :host([size='xs']) {
     --lr-form-control-height: var(--lr-form-control-height-xs);
     --lr-form-control-font-size: var(--lr-font-size-xs);
     --lr-form-control-padding-inline: var(--lr-space-xs);
     --lr-form-control-padding-block: 0;
-    --lr-form-control-radius: var(--lr-radius-xs);
+    --lr-form-control-radius: var(--lr-theme-form-control-radius, var(--lr-radius-xs));
   }
   :host([size='s']),
   :host([size='small']) {

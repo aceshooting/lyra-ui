@@ -206,7 +206,12 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     value: { attribute: false, noAccessor: true },
     defaultValue: {
       attribute: 'value',
-      reflect: true,
+      // The accessor owns reflection so an explicit empty default can remove the attribute
+      // synchronously, inside the property setter, before any update is scheduled. Reflecting it
+      // again from `updated()` (post-commit) mutates the attribute after Lit has already
+      // committed that same update, which schedules a further update and trips Lit's
+      // "scheduled an update after an update completed" warning under strict-console CI.
+      reflect: false,
       useDefault: true,
       noAccessor: true,
     },
@@ -703,11 +708,6 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
-    // `defaultValue` retains Lit reflection for the public manifest, while an
-    // explicit empty reset default follows native control semantics by removing
-    // `value` rather than leaving a misleading `value=""` attribute behind.
-    // This runs after Lit has reflected the changed property.
-    if (changed.has('defaultValue') && !this._defaultValue) this.syncDefaultValueAttribute();
     const reposition = changed.has('open') || (this.open && (changed.has('catalog') || changed.has('allowCustom')));
     if (reposition) {
       this.syncPopup();
@@ -958,9 +958,15 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     (this.renderRoot.querySelector('[part="combobox-input"]') as HTMLInputElement | null)?.focus();
   };
   private onInputFocus = (): void => {
+    // A programmatic mode-switch focus transfer (`updated()`'s `transferControlFocus` handling)
+    // fires this synchronously while `suppressControlEvents` is still true. Opening the popup and
+    // resetting `query` here are real property changes -- scheduling them as a side effect of the
+    // just-committed update trips Lit's dev-mode "scheduled an update after an update completed"
+    // warning under strict-console CI. A genuine user-driven focus never has this flag set.
+    if (this.suppressControlEvents) return;
     if (!this.open) this.query = this.labelFor(this.value);
     this.show();
-    if (!this.suppressControlEvents) this.emit('focus');
+    this.emit('focus');
   };
   private onInput = (e: Event): void => {
     this.query = (e.target as HTMLInputElement).value;

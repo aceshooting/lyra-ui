@@ -90,14 +90,15 @@ this same module-level registry unless a given `<lr-tool-result-view>`'s `regist
 set to a different `Map` instance.
 
 **`ToolRendererDefinition`** — the shape of one registered renderer:
-- `render?: (result: unknown, args: unknown, context: ToolRenderContext) => unknown` — renders the
+- `render?: (result: unknown, args: unknown, context?: ToolRenderContext) => unknown` — renders the
   result (and the args that produced it) as UI. Typed as `unknown` rather than Lit's
   `TemplateResult` so any lit-html-renderable value works (a plain string, a DOM node, an array of
   templates) — consumers already own their own Lit import and don't need this module to add one.
   The 3rd `context` argument is additive: it's the *last* positional parameter, so a pre-existing
   2-arg `render(result, args)` function stays assignable to this type unchanged — JS/TS function
   assignability allows an implementation with fewer parameters than its declared type. Use
-  `context.reportStatus(status)` (see `ToolRenderContext` below) to signal a non-throwing outcome
+  Direct callers may omit `context`; component invocations always provide it. Use
+  `context?.reportStatus(status)` (see `ToolRenderContext` below) to signal a non-throwing outcome
   — e.g. an application-level failure the renderer still drew real UI for — instead of throwing,
   which discards that UI for the `<lr-json-viewer>` fallback instead
 - `matches?: (payload: unknown) => boolean` — facade/shape-based dispatch predicate, consulted only

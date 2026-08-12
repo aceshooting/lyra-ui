@@ -2138,7 +2138,7 @@
           },
           {
             "name": "lr-toggle",
-            "type": "CustomEvent<{ open: boolean }>",
+            "type": "CustomEvent<LyraDetailsToggleDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -34745,7 +34745,7 @@
           },
           {
             "name": "lr-toggle",
-            "type": "CustomEvent<{ open: boolean }>",
+            "type": "CustomEvent<LyraDetailsToggleDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -102837,7 +102837,7 @@
             "name": "--lr-swatch-picker-fill-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-size-1-5rem)"
+            "default": "var(--lr-theme-swatch-picker-fill-size, var(--lr-size-1-5rem))"
           },
           {
             "name": "--lr-swatch-picker-gap",
@@ -120286,7 +120286,7 @@
             "name": "value",
             "property": "defaultValue",
             "type": "string",
-            "reflects": true,
+            "reflects": false,
             "inferred": false,
             "deprecated": null,
             "hasDefault": false
@@ -120356,7 +120356,7 @@
             "attribute": "value",
             "type": "string",
             "readonly": false,
-            "reflects": true,
+            "reflects": false,
             "deprecated": null,
             "hasDefault": false
           },

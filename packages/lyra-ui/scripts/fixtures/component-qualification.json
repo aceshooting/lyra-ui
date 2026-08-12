@@ -9599,21 +9599,21 @@
             },
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 1504,
+              "line": 1516,
               "test": "is accessible while showing the loading state (async source pending)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 1567,
+              "line": 1579,
               "test": "is accessible while showing the empty state (no matching rows)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 2851,
+              "line": 2863,
               "test": "is accessible with adornments slotted and the listbox open",
               "target": "el",
               "state": "open"
@@ -9638,7 +9638,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 2822,
+              "line": 2834,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -12357,28 +12357,28 @@
           "evidence": [
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 2377,
+              "line": 2389,
               "test": "exposes validationTarget/resetValidity and is accessible while open and populated",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 316,
+              "line": 328,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 1450,
+              "line": 1462,
               "test": "is accessible with adornments slotted",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 1566,
+              "line": 1578,
               "test": "stays accessible with a pinned exact control height",
               "target": "el",
               "state": "populated"
@@ -12392,7 +12392,7 @@
           "evidence": [
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 243,
+              "line": 255,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -12403,7 +12403,7 @@
           "evidence": [
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 1437,
+              "line": 1449,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -12414,7 +12414,7 @@
           "evidence": [
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 684,
+              "line": 696,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -12425,7 +12425,7 @@
           "evidence": [
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 2784,
+              "line": 2796,
               "kind": "320px allocation test signal"
             }
           ]
@@ -12581,7 +12581,7 @@
           "evidence": [
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 243,
+              "line": 255,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -12592,7 +12592,7 @@
           "evidence": [
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 1437,
+              "line": 1449,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -12603,7 +12603,7 @@
           "evidence": [
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 684,
+              "line": 696,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -12614,7 +12614,7 @@
           "evidence": [
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 2784,
+              "line": 2796,
               "kind": "320px allocation test signal"
             }
           ]
@@ -12742,14 +12742,14 @@
             },
             {
               "file": "src/components/layout/details/details.test.ts",
-              "line": 760,
+              "line": 785,
               "test": "is accessible with custom icons, grouping, and a populated open panel",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/layout/details/details.test.ts",
-              "line": 632,
+              "line": 657,
               "test": "stays accessible and keyboard-operable at the smallest tier",
               "target": "el",
               "state": "populated"
@@ -24821,14 +24821,14 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.test.ts",
-              "line": 473,
+              "line": 484,
               "test": "is accessible while open",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/locale-picker/locale-picker.test.ts",
-              "line": 466,
+              "line": 477,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -24842,7 +24842,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.test.ts",
-              "line": 377,
+              "line": 388,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -24853,7 +24853,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.test.ts",
-              "line": 489,
+              "line": 500,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -28917,7 +28917,7 @@
             },
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 2851,
+              "line": 2863,
               "test": "is accessible with adornments slotted and the listbox open",
               "target": "el",
               "state": "open"
@@ -28949,7 +28949,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 2822,
+              "line": 2834,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -33120,14 +33120,14 @@
           "evidence": [
             {
               "file": "src/components/media/qr-code/qr-code.test.ts",
-              "line": 756,
+              "line": 771,
               "test": "is accessible in the ready state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/qr-code/qr-code.test.ts",
-              "line": 767,
+              "line": 782,
               "test": "is accessible in the error state",
               "target": "el",
               "state": "populated"
@@ -33159,7 +33159,7 @@
           "evidence": [
             {
               "file": "src/components/media/qr-code/qr-code.test.ts",
-              "line": 948,
+              "line": 963,
               "kind": "320px allocation test signal"
             }
           ]
@@ -41600,14 +41600,14 @@
           "evidence": [
             {
               "file": "src/components/forms/swatch-picker/swatch-picker.test.ts",
-              "line": 453,
+              "line": 482,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/swatch-picker/swatch-picker.test.ts",
-              "line": 460,
+              "line": 489,
               "test": "is accessible when nothing is selected",
               "target": "el",
               "state": "populated"
@@ -41643,7 +41643,7 @@
           "evidence": [
             {
               "file": "src/components/forms/swatch-picker/swatch-picker.test.ts",
-              "line": 446,
+              "line": 475,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -48674,7 +48674,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/voice-picker/voice-picker.test.ts",
-              "line": 937,
+              "line": 958,
               "kind": "component keyboard assertion signal"
             }
           ]

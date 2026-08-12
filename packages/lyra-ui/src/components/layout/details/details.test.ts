@@ -457,6 +457,31 @@ describe("unified show/hide lifecycle", () => {
     expect(order).to.deep.equal(["lr-hide", "lr-toggle", "lr-after-hide"]);
   });
 
+  it("reports whether an accepted toggle came from a user, API call, or named peer", async () => {
+    const el = (await fixture(html`<lr-details summary="More">Content</lr-details>`)) as LyraDetails;
+    const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
+
+    const userToggle = oneEvent(el, 'lr-toggle') as Promise<CustomEvent<{ open: boolean; source: string }>>;
+    summary.click();
+    expect((await userToggle).detail).to.deep.equal({ open: true, source: 'user' });
+
+    const apiToggle = oneEvent(el, 'lr-toggle') as Promise<CustomEvent<{ open: boolean; source: string }>>;
+    await el.hide();
+    expect((await apiToggle).detail).to.deep.equal({ open: false, source: 'programmatic' });
+
+    const pair = await fixture<HTMLElement>(html`
+      <div>
+        <lr-details name="answers" summary="First" open>First panel</lr-details>
+        <lr-details name="answers" summary="Second">Second panel</lr-details>
+      </div>
+    `);
+    const [first, second] = [...pair.querySelectorAll('lr-details')] as LyraDetails[];
+    await Promise.all([first.updateComplete, second.updateComplete]);
+    const peerToggle = oneEvent(first, 'lr-toggle') as Promise<CustomEvent<{ open: boolean; source: string }>>;
+    await second.show();
+    expect((await peerToggle).detail).to.deep.equal({ open: false, source: 'peer' });
+  });
+
   it("honours a vetoed lr-show from the summary click, leaving the native details closed", async () => {
     const el = (await fixture(
       html`<lr-details summary="More">Content</lr-details>`

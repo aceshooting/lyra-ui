@@ -34,7 +34,7 @@ export const styles = css`
     --lr-swatch-picker-gemstone-selected-blur: var(--lr-size-0-5rem);
     --lr-swatch-picker-gemstone-shine-duration: var(--lr-transition-ambient);
     --lr-swatch-picker-hit-size: var(--lr-size-2-5rem);
-    --lr-swatch-picker-fill-size: var(--lr-size-1-5rem);
+    --lr-swatch-picker-fill-size: var(--lr-theme-swatch-picker-fill-size, var(--lr-size-1-5rem));
     --lr-swatch-picker-gap: var(--lr-space-xs);
   }
   /* A swatch is a square tap target in a wrapping grid, not a form-control row, so this is the
@@ -44,25 +44,25 @@ export const styles = css`
      internal/sizes.styles.ts does, so size="small" is honoured here too. */
   :host([size='2xs']) {
     --lr-swatch-picker-hit-size: var(--lr-size-1-5rem);
-    --lr-swatch-picker-fill-size: var(--lr-size-0-75rem);
+    --lr-swatch-picker-fill-size: var(--lr-theme-swatch-picker-fill-size, var(--lr-size-0-75rem));
   }
   :host([size='xs']) {
     --lr-swatch-picker-hit-size: var(--lr-size-1-75rem);
-    --lr-swatch-picker-fill-size: var(--lr-size-1rem);
+    --lr-swatch-picker-fill-size: var(--lr-theme-swatch-picker-fill-size, var(--lr-size-1rem));
   }
   :host([size='s']),
   :host([size='small']) {
     --lr-swatch-picker-hit-size: var(--lr-size-2rem);
-    --lr-swatch-picker-fill-size: var(--lr-size-1-25rem);
+    --lr-swatch-picker-fill-size: var(--lr-theme-swatch-picker-fill-size, var(--lr-size-1-25rem));
   }
   :host([size='l']),
   :host([size='large']) {
     --lr-swatch-picker-hit-size: var(--lr-size-3rem);
-    --lr-swatch-picker-fill-size: var(--lr-size-1-75rem);
+    --lr-swatch-picker-fill-size: var(--lr-theme-swatch-picker-fill-size, var(--lr-size-1-75rem));
   }
   :host([size='xl']) {
     --lr-swatch-picker-hit-size: var(--lr-size-3-5rem);
-    --lr-swatch-picker-fill-size: var(--lr-size-2rem);
+    --lr-swatch-picker-fill-size: var(--lr-theme-swatch-picker-fill-size, var(--lr-size-2rem));
   }
   :host([mode='gemstone']) {
     --lr-swatch-picker-selected-blur: var(--lr-swatch-picker-gemstone-selected-blur);

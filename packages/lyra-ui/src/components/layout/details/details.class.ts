@@ -20,13 +20,20 @@ export type LyraDetailsSize = LyraSize;
 export type LyraDetailsAppearance = Exclude<LyraAppearance, 'accent'>;
 /** Logical position of the disclosure icon. */
 export type LyraDetailsIconPlacement = 'start' | 'end';
+/** How an accepted disclosure transition began. */
+export type LyraDetailsToggleSource = 'user' | 'programmatic' | 'peer';
+/** Payload emitted with `lr-toggle` after an accepted disclosure transition renders. */
+export interface LyraDetailsToggleDetail {
+  open: boolean;
+  source: LyraDetailsToggleSource;
+}
 
 export interface LyraDetailsEventMap {
   'lr-show': CustomEvent<undefined>;
   'lr-after-show': CustomEvent<undefined>;
   'lr-hide': CustomEvent<undefined>;
   'lr-after-hide': CustomEvent<undefined>;
-  'lr-toggle': CustomEvent<{ open: boolean }>;
+  'lr-toggle': CustomEvent<LyraDetailsToggleDetail>;
 }
 
 /**
@@ -53,9 +60,11 @@ export interface LyraDetailsEventMap {
  * @event lr-after-show - The panel is open and its marker transition has finished.
  * @event lr-hide - The panel is about to close. Cancelable.
  * @event lr-after-hide - The panel is closed and its marker transition has finished.
- * @event lr-toggle - The disclosure state changed. `detail: { open }`. Kept alongside the four
- *   events above because it is the single event that reports which way the panel went, which
- *   `<lr-accordion>` uses to close the siblings of a newly-opened panel.
+ * @event lr-toggle - The disclosure state changed. `detail: { open, source }`, where `source` is
+ *   `user` for summary activation, `programmatic` for `show()`/`hide()`/`open`, or `peer` when a
+ *   named disclosure closes this panel. Kept alongside the four events above because it is the
+ *   single event that reports which way the panel went, which `<lr-accordion>` uses to close the
+ *   siblings of a newly-opened panel.
  * @csspart base - Compatibility name for the native details wrapper; use `details`.
  * @csspart details - The native details wrapper. It is the same node as `base`.
  * @csspart header - The summary-row layout wrapper.
@@ -181,6 +190,10 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
   /** Expand the panel. The promise resolves after `lr-after-show`; vetoed or disabled requests
    *  resolve without changing state. */
   async show(): Promise<void> {
+    await this.showWithSource('programmatic');
+  }
+
+  private async showWithSource(source: LyraDetailsToggleSource): Promise<void> {
     if (this._open || this.disabled) return;
     if (this.emit('lr-show', undefined, { cancelable: true }).defaultPrevented) {
       this.syncOpenAttribute();
@@ -191,19 +204,23 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
       return;
     }
     this.applyOpenState(true);
-    await this.settleTransition('lr-after-show');
+    await this.settleTransition('lr-after-show', source);
   }
 
   /** Collapse the panel. The promise resolves after `lr-after-hide`; vetoed requests resolve
    *  without changing state. */
   async hide(): Promise<void> {
+    await this.hideWithSource('programmatic');
+  }
+
+  private async hideWithSource(source: LyraDetailsToggleSource): Promise<void> {
     if (!this._open) return;
     if (this.emit('lr-hide', undefined, { cancelable: true }).defaultPrevented) {
       this.syncOpenAttribute();
       return;
     }
     this.applyOpenState(false);
-    await this.settleTransition('lr-after-hide');
+    await this.settleTransition('lr-after-hide', source);
   }
 
   /** Close open peers that share this non-empty name. A custom element's internal native
@@ -221,7 +238,7 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
         candidate.name === this.name &&
         candidate.open
       ) {
-        void candidate.hide();
+        void candidate.hideWithSource('peer');
         // hide() applies accepted state synchronously before its Promise waits for motion. If a
         // peer vetoes lr-hide it is still open here, so this disclosure must not create a
         // two-open group behind the consumer's back.
@@ -243,7 +260,10 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
     this.toggleAttribute('open', this._open);
   }
 
-  private async settleTransition(event: 'lr-after-show' | 'lr-after-hide'): Promise<void> {
+  private async settleTransition(
+    event: 'lr-after-show' | 'lr-after-hide',
+    source: LyraDetailsToggleSource,
+  ): Promise<void> {
     const token = ++this.transitionToken;
     setCustomState(this.detailsInternals, 'animating', true);
     try {
@@ -255,7 +275,7 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
       // update mid-update. Emitting once the disclosure has actually rendered keeps the historical
       // timing (it used to ride the native <details> toggle event) while preserving the documented
       // lr-show -> lr-toggle -> lr-after-show ordering.
-      this.emit('lr-toggle', { open: this._open });
+      this.emit('lr-toggle', { open: this._open, source });
       if (this.isConnected) {
         const view = this.ownerDocument.defaultView;
         if (view) await new Promise<void>((resolve) => view.requestAnimationFrame(() => resolve()));
@@ -300,8 +320,8 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
       event.stopPropagation();
       return;
     }
-    if (this._open) void this.hide();
-    else void this.show();
+    if (this._open) void this.hideWithSource('user');
+    else void this.showWithSource('user');
   };
 
   // Safety net only: the click default action is cancelled above, so the native element toggles

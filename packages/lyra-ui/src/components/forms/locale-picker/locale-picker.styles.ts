@@ -13,7 +13,7 @@ export const styles = css`
     --_lr-locale-picker-font-size-default: var(--lr-form-control-font-size);
     --_lr-locale-picker-expand-size-default: var(--lr-size-1-75rem);
     --_lr-locale-picker-gap-default: var(--lr-space-xs);
-    --_lr-locale-picker-radius-default: var(--lr-radius);
+    --_lr-locale-picker-radius-default: var(--lr-form-control-radius);
     /* --lr-locale-picker-trigger-height is intentionally NOT declared here -- see lr-select's
        identical convention: it is a consumer-facing escape hatch consumed only through the
        var() fallback on [part='trigger'] below, so leaving it genuinely undeclared keeps that

@@ -3674,7 +3674,10 @@ what is specific to it.
   attribute rewrite. One ladder now drives `lr-button`, `lr-input`, `lr-select`, `lr-combobox`,
   `lr-date-input`, `lr-textarea`, `lr-checkbox`, `lr-radio`, `lr-switch` and `lr-slider`, so
   same-`size` controls line up in a toolbar row by construction. Retune a whole tier from one place
-  with `--lr-theme-form-control-height-*` rather than per component.
+  with `--lr-theme-form-control-height-*` rather than per component. Set
+  `--lr-theme-form-control-radius` on the same ancestor to give these controls one shared corner
+  radius across every tier; without it, the compact `2xs`/`xs` tiers retain their smaller default
+  radius.
 - **`appearance` is the fill vocabulary and nothing else.** `accent` (the loud semantic fill),
   `filled` (a quiet tint of the same tone), `outlined` (a border, no fill), `filled-outlined`
   (both) and `plain` (neither). It used to double as a _container_ treatment on other components;
@@ -4547,7 +4550,8 @@ for a looping brighten-and-settle pulse on the selected swatch. It drives a sepa
 works identically for a fill and an icon; disabled outright under `prefers-reduced-motion: reduce`,
 which also drops the hover/selection scale transition), `--lr-swatch-picker-hit-size` (hit-area
 size, swapped per `size` tier), `--lr-swatch-picker-fill-size` (visible fill/icon diameter, swapped
-per `size` tier), `--lr-swatch-picker-gemstone-selected-blur` (default `--lr-size-0-5rem` in
+per `size` tier; set `--lr-theme-swatch-picker-fill-size` on an ancestor for a shared default
+across every tier), `--lr-swatch-picker-gemstone-selected-blur` (default `--lr-size-0-5rem` in
 gemstone mode), `--lr-swatch-picker-gemstone-shine-duration` (default `1.8s` in gemstone mode);
 plus shared tokens — `--lr-color-border`/`-brand`, `--lr-space-xs`,
 `--lr-border-width-thin`/`-thick`, `--lr-radius`, `--lr-transition-fast`, `--lr-focus-ring-*`,
@@ -12123,11 +12127,14 @@ invariant.
 
 The Details events `lr-show` and `lr-hide` have no detail payload and are cancelable; preventing
 either leaves the panel in its previous state. Accepted changes emit `lr-toggle` with
-`detail: { open }`, then the non-cancelable `lr-after-show` or `lr-after-hide` once rendering and
-motion settle. The full orders are `lr-show` → `lr-toggle` → `lr-after-show` and `lr-hide` →
-`lr-toggle` → `lr-after-hide`. Initially open markup emits nothing, and an interrupted transition
-drops its stale after-event. The `animating` CSS custom state is present only between an accepted
-state change and that settled boundary, and is cleared when the element disconnects.
+`detail: { open, source }`, then the non-cancelable `lr-after-show` or `lr-after-hide` once
+rendering and motion settle. `source` is `user` for a summary click or keyboard activation,
+`programmatic` for `show()`, `hide()`, or assigning `open`, and `peer` when another Details with
+the same non-empty `name` closes this one. The full orders are `lr-show` → `lr-toggle` →
+`lr-after-show` and `lr-hide` → `lr-toggle` → `lr-after-hide`. Initially open markup emits
+nothing, and an interrupted transition drops its stale after-event. The `animating` CSS custom
+state is present only between an accepted state change and that settled boundary, and is cleared
+when the element disconnects.
 
 **Keyboard:** each direct enabled accordion item contributes one heading button. Exactly one is in
 the tab order; ArrowDown/ArrowUp move cyclically, horizontal arrows provide the same next/previous
@@ -20456,6 +20463,16 @@ produced HTML in a single pass (no second DOM walk after insertion).
 If an instance disconnects and reconnects before that shared promise settles, only the current
 connection applies the result and reparses; the stale connection callback is generation-guarded.
 
+To warm that shared cache before the first Markdown instance connects, await the stable public
+entry point. This keeps the default lazy behavior for apps that do not need it, while letting a
+route or startup boundary make an `eager-load` instance render from an already-settled cache:
+
+```ts
+import { preloadMarkdown } from '@aceshooting/lyra-ui/components/lr-markdown.js';
+
+await preloadMarkdown();
+```
+
 Fenced code blocks are also syntax-highlighted via the same optional `shiki` peer `<lr-code-block>`
 uses, gated by `highlightCode` (default `true`). This is a pure upgrade, not a separate opt-in: it's
 already transparently gated by whether `shiki` is installed at all, so an app that never installs the
@@ -23710,14 +23727,15 @@ this same module-level registry unless a given `<lr-tool-result-view>`'s `regist
 set to a different `Map` instance.
 
 **`ToolRendererDefinition`** — the shape of one registered renderer:
-- `render?: (result: unknown, args: unknown, context: ToolRenderContext) => unknown` — renders the
+- `render?: (result: unknown, args: unknown, context?: ToolRenderContext) => unknown` — renders the
   result (and the args that produced it) as UI. Typed as `unknown` rather than Lit's
   `TemplateResult` so any lit-html-renderable value works (a plain string, a DOM node, an array of
   templates) — consumers already own their own Lit import and don't need this module to add one.
   The 3rd `context` argument is additive: it's the *last* positional parameter, so a pre-existing
   2-arg `render(result, args)` function stays assignable to this type unchanged — JS/TS function
   assignability allows an implementation with fewer parameters than its declared type. Use
-  `context.reportStatus(status)` (see `ToolRenderContext` below) to signal a non-throwing outcome
+  Direct callers may omit `context`; component invocations always provide it. Use
+  `context?.reportStatus(status)` (see `ToolRenderContext` below) to signal a non-throwing outcome
   — e.g. an application-level failure the renderer still drew real UI for — instead of throwing,
   which discards that UI for the `<lr-json-viewer>` fallback instead
 - `matches?: (payload: unknown) => boolean` — facade/shape-based dispatch predicate, consulted only

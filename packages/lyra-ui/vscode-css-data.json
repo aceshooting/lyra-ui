@@ -9763,7 +9763,7 @@
       "name": "--lr-swatch-picker-fill-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-swatch-picker>`** (default: `var(--lr-size-1-5rem)`) — Visible fill/icon diameter for the swatch, swapped per tier."
+        "value": "**`<lr-swatch-picker>`** (default: `var(--lr-theme-swatch-picker-fill-size, var(--lr-size-1-5rem))`) — Visible fill/icon diameter for the swatch, swapped per tier. Set `--lr-theme-swatch-picker-fill-size` on an ancestor to give every tier a shared default."
       }
     },
     {

@@ -2923,11 +2923,14 @@ invariant.
 
 The Details events `lr-show` and `lr-hide` have no detail payload and are cancelable; preventing
 either leaves the panel in its previous state. Accepted changes emit `lr-toggle` with
-`detail: { open }`, then the non-cancelable `lr-after-show` or `lr-after-hide` once rendering and
-motion settle. The full orders are `lr-show` → `lr-toggle` → `lr-after-show` and `lr-hide` →
-`lr-toggle` → `lr-after-hide`. Initially open markup emits nothing, and an interrupted transition
-drops its stale after-event. The `animating` CSS custom state is present only between an accepted
-state change and that settled boundary, and is cleared when the element disconnects.
+`detail: { open, source }`, then the non-cancelable `lr-after-show` or `lr-after-hide` once
+rendering and motion settle. `source` is `user` for a summary click or keyboard activation,
+`programmatic` for `show()`, `hide()`, or assigning `open`, and `peer` when another Details with
+the same non-empty `name` closes this one. The full orders are `lr-show` → `lr-toggle` →
+`lr-after-show` and `lr-hide` → `lr-toggle` → `lr-after-hide`. Initially open markup emits
+nothing, and an interrupted transition drops its stale after-event. The `animating` CSS custom
+state is present only between an accepted state change and that settled boundary, and is cleared
+when the element disconnects.
 
 **Keyboard:** each direct enabled accordion item contributes one heading button. Exactly one is in
 the tab order; ArrowDown/ArrowUp move cyclically, horizontal arrows provide the same next/previous

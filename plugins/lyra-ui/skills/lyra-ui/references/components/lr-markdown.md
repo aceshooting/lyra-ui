@@ -26,6 +26,16 @@ produced HTML in a single pass (no second DOM walk after insertion).
 If an instance disconnects and reconnects before that shared promise settles, only the current
 connection applies the result and reparses; the stale connection callback is generation-guarded.
 
+To warm that shared cache before the first Markdown instance connects, await the stable public
+entry point. This keeps the default lazy behavior for apps that do not need it, while letting a
+route or startup boundary make an `eager-load` instance render from an already-settled cache:
+
+```ts
+import { preloadMarkdown } from '@aceshooting/lyra-ui/components/lr-markdown.js';
+
+await preloadMarkdown();
+```
+
 Fenced code blocks are also syntax-highlighted via the same optional `shiki` peer `<lr-code-block>`
 uses, gated by `highlightCode` (default `true`). This is a pure upgrade, not a separate opt-in: it's
 already transparently gated by whether `shiki` is installed at all, so an app that never installs the

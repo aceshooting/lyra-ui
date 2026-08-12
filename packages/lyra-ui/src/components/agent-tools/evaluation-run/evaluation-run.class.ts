@@ -402,7 +402,7 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
         part="example"
         data-status=${kind}
         .open=${expanded}
-        @lr-toggle=${(e: CustomEvent<{ open: boolean }>) => this.onExampleToggle(example.id, e)}
+        @lr-toggle=${(e: LyraDetailsEventMap['lr-toggle']) => this.onExampleToggle(example.id, e)}
       >
         <span slot="summary" part="example-summary">
           <span part="example-label">${this.exampleLabel(example, index)}</span>

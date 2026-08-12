@@ -1,5 +1,6 @@
 import { expect } from '@open-wc/testing';
 import { loadMarkdownDeps, loadMarkdownAndSanitizer, getMarkdownDepsIfLoaded } from './markdown-loader.js';
+import { preloadMarkdown } from './markdown.js';
 
 class UsableMarked {
   readonly defaults: Record<string, unknown> = {};
@@ -25,6 +26,10 @@ it('caches the module — a second call returns the same promise result', async 
   const a = await loadMarkdownDeps();
   const b = await loadMarkdownDeps();
   expect(a).to.equal(b);
+});
+
+it('exports preloadMarkdown as the stable public cache-warming entry point', () => {
+  expect(preloadMarkdown).to.equal(loadMarkdownDeps);
 });
 
 it('getMarkdownDepsIfLoaded() returns the same resolved deps synchronously once loadMarkdownDeps() has settled', async () => {

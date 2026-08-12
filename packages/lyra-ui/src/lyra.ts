@@ -837,7 +837,11 @@ export type { AlertCountdown, AlertVariant, LyraAlertEventMap } from './componen
 export { LyraCallout } from './components/overlays/callout/callout.class.js';
 export type { CalloutVariant, LyraCalloutEventMap } from './components/overlays/callout/callout.class.js';
 export { LyraDetails } from './components/layout/details/details.class.js';
-export type { LyraDetailsEventMap } from './components/layout/details/details.class.js';
+export type {
+  LyraDetailsEventMap,
+  LyraDetailsToggleDetail,
+  LyraDetailsToggleSource,
+} from './components/layout/details/details.class.js';
 export { LyraAccordion } from './components/layout/details/accordion.class.js';
 export type { LyraAccordionEventMap } from './components/layout/details/accordion.class.js';
 export { LyraAccordionItem } from './components/layout/details/accordion-item.class.js';

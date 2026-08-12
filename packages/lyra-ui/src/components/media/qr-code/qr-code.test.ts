@@ -45,8 +45,23 @@ async function waitForPart(el: LyraQrCode, part: string): Promise<void> {
 
 describe('lr-qr-code', () => {
   it('preloads the optional QR peer without generating a code', async () => {
-    const loaded = await LyraQrCode.preload();
-    expect(typeof loaded).to.equal('boolean');
+    // `preload()` always goes through the real, non-injectable module-level `loadQrCodeCached()`
+    // (unlike every other test here, which overrides the per-instance `loadLibrary` seam) --
+    // by design, since its whole purpose is priming the actual peer for a real application.
+    // `qrcode` is a genuine multi-file CommonJS package with no single-file browser bundle
+    // (qr-code-loader.test.ts's own skipped "caches the real optional module result" test
+    // documents the same gap), so this test browser cannot resolve it and the loader's documented
+    // fail-closed `console.warn()` fires -- exactly the behavior under test, not a bug. Stub
+    // `console.warn` locally (matching qr-code-loader.test.ts's "returns null and logs the import
+    // error" pattern) so that expected warning doesn't trip strict-console mode.
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    try {
+      const loaded = await LyraQrCode.preload();
+      expect(typeof loaded).to.equal('boolean');
+    } finally {
+      console.warn = originalWarn;
+    }
   });
 
   it('defaults value/label/size/radius/errorCorrection to their documented values', async () => {

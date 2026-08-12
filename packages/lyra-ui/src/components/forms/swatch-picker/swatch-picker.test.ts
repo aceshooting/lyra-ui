@@ -341,6 +341,35 @@ describe('lr-swatch-picker', () => {
     expect(getComputedStyle(fill).blockSize).to.equal('24px');
   });
 
+  it('inherits a theme-wide fill size while retaining its compact size tier', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="--lr-theme-swatch-picker-fill-size: 19px">
+        <lr-swatch-picker size="xs" .options=${options()} value="blue"></lr-swatch-picker>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-swatch-picker') as LyraSwatchPicker;
+    await el.updateComplete;
+    const fill = swatches(el)[0]!.querySelector('[part="swatch-fill"]') as HTMLElement;
+    expect(getComputedStyle(fill).inlineSize).to.equal('19px');
+  });
+
+  it('lets an explicit component fill size override the inherited theme default', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="--lr-theme-swatch-picker-fill-size: 19px">
+        <lr-swatch-picker
+          size="xs"
+          style="--lr-swatch-picker-fill-size: 13px"
+          .options=${options()}
+          value="blue"
+        ></lr-swatch-picker>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-swatch-picker') as LyraSwatchPicker;
+    await el.updateComplete;
+    const fill = swatches(el)[0]!.querySelector('[part="swatch-fill"]') as HTMLElement;
+    expect(getComputedStyle(fill).inlineSize).to.equal('13px');
+  });
+
   it('draws the selected ring through the --lr-swatch-picker-selected-color token', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     // The ring lives on [part='swatch-fill'], a descendant of the checked [part='swatch'] -- split

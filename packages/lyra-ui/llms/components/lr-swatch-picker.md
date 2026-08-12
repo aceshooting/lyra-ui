@@ -70,7 +70,8 @@ for a looping brighten-and-settle pulse on the selected swatch. It drives a sepa
 works identically for a fill and an icon; disabled outright under `prefers-reduced-motion: reduce`,
 which also drops the hover/selection scale transition), `--lr-swatch-picker-hit-size` (hit-area
 size, swapped per `size` tier), `--lr-swatch-picker-fill-size` (visible fill/icon diameter, swapped
-per `size` tier), `--lr-swatch-picker-gemstone-selected-blur` (default `--lr-size-0-5rem` in
+per `size` tier; set `--lr-theme-swatch-picker-fill-size` on an ancestor for a shared default
+across every tier), `--lr-swatch-picker-gemstone-selected-blur` (default `--lr-size-0-5rem` in
 gemstone mode), `--lr-swatch-picker-gemstone-shine-duration` (default `1.8s` in gemstone mode);
 plus shared tokens — `--lr-color-border`/`-brand`, `--lr-space-xs`,
 `--lr-border-width-thin`/`-thick`, `--lr-radius`, `--lr-transition-fast`, `--lr-focus-ring-*`,

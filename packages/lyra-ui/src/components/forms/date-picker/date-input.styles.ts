@@ -8,7 +8,7 @@ export const styles = css`
     --lr-date-input-padding-inline: var(--lr-space-s);
     --lr-date-input-font-size: inherit;
     --lr-date-input-gap: var(--lr-space-xs);
-    --lr-date-input-radius: var(--lr-radius);
+    --lr-date-input-radius: var(--lr-form-control-radius);
     /* Per-tier minimum block size of the input row, reusing lr-input's own min-height scale
        values. This does NOT make the two controls height-matched at a given size, and nothing here
        should be read as promising that: [part='input-wrapper'] has no min-block-size of its own,

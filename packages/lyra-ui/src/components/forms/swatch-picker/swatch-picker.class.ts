@@ -75,8 +75,9 @@ export interface LyraSwatchPickerEventMap {
  *   `mode="gemstone"` when `--lr-swatch-picker-shine-duration` is not overridden.
  * @cssprop [--lr-swatch-picker-hit-size=var(--lr-size-2-5rem)] - Hit-area size (both
  *   min-inline-size and min-block-size) for the swatch button, swapped per tier and floored at 24px.
- * @cssprop [--lr-swatch-picker-fill-size=var(--lr-size-1-5rem)] - Visible fill/icon diameter
- *   for the swatch, swapped per tier.
+ * @cssprop [--lr-swatch-picker-fill-size=var(--lr-theme-swatch-picker-fill-size, var(--lr-size-1-5rem))] - Visible
+ *   fill/icon diameter for the swatch, swapped per tier. Set `--lr-theme-swatch-picker-fill-size`
+ *   on an ancestor to give every tier a shared default.
  * @cssprop [--lr-swatch-picker-gap=var(--lr-space-xs)] - Gap between swatches.
  * @status stable
  * @since 4.0.0

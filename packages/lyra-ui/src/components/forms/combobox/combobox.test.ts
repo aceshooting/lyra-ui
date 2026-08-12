@@ -750,12 +750,24 @@ it('uses the shared disabled-opacity token for the disabled host and disabled op
   expect(getComputedStyle(disabledOption).opacity).to.equal('0.5');
 });
 
-it('exposes --lr-combobox-gap and --lr-combobox-radius, defaulting to the pre-existing literals', async () => {
+it('exposes --lr-combobox-gap and --lr-combobox-radius, defaulting to the shared form-control ladder', async () => {
   const el = (await fixture(basic())) as LyraCombobox;
   const combobox = el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
   const cs = getComputedStyle(combobox);
   expect(cs.gap).to.equal('4px');
   expect(cs.borderRadius).to.equal('6px');
+});
+
+it('inherits the theme-wide form-control radius at a compact size tier', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-theme-form-control-radius: 17px">
+      <lr-combobox size="xs"><lr-option value="a">Apple</lr-option></lr-combobox>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-combobox') as LyraCombobox;
+  await el.updateComplete;
+  const combobox = el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
+  expect(getComputedStyle(combobox).borderTopLeftRadius).to.equal('17px');
 });
 
 it('retunes the trigger gap and corner radius with no ::part(combobox) rule', async () => {
@@ -772,7 +784,7 @@ it('retunes the trigger gap and corner radius with no ::part(combobox) rule', as
 it('declares --lr-combobox-gap/--lr-combobox-radius on :host and consumes them once on [part="combobox"]', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/:host \{[^}]*--lr-combobox-gap: var\(--lr-space-xs\);/);
-  expect(css).to.match(/:host \{[^}]*--lr-combobox-radius: var\(--lr-radius\);/);
+  expect(css).to.match(/:host \{[^}]*--lr-combobox-radius: var\(--lr-form-control-radius\);/);
   expect(css).to.include('gap: var(--lr-combobox-gap);');
   expect(css).to.include('border-radius: var(--lr-combobox-radius);');
 });

@@ -81,7 +81,7 @@ export const contextualSizes = css`
     --lr-form-control-padding-inline: var(--lr-space-2xs);
     --lr-form-control-padding-block: 0;
     --lr-form-control-gap: var(--lr-space-2xs);
-    --lr-form-control-radius: var(--lr-radius-xs);
+    --lr-form-control-radius: var(--lr-theme-form-control-radius, var(--lr-radius-xs));
   }
   :host([size='xs']) {
     --lr-form-control-height: var(
@@ -92,7 +92,7 @@ export const contextualSizes = css`
     --lr-form-control-padding-inline: var(--lr-space-xs);
     --lr-form-control-padding-block: 0;
     --lr-form-control-gap: var(--lr-space-2xs);
-    --lr-form-control-radius: var(--lr-radius-xs);
+    --lr-form-control-radius: var(--lr-theme-form-control-radius, var(--lr-radius-xs));
   }
   :host([size='s']),
   :host([size='small']) {
@@ -104,7 +104,7 @@ export const contextualSizes = css`
     --lr-form-control-padding-inline: var(--lr-space-s);
     --lr-form-control-padding-block: var(--lr-space-2xs);
     --lr-form-control-gap: var(--lr-space-2xs);
-    --lr-form-control-radius: var(--lr-radius);
+    --lr-form-control-radius: var(--lr-theme-form-control-radius, var(--lr-radius));
   }
   :host([size='m']),
   :host([size='medium']) {
@@ -116,7 +116,7 @@ export const contextualSizes = css`
     --lr-form-control-padding-inline: var(--lr-space-m);
     --lr-form-control-padding-block: var(--lr-space-xs);
     --lr-form-control-gap: var(--lr-space-2xs);
-    --lr-form-control-radius: var(--lr-radius);
+    --lr-form-control-radius: var(--lr-theme-form-control-radius, var(--lr-radius));
   }
   :host([size='l']),
   :host([size='large']) {
@@ -128,7 +128,7 @@ export const contextualSizes = css`
     --lr-form-control-padding-inline: var(--lr-space-l);
     --lr-form-control-padding-block: var(--lr-space-s);
     --lr-form-control-gap: var(--lr-space-2xs);
-    --lr-form-control-radius: var(--lr-radius);
+    --lr-form-control-radius: var(--lr-theme-form-control-radius, var(--lr-radius));
   }
   :host([size='xl']) {
     --lr-form-control-height: var(
@@ -139,6 +139,6 @@ export const contextualSizes = css`
     --lr-form-control-padding-inline: var(--lr-space-l);
     --lr-form-control-padding-block: var(--lr-space-s);
     --lr-form-control-gap: var(--lr-space-2xs);
-    --lr-form-control-radius: var(--lr-radius);
+    --lr-form-control-radius: var(--lr-theme-form-control-radius, var(--lr-radius));
   }
 `;

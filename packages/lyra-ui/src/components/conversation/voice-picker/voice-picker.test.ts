@@ -808,6 +808,27 @@ it('normalizes a nullish defaultValue write and clears the reflected default for
   expect(el.hasAttribute('value')).to.be.false;
 });
 
+it('mounting with no initial value never schedules an update after the first update completes', async () => {
+  // `defaultValue` uses `useDefault: true`, which marks it "changed" on the component's very
+  // first update even when no consumer ever assigned it. A post-commit `updated()` correction
+  // that mutates the `value` attribute for that default empty case would fire on every ordinary
+  // mount and trip Lit's "scheduled an update after an update completed" warning -- exactly the
+  // failure `WTR_STRICT_CONSOLE=1` (the CI/full-engine config) turns into a hard test failure.
+  const originalWarn = console.warn;
+  const calls: unknown[][] = [];
+  console.warn = (...args: unknown[]) => calls.push(args);
+  try {
+    const el = (await fixture(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
+    await el.updateComplete;
+    // Give any wrongly-scheduled follow-up update a full microtask/task turn to actually fire.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(el.hasAttribute('value')).to.be.false;
+    expect(calls.flat().join(' ')).to.not.contain('scheduled an update');
+  } finally {
+    console.warn = originalWarn;
+  }
+});
+
 // -- disabled setter / effectiveDisabled guards -----------------------------
 
 it('the disabled setter toggles the attribute and closes an open dropdown', async () => {

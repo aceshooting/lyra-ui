@@ -227,7 +227,10 @@ what is specific to it.
   attribute rewrite. One ladder now drives `lr-button`, `lr-input`, `lr-select`, `lr-combobox`,
   `lr-date-input`, `lr-textarea`, `lr-checkbox`, `lr-radio`, `lr-switch` and `lr-slider`, so
   same-`size` controls line up in a toolbar row by construction. Retune a whole tier from one place
-  with `--lr-theme-form-control-height-*` rather than per component.
+  with `--lr-theme-form-control-height-*` rather than per component. Set
+  `--lr-theme-form-control-radius` on the same ancestor to give these controls one shared corner
+  radius across every tier; without it, the compact `2xs`/`xs` tiers retain their smaller default
+  radius.
 - **`appearance` is the fill vocabulary and nothing else.** `accent` (the loud semantic fill),
   `filled` (a quiet tint of the same tone), `outlined` (a border, no fill), `filled-outlined`
   (both) and `plain` (neither). It used to double as a _container_ treatment on other components;
