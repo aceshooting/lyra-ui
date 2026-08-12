@@ -77,7 +77,16 @@ it('bounds retained live Ranges while still counting and navigating every match'
     const viewer = (await fixture(
       html`<lr-email-viewer src="https://example.test/message.eml"></lr-email-viewer>`,
     )) as HTMLElement & LyraTextViewerTarget;
-    await waitUntil(() => viewer.shadowRoot!.querySelector('[part="body"]') !== null);
+    // Margined past waitUntil's 1000ms default on purpose: this fixture parses and renders a
+    // 400-sentence message, which comfortably fits 1s in isolation but not always while the full
+    // 460-file suite runs in parallel lanes on a loaded machine (observed timing out there on
+    // Firefox, then passing standalone). Real timers with a margined threshold is this repo's
+    // convention -- @sinonjs/fake-timers does not work under wtr.
+    await waitUntil(
+      () => viewer.shadowRoot!.querySelector('[part="body"]') !== null,
+      'the email viewer never rendered its body',
+      { timeout: 5000 },
+    );
 
     // 'the' twice per sentence * 400 sentences; the subject/headers add none.
     const total = await viewer.search('the');

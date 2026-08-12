@@ -220,11 +220,18 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
    *  deliberately not the forwarding target. */
   override focus(options?: FocusOptions): void {
     this.iframe?.focus(options);
+    // Emitted here as well as from the native listener, de-duplicated by `hasEmittedFocus`, because
+    // Firefox dispatches NO focus/focusin on an <iframe> element for a programmatic focus() -- it
+    // moves focus into the frame's own document instead. Chromium/WebKit fire the native event
+    // synchronously inside the call above, so the flag is already set by the time this runs and this
+    // call is a no-op there; on Firefox it is the only thing that emits.
+    this.emitHostFocus();
   }
 
   /** Blur the internal iframe. */
   override blur(): void {
     this.iframe?.blur();
+    this.emitHostBlur();
   }
 
   /** Activate the internal iframe, so a host-level `.click()` is not a silent no-op. */
@@ -232,14 +239,41 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     this.iframe?.click();
   }
 
+  // Bound to focusin/focusout rather than focus/blur. Firefox does not dispatch focus/blur on an
+  // <iframe> ELEMENT for a programmatic .focus()/.blur() (verified: the element becomes
+  // shadowRoot.activeElement, but no focus event fires), so a focus/blur binding re-dispatched
+  // nothing there while working in Chromium -- the host focus/blur contract silently did not exist
+  // on one engine. focusin/focusout are dispatched for the iframe in all three engines. They also
+  // bubble, which is why stopPropagation() below still matters: it keeps the internal event from
+  // escaping the shadow boundary alongside the component's own re-dispatched one.
+  /** Whether a host-level `focus` has been emitted without a matching `blur` yet. Guarantees the
+   *  re-dispatched pair stays balanced when both the native listener and the overridden method fire
+   *  for one focus change (Chromium/WebKit) and when only one of them does (Firefox). */
+  private hasEmittedFocus = false;
+
+  private emitHostFocus(): void {
+    if (this.hasEmittedFocus) return;
+    this.hasEmittedFocus = true;
+    this.emit('focus');
+  }
+
+  private emitHostBlur(): void {
+    if (!this.hasEmittedFocus) return;
+    this.hasEmittedFocus = false;
+    this.emit('blur');
+  }
+
+  // Bound to focusin/focusout rather than focus/blur: these bubble, so they also catch focus that
+  // lands via user interaction rather than the overridden methods above. stopPropagation() keeps
+  // the internal event from escaping the shadow boundary alongside our own re-dispatched one.
   private onFrameFocus = (event: FocusEvent): void => {
     event.stopPropagation();
-    this.emit('focus');
+    this.emitHostFocus();
   };
 
   private onFrameBlur = (event: FocusEvent): void => {
     event.stopPropagation();
-    this.emit('blur');
+    this.emitHostBlur();
   };
 
   private navigationGeneration = 0;
@@ -274,6 +308,9 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   override disconnectedCallback(): void {
     this.navigationGeneration++;
     this.needsReconnectFrame = true;
+    // Transient focus state, reset like every other open-state flag: a disconnected host is not
+    // focused, and leaving this set would swallow the next genuine `focus` after a reconnect.
+    this.hasEmittedFocus = false;
     this.lyraThemeObserver?.disconnect();
     this.lyraThemeObserver = undefined;
     this.resetThemeSyncState();
@@ -603,8 +640,8 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
       style="--lr-zoomable-frame-zoom: ${zoom}"
       @load=${(event: Event) => this.onFrameEvent('load', event, generation, navigationSignature)}
       @error=${(event: Event) => this.onFrameEvent('error', event, generation, navigationSignature)}
-      @focus=${this.onFrameFocus}
-      @blur=${this.onFrameBlur}
+      @focusin=${this.onFrameFocus}
+      @focusout=${this.onFrameBlur}
     ></iframe>`;
     return html`${keyed(generation, frame)}${this.renderControls()}`;
   }
