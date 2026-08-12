@@ -69,8 +69,8 @@ export const styles = css`
      should show, letting the canvas's own painted glyphs remain the visible text underneath.
      ::part() already matches on part~= semantics, so the active match's two-name part list is
      reached by naming each part separately. */
-  lr-virtual-list::part(search-match) { background: var(--lr-color-warning-quiet); color: transparent; border-radius: var(--lr-radius-xs); }
-  lr-virtual-list::part(search-match-active) { background: var(--lr-color-warning); }
+  lr-virtual-list::part(search-match) { background: var(--lr-pdf-viewer-search-match-bg, var(--lr-color-warning-quiet)); color: transparent; border-radius: var(--lr-radius-xs); }
+  lr-virtual-list::part(search-match-active) { background: var(--lr-pdf-viewer-search-match-active-bg, var(--lr-color-warning)); }
   .empty-note, [part='error'] { margin: 0; padding: var(--lr-space-l); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-md-sm); text-align: center; }
   [part='error'] { color: var(--lr-color-danger); }
   [part='spinner'] { display: flex; justify-content: center; padding: var(--lr-space-l); }

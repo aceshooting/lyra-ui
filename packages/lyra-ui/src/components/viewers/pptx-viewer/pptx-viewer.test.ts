@@ -89,6 +89,11 @@ describe('lr-pptx-viewer', () => {
     await expect(el).to.be.accessible();
   });
 
+  it('applies max-height to the base custom property', async () => {
+    const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer max-height="32rem"></lr-pptx-viewer>`);
+    expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).style.getPropertyValue('--lr-pptx-viewer-max-height')).to.equal('32rem');
+  });
+
   it('keeps the nested loading skeleton out of the viewer live-region contract', async () => {
     const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-busy')).to.equal('false');
@@ -555,4 +560,16 @@ it('registers a application/vnd.openxmlformats-officedocument.presentationml.pre
     name: 'Deck.PPTX', mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', src: 'https://example.test/f',
   })}</div>`)) as HTMLElement;
   expect(host.querySelector('lr-pptx-viewer'), 'render() produces the viewer element').to.exist;
+});
+
+it('validates maxHeight before assigning the base custom property', async () => {
+  const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+  el.maxHeight = '10rem;position:fixed';
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.style.position).to.equal('');
+  expect(base.style.getPropertyValue('--lr-pptx-viewer-max-height')).to.equal('');
+  el.maxHeight = 'calc(10rem + 2px)';
+  await el.updateComplete;
+  expect(base.style.getPropertyValue('--lr-pptx-viewer-max-height')).to.equal('calc(10rem + 2px)');
 });

@@ -2646,6 +2646,53 @@ describe('virtualized page part styling', () => {
     }
   });
 
+  it('lets --lr-pdf-viewer-search-match-bg/-active-bg override the default warning-token fills', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer
+      style="--lr-pdf-viewer-search-match-bg: rgb(11, 22, 33); --lr-pdf-viewer-search-match-active-bg: rgb(44, 55, 66);"
+    ></lr-pdf-viewer>`)) as LyraPdfViewer;
+    // Single span, no trailing whitespace nodes: keeps the DOM and getPageText() coordinate spaces
+    // aligned so both matches provably paint (same fixture as the default-token test above).
+    class SingleSpanTextLayer {
+      constructor(private options: { container: HTMLElement }) {}
+      render(): Promise<void> {
+        const span = document.createElement('span');
+        span.textContent = 'aabaab';
+        this.options.container.appendChild(span);
+        return Promise.resolve();
+      }
+      cancel(): void {}
+    }
+    const doc = {
+      numPages: 1,
+      getPage: (pageNumber: number) =>
+        Promise.resolve({
+          ...fakePage(pageNumber),
+          getTextContent: () => Promise.resolve({ items: [{ str: 'aabaab', hasEOL: false }] }),
+        }),
+    };
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
+      getDocument: () => ({ promise: Promise.resolve(doc) }),
+      GlobalWorkerOptions: { workerSrc: '' },
+      TextLayer: SingleSpanTextLayer,
+    });
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      expect(await el.search('aab')).to.equal(2);
+      await el.updateComplete;
+      const root = listShadowRoot(el);
+      const marks = Array.from(root.querySelectorAll<HTMLElement>('mark[part~="search-match"]'));
+      expect(marks.length).to.equal(2);
+      const active = root.querySelector('mark[part~="search-match-active"]') as HTMLElement;
+      const inactive = marks.find((mark) => !mark.getAttribute('part')!.includes('search-match-active'))!;
+      expect(getComputedStyle(inactive).backgroundColor).to.equal('rgb(11, 22, 33)');
+      expect(getComputedStyle(active).backgroundColor).to.equal('rgb(44, 55, 66)');
+    } finally {
+      restore();
+    }
+  });
+
   it('mirrors the text layer offset under RTL', async () => {
     const ltr = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
     installFakeLoader(ltr, fakeDocument(1));

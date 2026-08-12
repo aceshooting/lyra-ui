@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { createRef, ref, type Ref } from 'lit/directives/ref.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   isAbortError,
@@ -12,6 +13,7 @@ import {
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { Announcer } from '../../../internal/announcer.js';
 import { announceSearchResult } from '../../../internal/viewer-search.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
@@ -132,6 +134,8 @@ class LyraEbookViewerBase extends LyraElement<LyraEbookViewerEventMap> {}
  *   document-level assertive region.
  * @csspart announcer - The aria-hidden shadow-tree mirror retained for styling compatibility;
  *   search announcements are appended to the shared document-level polite region.
+ * @cssprop [--lr-ebook-viewer-max-height=none] - Maximum block size of the mount area epub.js
+ *   renders into, before it scrolls internally. Also settable via the `max-height` property.
  * @status stable
  * @since 4.0.0
  */
@@ -172,6 +176,10 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   @property() name = '';
   /** Host `aria-label` override for the internal reading region. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
+
+  /** A CSS `max-height` that caps the mount area epub.js renders into; invalid values are
+   *  ignored. */
+  @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** A CFI or spine href identifying the current reading position. Set before the book has
    *  finished loading, it's recorded and applied via `rendition.display()` once loading
@@ -718,7 +726,13 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   override render(): TemplateResult {
     const disabled = this.ebookState.kind !== 'ready';
     return html`
-      <div part="base" aria-busy=${this.ebookState.kind === 'loading' ? 'true' : 'false'}>
+      <div
+        part="base"
+        aria-busy=${this.ebookState.kind === 'loading' ? 'true' : 'false'}
+        style=${sanitizeCssLength(this.maxHeight)
+          ? styleMap({ '--lr-ebook-viewer-max-height': sanitizeCssLength(this.maxHeight)! })
+          : nothing}
+      >
         <div part="toolbar">
           <button part="previous-button" type="button" aria-label=${this.localize('ebookViewerPreviousChapter')} ?disabled=${disabled} @click=${this.previous}>
             <span part="previous-icon" aria-hidden="true">${chevronIcon()}</span>

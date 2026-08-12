@@ -1794,11 +1794,26 @@ records. Dangling citation ids are ignored rather than rendered as invented evid
 `status: 'supported' | 'partially-supported' | 'unsupported' | 'contradicted'`. Claim confidence
 is clamped to 0–1 for localized percent display. `Citation` is the shared AI citation record
 (`id`, source/chunk ids, label, locator/ranges, quote, metadata).
+- `compact: boolean = false` (reflected) — tighter `claim-trigger` padding and column gap, for dense
+  evidence lists — the same convention as `lr-source-card`'s/`lr-entity-card`'s `compact`. Purely a
+  density knob: each claim's border and background stay. `false` (the default) keeps the full
+  claim-trigger padding.
+- `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
+  vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps each claim's bordered, filled box;
+  `'plain'` removes the border, background, and corner radius from every `claim` row, so claims
+  nested inside an already-bordered container don't double the frame. `plain` wins over `compact`
+  when both are set — nothing left to tighten.
 
 **Events:** `lr-claim-select` (`{ claim }`), `lr-citation-select` (`{ citation }`).
 
 **CSS parts:** `base`, `list`, `claim`, `claim-selected`, `claim-trigger`, `status`, `claim-text`,
 `confidence`, `explanation`, `evidence`, `empty`.
+
+**Themeable custom properties:** `--lr-claim-evidence-compact-padding` (default
+`var(--lr-space-xs)`) — `[part='claim-trigger']`'s padding while `compact`;
+`--lr-claim-evidence-compact-gap` (default `var(--lr-space-xs)`) — the gap between
+`[part='claim-trigger']`'s columns while `compact`. Both apply only in the `compact` state.
+Otherwise shared tokens only.
 
 Selection is controlled: activation emits the complete claim but does not assign
 `selectedClaimId`. Evidence preserves `citations` order and silently skips dangling ids.
@@ -1828,6 +1843,10 @@ trace metadata, and `scores?: { dense?, sparse?, rerank?, final }`.
 Chunks are ordered by effective rank, then score, then input order before the top-k slice. Overlap
 is pairwise Jaccard similarity across those visible chunk ids. Selection is controlled.
 **Slots:** none. **Optional peer deps:** none.
+
+**Themeable custom properties:** `--lr-retrieval-compare-selected-border` (default
+`var(--lr-color-brand)`) — the border color marking a selected `[part~="chunk-selected"]` row, the
+same escape-hatch pattern as `lr-retrieval-results`'s `--lr-retrieval-results-selected-border`.
 
 ```ts
 import '@aceshooting/lyra-ui/components/retrieval/retrieval-compare/retrieval-compare.js';

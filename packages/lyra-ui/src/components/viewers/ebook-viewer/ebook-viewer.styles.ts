@@ -3,6 +3,7 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    --lr-ebook-viewer-max-height: none;
   }
   [part='base'] {
     display: flex;
@@ -68,6 +69,7 @@ export const styles = css`
   [part='mount'] {
     flex: 1 1 auto;
     min-block-size: var(--lr-size-10rem);
+    max-block-size: var(--lr-ebook-viewer-max-height);
     overflow: hidden;
   }
   [part='mount'] iframe {

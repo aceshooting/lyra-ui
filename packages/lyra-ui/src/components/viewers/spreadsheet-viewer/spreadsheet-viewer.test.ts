@@ -145,6 +145,18 @@ describe('lr-spreadsheet-viewer', () => {
     expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No document to display.');
   });
 
+  it('defaults --lr-spreadsheet-viewer-max-height to none, leaving the body unconstrained', async () => {
+    const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+    expect(el.maxHeight).to.equal('');
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    expect(getComputedStyle(body).maxBlockSize).to.equal('none');
+  });
+
+  it('applies max-height as a custom property on the base part', async () => {
+    const el = (await fixture(html`<lr-spreadsheet-viewer max-height="20rem"></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+    expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).style.getPropertyValue('--lr-spreadsheet-viewer-max-height')).to.equal('20rem');
+  });
+
   it('never scrolls vertically on the sheet wrapper -- overflow-x:auto alone lets the y axis compute to auto too, which can show a phantom scrollbar', async () => {
     // Same bug/fix as lr-tab-group: pinning only overflow-x to a non-'visible' value forces the browser
     // to resolve the unset y axis to 'auto' too (never leaves it 'visible'), risking a phantom empty
@@ -886,6 +898,17 @@ describe('lr-spreadsheet-viewer', () => {
       } finally { restore(); }
     });
 
+    it('lets --lr-spreadsheet-viewer-highlight-outline-offset override the default outline offset', async () => {
+      const el = (await fixture(
+        html`<lr-spreadsheet-viewer style="--lr-spreadsheet-viewer-highlight-outline-offset: 4px;"></lr-spreadsheet-viewer>`,
+      )) as LyraSpreadsheetViewer;
+      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
+      try {
+        const { highlighted } = await mountHighlighted(el);
+        expect(getComputedStyle(highlighted).outlineOffset).to.equal('4px');
+      } finally { restore(); }
+    });
+
     it('tints the active highlight apart from an inactive one', async () => {
       injectStyle('lr-spreadsheet-viewer { --lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-warning-fill-loud: rgb(4, 5, 6); }');
       const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
@@ -961,6 +984,18 @@ describe('lr-spreadsheet-viewer', () => {
       }
     });
   });
+});
+
+it('validates maxHeight before assigning the base custom property', async () => {
+  const el = await fixture<LyraSpreadsheetViewer>(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`);
+  el.maxHeight = '10rem;position:fixed';
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.style.position).to.equal('');
+  expect(base.style.getPropertyValue('--lr-spreadsheet-viewer-max-height')).to.equal('');
+  el.maxHeight = 'calc(10rem + 2px)';
+  await el.updateComplete;
+  expect(base.style.getPropertyValue('--lr-spreadsheet-viewer-max-height')).to.equal('calc(10rem + 2px)');
 });
 
 // -- Document-renderer registry entry ---------------------------------------

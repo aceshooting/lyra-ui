@@ -1,4 +1,4 @@
-import { fixture, expect, html, elementUpdated } from '@open-wc/testing';
+import { fixture, expect, html, elementUpdated, waitUntil } from '@open-wc/testing';
 import './slider.js';
 import type { LyraSlider } from './slider.js';
 import { styles } from './slider.styles.js';
@@ -51,9 +51,19 @@ it('themes slider thumb rest, hover, and pressed paint through component hooks',
       type: 'move',
       position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
     });
-    expect(getComputedStyle(thumb).boxShadow).to.contain('rgb(7, 8, 9)');
+    // A single synchronous read right after sendMouse resolves can race a still-settling
+    // :hover/:active recalculation under CI load (real, observed cross-run flake on this exact
+    // assertion) -- poll instead of snapshotting once, mirroring menu.test.ts's identical
+    // waitUntil(() => getComputedStyle(...)) pattern for a transitioning visual state.
+    await waitUntil(
+      () => getComputedStyle(thumb).boxShadow.includes('rgb(7, 8, 9)'),
+      'hover ring never painted',
+    );
     await sendMouse({ type: 'down' });
-    expect(getComputedStyle(thumb).boxShadow).to.contain('rgb(10, 11, 12)');
+    await waitUntil(
+      () => getComputedStyle(thumb).boxShadow.includes('rgb(10, 11, 12)'),
+      'active ring never painted',
+    );
   } finally {
     await sendMouse({ type: 'up' });
     await resetMouse();

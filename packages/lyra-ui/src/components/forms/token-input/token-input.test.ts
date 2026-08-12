@@ -1861,3 +1861,59 @@ it('renders the required marker from the shared themeable rule, not a literal sp
   await el.updateComplete;
   expect(getComputedStyle(label, '::after').content).to.not.contain('*');
 });
+
+describe('start/end adornment slots', () => {
+  const part = (el: LyraTokenInput, name: string) =>
+    el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
+
+  it('renders a slotted glyph in the start wrapper, before the tokens', async () => {
+    const el = (await fixture(html`
+      <lr-token-input .value=${['alpha']}>
+        <svg slot="start" width="12" height="12" aria-hidden="true">
+          <circle cx="6" cy="6" r="5"></circle>
+        </svg>
+      </lr-token-input>
+    `)) as LyraTokenInput;
+    await el.updateComplete;
+    const start = part(el, 'start');
+    expect(start.hasAttribute('hidden')).to.be.false;
+    const startRect = start.getBoundingClientRect();
+    const tokenRect = (el.shadowRoot!.querySelector('[part="token"]') as HTMLElement).getBoundingClientRect();
+    expect(startRect.width).to.be.greaterThan(0);
+    expect(startRect.right).to.be.at.most(tokenRect.left + 1);
+  });
+
+  it('renders the end wrapper after the draft input', async () => {
+    const el = (await fixture(html`
+      <lr-token-input>
+        <kbd slot="end">K</kbd>
+      </lr-token-input>
+    `)) as LyraTokenInput;
+    await el.updateComplete;
+    const end = part(el, 'end');
+    expect(end.hasAttribute('hidden')).to.be.false;
+    const input = el.shadowRoot!.querySelector('#input') as HTMLElement;
+    expect(end.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_PRECEDING).to.be.greaterThan(0);
+  });
+
+  it('hides both wrappers when nothing is slotted', async () => {
+    const el = (await fixture(html`<lr-token-input></lr-token-input>`)) as LyraTokenInput;
+    await el.updateComplete;
+    expect(part(el, 'start').hasAttribute('hidden')).to.be.true;
+    expect(part(el, 'end').hasAttribute('hidden')).to.be.true;
+    expect(getComputedStyle(part(el, 'start')).display).to.equal('none');
+    expect(getComputedStyle(part(el, 'end')).display).to.equal('none');
+  });
+
+  it('reveals the start wrapper when adornment content is slotted in after first render', async () => {
+    const el = (await fixture(html`<lr-token-input></lr-token-input>`)) as LyraTokenInput;
+    expect(part(el, 'start').hasAttribute('hidden')).to.be.true;
+    const glyph = document.createElement('span');
+    glyph.slot = 'start';
+    glyph.textContent = '*';
+    el.append(glyph);
+    await el.updateComplete;
+    await el.updateComplete;
+    expect(part(el, 'start').hasAttribute('hidden')).to.be.false;
+  });
+});

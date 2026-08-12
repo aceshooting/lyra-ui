@@ -272,6 +272,10 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  *   toolbar buttons. Defaults to the surface fill rather than the toolbar's own tint so the hover
  *   state is actually visible against it.
  *   Also settable via the `max-height` property.
+ * @cssprop [--lr-pdf-viewer-search-match-bg=var(--lr-color-warning-quiet)] - Background of a
+ *   painted, non-active search match.
+ * @cssprop [--lr-pdf-viewer-search-match-active-bg=var(--lr-color-warning)] - Background of the
+ *   currently active search match.
  * @status stable
  * @since 4.0.0
  */

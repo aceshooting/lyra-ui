@@ -9,6 +9,7 @@ import type {
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import type { LyraFrame } from '../../../internal/variants.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 import '../../overlays/badge/badge.class.js';
 import '../../overlays/empty/empty.class.js';
@@ -51,6 +52,10 @@ const STATUS_VARIANT: Record<GroundedClaimStatus, BadgeVariant> = {
  * @csspart explanation - Caller-supplied assessment explanation.
  * @csspart evidence - Resolved evidence citations for one claim.
  * @csspart empty - The empty state.
+ * @cssprop [--lr-claim-evidence-compact-padding=var(--lr-space-xs)] - `[part="claim-trigger"]`
+ * padding while `compact`.
+ * @cssprop [--lr-claim-evidence-compact-gap=var(--lr-space-xs)] - Gap between `[part="claim-trigger"]`'s
+ * columns while `compact`.
  * @status stable
  * @since 7.0.0
  */
@@ -78,6 +83,17 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
   @property({ attribute: false }) citations: Citation[] = [];
   @property({ attribute: 'selected-claim-id' }) selectedClaimId = '';
   @property() label = '';
+  /** Tighter claim-trigger padding and column gap, for dense evidence lists -- same convention as
+   *  `lr-source-card`'s/`lr-entity-card`'s `compact`. Defaults to `false`, i.e. the full
+   *  claim-trigger padding. Purely a density knob: each claim's border and background stay, so use
+   *  `frame="plain"` to drop the chrome entirely. */
+  @property({ type: Boolean, reflect: true }) compact = false;
+  /** Container treatment, in the shared `LyraFrame` vocabulary. `'card'` (the default) keeps each
+   *  claim's bordered, filled box. `'plain'` removes the border, background, and corner radius from
+   *  every `[part~="claim"]` row, so claims nested inside an already-bordered container (e.g. a
+   *  wider audit panel) don't double the frame. `plain` wins over `compact` when both are set
+   *  (nothing left to tighten). */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   private statusLabel(status: GroundedClaimStatus): string {
     switch (status) {

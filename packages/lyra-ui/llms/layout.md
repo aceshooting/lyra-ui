@@ -2604,10 +2604,19 @@ unit for free.
 **Themeable custom properties:** `--lr-dock-panel-collapsed-size` (default
 `var(--lr-icon-button-size)`) — the persistent "rail" width/height the panel holds at while
 `collapsed`, rather than collapsing to zero (a zero-size collapsed panel would have nowhere to host
-the re-expand toggle); component-specific since collapse never zeroes the box. Plus shared tokens
-`--lr-color-surface`, `--lr-color-border`, `--lr-color-brand`, `--lr-color-brand-quiet`,
-`--lr-color-text`, `--lr-radius`, `--lr-space-xs`, `--lr-focus-ring-width/-color/-offset`,
-`--lr-transition-fast`, `--lr-icon-button-size`.
+the re-expand toggle); component-specific since collapse never zeroes the box. The `collapse-toggle`
+button and the resize `handle` used to share the bare `--lr-color-brand`/`--lr-color-brand-quiet`
+tokens for their hover/pressed feedback even though they're unrelated visual purposes (button
+affordance vs. drag affordance); each now has its own scoped override, all still defaulting to the
+exact same colors as before: `--lr-dock-panel-collapse-toggle-hover-bg` (default
+`var(--lr-color-brand-quiet)`) and `--lr-dock-panel-collapse-toggle-hover-color` (default
+`var(--lr-color-brand)`) theme the toggle's hover state and are reused verbatim (color) or through
+`color-mix()` (background) for its pressed state; `--lr-dock-panel-handle-hover-color` (default
+`var(--lr-color-brand)`) themes the handle's hover/keyboard-focus state, and
+`--lr-dock-panel-handle-active-color` (default a `color-mix()` of the hover color) themes it while
+being dragged. Plus shared tokens `--lr-color-surface`, `--lr-color-border`, `--lr-color-brand`,
+`--lr-color-brand-quiet`, `--lr-color-text`, `--lr-radius`, `--lr-space-xs`,
+`--lr-focus-ring-width/-color/-offset`, `--lr-transition-fast`, `--lr-icon-button-size`.
 
 **Optional peer deps:** none.
 

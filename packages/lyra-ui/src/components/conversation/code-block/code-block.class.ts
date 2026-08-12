@@ -154,6 +154,11 @@ export interface LyraCodeBlockEventMap {
  *   the line marked active by `active-highlight-id`. Retints just that outline, leaving every
  *   other `--lr-color-brand` surface in the component (header pill, hover states, focus ring)
  *   alone. Inherits, so it can also be set on an ancestor or at the theme level.
+ * @cssprop [--lr-code-block-highlighted-line-bg=var(--lr-color-warning-quiet)] - Background color
+ *   of a line marked by `highlight-lines` or a `line-range` entry in `highlights`, in both the
+ *   light and dark-theme (shiki) rendering paths. Retints just that background, leaving every
+ *   other `--lr-color-warning-quiet` surface alone. Inherits, so it can also be set on an
+ *   ancestor or at the theme level.
  * @status stable
  * @since 4.0.0
  */

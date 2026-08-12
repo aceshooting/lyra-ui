@@ -1262,6 +1262,32 @@ describe('active-line outline color (--lr-code-block-active-line-outline-color)'
   });
 });
 
+// Same rationale as the active-line outline color above: the highlighted-line background had no
+// component-scoped override, so a consumer retinting it had to reach for the shared
+// --lr-color-warning-quiet (which every other warning-toned surface in the library also reads).
+describe('highlighted-line background color (--lr-code-block-highlighted-line-bg)', () => {
+  const highlightedLine = async (style = ''): Promise<HTMLElement> => {
+    const el = (await fixture(
+      html`<lr-code-block code=${'a\nb\nc'} highlight-lines="2" style=${style}></lr-code-block>`,
+    )) as LyraCodeBlock;
+    await el.updateComplete;
+    return el.shadowRoot!.querySelector('[data-highlighted]') as HTMLElement;
+  };
+
+  it('defaults to --lr-color-warning-quiet, unchanged from before the override existed', async () => {
+    const line = await highlightedLine();
+    const probe = document.createElement('div');
+    probe.style.cssText = 'color: var(--lr-color-warning-quiet);';
+    line.parentElement!.appendChild(probe);
+    expect(getComputedStyle(line).backgroundColor).to.equal(getComputedStyle(probe).color);
+  });
+
+  it('retints the highlighted-line background without touching --lr-color-warning-quiet', async () => {
+    const line = await highlightedLine('--lr-code-block-highlighted-line-bg: rgb(4, 5, 6)');
+    expect(getComputedStyle(line).backgroundColor).to.equal('rgb(4, 5, 6)');
+  });
+});
+
 describe('shiki dark-theme signal', () => {
   it('marks part="body" as dark-theme once the resolved --lr-color-text is lighter than --lr-color-surface', async () => {
     const wrapper = (await fixture(html`

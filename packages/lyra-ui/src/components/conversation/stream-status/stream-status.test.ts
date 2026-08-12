@@ -564,6 +564,62 @@ describe('phase-dot cssprop escape hatches', () => {
   });
 });
 
+describe('stalled-row cssprop escape hatches', () => {
+  const base = (el: LyraStreamStatus): HTMLElement =>
+    el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const message = (el: LyraStreamStatus): HTMLElement =>
+    el.shadowRoot!.querySelector('[part="message"]') as HTMLElement;
+
+  const resolvedInShadow = (el: LyraStreamStatus, declaration: string, property: string): string => {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  };
+
+  it('lets --lr-stream-status-stalled-bg override the base row background while stalled', async () => {
+    const el = (await fixture(html`
+      <lr-stream-status
+        phase="stalled"
+        style="--lr-stream-status-stalled-bg: rgb(0, 51, 102);"
+      ></lr-stream-status>
+    `)) as LyraStreamStatus;
+    expect(getComputedStyle(base(el)).backgroundColor).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('lets --lr-stream-status-stalled-border-color override the base row border while stalled', async () => {
+    const el = (await fixture(html`
+      <lr-stream-status
+        phase="stalled"
+        style="--lr-stream-status-stalled-border-color: rgb(102, 0, 51);"
+      ></lr-stream-status>
+    `)) as LyraStreamStatus;
+    expect(getComputedStyle(base(el)).borderTopColor).to.equal('rgb(102, 0, 51)');
+  });
+
+  it('lets --lr-stream-status-message-color override the message text color while stalled, independent of the border token', async () => {
+    const el = (await fixture(html`
+      <lr-stream-status
+        phase="stalled"
+        style="--lr-stream-status-message-color: rgb(51, 0, 102);"
+      ></lr-stream-status>
+    `)) as LyraStreamStatus;
+    expect(getComputedStyle(message(el)).color).to.equal('rgb(51, 0, 102)');
+  });
+
+  it('keeps today\'s shared-warning-token defaults for background/border/message color when the new cssprops are unset', async () => {
+    const el = (await fixture(html`<lr-stream-status phase="stalled"></lr-stream-status>`)) as LyraStreamStatus;
+    const warningQuiet = resolvedInShadow(el, 'color: var(--lr-color-warning-quiet)', 'color');
+    const warning = resolvedInShadow(el, 'color: var(--lr-color-warning)', 'color');
+
+    expect(getComputedStyle(base(el)).backgroundColor).to.equal(warningQuiet);
+    expect(getComputedStyle(base(el)).borderTopColor).to.equal(warning);
+    expect(getComputedStyle(message(el)).color).to.equal(warning);
+  });
+});
+
 it('contains a long stalled message and two actions in a 320px allocation', async () => {
   const longMessage = 'ConnectionRecoveryExplanationWithoutNaturalBreaks'.repeat(4);
   const container = document.createElement('div');

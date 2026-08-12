@@ -7,6 +7,7 @@ import { finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './code-editor.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { sanitizeCssResize } from '../../../internal/safe-css.js';
+import type { LyraSize } from '../../../internal/variants.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_codeEditorLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
@@ -56,7 +57,9 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * @csspart textarea - Native textarea.
  * @csspart hint - Supporting text.
  * @csspart error - Validation message.
- * @cssprop [--lr-code-editor-min-block-size=var(--lr-size-8rem)] - Minimum block size of the editor frame and its textarea.
+ * @cssprop [--lr-code-editor-min-block-size=var(--lr-size-8rem)] - Minimum block size of the editor frame and its textarea. Comes from the active `size` tier by default; assign it directly to override that tier's value.
+ * @cssprop [--lr-code-editor-padding=var(--lr-space-s)] - Padding of the gutter (block side only) and the textarea (all sides), from the active `size` tier.
+ * @cssprop [--lr-code-editor-font-size=var(--lr-font-size-m)] - Font size of the gutter's line numbers and the textarea, from the active `size` tier.
  * @cssprop [--lr-code-editor-line-height=1.5] - Line height shared by the gutter and the textarea, so line numbers stay aligned with their lines.
  * @cssprop [--lr-code-editor-tab-size=2] - The textarea's `tab-size`. The single channel for tab width — the class writes this token rather than setting `tab-size` directly.
  * @cssprop [--lr-code-editor-hover-border=var(--lr-color-brand)] - Editor-frame border while the
@@ -129,6 +132,12 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   @property({ type: Boolean, reflect: true }) readonly = false;
   /** Native CSS `resize` behavior. An invalid runtime value falls back to `'both'`. */
   @property() resize: 'none' | 'both' | 'horizontal' | 'vertical' = 'both';
+  /** Visual size on the library's one control ladder, shared with `<lr-textarea>`/`<lr-input>`/
+   *  `<lr-select>`. Accepts both the canonical `'2xs'`–`'xl'` steps and Web Awesome's/Shoelace's
+   *  `'small'`/`'medium'`/`'large'` spellings of `s`/`m`/`l`; the two render identically. Governs
+   *  the gutter's and textarea's padding and font size, plus the editor frame's minimum block
+   *  size. */
+  @property({ reflect: true }) size: LyraSize = 'm';
   @property({ attribute: 'wrap' }) wrap: 'off' | 'soft' | 'hard' = 'off';
   @property({ converter: { fromAttribute: (value: string | null) => value !== 'false', toAttribute: (value: boolean) => value ? 'true' : 'false' } }) override spellcheck = false;
   @property() override autocapitalize = 'off';

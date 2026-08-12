@@ -70,6 +70,9 @@ export interface LyraChipEventMap {
  * synchronized with toggle/remove action names.
  * @slot icon - Optional leading icon or status dot. Nothing is reserved for
  * it (no extra gap) when left empty.
+ * @slot end - Optional trailing content, typically an icon, placed after the label and before the
+ * toggle/remove button. Nothing is reserved for it (no extra gap) when left empty, mirroring
+ * `<lr-badge>`'s identical `end` slot.
  * @event lr-remove - The remove (×) button was activated (click, or
  * Enter/Space while focused — native `<button>` behavior). `detail: { value }`
  * — `value` is `undefined` when the `value` prop was never set. Only
@@ -85,6 +88,7 @@ export interface LyraChipEventMap {
  * @csspart base - The pill's root container.
  * @csspart icon - Wrapper around the `icon` slot. Hidden entirely while empty.
  * @csspart label - Wrapper around the default slot.
+ * @csspart end - Wrapper around the `end` slot. Hidden entirely while empty.
  * @csspart toggle-button - The real toggle control, rendered over the non-interactive label when
  * toggle mode is active.
  * @csspart remove-button - The remove (×) affordance, only rendered while `removable`.
@@ -195,6 +199,11 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   // in JS instead, the same fix `<lr-stat>`'s `hasIcon`/
   // `<lr-tool-call-chip>`'s `hasDetailSlot` etc. already establish.
   @state() private hasIconSlot = false;
+  // Same rationale as hasIconSlot above -- mirrors <lr-badge>'s hasEndSlot, adapted to chip's
+  // already-established SSR-safe seeding path (recomputeHasEndSlot + seedFirstRenderState) rather
+  // than badge's willUpdate-based seed, since only this file needs to survive server-rendered
+  // hydration.
+  @state() private hasEndSlot = false;
   // The server cannot inspect assigned nodes. Keep its first render on the empty-label fallback,
   // then seed from light DOM before a browser-only first paint (or immediately after hydration).
   private cachedLabelText = '';
@@ -220,6 +229,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     this.bindLabelObserverTargets();
     const sampleBrowserState = (): void => {
       this.recomputeHasIconSlot();
+      this.recomputeHasEndSlot();
       this.recomputeLabelText();
     };
     if (this.hasUpdated) sampleBrowserState();
@@ -274,6 +284,16 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
 
   private onIconSlotChange = (e: Event): void => {
     this.hasIconSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private recomputeHasEndSlot(): void {
+    const children = (this as unknown as { children?: HTMLCollection }).children;
+    if (!children) return;
+    this.hasEndSlot = Array.from(children).some((el) => el.getAttribute('slot') === 'end');
+  }
+
+  private onEndSlotChange = (e: Event): void => {
+    this.hasEndSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
   // Only the default slot's own content counts toward the remove button's
@@ -381,6 +401,9 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
           <slot name="icon" @slotchange=${this.onIconSlotChange}></slot>
         </span>
         <span part="label" ?inert=${toggleMode}><slot @slotchange=${this.onLabelSlotChange}></slot></span>
+        <span part="end" ?hidden=${!this.hasEndSlot}>
+          <slot name="end" @slotchange=${this.onEndSlotChange}></slot>
+        </span>
         ${toggleMode
           ? html`<button
               part="toggle-button"

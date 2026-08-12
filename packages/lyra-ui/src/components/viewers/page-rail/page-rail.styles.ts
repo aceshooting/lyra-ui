@@ -78,20 +78,20 @@ export const styles = css`
     inline-size: var(--lr-size-6px);
     block-size: var(--lr-size-6px);
     border-radius: 50%;
-    background: var(--lr-color-brand);
+    background: var(--lr-page-rail-heat-accent-color, var(--lr-color-brand));
     font-size: var(--lr-font-size-2xs);
   }
   lr-virtual-list::part(heat-dot-success) {
-    background: var(--lr-color-success);
+    background: var(--lr-page-rail-heat-success-color, var(--lr-color-success));
   }
   lr-virtual-list::part(heat-dot-warning) {
-    background: var(--lr-color-warning);
+    background: var(--lr-page-rail-heat-warning-color, var(--lr-color-warning));
   }
   lr-virtual-list::part(heat-dot-danger) {
-    background: var(--lr-color-danger);
+    background: var(--lr-page-rail-heat-danger-color, var(--lr-color-danger));
   }
   lr-virtual-list::part(heat-dot-neutral) {
-    background: var(--lr-color-text-quiet);
+    background: var(--lr-page-rail-heat-neutral-color, var(--lr-color-text-quiet));
   }
   lr-virtual-list::part(heat-dot-overflow) {
     inline-size: auto;

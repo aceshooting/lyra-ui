@@ -24,6 +24,23 @@ export const styles = css`
   [part~='claim-selected'] {
     border-color: var(--lr-color-brand);
   }
+  /* Density escape -- same convention as lr-source-card's/lr-entity-card's compact. The tuned
+     values sit behind inline var() fallbacks (rather than a :host declaration, which every
+     instance re-declares and so shadows any ancestor value), letting a list retune every claim at
+     once from the outside; the fallbacks are the pre-existing values scaled down one step, so an
+     unset claim renders unchanged. */
+  :host([compact]) [part='claim-trigger'] {
+    padding: var(--lr-claim-evidence-compact-padding, var(--lr-space-xs));
+    gap: var(--lr-claim-evidence-compact-gap, var(--lr-space-xs));
+  }
+  /* Strips the claim-row chrome for a claim nested inside an already-bordered/backgrounded
+     container -- same escape hatch as this component's sibling lr-source-card's/lr-entity-card's
+     identical frame='plain' rule. */
+  :host([frame='plain']) [part~='claim'] {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
   [part='claim-trigger'] {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;

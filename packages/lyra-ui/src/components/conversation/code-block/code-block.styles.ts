@@ -229,9 +229,15 @@ export const styles = css`
   }
   /* A highlighted line, from either highlight-lines or a line-range entry in highlights --
      stamped identically by codeBlockLineTransformer (shiki path) and renderPlainCode() (plain
-     path). See the dark-mode block below for why this needs its own !important there. */
+     path). See the dark-mode block below for why this needs its own !important there.
+
+     --lr-code-block-highlighted-line-bg is an inline var() fallback rather than a :host
+     declaration, for the same reason --lr-code-block-active-line-outline-color below is: a :host
+     declaration is re-stamped on every instance and would shadow any ancestor/theme-level value,
+     which is exactly what a state-styling override hook must not do. Unset, it resolves to
+     --lr-color-warning-quiet -- byte-identical to before it existed. */
   [part='pre'] [data-highlighted] {
-    background: var(--lr-color-warning-quiet);
+    background: var(--lr-code-block-highlighted-line-bg, var(--lr-color-warning-quiet));
   }
   /* The active highlight (highlights entry matching activeHighlightId) gets an outline on top of
      any background -- inset so it doesn't add to the line's own box size.
@@ -303,7 +309,7 @@ export const styles = css`
     background-color: var(--shiki-dark-bg, transparent) !important;
   }
   [part='body'][data-dark-theme='true'] [part='pre'] [data-highlighted] {
-    background: var(--lr-color-warning-quiet) !important;
+    background: var(--lr-code-block-highlighted-line-bg, var(--lr-color-warning-quiet)) !important;
   }
   @media (prefers-reduced-motion: reduce) {
     [part='toggle'] .chevron {

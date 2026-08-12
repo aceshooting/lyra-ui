@@ -48,8 +48,9 @@ export const styles = css`
      unit rather than a plain dot next to unrelated-looking text. */
   :host([phase='stalled']) [part='base'] {
     padding: var(--lr-space-xs) var(--lr-space-s);
-    background: var(--lr-color-warning-quiet);
-    border: var(--lr-border-width-thin) solid var(--lr-color-warning);
+    background: var(--lr-stream-status-stalled-bg, var(--lr-color-warning-quiet));
+    border: var(--lr-border-width-thin) solid
+      var(--lr-stream-status-stalled-border-color, var(--lr-color-warning));
   }
 
   [part='indicator'] {
@@ -93,7 +94,7 @@ export const styles = css`
   [part='message'] {
     min-inline-size: 0;
     overflow-wrap: anywhere;
-    color: var(--lr-color-warning);
+    color: var(--lr-stream-status-message-color, var(--lr-color-warning));
     font-size: var(--lr-font-size-md-sm);
     font-weight: var(--lr-font-weight-semibold);
     line-height: var(--lr-line-height-snug);

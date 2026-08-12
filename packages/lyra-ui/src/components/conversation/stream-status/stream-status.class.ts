@@ -118,6 +118,13 @@ export interface LyraStreamStatusEventMap {
  * @cssprop [--lr-stream-status-dot-opacity=0.35] - `indicator` dot opacity. Its unset default is
  *   swapped by the reflected `phase`: `0.6` for `connecting`, `1` for `streaming` and `stalled`.
  *   Set it on the element or any ancestor; an element value wins.
+ * @cssprop [--lr-stream-status-stalled-bg=var(--lr-color-warning-quiet)] - `base` row background
+ *   while `phase="stalled"`.
+ * @cssprop [--lr-stream-status-stalled-border-color=var(--lr-color-warning)] - `base` row border
+ *   color while `phase="stalled"`.
+ * @cssprop [--lr-stream-status-message-color=var(--lr-color-warning)] - `message` text color
+ *   while `phase="stalled"`. Decoupled from `--lr-stream-status-stalled-border-color` even though
+ *   both fall back to the same shared token today.
  * @status stable
  * @since 4.0.0
  */

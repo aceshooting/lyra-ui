@@ -1,7 +1,19 @@
 import { css } from 'lit';
 import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 export const styles = css`
-  :host { display: block; --lr-code-editor-min-block-size: var(--lr-size-8rem); --lr-code-editor-line-height: 1.5; --lr-code-editor-tab-size: 2; }
+  :host { display: block; --lr-code-editor-min-block-size: var(--lr-size-8rem); --lr-code-editor-padding: var(--lr-space-s); --lr-code-editor-font-size: var(--lr-font-size-m); --lr-code-editor-line-height: 1.5; --lr-code-editor-tab-size: 2; }
+  /* Size ladder for the \`size\` property, mirroring lr-textarea's own six-step ladder (see its
+     "leaves the committed padding/font-size untouched at the default tier" test). The default tier
+     is "m"; the :host block above IS that tier, so a :host([size='m']) rule below would only restate
+     it -- these three tokens are the only ones that vary. min-block-size uses the existing
+     --lr-size-* geometry scale rather than the space scale, since it is a block-axis floor, not a
+     padding value. */
+  :host([size='2xs']) { --lr-code-editor-min-block-size: var(--lr-size-4rem); --lr-code-editor-padding: var(--lr-space-2xs); --lr-code-editor-font-size: var(--lr-font-size-2xs); }
+  :host([size='xs']) { --lr-code-editor-min-block-size: var(--lr-size-5rem); --lr-code-editor-padding: var(--lr-space-xs); --lr-code-editor-font-size: var(--lr-font-size-xs); }
+  :host([size='s']), :host([size='small']) { --lr-code-editor-min-block-size: var(--lr-size-6rem); --lr-code-editor-padding: var(--lr-size-0-375rem); --lr-code-editor-font-size: var(--lr-font-size-sm); }
+  :host([size='medium']) { --lr-code-editor-min-block-size: var(--lr-size-8rem); --lr-code-editor-padding: var(--lr-space-s); --lr-code-editor-font-size: var(--lr-font-size-m); }
+  :host([size='l']), :host([size='large']) { --lr-code-editor-min-block-size: var(--lr-size-10rem); --lr-code-editor-padding: var(--lr-space-m); --lr-code-editor-font-size: var(--lr-font-size-lg); }
+  :host([size='xl']) { --lr-code-editor-min-block-size: var(--lr-size-12rem); --lr-code-editor-padding: var(--lr-space-l); --lr-code-editor-font-size: var(--lr-font-size-xl); }
   [part='form-control'] { display: grid; gap: var(--lr-space-xs); }
   [part~='label'] { color: var(--lr-color-text); font-weight: var(--lr-font-weight-semibold); }
   /* The one required-marker rule the library shares, replacing the literal
@@ -13,12 +25,12 @@ export const styles = css`
      native horizontal scrollbar when wrap="off"; its max-content track lets the frame own both
      axes instead. */
   [part='editor'] { display: grid; grid-template-columns: auto max-content; overflow: auto; min-block-size: var(--lr-code-editor-min-block-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius); background: var(--lr-color-surface); }
-  [part='gutter'] { padding: var(--lr-space-s) var(--lr-space-xs); border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border); color: var(--lr-color-text-quiet); text-align: end; white-space: pre; user-select: none; font: inherit; line-height: var(--lr-code-editor-line-height); }
+  [part='gutter'] { padding: var(--lr-code-editor-padding) var(--lr-space-xs); border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border); color: var(--lr-color-text-quiet); text-align: end; white-space: pre; user-select: none; font: inherit; font-size: var(--lr-code-editor-font-size); line-height: var(--lr-code-editor-line-height); }
   /* --lr-code-editor-tab-size is the single channel for the tab width: the class writes that token
      inline on this part only when tabSize was explicitly assigned, so an untouched tabSize leaves a
      host-level override of the token in charge instead of losing to an inline tab-size
      declaration. */
-  [part='textarea'] { display: block; box-sizing: border-box; inline-size: max-content; min-inline-size: 100%; min-block-size: var(--lr-code-editor-min-block-size); overflow: visible; padding: var(--lr-space-s); resize: both; border: 0; outline: 0; background: transparent; color: var(--lr-color-text); font: var(--lr-font-mono); line-height: var(--lr-code-editor-line-height); tab-size: var(--lr-code-editor-tab-size); }
+  [part='textarea'] { display: block; box-sizing: border-box; inline-size: max-content; min-inline-size: 100%; min-block-size: var(--lr-code-editor-min-block-size); overflow: visible; padding: var(--lr-code-editor-padding); resize: both; border: 0; outline: 0; background: transparent; color: var(--lr-color-text); font: var(--lr-font-mono); font-size: var(--lr-code-editor-font-size); line-height: var(--lr-code-editor-line-height); tab-size: var(--lr-code-editor-tab-size); }
   [part='textarea']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: calc(var(--lr-focus-ring-offset) * -1); }
   [part='textarea']::placeholder { color: var(--lr-color-text-quiet); }
   /* Mirrors lr-checkbox's [part='base']:hover [part='box'] -- the focus-visible outline above gives

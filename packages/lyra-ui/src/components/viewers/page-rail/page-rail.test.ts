@@ -3,7 +3,7 @@ import { LitElement, type PropertyValues } from 'lit';
 import './page-rail.js';
 import type { LyraPageRail, PageThumbnailSource } from './page-rail.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.js';
-import type { LyraHighlight } from '../document-viewer/anchors.js';
+import type { LyraHighlight, LyraHighlightTone } from '../document-viewer/anchors.js';
 
 function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   let resolve!: (value: T) => void;
@@ -1092,6 +1092,24 @@ describe('lr-page-rail part reachability through the embedded virtual list', () 
       expect(getComputedStyle(toned).backgroundColor, tone).to.equal(
         resolveDeclaration(vlistRoot, `background: var(${token})`, 'background-color'),
       );
+    }
+  });
+
+  it('themes each heat-dot tone from its own cssprop, defaulting to the shared tone token', async () => {
+    const cases: Array<[LyraHighlightTone, string]> = [
+      ['accent', '--lr-page-rail-heat-accent-color'],
+      ['success', '--lr-page-rail-heat-success-color'],
+      ['warning', '--lr-page-rail-heat-warning-color'],
+      ['danger', '--lr-page-rail-heat-danger-color'],
+      ['neutral', '--lr-page-rail-heat-neutral-color'],
+    ];
+    for (const [tone, cssprop] of cases) {
+      const { vlistRoot } = await rail({
+        style: `${cssprop}: rgb(9, 8, 7)`,
+        highlights: heatHighlights(tone),
+      });
+      const dot = vlistRoot.querySelector(`[part~="heat-dot-${tone}"]`) as HTMLElement;
+      expect(getComputedStyle(dot).backgroundColor, tone).to.equal('rgb(9, 8, 7)');
     }
   });
 

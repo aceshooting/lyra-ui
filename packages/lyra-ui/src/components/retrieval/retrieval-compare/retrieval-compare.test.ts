@@ -118,3 +118,36 @@ it('renders a labeled overlap summary for every pair of result sets', async () =
     'Top-k overlap between Reranked and Hybrid: 33.3%',
   ]);
 });
+
+describe('chunk-selected cssprop escape hatch', () => {
+  function resolvedInShadow(el: LyraRetrievalCompare, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  it('recolors the selected chunk border from --lr-retrieval-compare-selected-border set on the host', async () => {
+    const el = (await fixture(
+      html`<lr-retrieval-compare
+        style="--lr-retrieval-compare-selected-border: rgb(0, 51, 102)"
+        .sets=${sets}
+        selected-chunk-id="b"
+      ></lr-retrieval-compare>`,
+    )) as LyraRetrievalCompare;
+    const selectedChunk = el.shadowRoot!.querySelector('[part~="chunk-selected"]') as HTMLElement;
+    expect(getComputedStyle(selectedChunk).borderTopColor).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('renders byte-identical to the brand token when unset', async () => {
+    const el = (await fixture(
+      html`<lr-retrieval-compare .sets=${sets} selected-chunk-id="b"></lr-retrieval-compare>`,
+    )) as LyraRetrievalCompare;
+    const selectedChunk = el.shadowRoot!.querySelector('[part~="chunk-selected"]') as HTMLElement;
+    expect(getComputedStyle(selectedChunk).borderTopColor).to.equal(
+      resolvedInShadow(el, 'border-top-color: var(--lr-color-brand)', 'border-top-color'),
+    );
+  });
+});

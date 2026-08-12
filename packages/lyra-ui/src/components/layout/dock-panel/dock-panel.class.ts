@@ -160,6 +160,16 @@ interface DragState {
  * @cssprop [--lr-dock-panel-collapsed-size=var(--lr-icon-button-size)] - The extent the panel
  *   keeps along its resize axis while `collapsed` -- enough to still host the toggle button that
  *   re-expands it.
+ * @cssprop [--lr-dock-panel-collapse-toggle-hover-bg=var(--lr-color-brand-quiet)] - Background of
+ *   `collapse-toggle` on hover; also feeds its pressed background via `color-mix()`.
+ * @cssprop [--lr-dock-panel-collapse-toggle-hover-color=var(--lr-color-brand)] - Text/icon color
+ *   of `collapse-toggle` on hover, reused verbatim for its pressed color too.
+ * @cssprop [--lr-dock-panel-handle-hover-color=var(--lr-color-brand)] - Background of `handle` on
+ *   hover and keyboard focus -- scoped separately from `collapse-toggle`'s own hover tokens above
+ *   even though both default to the same brand token, since the two serve unrelated purposes
+ *   (drag affordance vs. button feedback).
+ * @cssprop [--lr-dock-panel-handle-active-color=color-mix(in oklab, var(--lr-dock-panel-handle-hover-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
+ *   Background of `handle` while actively dragged/pressed.
  * @status stable
  * @since 4.0.0
  */

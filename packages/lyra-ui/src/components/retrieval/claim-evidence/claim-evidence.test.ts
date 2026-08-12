@@ -94,3 +94,44 @@ it('applies per-instance strings to the evidence region label', async () => {
     'Localized evidence review',
   );
 });
+
+it('defaults frame to card, keeping the claim row bordered and filled', async () => {
+  const el = (await fixture(
+    html`<lr-claim-evidence .claims=${claims} .citations=${citations}></lr-claim-evidence>`,
+  )) as LyraClaimEvidence;
+  expect(el.frame).to.equal('card');
+  const claimRow = el.shadowRoot!.querySelector('[part~="claim"]') as HTMLElement;
+  const style = getComputedStyle(claimRow);
+  expect(style.borderTopWidth).to.not.equal('0px');
+  expect(style.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+});
+
+it('suppresses the claim row border and background when frame is plain', async () => {
+  const el = (await fixture(
+    html`<lr-claim-evidence frame="plain" .claims=${claims} .citations=${citations}></lr-claim-evidence>`,
+  )) as LyraClaimEvidence;
+  const claimRow = el.shadowRoot!.querySelector('[part~="claim"]') as HTMLElement;
+  const style = getComputedStyle(claimRow);
+  expect(style.borderTopWidth).to.equal('0px');
+  expect(style.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  expect(style.borderRadius).to.equal('0px');
+});
+
+it('tightens claim-trigger padding and gap when compact', async () => {
+  const defaultEl = (await fixture(
+    html`<lr-claim-evidence .claims=${claims} .citations=${citations}></lr-claim-evidence>`,
+  )) as LyraClaimEvidence;
+  expect(defaultEl.compact).to.be.false;
+  const defaultTrigger = defaultEl.shadowRoot!.querySelector('[part="claim-trigger"]') as HTMLElement;
+  const defaultPadding = parseFloat(getComputedStyle(defaultTrigger).paddingInlineStart);
+
+  const compactEl = (await fixture(
+    html`<lr-claim-evidence compact .claims=${claims} .citations=${citations}></lr-claim-evidence>`,
+  )) as LyraClaimEvidence;
+  const compactTrigger = compactEl.shadowRoot!.querySelector('[part="claim-trigger"]') as HTMLElement;
+  const compactPadding = parseFloat(getComputedStyle(compactTrigger).paddingInlineStart);
+  const compactGap = parseFloat(getComputedStyle(compactTrigger).columnGap);
+
+  expect(compactPadding).to.be.lessThan(defaultPadding);
+  expect(compactGap).to.be.lessThan(parseFloat(getComputedStyle(defaultTrigger).columnGap));
+});

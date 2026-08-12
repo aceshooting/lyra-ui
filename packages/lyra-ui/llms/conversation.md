@@ -782,7 +782,13 @@ message text color, stalled border), `--lr-color-warning-quiet` (stalled backgro
 dot's color/opacity transitions), and `--lr-transition-ambient` (the streaming pulse cycle).
 The phase defaults flow through `--lr-stream-status-dot-color` and
 `--lr-stream-status-dot-opacity`; setting either custom property on the element or an ancestor
-wins through the shadow cascade and is the supported per-instance override.
+wins through the shadow cascade and is the supported per-instance override. The stalled row's own
+longhands are indirected the same way: `--lr-stream-status-stalled-bg` (falls back to
+`--lr-color-warning-quiet`) and `--lr-stream-status-stalled-border-color` (falls back to
+`--lr-color-warning`) retheme the `base` part's background/border while `phase="stalled"`, and
+`--lr-stream-status-message-color` (also falling back to `--lr-color-warning`) retheme the
+`message` part's text color independently of the border — the two currently share a default value
+but are separate hooks, so overriding one never moves the other.
 
 **Optional peer deps:** none.
 
@@ -1530,7 +1536,10 @@ are both set)
 scroll cap; only takes effect once `max-height` is set), `--lr-code-block-font` (default
 `var(--lr-font-mono)`, the library's shared monospace stack), `--lr-code-block-tab-size` (default `2` — tab width for the
 rendered code, applied to `[part='pre']`), `--lr-code-block-active-line-outline-color` (default
-`var(--lr-color-brand)` — the outline around the line marked active by `active-highlight-id`), plus shared tokens `--lr-color-border`, `--lr-radius`,
+`var(--lr-color-brand)` — the outline around the line marked active by `active-highlight-id`),
+`--lr-code-block-highlighted-line-bg` (default `var(--lr-color-warning-quiet)` — the background of a
+line marked by `highlight-lines` or a `line-range` entry in `highlights`, in both the light and
+dark-theme rendering paths), plus shared tokens `--lr-color-border`, `--lr-radius`,
 `--lr-color-surface`, `--lr-space-xs/-s/-m`, `--lr-font`, `--lr-color-text-quiet`,
 `--lr-color-text`, `--lr-color-brand`/`-brand-quiet`, `--lr-transition-fast`,
 `--lr-focus-ring-width/-color/-offset`.
@@ -1551,6 +1560,10 @@ wrapped line's tabs diverge.
 other `--lr-color-brand` surface in the component — the header language pill, hover states, the focus
 ring — alone. It too is an inline `var()` fallback rather than a `:host` declaration, deliberately,
 so it inherits: set it on the element, on an ancestor, or at the theme level.
+
+`--lr-code-block-highlighted-line-bg` follows the same pattern: an inline `var()` fallback (not a
+`:host` declaration) so it inherits, retinting just the highlighted-line background and leaving every
+other `--lr-color-warning-quiet` surface alone.
 
 **Optional peer deps:** `shiki` (lazy-loaded and cached once per page by `code-loader.ts`'s
 `loadShikiHighlighter()`, which builds a single `Highlighter` seeded with the bundled `github-light`/
@@ -1687,8 +1700,9 @@ body ended; `anchor` is a `line-range` anchor covering the selected lines).
 
 **Themeable custom properties:** identical to `<lr-code-block>` — `--lr-code-block-max-height`,
 `--lr-code-block-font`, `--lr-code-block-tab-size` (default `2`, applied to `[part='pre']`),
-`--lr-code-block-active-line-outline-color` (default `var(--lr-color-brand)`), plus the same shared
-tokens. Both of the last two are inline `var()` fallbacks at the point of use rather than `:host`
+`--lr-code-block-active-line-outline-color` (default `var(--lr-color-brand)`),
+`--lr-code-block-highlighted-line-bg` (default `var(--lr-color-warning-quiet)`), plus the same shared
+tokens. The last three are inline `var()` fallbacks at the point of use rather than `:host`
 declarations, so a page-, container-, or theme-level value reaches them; see `<lr-code-block>` above
 for the full rationale, including why `<lr-markdown>`/`<lr-markdown-core>` must declare the tab-size
 fallback separately.

@@ -1,9 +1,11 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { isAbortError, isResourceLimitError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import {
   getPptxRenderer,
@@ -69,6 +71,8 @@ class LyraPptxViewerBase extends LyraElement<LyraPptxViewerEventMap> {}
  * @csspart next-button - Next-slide button.
  * @csspart next-icon - Next-slide icon.
  * @csspart container - The renderer-owned output container.
+ * @cssprop [--lr-pptx-viewer-max-height=none] - Maximum block size of the scrollable renderer
+ *   output container before it scrolls internally. Also settable via the `max-height` property.
  * @status stable
  * @since 4.0.0
  */
@@ -106,6 +110,8 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   @property() name = '';
   /** Accessible-name override for the viewer region. */
   @property() label = '';
+  /** A CSS `max-height` that caps the scrollable renderer output container; invalid values are ignored. */
+  @property({ attribute: 'max-height' }) maxHeight = '';
   /** Shared text search and anchor-target API for renderer output when it exposes DOM text. */
   override async search(query: string): Promise<number> { return super.search(query); }
   override async searchNext(): Promise<boolean> { return super.searchNext(); }
@@ -293,6 +299,9 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
         role="region"
         aria-label=${ariaLabel}
         aria-busy=${this.phase === 'loading' ? 'true' : 'false'}
+        style=${sanitizeCssLength(this.maxHeight)
+          ? styleMap({ '--lr-pptx-viewer-max-height': sanitizeCssLength(this.maxHeight)! })
+          : nothing}
       >
         <div part="header" ?hidden=${!this.name}><span part="name">${this.name}</span></div>
         <p part="notice" role="note">${this.localize('pptxViewerFidelityNotice')}</p>

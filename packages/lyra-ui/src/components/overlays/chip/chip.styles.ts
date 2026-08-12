@@ -186,6 +186,22 @@ export const styles = css`
     white-space: nowrap;
   }
 
+  [part='end'] {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--lr-chip-icon-size);
+  }
+  [part='end'] ::slotted(*) {
+    display: block;
+  }
+  /* Defeats [part='end']'s own 'display: inline-flex' above -- the native [hidden] UA rule alone
+     would lose to it at equal specificity. Same fix [part='icon'][hidden] above already applies. */
+  [part='end'][hidden] {
+    display: none;
+  }
+
   [part='toggle-button'] {
     position: absolute;
     inset: 0;

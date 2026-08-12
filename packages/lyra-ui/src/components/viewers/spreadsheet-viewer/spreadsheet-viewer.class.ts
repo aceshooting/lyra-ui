@@ -1,8 +1,10 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { assertTableDimensions, assertTableSize, isAbortError, isResourceLimitError, LyraResourceLimitError, LyraUserFacingError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import { parseCellRange, type ParsedCellRange } from '../../../internal/cell-range.js';
@@ -76,6 +78,7 @@ class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMa
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
  *   matchCount, activeIndex }`.
  * @csspart base - The root wrapper.
+ * @csspart body - The scrollable wrapper around the fetched-state content, capped by `max-height`.
  * @csspart tabs - The sheet-switching `<lr-tab-group>`, rendered only for a multi-sheet workbook.
  * @csspart sheet - The wrapper around one sheet's header row and virtualized body.
  * @csspart rows - The virtualized row list.
@@ -92,6 +95,11 @@ class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMa
  * @cssprop [--lr-spreadsheet-viewer-highlight-color=var(--lr-color-brand)] - Outline color of a
  *   highlighted cell. The active highlight sets it inline to
  *   `var(--lr-color-warning, var(--lr-color-brand))`.
+ * @cssprop [--lr-spreadsheet-viewer-highlight-outline-offset=calc(-1 * var(--lr-border-width-medium))] -
+ *   Outline offset of a highlighted cell.
+ * @cssprop [--lr-spreadsheet-viewer-max-height=none] - Maximum block size of `[part="body"]`
+ *   before it scrolls internally. The `maxHeight` property sets this token inline on
+ *   `[part="base"]`.
  * @status stable
  * @since 4.0.0
  */
@@ -127,6 +135,8 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
   @property() src = '';
   /** Source filename or display name, used as the viewer's accessible name. */
   @property() name = '';
+  /** A CSS `max-height`; invalid values are ignored. */
+  @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Anchor kinds this viewer resolves via `scrollToAnchor()`. */
   override readonly anchorKinds: readonly LyraAnchorKind[] = ['cell-range'];
@@ -515,7 +525,13 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
 
   override render(): TemplateResult {
     const body = this.fetchState.kind === 'loaded' ? this.renderLoaded(this.fetchState.sheets) : this.fetchState.kind === 'loading' ? html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>` : this.fetchState.kind === 'error' ? html`<div part="error">${this.fetchState.message}</div>` : html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
-    return html`<div part="base" role="region" aria-label=${this.getAttribute('aria-label') || this.name || this.localize('spreadsheetViewerLabel')}>${body}${this.renderAnchorLiveRegion()}</div>`;
+    const maxHeight = sanitizeCssLength(this.maxHeight);
+    return html`<div
+      part="base"
+      role="region"
+      style=${maxHeight ? styleMap({ '--lr-spreadsheet-viewer-max-height': maxHeight }) : nothing}
+      aria-label=${this.getAttribute('aria-label') || this.name || this.localize('spreadsheetViewerLabel')}
+    ><div part="body">${body}</div>${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

@@ -509,7 +509,9 @@ epub.js renders the reading area into its stable `mount` element, using an inter
 chapter content.
 
 **Properties:** `src: string = ''` and `name: string = ''`. `accessibleLabel: string = ''`
-(attribute `aria-label`) overrides the reading region's accessible name. `location: string = ''`
+(attribute `aria-label`) overrides the reading region's accessible name. `maxHeight: string = ''`
+(attribute `max-height`) caps the `mount` area epub.js renders into; invalid CSS `max-height`
+values, declaration breaks, and `url()` are ignored. `location: string = ''`
 (not reflected — CFIs are long) is
 a CFI or spine href identifying the current reading position: set before the book finishes
 loading it's recorded and applied once ready, set after it applies immediately, and epub.js's own
@@ -544,6 +546,10 @@ non-live shadow content and later loading transitions use the shared document-le
 assertive sink), and `announcer` (an aria-hidden, non-live shadow mirror retained for styling
 compatibility; search results are appended to the shared document-level polite sink).
 
+**Themeable custom properties:** `--lr-ebook-viewer-max-height` (default `none`) — maximum block
+size of `[part="mount"]` before it scrolls internally; also settable via the `max-height` property,
+which writes this token inline.
+
 The toolbar buttons use the component-specific localized labels `ebookViewerPreviousChapter` and
 `ebookViewerNextChapter` (English: “Previous chapter” / “Next chapter”), so they remain
 unambiguous beside other previous/next controls and are overridable through `.strings`.
@@ -575,9 +581,12 @@ Best-effort client-side PPTX viewer backed by the optional `@aiden0z/pptx-render
 localized fidelity notice is always visible because animations, equations, embedded objects,
 speaker notes, and several advanced effects are not rendered.
 
-**Properties:** `src: string = ''`, `name: string = ''`, and `label: string = ''`. A host
+**Properties:** `src: string = ''`, `name: string = ''`, `label: string = ''`, and `maxHeight:
+string = ''` (attribute `max-height`). A host
 `aria-label` takes precedence over
-`label` and `name`. `highlights`, `activeHighlightId`, `anchor`, and `anchorKinds`
+`label` and `name`. `maxHeight` caps the scrollable `[part="container"]`; invalid CSS `max-height`
+values, declaration breaks, and `url()` are ignored. `highlights`, `activeHighlightId`, `anchor`,
+and `anchorKinds`
 (`['text-quote', 'fragment']`) provide the shared text-viewer contract when the renderer exposes
 DOM text.
 
@@ -603,6 +612,10 @@ The three shared text-viewer events bubble and compose and are non-cancelable.
 `next-icon`, and `container`. While loading, the decorative skeleton is paired with an ordinary
 visually-hidden localized label; later loading and error transitions use the shared document-level
 polite and assertive sinks, respectively, without adding live semantics inside the viewer shadow.
+
+**Themeable custom properties:** `--lr-pptx-viewer-max-height` (default `none`) — maximum block
+size of `[part="container"]` before it scrolls internally; also settable via the `max-height`
+property, which writes this token inline.
 
 **Optional peer dependency:** install `@aiden0z/pptx-renderer` with
 `pnpm add @aiden0z/pptx-renderer`. The registry matches the official PPTX MIME type and `.pptx`
@@ -916,8 +929,11 @@ size of the virtualized page list (`[part="pages"]`); also settable via the `max
 which writes this token inline on `[part="base"]`. `--lr-pdf-viewer-toolbar-button-hover-bg`
 (default `var(--lr-color-surface)`) — hover fill of the toolbar buttons; it defaults to the surface
 fill rather than the toolbar's own `--lr-color-brand-quiet` tint precisely so the hover state is
-visible against the toolbar behind it. Everything else below the page list is retuned through the
-exported parts above rather than through dedicated custom properties.
+visible against the toolbar behind it. `--lr-pdf-viewer-search-match-bg` (default
+`var(--lr-color-warning-quiet)`) and `--lr-pdf-viewer-search-match-active-bg` (default
+`var(--lr-color-warning)`) retint the painted `search-match`/`search-match-active` marks without
+overriding the shared warning tokens directly. Everything else below the page list is retuned
+through the exported parts above rather than through dedicated custom properties.
 
 **Optional peer dependency:** install `pdfjs-dist` with `pnpm add pdfjs-dist`. The component registers
 a lazy `application/pdf` renderer with `<lr-document-viewer>` so the PDF library is loaded only when
@@ -942,9 +958,11 @@ back to a `Sheet!`-prefixed `range`, then the active sheet); `scrollToAnchor()` 
 `<lr-tab-group>`'s active tab first when needed, then scrolls the addressed row/column into view.
 `highlights` paint as a focusable `part="cell-highlight"`.
 
-**Properties:** `src: string = ''` and `name: string = ''`. `anchorKinds: readonly LyraAnchorKind[] =
-['cell-range']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
-contract).
+**Properties:** `src: string = ''` and `name: string = ''`. `maxHeight: string = ''` (attribute
+`max-height`) is a CSS length that caps the scrollable body — setting it writes
+`--lr-spreadsheet-viewer-max-height` inline on `[part="base"]`; invalid CSS `max-height` values are
+ignored. `anchorKinds: readonly LyraAnchorKind[] = ['cell-range']` (this viewer's supported
+`LyraAnchor.kind` values for the shared anchor-target contract).
 
 **Methods:** `search(query)` resolves the match count across every sheet's stringified cell values,
 ordered sheet then row then column, switching tabs as navigation crosses sheets (empty/whitespace
@@ -958,7 +976,8 @@ Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
 
-**CSS parts:** `base`, `tabs`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a
+**CSS parts:** `base`, `body` (the scrollable wrapper around the fetched-state content, capped by
+`max-height`), `tabs`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a
 structural cell covered by a `highlights` entry), `cell-highlight-action` (the native button
 filling a highlighted cell; focusable and emits `lr-highlight-activate`; its complete accessible
 name uses the localized `cellHighlightWithLabel` message with independent `{value}` and `{label}`
@@ -972,7 +991,11 @@ internal `<lr-virtual-list>` and forwarded via
 inline (as `var(--lr-color-warning, var(--lr-color-brand))`) on the cell matching
 `activeHighlightId`, since a `[data-active]` selector can't be chained onto the
 `::part(cell-highlight)` the cell reaches this component's stylesheet through; a custom property
-inherits across that boundary instead.
+inherits across that boundary instead. `--lr-spreadsheet-viewer-highlight-outline-offset` (default
+`calc(-1 * var(--lr-border-width-medium))`) — the outline offset of a highlighted cell.
+`--lr-spreadsheet-viewer-max-height` (default `none`) — maximum block size of `[part="body"]`
+before it scrolls internally; also settable via the `maxHeight` property, which writes this token
+inline on `[part="base"]`.
 
 **Optional peer dependency:** install `xlsx` with `pnpm add https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`. The official CDN matches the
 `.xlsx` and `.xls` MIME types and filename extensions.
@@ -1215,7 +1238,13 @@ the localized page name, so thumbnail work does not create one live region per v
 **Themeable custom properties:** `--lr-page-rail-height` (default `var(--lr-size-24rem)`) — block
 size of the virtualized rail. `--lr-page-rail-current-bg` (default `var(--lr-color-brand-quiet)`) —
 background of the `page-current` button, kept while the row is hovered so the current page stays
-identifiable under the pointer.
+identifiable under the pointer. Each heat-dot tone has its own matching cssprop, all defaulting to
+the same shared tone token the marker used before: `--lr-page-rail-heat-accent-color` (default
+`var(--lr-color-brand)`, the base `heat-dot` rule shared by the default "accent" tone),
+`--lr-page-rail-heat-success-color` (default `var(--lr-color-success)`),
+`--lr-page-rail-heat-warning-color` (default `var(--lr-color-warning)`),
+`--lr-page-rail-heat-danger-color` (default `var(--lr-color-danger)`), and
+`--lr-page-rail-heat-neutral-color` (default `var(--lr-color-text-quiet)`).
 
 ## `lr-notebook-viewer`
 

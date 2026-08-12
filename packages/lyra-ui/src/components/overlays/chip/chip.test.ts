@@ -304,6 +304,37 @@ describe('icon slot', () => {
   });
 });
 
+describe('end slot', () => {
+  it('hides [part="end"] when nothing is slotted', async () => {
+    const el = (await fixture(html`<lr-chip>Tag</lr-chip>`)) as LyraChip;
+    const end = el.shadowRoot!.querySelector('[part="end"]') as HTMLElement;
+    expect(end.hidden).to.be.true;
+    expect(getComputedStyle(end).display).to.equal('none');
+  });
+
+  it('shows [part="end"] once an element is slotted with slot="end"', async () => {
+    const el = (await fixture(html`<lr-chip>Tag<span slot="end">●</span></lr-chip>`)) as LyraChip;
+    const end = el.shadowRoot!.querySelector('[part="end"]') as HTMLElement;
+    expect(end.hidden).to.be.false;
+    expect(getComputedStyle(end).display).to.not.equal('none');
+  });
+
+  it('reacts to the end slot being populated after first render', async () => {
+    const el = (await fixture(html`<lr-chip>Tag</lr-chip>`)) as LyraChip;
+    const end = el.shadowRoot!.querySelector('[part="end"]') as HTMLElement;
+    expect(end.hidden).to.be.true;
+
+    const dot = document.createElement('span');
+    dot.setAttribute('slot', 'end');
+    dot.textContent = '●';
+    el.appendChild(dot);
+    // slotchange fires asynchronously
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await el.updateComplete;
+    expect(end.hidden).to.be.false;
+  });
+});
+
 describe('remove affordance', () => {
   it('is not rendered by default (removable=false)', async () => {
     const el = (await fixture(html`<lr-chip>Tag</lr-chip>`)) as LyraChip;

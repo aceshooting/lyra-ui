@@ -65,7 +65,7 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part~='chunk-selected'] {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-retrieval-compare-selected-border, var(--lr-color-brand));
   }
   [part='chunk-rank'] {
     color: var(--lr-color-text-quiet);

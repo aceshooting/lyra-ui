@@ -68,24 +68,35 @@ export const styles = css`
     background: var(--lr-color-border);
     touch-action: none;
   }
+  /* --lr-dock-panel-handle-hover-color/-active-color deliberately don't reuse the bare
+     --lr-color-brand token the collapse-toggle's own hover/active tokens fall back to below --
+     the handle's drag-affordance accent and the toggle's button hover/active feedback are
+     different visual purposes that happened to share a token by coincidence, not by design; each
+     now has its own scoped override while defaulting to the exact same rendered color. */
   [part="handle"]:hover {
-    background: var(--lr-color-brand);
+    background: var(--lr-dock-panel-handle-hover-color, var(--lr-color-brand));
   }
   /* Split off from the :hover rule it used to share (rather than kept as one selector list) so the
      pressed rule below can be that rule's exact twin: swapping :hover for :active in a list that
      also carries :focus-visible would have repainted the focus state as pressed. */
   [part="handle"]:focus-visible {
-    background: var(--lr-color-brand);
+    background: var(--lr-dock-panel-handle-hover-color, var(--lr-color-brand));
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
   /* After :focus-visible, so a handle that was focused by keyboard still shows the deeper pressed
-     fill for the duration of a pointer drag (pointer capture holds :active throughout). */
+     fill for the duration of a pointer drag (pointer capture holds :active throughout).
+     --lr-dock-panel-handle-active-color's own fallback still derives from the hover token via
+     color-mix() -- overriding just the hover token keeps retinting the pressed state too, same as
+     before this token existed, while an explicit active override can still opt out of that. */
   [part="handle"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-dock-panel-handle-active-color,
+      color-mix(
+        in oklab,
+        var(--lr-dock-panel-handle-hover-color, var(--lr-color-brand)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
   }
   /* Transparent hit-slop, widening the draggable/tappable box along the
@@ -143,17 +154,21 @@ export const styles = css`
       color var(--lr-transition-fast);
     z-index: var(--lr-layer-content);
   }
+  /* :active reuses the same two scoped tokens :hover sets (mixed for the background, verbatim
+     for the color) rather than a separate pair of active-only tokens -- mirrors this file's own
+     [part="handle"] precedent above, where :active has always derived straight from whatever
+     color :hover uses instead of carrying an independent token. */
   [part="collapse-toggle"]:hover {
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
+    background: var(--lr-dock-panel-collapse-toggle-hover-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-dock-panel-collapse-toggle-hover-color, var(--lr-color-brand));
   }
   [part="collapse-toggle"]:active {
     background: color-mix(
       in oklab,
-      var(--lr-color-brand-quiet),
+      var(--lr-dock-panel-collapse-toggle-hover-bg, var(--lr-color-brand-quiet)),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
-    color: var(--lr-color-brand);
+    color: var(--lr-dock-panel-collapse-toggle-hover-color, var(--lr-color-brand));
   }
   [part="collapse-toggle"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

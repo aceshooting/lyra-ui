@@ -44,6 +44,8 @@ export interface LyraRetrievalCompareEventMap {
  * @csspart scores - Score-breakdown list.
  * @csspart score - One named score.
  * @csspart empty - The empty state.
+ * @cssprop [--lr-retrieval-compare-selected-border=var(--lr-color-brand)] - Border color marking
+ *   a selected `[part~="chunk"]` row.
  * @status stable
  * @since 7.0.0
  */

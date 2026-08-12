@@ -1387,6 +1387,59 @@ it('exposes loading through a busy state owner without a shadow-root live region
   expect(base.querySelectorAll('[role="status"], [role="alert"], [aria-live]').length).to.equal(0);
 });
 
+// Parity with <lr-docx-viewer>/<lr-notebook-viewer>/<lr-svg-viewer>/<lr-xml-viewer>/<lr-pdf-viewer>,
+// which all expose a `max-height` attribute as a declarative alternative to setting their own sizing
+// CSS custom property inline.
+describe('maxHeight', () => {
+  it('defaults to unset, leaving --lr-ebook-viewer-max-height at its stylesheet default', async () => {
+    const el = (await fixture(html`<lr-ebook-viewer></lr-ebook-viewer>`)) as LyraEbookViewer;
+    expect(el.maxHeight).to.equal('');
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.style.getPropertyValue('--lr-ebook-viewer-max-height')).to.equal('');
+    const mount = el.shadowRoot!.querySelector('[part="mount"]') as HTMLElement;
+    expect(getComputedStyle(mount).maxBlockSize).to.equal('none');
+  });
+
+  it('reflects the max-height attribute onto --lr-ebook-viewer-max-height, and it reaches the mount area', async () => {
+    const el = (await fixture(html`<lr-ebook-viewer max-height="200px"></lr-ebook-viewer>`)) as LyraEbookViewer;
+    expect(el.maxHeight).to.equal('200px');
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.style.getPropertyValue('--lr-ebook-viewer-max-height').trim()).to.equal('200px');
+    const mount = el.shadowRoot!.querySelector('[part="mount"]') as HTMLElement;
+    expect(getComputedStyle(mount).maxBlockSize).to.equal('200px');
+  });
+
+  it('updates --lr-ebook-viewer-max-height live when the maxHeight property changes after first render', async () => {
+    const el = (await fixture(html`<lr-ebook-viewer></lr-ebook-viewer>`)) as LyraEbookViewer;
+    el.maxHeight = '12rem';
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.style.getPropertyValue('--lr-ebook-viewer-max-height').trim()).to.equal('12rem');
+  });
+
+  it('ignores an invalid maxHeight value, leaving the mount area uncapped', async () => {
+    const el = (await fixture(html`<lr-ebook-viewer></lr-ebook-viewer>`)) as LyraEbookViewer;
+    el.maxHeight = 'not-a-length';
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.style.getPropertyValue('--lr-ebook-viewer-max-height')).to.equal('');
+    const mount = el.shadowRoot!.querySelector('[part="mount"]') as HTMLElement;
+    expect(getComputedStyle(mount).maxBlockSize).to.equal('none');
+  });
+
+  it('validates maxHeight before assigning the base custom property', async () => {
+    const el = (await fixture(html`<lr-ebook-viewer></lr-ebook-viewer>`)) as LyraEbookViewer;
+    el.maxHeight = '10rem;position:fixed';
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.style.position).to.equal('');
+    expect(base.style.getPropertyValue('--lr-ebook-viewer-max-height')).to.equal('');
+    el.maxHeight = 'calc(10rem + 2px)';
+    await el.updateComplete;
+    expect(base.style.getPropertyValue('--lr-ebook-viewer-max-height').trim()).to.equal('calc(10rem + 2px)');
+  });
+});
+
 describe('styling', () => {
   it('gives previous-button and next-button a hover state', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');

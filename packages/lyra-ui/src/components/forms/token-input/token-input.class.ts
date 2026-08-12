@@ -85,6 +85,8 @@ const stringArrayConverter = {
  * @slot label - Visible label content.
  * @slot hint - Supporting text.
  * @slot error - Validation message.
+ * @slot start - Adornment at the inline-start of the token/input row, before the tokens.
+ * @slot end - Adornment at the inline-end of the token/input row, after the draft input.
  * @event input - Native-style composed event emitted after a user changes the token list.
  * @event change - Native-style composed commit event emitted with `input`.
  * @event focus - Re-dispatched from the draft input and inline token editor as a bubbling,
@@ -109,6 +111,8 @@ const stringArrayConverter = {
  * @csspart token-editor - The inline text field replacing a token's text while it is being edited. Rendered only while `editable` is set and that token is open for editing.
  * @csspart remove - Token remove button.
  * @csspart input - Native text input.
+ * @csspart start - Wrapper around the `start` adornment slot; `hidden` while nothing is slotted.
+ * @csspart end - Wrapper around the `end` adornment slot; `hidden` while nothing is slotted.
  * @csspart hint - Supporting text.
  * @csspart error - Validation message.
  * @cssprop [--lr-token-input-input-inline-size=var(--lr-size-8rem)] - `flex-basis` of the native text input within the token row.
@@ -259,6 +263,8 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   @state() private hasLabelSlot = false;
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
+  @state() private hasStartSlot = false;
+  @state() private hasEndSlot = false;
   // Selected by id rather than by tag: an open token editor is also an `input`, and it precedes
   // this one in DOM order, so a bare `input` selector would silently retarget `focus()`, `blur()`,
   // and the validity anchor at the editor while a token is being edited.
@@ -487,6 +493,8 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
       this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
       this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
+      this.hasStartSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'start');
+      this.hasEndSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'end');
     }
   }
 
@@ -730,6 +738,8 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   private onLabelSlotChange = (e: Event): void => { this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
   private onHintSlotChange = (e: Event): void => { this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
   private onErrorSlotChange = (e: Event): void => { this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
+  private onStartSlotChange = (e: Event): void => { this.hasStartSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
+  private onEndSlotChange = (e: Event): void => { this.hasEndSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
   formResetCallback(): void {
     this.restoreLiveValueFromDefault();
     this.discardTransientState(true);
@@ -795,8 +805,10 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     return html`<div part="form-control">
       <label part="form-control-label" ?hidden=${!hasLabel} for="input" id=${this.labelId}>${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot></label>
       <div part="input-wrapper" role="group" aria-labelledby=${!hasAccessibleLabel && hasLabel ? this.labelId : nothing} aria-label=${hasAccessibleLabel ? this.accessibleLabel : nothing}>
+        <span part="start" ?hidden=${!this.hasStartSlot}><slot name="start" @slotchange=${this.onStartSlotChange}></slot></span>
         ${this.value.map((token, index) => this.editable ? this.renderEditableToken(token, index) : html`<span part="token"><span>${token}</span><button part="remove" type="button" aria-label=${this.localize('removeWithContext', undefined, { label: token })} ?disabled=${this.effectiveDisabled} @click=${() => this.removeToken(index)}>${closeIcon()}</button></span>`)}
         <input id="input" part="input" .value=${this.draft} placeholder=${this.placeholder} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize || nothing} autocorrect=${this.autoCorrect || nothing} aria-label=${hasAccessibleLabel ? this.accessibleLabel : nothing} aria-labelledby=${!hasAccessibleLabel && hasLabel ? this.labelId : nothing} aria-describedby=${described} aria-required=${this.required ? 'true' : 'false'} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'} @input=${this.onInput} @change=${this.stopInternalChange} @keydown=${this.onKeyDown} @blur=${this.onBlur} @focus=${this.onFocus} />
+        <span part="end" ?hidden=${!this.hasEndSlot}><slot name="end" @slotchange=${this.onEndSlotChange}></slot></span>
       </div>
       <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot></div>
       <div part="error" id=${this.errorId} ?hidden=${!hasError}>${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot></div>

@@ -94,6 +94,21 @@ export const styles = css`
      used to push the dense tiers over their floor and hand the rendered height to the font. */
   [part='input'] { flex: 1 1 var(--lr-token-input-input-inline-size, var(--lr-size-8rem)); min-inline-size: var(--lr-token-input-min-input-inline-size); padding-block: 0; border: 0; outline: 0; background: transparent; color: var(--lr-color-text); font: inherit; }
   [part='input']::placeholder { color: var(--lr-color-text-quiet); }
+  /* Mirrors lr-combobox's identical [part='start']/[part='end'] wrappers: the wrapper span is
+     always present so JS can toggle its hidden attribute -- an author display rule always beats
+     the UA's own [hidden] rule regardless of specificity, so the explicit override below is
+     required once this selector declares its own display. */
+  [part='start'],
+  [part='end'] {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    color: var(--lr-color-text-quiet);
+  }
+  [part='start'][hidden],
+  [part='end'][hidden] {
+    display: none;
+  }
   [part='token'] { display: inline-flex; min-inline-size: 0; max-inline-size: 100%; overflow: hidden; align-items: center; gap: var(--lr-token-input-token-gap); padding: var(--lr-token-input-token-padding); border-radius: var(--lr-token-input-radius); background: var(--lr-token-input-token-bg, var(--lr-color-brand-quiet)); color: var(--lr-color-text); }
   [part='token'] > span:first-child {
     min-inline-size: 0;

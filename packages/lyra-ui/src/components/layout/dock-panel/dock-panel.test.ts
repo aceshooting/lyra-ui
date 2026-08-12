@@ -12,6 +12,7 @@ import type {
   DockPanelCollapseChangeDetail,
 } from "./dock-panel.js";
 import { parseLengthPx } from "./dock-panel.js";
+import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 async function dockedFixture(attrs = "", edge = "end"): Promise<LyraDockPanel> {
   const wrapper = (await fixture(
@@ -842,4 +843,157 @@ it("no longer answers to the pre-8.0.0 size/min-size/max-size attributes — ext
   expect(el.minExtent).to.equal("160px");
   expect(el.maxExtent).to.equal("");
   expect(el.getBoundingClientRect().width).to.be.closeTo(280, 1);
+});
+
+describe("collapse-toggle/handle hover and pressed theming cssprops", () => {
+  // [part="collapse-toggle"] (unlike [part="handle"]) animates background/color across
+  // --lr-transition-fast (120ms by default); reading getComputedStyle() synchronously right
+  // after the hover/press pointer event would still see the *starting* value mid-transition, not
+  // the settled target -- real timer, margined well past the token default, never fake timers
+  // (wtr does not support @sinonjs/fake-timers).
+  const settleTransition = (): Promise<void> =>
+    new Promise((resolve) => setTimeout(resolve, 200));
+
+  it("lets --lr-dock-panel-collapse-toggle-hover-bg/-hover-color retint the collapse toggle on hover, and feeds the pressed state through color-mix()", async () => {
+    const el = await fixture<HTMLDivElement>(html`
+      <div style="position: relative; height: 20rem; display: flex;">
+        <lr-dock-panel
+          edge="end"
+          extent="280px"
+          collapsible
+          style="--lr-dock-panel-collapse-toggle-hover-bg: rgb(10, 20, 30); --lr-dock-panel-collapse-toggle-hover-color: rgb(40, 50, 60);"
+        ></lr-dock-panel>
+      </div>
+    `);
+    const panel = el.querySelector("lr-dock-panel") as LyraDockPanel;
+    await elementUpdated(panel);
+    const toggle = panel.shadowRoot!.querySelector(
+      '[part="collapse-toggle"]'
+    ) as HTMLElement;
+    const resting = getComputedStyle(toggle).backgroundColor;
+    const rect = toggle.getBoundingClientRect();
+    const position: [number, number] = [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
+    try {
+      await sendMouse({ type: "move", position });
+      await settleTransition();
+      expect(getComputedStyle(toggle).backgroundColor).to.equal("rgb(10, 20, 30)");
+      expect(getComputedStyle(toggle).color).to.equal("rgb(40, 50, 60)");
+      await sendMouse({ type: "down" });
+      await settleTransition();
+      const pressedBg = getComputedStyle(toggle).backgroundColor;
+      // The pressed state derives from the same hover-bg token via color-mix(), so an override
+      // reaches it too -- but visibly mixed further toward --lr-color-mix-partner, not identical
+      // to the flat hover override.
+      expect(pressedBg).to.not.equal("rgb(10, 20, 30)");
+      expect(pressedBg).to.not.equal(resting);
+      expect(getComputedStyle(toggle).color).to.equal("rgb(40, 50, 60)");
+      await sendMouse({ type: "up" });
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it("defaults --lr-dock-panel-collapse-toggle-hover-bg/-hover-color to the previous hardcoded brand tokens, so hover repaints unchanged when unset", async () => {
+    const el = await dockedFixture("collapsible");
+    await elementUpdated(el);
+    const toggle = el.shadowRoot!.querySelector(
+      '[part="collapse-toggle"]'
+    ) as HTMLElement;
+    // A probe resolves what --lr-color-brand-quiet/--lr-color-brand actually paint as, so the
+    // hovered/pressed colors below can be checked against the *exact* previous hardcoded values
+    // rather than merely "changed from resting".
+    const probe = document.createElement("div");
+    probe.style.cssText = "background-color: var(--lr-color-brand-quiet); color: var(--lr-color-brand);";
+    el.shadowRoot!.appendChild(probe);
+    const expectedHoverBg = getComputedStyle(probe).backgroundColor;
+    const expectedHoverColor = getComputedStyle(probe).color;
+    probe.remove();
+
+    const resting = getComputedStyle(toggle).backgroundColor;
+    const rect = toggle.getBoundingClientRect();
+    const position: [number, number] = [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
+    try {
+      await sendMouse({ type: "move", position });
+      await settleTransition();
+      const hovered = getComputedStyle(toggle).backgroundColor;
+      expect(hovered).to.not.equal(resting);
+      expect(hovered).to.equal(expectedHoverBg);
+      expect(getComputedStyle(toggle).color).to.equal(expectedHoverColor);
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it("lets --lr-dock-panel-handle-hover-color/-active-color retint the resize handle independently of the collapse-toggle's own tokens", async () => {
+    const el = await fixture<HTMLDivElement>(html`
+      <div style="position: relative; height: 20rem; display: flex;">
+        <lr-dock-panel
+          edge="end"
+          extent="280px"
+          style="--lr-dock-panel-handle-hover-color: rgb(70, 80, 90); --lr-dock-panel-handle-active-color: rgb(100, 110, 120);"
+        ></lr-dock-panel>
+      </div>
+    `);
+    const panel = el.querySelector("lr-dock-panel") as LyraDockPanel;
+    await elementUpdated(panel);
+    const handle = panel.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+    const resting = getComputedStyle(handle).backgroundColor;
+    handle.setPointerCapture = () => {};
+    const rect = handle.getBoundingClientRect();
+    const position: [number, number] = [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
+    try {
+      await sendMouse({ type: "move", position });
+      expect(getComputedStyle(handle).backgroundColor).to.equal("rgb(70, 80, 90)");
+      expect(getComputedStyle(handle).backgroundColor).to.not.equal(resting);
+      await sendMouse({ type: "down" });
+      expect(getComputedStyle(handle).backgroundColor).to.equal("rgb(100, 110, 120)");
+      await sendMouse({ type: "up" });
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it("derives the resize handle's pressed color from its own hover token via color-mix() when only the hover token is overridden", async () => {
+    const el = await fixture<HTMLDivElement>(html`
+      <div style="position: relative; height: 20rem; display: flex;">
+        <lr-dock-panel
+          edge="end"
+          extent="280px"
+          style="--lr-dock-panel-handle-hover-color: rgb(200, 0, 0);"
+        ></lr-dock-panel>
+      </div>
+    `);
+    const panel = el.querySelector("lr-dock-panel") as LyraDockPanel;
+    await elementUpdated(panel);
+    const handle = panel.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+    handle.setPointerCapture = () => {};
+    const rect = handle.getBoundingClientRect();
+    const position: [number, number] = [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
+    try {
+      await sendMouse({ type: "move", position });
+      const hovered = getComputedStyle(handle).backgroundColor;
+      expect(hovered).to.equal("rgb(200, 0, 0)");
+      await sendMouse({ type: "down" });
+      const pressed = getComputedStyle(handle).backgroundColor;
+      // No --lr-dock-panel-handle-active-color override here, so the pressed color must be a
+      // color-mix() of the *overridden* hover color, not the original default brand token.
+      expect(pressed).to.not.equal(hovered);
+      expect(pressed).to.not.equal("rgb(200, 0, 0)");
+      await sendMouse({ type: "up" });
+    } finally {
+      await resetMouse();
+    }
+  });
 });

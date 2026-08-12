@@ -580,6 +580,60 @@ it('emits a cancelable lr-invalid alias whose cancellation reaches the native in
   expect(natives[0].defaultPrevented).to.be.true;
 });
 
+// -- size: parity with lr-textarea's own six-step ladder (see textarea.test.ts's identical
+// describe block) -- lr-code-editor had no `size` property at all before this.
+describe('lr-code-editor size', () => {
+  const textareaOf = (el: LyraCodeEditor) => el.shadowRoot!.querySelector('[part="textarea"]') as HTMLElement;
+  const gutterOf = (el: LyraCodeEditor) => el.shadowRoot!.querySelector('[part="gutter"]') as HTMLElement;
+  const editorOf = (el: LyraCodeEditor) => el.shadowRoot!.querySelector('[part="editor"]') as HTMLElement;
+
+  it('defaults to size "m" and reflects the attribute', async () => {
+    const el = await fixture<LyraCodeEditor>(html`<lr-code-editor></lr-code-editor>`);
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+    const sized = await fixture<LyraCodeEditor>(html`<lr-code-editor size="s"></lr-code-editor>`);
+    expect(sized.size).to.equal('s');
+    expect(sized.getAttribute('size')).to.equal('s');
+  });
+
+  it('leaves the committed padding/font-size untouched at the default tier and tightens them at "xs"', async () => {
+    const mEl = await fixture<LyraCodeEditor>(html`<lr-code-editor value="one"></lr-code-editor>`);
+    const xsEl = await fixture<LyraCodeEditor>(html`<lr-code-editor value="one" size="xs"></lr-code-editor>`);
+    const m = getComputedStyle(textareaOf(mEl));
+    const xs = getComputedStyle(textareaOf(xsEl));
+    // Today's exact rendering at the untouched default tier -- 0.5rem padding, 1rem font-size --
+    // must survive the addition of the `size` property unchanged.
+    expect(m.paddingTop).to.equal('8px');
+    expect(m.fontSize).to.equal('16px');
+    expect(parseFloat(xs.paddingTop)).to.be.below(parseFloat(m.paddingTop));
+    expect(parseFloat(xs.fontSize)).to.be.below(parseFloat(m.fontSize));
+  });
+
+  it('grows padding/font-size/min-block-size at "xl" beyond the default tier', async () => {
+    const mEl = await fixture<LyraCodeEditor>(html`<lr-code-editor value="one"></lr-code-editor>`);
+    const xlEl = await fixture<LyraCodeEditor>(html`<lr-code-editor value="one" size="xl"></lr-code-editor>`);
+    const m = getComputedStyle(textareaOf(mEl));
+    const xl = getComputedStyle(textareaOf(xlEl));
+    expect(parseFloat(xl.paddingTop)).to.be.above(parseFloat(m.paddingTop));
+    expect(parseFloat(xl.fontSize)).to.be.above(parseFloat(m.fontSize));
+    expect(parseFloat(getComputedStyle(editorOf(xlEl)).minHeight)).to.be.above(
+      parseFloat(getComputedStyle(editorOf(mEl)).minHeight),
+    );
+  });
+
+  it('keeps the gutter font-size in step with the textarea so line numbers stay aligned', async () => {
+    const el = await fixture<LyraCodeEditor>(html`<lr-code-editor value="one\ntwo" size="l"></lr-code-editor>`);
+    expect(getComputedStyle(gutterOf(el)).fontSize).to.equal(getComputedStyle(textareaOf(el)).fontSize);
+  });
+
+  it('accepts the Web Awesome/Shoelace "small"/"large" spellings and renders them identically to "s"/"l"', async () => {
+    const small = await fixture<LyraCodeEditor>(html`<lr-code-editor value="one" size="small"></lr-code-editor>`);
+    const s = await fixture<LyraCodeEditor>(html`<lr-code-editor value="one" size="s"></lr-code-editor>`);
+    expect(getComputedStyle(textareaOf(small)).fontSize).to.equal(getComputedStyle(textareaOf(s)).fontSize);
+    expect(getComputedStyle(textareaOf(small)).paddingTop).to.equal(getComputedStyle(textareaOf(s)).paddingTop);
+  });
+});
+
 it('keeps long code in its editor scrollport inside an exact 320px RTL allocation', async () => {
   const long = 'LocalizedUnbrokenCodeEditorChrome'.repeat(32);
   const code = `const payload = '${'unbrokenSourceToken'.repeat(96)}';`;

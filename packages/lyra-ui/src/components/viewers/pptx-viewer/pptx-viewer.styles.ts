@@ -1,7 +1,10 @@
 import { css } from 'lit';
 
 export const styles = css`
-  :host { display: block; }
+  :host {
+    display: block;
+    --lr-pptx-viewer-max-height: none;
+  }
   [part='base'] {
     display: flex;
     flex-direction: column;
@@ -69,7 +72,12 @@ export const styles = css`
   :host(:dir(rtl)) [part='previous-icon'] { transform: rotate(0deg); }
   :host(:dir(rtl)) [part='next-icon'] { transform: rotate(180deg); }
   [part='slide-count'] { color: var(--lr-color-text-quiet); white-space: nowrap; }
-  [part='container'] { min-block-size: var(--lr-size-10rem); overflow: auto; position: relative; }
+  [part='container'] {
+    min-block-size: var(--lr-size-10rem);
+    max-block-size: var(--lr-pptx-viewer-max-height);
+    overflow: auto;
+    position: relative;
+  }
   [part='error'] { padding: var(--lr-space-l); color: var(--lr-color-danger); }
   lr-skeleton { display: block; min-block-size: var(--lr-size-10rem); }
 `;

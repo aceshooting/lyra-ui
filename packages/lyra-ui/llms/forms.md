@@ -3888,7 +3888,9 @@ rounds the token row's corners to a full pill by re-assigning `--lr-token-input-
 `allowDuplicates`
 (`allow-duplicates`, default `false`), `editable` (reflected, default `false` — see below), and
 `delimiter: string | null` (default `','` — see below).
-**Slots:** `label`, `hint`, `error`.
+**Slots:** `label`, `hint`, `error`, `start` (adornment before the tokens), `end` (adornment after
+the draft input) — both wrapped in a `hidden`-toggling span, mirroring `lr-combobox`'s identical
+`start`/`end`.
 **Events:** native-style `input` and `change` (`detail: { value: string[] }`), bubbling/composed
 `focus` and `blur` re-dispatched from the draft and inline-editor text inputs, `lr-add` (`detail: { value }`),
 `lr-remove`
@@ -3901,7 +3903,7 @@ token's text, doubling as the roving-focus edit trigger — rendered only while 
 `token-editor` (the inline text field that replaces a token's text while it is open for editing —
 rendered only while `editable` and only for the token being edited), `remove` (the
 per-token remove button, floored at the shared `--lr-icon-button-size` tap size around a compact
-glyph), `input`, `hint`, `error`. `focus()`, `blur()`, `click()`, and `select()` forward to the
+glyph), `input`, `start`, `end`, `hint`, `error`. `focus()`, `blur()`, `click()`, and `select()` forward to the
 internal draft text input. `selectionStart`, `selectionEnd`, and `selectionDirection` are readable/
 writable native-selection passthroughs; `setSelectionRange(start, end, direction?)` and
 `setRangeText(replacement, start?, end?, selectMode?)` expose the matching native methods.
@@ -4009,6 +4011,10 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
 - `readonly: boolean = false` (reflected) — also disables Tab indentation
 - `resize: 'none' | 'both' | 'horizontal' | 'vertical' = 'both'` — written as the textarea's inline
   `resize`; an invalid runtime value falls back to `'both'`
+- `size: LyraSize = 'm'` (reflected) — visual size on the shared control ladder, the same scale as
+  `lr-textarea`/`lr-input`/`lr-select`, accepting both spellings of every tier (`2xs`/`xs`/`s`/`m`/
+  `l`/`xl` and `small`/`medium`/`large`). Governs the gutter's and textarea's padding and font size,
+  plus the editor frame's minimum block size.
 - `wrap: 'off' | 'soft' | 'hard' = 'off'` — native textarea wrapping; `'off'` (the default) makes
   the `editor` part the single horizontal scroll viewport
 - `spellcheck: boolean = false` — off by default for code, and parsed with a string-aware converter
@@ -4045,8 +4051,12 @@ a copy of it, so `--lr-form-control-required-content`, `--lr-form-control-requir
 With no label text the element is hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-code-editor-min-block-size` (default `--lr-size-8rem`, the
-frame's and textarea's height floor) and `--lr-code-editor-line-height` (default `1.5`, applied to
-both gutter and textarea so line numbers stay aligned with their lines).
+frame's and textarea's height floor), `--lr-code-editor-padding` (default `--lr-space-s`, the
+gutter's block-side padding and the textarea's all-side padding), and `--lr-code-editor-font-size`
+(default `--lr-font-size-m`, the gutter's and textarea's font size) — all three come from the active
+`size` tier by default, and assigning one directly overrides that tier's value. Also
+`--lr-code-editor-line-height` (default `1.5`, applied to both gutter and textarea so line numbers
+stay aligned with their lines).
 `--lr-code-editor-tab-size` (default `2`) is read by the `textarea` part's rule and drives both the
 rendered tab stops and the number of spaces Tab inserts. Precedence, highest first: an explicitly
 assigned `tabSize` (property or `tab-size` attribute) > a host-level `--lr-code-editor-tab-size` >

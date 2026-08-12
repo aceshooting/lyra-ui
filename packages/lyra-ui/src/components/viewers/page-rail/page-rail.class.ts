@@ -67,6 +67,16 @@ interface OwnedAnimationFrameWait {
  * @cssprop [--lr-page-rail-height=var(--lr-size-24rem)] - Block size of the virtualized rail.
  * @cssprop [--lr-page-rail-current-bg=var(--lr-color-brand-quiet)] - Background of the
  *   `[part="page-current"]` button for the current `page`.
+ * @cssprop [--lr-page-rail-heat-accent-color=var(--lr-color-brand)] - Background of an
+ *   accent-tone (the default tone) `[part="heat-dot"]` marker.
+ * @cssprop [--lr-page-rail-heat-success-color=var(--lr-color-success)] - Background of a
+ *   success-tone `[part="heat-dot-success"]` marker.
+ * @cssprop [--lr-page-rail-heat-warning-color=var(--lr-color-warning)] - Background of a
+ *   warning-tone `[part="heat-dot-warning"]` marker.
+ * @cssprop [--lr-page-rail-heat-danger-color=var(--lr-color-danger)] - Background of a
+ *   danger-tone `[part="heat-dot-danger"]` marker.
+ * @cssprop [--lr-page-rail-heat-neutral-color=var(--lr-color-text-quiet)] - Background of a
+ *   neutral-tone `[part="heat-dot-neutral"]` marker.
  * @status stable
  * @since 4.0.0
  */
