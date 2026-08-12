@@ -1,5 +1,5 @@
 ---
-'@aceshooting/lyra-ui': minor
+"@aceshooting/lyra-ui": minor
 ---
 
 Remediate the confirmed findings of a full-library review sweep. Every change is additive: no public
