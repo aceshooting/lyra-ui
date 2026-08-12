@@ -359,6 +359,26 @@ fixed at the source:
   release commit. Fix: rebuild, `node scripts/generate-component-quality.mjs --write
   --measure-gzip`, `check:bundle-size`, then a follow-up commit on top of the already-pushed release
   commit, re-qualified through `wait-ci`/`wait-full-engine` like any other commit before tagging.
+- **The same regeneration is owed by ANY change under `src/`, not just a version bump — and not just
+  changes to shipped code.** `generate-component-quality.mjs` measures two things a source diff does
+  not obviously touch: the *built* per-component gzip size (so it reads `dist/`, and needs a fresh
+  build first) and per-component *test* quality (so it reads `src/**/*.test.ts` too). Both bit this
+  repo in sequence on 2026-08-12: a one-method source fix, then a test-only edit, each turned CI's
+  `lint` job red with `component-qualification.json: stale or missing` after local `pnpm lint` had
+  passed. Critically, `pnpm manifest` came back **byte-identical** both times, which made each
+  change look artifact-neutral — a clean manifest is not evidence that component-quality is clean.
+  Rule of thumb: touched anything under `src/`? rebuild, then rerun
+  `generate-component-quality.mjs --write --measure-gzip` before committing.
+- **`./scripts/ci.sh` is Chromium-only, so it cannot see a contract that is entirely absent on
+  another engine.** On 2026-08-12 `lr-zoomable-frame`'s host `focus`/`blur` forwarding re-dispatched
+  nothing at all on Firefox — that engine dispatches neither `focus` nor `focusin` on an `<iframe>`
+  ELEMENT for a programmatic `.focus()`, moving focus into the frame's own document instead. The
+  element still became `shadowRoot.activeElement`, so the assertion that focus *moved* passed and
+  only the missing events failed. Anything that wraps an `<iframe>`, or that re-emits a
+  non-composed native event, needs a `WTR_BROWSER=firefox`/`webkit` run before it is believed;
+  `pnpm exec wtr --files <path>` accepts that env var per file, and a full local sweep on one engine
+  is far cheaper than a `workflow_dispatch` round trip. It also sees what CI's *sharding* can hide:
+  the same sweep surfaced a second, unrelated load-sensitive timeout that the sharded run missed.
 
 ## Coverage floors (`scripts/coverage-floors.json`)
 
