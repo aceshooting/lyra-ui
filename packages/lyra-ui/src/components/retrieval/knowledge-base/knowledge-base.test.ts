@@ -158,16 +158,16 @@ describe('lr-knowledge-base', () => {
     expect(permissionBadges.map((b) => b.textContent!.trim())).to.deep.equal(['Owner', 'Editor']);
   });
 
-  it('clicking "Add source" emits lr-kb-create with no detail; hide-create removes the button', async () => {
+  it('clicking "Add source" emits lr-source-create with no detail; hide-create removes the button', async () => {
     const el = (await fixture(html`<lr-knowledge-base></lr-knowledge-base>`)) as LyraKnowledgeBase;
     const button = el.shadowRoot!.querySelector('[part="create-button"]') as HTMLElement;
     expect((button) != null).to.equal(true);
-    const listener = oneEvent(el, 'lr-kb-create');
+    const listener = oneEvent(el, 'lr-source-create');
     button.click();
     const event = (await listener) as CustomEvent<undefined>;
     // CustomEventInit's `detail` member defaults to `null` when omitted/undefined -- WebIDL
     // dictionary conversion substitutes the default for an explicitly-`undefined` value too, so
-    // this.emit('lr-kb-create') (no 2nd argument) still reads back as `null`, not `undefined`.
+    // this.emit('lr-source-create') (no 2nd argument) still reads back as `null`, not `undefined`.
     expect(event.detail).to.equal(null);
 
     el.hideCreate = true;
@@ -193,34 +193,34 @@ describe('lr-knowledge-base', () => {
     expect(el.shadowRoot!.querySelector('[part="summary"]')).to.not.exist;
   });
 
-  it('activating "Sync now" on a row emits lr-kb-sync with that row\'s sourceId', async () => {
+  it('activating "Sync now" on a row emits lr-source-sync with that row\'s sourceId', async () => {
     const el = (await fixture(html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`)) as LyraKnowledgeBase;
     await el.updateComplete;
     const menu = menuFor(el, 2);
     const items = menuItems(menu);
-    const listener = oneEvent(el, 'lr-kb-sync');
+    const listener = oneEvent(el, 'lr-source-sync');
     activate(items.find((i) => i.value === 'sync')!);
     const event = (await listener) as CustomEvent<{ sourceId: string }>;
     expect(event.detail).to.deep.equal({ sourceId: 's3' });
   });
 
-  it('activating "Pause sync" emits lr-kb-pause with that row\'s sourceId', async () => {
+  it('activating "Pause sync" emits lr-source-pause with that row\'s sourceId', async () => {
     const el = (await fixture(html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`)) as LyraKnowledgeBase;
     await el.updateComplete;
     const menu = menuFor(el, 1);
     const items = menuItems(menu);
-    const listener = oneEvent(el, 'lr-kb-pause');
+    const listener = oneEvent(el, 'lr-source-pause');
     activate(items.find((i) => i.value === 'pause')!);
     const event = (await listener) as CustomEvent<{ sourceId: string }>;
     expect(event.detail).to.deep.equal({ sourceId: 's2' });
   });
 
-  it('activating "Delete source" emits lr-kb-delete with that row\'s sourceId', async () => {
+  it('activating "Delete source" emits lr-source-delete with that row\'s sourceId', async () => {
     const el = (await fixture(html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`)) as LyraKnowledgeBase;
     await el.updateComplete;
     const menu = menuFor(el, 0);
     const items = menuItems(menu);
-    const listener = oneEvent(el, 'lr-kb-delete');
+    const listener = oneEvent(el, 'lr-source-delete');
     activate(items.find((i) => i.value === 'delete')!);
     const event = (await listener) as CustomEvent<{ sourceId: string }>;
     expect(event.detail).to.deep.equal({ sourceId: 's1' });
@@ -272,7 +272,7 @@ describe('lr-knowledge-base', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="heading"]')).to.exist;
     const menu = menuFor(el, 0);
-    const listener = oneEvent(el, 'lr-kb-delete');
+    const listener = oneEvent(el, 'lr-source-delete');
     activate(menuItems(menu).find((i) => i.value === 'delete')!);
     const event = (await listener) as CustomEvent<{ sourceId: string }>;
     expect(event.detail).to.deep.equal({ sourceId: 's1' });

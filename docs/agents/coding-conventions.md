@@ -54,11 +54,22 @@
   `part=` resolves its clickable box to at least `--lr-icon-button-size` via
   `min-inline-size`/`min-block-size` — a floor, not a fixed size, so larger slotted content still
   grows it. `pnpm run check:hit-area` checks this and honours a `hit-area-exempt` comment.
-- **Never expose `rel` independently of `target`.** A property that can set a real anchor's
-  `target` derives `rel="noopener noreferrer"` from that same value —
-  `rel=${this.target ? 'noopener noreferrer' : nothing}`, as `app-rail-item.class.ts` does. A
-  separately-settable `rel` means a consumer setting only `target="_blank"` gets an anchor with
-  no `rel` at all — a live reverse-tabnabbing vector, not a style nit.
+- **`rel` is settable; the `target`-derived guard is not removable.** A property that can set a real
+  anchor's `target` must guarantee that setting `target` alone still produces
+  `noopener noreferrer` — a consumer who sets only `target="_blank"` and gets an anchor with no
+  `rel` has a live reverse-tabnabbing vector, not a style nit. The guarantee is implemented by
+  *merging* rather than by refusing author input: take the author's tokens, always drop `opener`
+  (the one token that re-opens the vector), and force-add `noopener` + `noreferrer` whenever
+  `target` is set. `button.class.ts`'s and `breadcrumb-item.class.ts`'s `resolvedRel` getters are
+  the reference implementation.
+
+  This replaces the earlier, stricter rule ("never expose `rel` independently of `target`", still
+  the shape `app-rail-item.class.ts` uses). That rule was over-broad in both directions: it refused
+  a same-tab link, which opens no new browsing context and needs no guard at all, and it silently
+  discarded every `nofollow`/`me`/`license`/`external` written by a consumer migrating from
+  `wa-*`/`sl-*` — where `rel` is a documented settable property. Because `migrate-wa.mjs` warns at
+  tag granularity rather than member granularity, that divergence also refused **every**
+  `<wa-button>`/`<sl-button>` in a migrating app, including ones with no `href` at all.
 - **Resolve CSS colors before assigning `ctx.fillStyle`/`strokeStyle`.** Canvas 2D's setter is a
   spec'd silent no-op on an unparseable string: it keeps the previous value, usually black, with
   no error. Any canvas path deriving a color from a `--lr-*` property, a consumer callback, or a

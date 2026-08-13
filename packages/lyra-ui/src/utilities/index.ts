@@ -14,6 +14,7 @@ export * from './announcer.js';
 export * from './layered-layout.js';
 export * from './form-associated.js';
 export * from './group-by-recency.js';
+export * from './localization.js';
 export * from './animation-registry.js';
 export * from './defined.js';
 export * from './theme.js';

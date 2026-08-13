@@ -2469,8 +2469,11 @@ pre-formatted cost (e.g. `"$0.012"`), rendered verbatim. `latencyMs?: number` (a
 `latency-ms`) — formatted with the shared duration algorithm (`820 -> "820ms"`, `1500 -> "1.5s"`), or
 `formatLatency` when set. `formatLatency?: (ms: number) => string` — overrides the built-in duration
 algorithm (which has no minutes/hours tier) in both the visible strip and the tooltip row; mirrors
-`lr-activity-feed`'s `formatTimestamp` convention. `compact: boolean = false` — token counts render
-via `Intl.NumberFormat` `notation: 'compact'`; the tooltip always shows full grouped figures.
+`lr-activity-feed`'s `formatTimestamp` convention. `abbreviate: boolean = false` (reflected) — token
+counts render via `Intl.NumberFormat` `notation: 'compact'` (`12345 -> "12K"`); the tooltip always
+shows full grouped figures. This badge has no density mode: the old `compact` spelling of this
+property was removed in 9.0.0 (it collided with `compact`'s density meaning everywhere else in the
+library) — rename `compact` to `abbreviate`; a stale `compact` attribute is inert.
 
 **Slots:** default — extra rows appended below the built-in tooltip breakdown (e.g. cache-read
 tokens); the visible strip itself is prop-driven only.
@@ -2900,8 +2903,8 @@ discriminated part shapes come from the `@aceshooting/lyra-ui/ai` subpath.
 **Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`). Composed child
 events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`,
 `lr-highlight-activate`, `lr-link-click`, `lr-preview`, `lr-remove`, `lr-render-error`, `lr-retry`,
-`lr-search-change`, `lr-text-select`, `lr-toggle`, `lr-tool-call-chip-select`,
-`lr-tool-chip-select`, `lr-widget-action`, and `lr-widget-state-change`.
+`lr-search-change`, `lr-text-select`, `lr-toggle`, `lr-tool-call-chip-select`, `lr-widget-action`,
+and `lr-widget-state-change`. The `lr-tool-chip-select` alias passthrough was removed in 9.0.0.
 
 **CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-result`,
 `citation`, `attachment`, `data`, `audio`, `audio-transcript`, `error`, `retry`.
@@ -2942,8 +2945,8 @@ import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts
 - `lr-search-change` event — Passthrough from rendered JSON content.
 - `lr-text-select` event — Passthrough from rendered Markdown.
 - `lr-toggle` event — Passthrough from a rendered reasoning panel.
-- `lr-tool-call-chip-select` event — Passthrough from a rendered tool-call chip.
-- `lr-tool-chip-select` event — Deprecated tool-call selection alias passthrough.
+- `lr-tool-call-chip-select` event — Passthrough from a rendered tool-call chip. The
+  `lr-tool-chip-select` alias it replaced was removed in 9.0.0.
 - `lr-widget-action` event — Passthrough from a rendered declarative widget.
 - `lr-widget-state-change` event — Passthrough from a rendered controlled widget.
 

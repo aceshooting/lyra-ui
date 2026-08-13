@@ -25,6 +25,11 @@ import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-m
 import { setCustomState } from '../../../internal/custom-states.js';
 import { animateRegistered } from '../../../internal/registered-animation.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from './overlay-arrow.js';
+import {
+  normalizeVirtualRect,
+  resolveOverlayAnchor,
+  type OverlayVirtualRect,
+} from './overlay-shared.js';
 import { styles } from './overlay.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -40,26 +45,8 @@ export type LyraPopupRole = 'dialog' | 'menu';
 
 export type { LyraArrowPlacement };
 
-type PopoverVirtualRect = {
-  x: number;
-  y: number;
-  width?: number;
-  height?: number;
-  contextElement?: Element;
-};
-
-function normalizeVirtualRect(rect: PopoverVirtualRect): PopoverVirtualRect | undefined {
-  const width = rect.width ?? 0;
-  const height = rect.height ?? 0;
-  if (![rect.x, rect.y, width, height].every(Number.isFinite)) return undefined;
-  return {
-    x: rect.x,
-    y: rect.y,
-    width: Math.max(0, width),
-    height: Math.max(0, height),
-    contextElement: rect.contextElement,
-  };
-}
+/** The `showAt()` rectangle, shared verbatim with `<lr-tooltip>` (see `./overlay-shared.ts`). */
+type PopoverVirtualRect = OverlayVirtualRect;
 
 export interface LyraPopoverEventMap {
   'lr-show': CustomEvent<undefined>;
@@ -425,16 +412,15 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     else void this.show();
   }
   /** Resolves what the popup is positioned against: an explicit virtual anchor first, then the
-   *  `for` idref, then the slotted trigger. */
+   *  direct `anchor`, then the `for` idref, then the slotted trigger. Shared with `<lr-tooltip>`,
+   *  which resolves the identical chain. */
   private resolveAnchor(): Element | VirtualAnchor | null {
-    if (this.virtualAnchor) return this.virtualAnchor;
-    if (this.anchor) return this.anchor;
-    if (this.for) {
-      const root = this.getRootNode() as Document | ShadowRoot;
-      const target = root.getElementById?.(this.for) ?? null;
-      if (target) return target;
-    }
-    return this.trigger ?? null;
+    return resolveOverlayAnchor(this, {
+      virtualAnchor: this.virtualAnchor,
+      anchor: this.anchor,
+      for: this.for,
+      trigger: this.trigger,
+    });
   }
   protected positionPopup(): void {
     this.cleanup?.();

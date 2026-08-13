@@ -10,6 +10,7 @@ import {
   stringFormValueAdapter,
   type FormValueAdapter,
 } from './form-associated.js';
+import { syncValidityStates } from './custom-states.js';
 import { attachLegacyNoopInternalsSafely } from './legacy-noop-internals.js';
 import { SET_ANCHORED_VALIDITY } from './anchored-validity.js';
 import { tag } from './prefix.js';
@@ -1093,8 +1094,13 @@ describe('fallback ElementInternals when attachInternals() is unavailable', () =
   });
 });
 
-describe('legacy no-op ElementInternals fallback', () => {
-  it('preserves the old no-op internals shape when attachInternals is missing or throws', () => {
+// The historical `attachLegacyNoopInternalsSafely()` entry point kept a SECOND fallback shape whose
+// `validity` was an empty object and which had no `states` at all. `setCustomState()` early-returns
+// on a falsy `internals.states`, so in any environment without `ElementInternals` all six validity
+// custom states silently never published for the nine controls that called it -- while they DID
+// publish for the controls calling `attachInternalsSafely()`. It is now the same one fallback.
+describe('the legacy no-op ElementInternals entry point', () => {
+  it('degrades to the working shared fallback, states included, when attachInternals is missing or throws', () => {
     const hosts = [
       {} as HTMLElement,
       {
@@ -1110,13 +1116,34 @@ describe('legacy no-op ElementInternals fallback', () => {
       expect(internals.labels.length).to.equal(0);
       expect(internals.validationMessage).to.equal('');
       expect(internals.willValidate).to.be.false;
-      expect(internals.validity.valid).to.equal(undefined);
-      expect(internals.checkValidity()).to.be.true;
-      expect(internals.reportValidity()).to.be.true;
-      expect((internals as unknown as { states?: CustomStateSet }).states).to.equal(undefined);
       expect(() => internals.setFormValue('value')).to.not.throw();
-      expect(() => internals.setValidity({ valueMissing: true }, 'Required')).to.not.throw();
+
+      // A real `ValidityState`, not `{}`: `valid` answers `true` rather than `undefined`, and
+      // `setValidity()` is recorded rather than dropped.
+      expect(internals.validity.valid).to.equal(true);
+      expect(internals.checkValidity()).to.be.true;
+      internals.setValidity({ valueMissing: true }, 'Required');
+      expect(internals.validity.valueMissing).to.equal(true);
+      expect(internals.validity.valid).to.equal(false);
+      expect(internals.validationMessage).to.equal('Required');
+      expect(internals.checkValidity()).to.be.false;
+      expect(internals.reportValidity()).to.be.false;
+
+      // The regression this collapse exists to remove.
+      const states = (internals as unknown as { states?: CustomStateSet }).states;
+      expect(typeof states?.add, 'the fallback must carry a usable states set').to.equal('function');
+      syncValidityStates(internals, { required: true, hasInteracted: true });
+      expect(states!.has('required')).to.equal(true);
+      expect(states!.has('invalid')).to.equal(true);
+      expect(states!.has('user-invalid')).to.equal(true);
+      expect(states!.has('valid')).to.equal(false);
     }
+  });
+
+  it('returns the real internals whenever the host attachInternals() works', () => {
+    const attached = {} as ElementInternals;
+    const host = { attachInternals: () => attached } as unknown as HTMLElement;
+    expect(attachLegacyNoopInternalsSafely(host) === attached).to.equal(true);
   });
 });
 

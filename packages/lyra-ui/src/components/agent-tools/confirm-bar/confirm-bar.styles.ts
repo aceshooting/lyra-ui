@@ -85,10 +85,11 @@ export const styles = css`
     }
   }
 
-  /* Compact presentation -- everything below is gated on [compact] and every value routes through a
-     --lr-confirm-bar-compact-* custom property with today's-equivalent fallback, so an unset
-     consumer renders byte-identically to the default card presentation. Declared last so it wins
-     the equal-specificity race against the :host([variant='danger']) [part='base'] border rule above. */
+  /* Density escape -- same convention as lr-agent-run's/lr-commit-card's compact, and purely a
+     density and layout knob: the card border, radius and background all stay, and frame='plain'
+     below is what drops them. The tuned values sit behind inline var() fallbacks (rather than a
+     :host declaration, which every instance would re-declare and so shadow any ancestor value) so a
+     consumer can retune the density from outside without restating the whole rule. */
   :host([compact]) {
     display: inline-flex;
     /* The container query above measures *this* host. A compact bar exists precisely to be dropped
@@ -103,10 +104,7 @@ export const styles = css`
     align-items: center;
     flex-wrap: wrap;
     gap: var(--lr-confirm-bar-compact-gap, var(--lr-space-s));
-    padding: var(--lr-confirm-bar-compact-padding, 0);
-    border: var(--lr-confirm-bar-compact-border, none);
-    border-radius: var(--lr-confirm-bar-compact-radius, 0);
-    background: var(--lr-confirm-bar-compact-background, transparent);
+    padding: var(--lr-confirm-bar-compact-padding, var(--lr-space-s));
   }
   :host([compact]) [part='heading'] {
     flex: 1 1 auto;
@@ -121,6 +119,18 @@ export const styles = css`
      content simply becomes a direct flex item of the row instead. */
   :host([compact][decision]) [part='footer'] {
     display: contents;
+  }
+  /* Chrome escape -- the shared frame='plain' treatment, same convention as lr-agent-run's and
+     lr-result-card's. MUST stay after both :host([variant='danger']) [part='base'] and
+     :host([compact]) [part='base']: all three are equal-specificity, so source order alone decides
+     which border/padding wins. plain is the stronger statement ('no chrome at all'), so it goes
+     last. The Deny/Approve lr-buttons keep their own border/background -- that chrome is theirs,
+     not the card's -- so a chrome-less bar still has a visible interactive affordance. */
+  :host([frame='plain']) [part='base'] {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
   }
   /* NOTE: the undecided [part='status'] is deliberately NOT collapsed here, in either presentation.
      [part='status']:empty above never actually matches (the part's lit template leaves

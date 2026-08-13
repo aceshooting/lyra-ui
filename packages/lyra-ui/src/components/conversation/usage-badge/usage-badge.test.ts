@@ -3,13 +3,28 @@ import './usage-badge.js';
 import type { LyraUsageBadge } from './usage-badge.js';
 import { styles } from './usage-badge.styles.js';
 
-it('defaults to no tokensIn/tokensOut/costText/latencyMs, compact=false', async () => {
+it('defaults to no tokensIn/tokensOut/costText/latencyMs, abbreviate=false', async () => {
   const el = (await fixture(html`<lr-usage-badge></lr-usage-badge>`)) as LyraUsageBadge;
   expect(el.tokensIn).to.be.undefined;
   expect(el.tokensOut).to.be.undefined;
   expect(el.costText).to.equal('');
   expect(el.latencyMs).to.be.undefined;
-  expect(el.compact).to.be.false;
+  expect(el.abbreviate).to.be.false;
+});
+
+it('no longer carries a compact property, and a stale compact attribute is inert', async () => {
+  const el = (await fixture(html`<lr-usage-badge tokens-in="12345" compact></lr-usage-badge>`)) as LyraUsageBadge;
+  expect('compact' in el).to.equal(false);
+  // Inert rather than actively wrong: the removed density-colliding name changes nothing.
+  expect(el.shadowRoot!.querySelector('[part="tokens-in"]')!.textContent!.trim()).to.equal('12,345 in');
+});
+
+it('reflects abbreviate to an attribute so a host can style off it', async () => {
+  const el = (await fixture(html`<lr-usage-badge tokens-in="12345"></lr-usage-badge>`)) as LyraUsageBadge;
+  expect(el.hasAttribute('abbreviate')).to.equal(false);
+  el.abbreviate = true;
+  await el.updateComplete;
+  expect(el.hasAttribute('abbreviate')).to.equal(true);
 });
 
 it('renders nothing when no segment is set', async () => {
@@ -76,14 +91,14 @@ it('lets formatLatency override the built-in duration algorithm in both the visi
   expect(el.shadowRoot!.querySelector('[part="tooltip"]')!.textContent).to.include('5m 12s');
 });
 
-it('renders compact token notation when compact is set, full grouped figures otherwise', async () => {
+it('renders abbreviated token notation when abbreviate is set, full grouped figures otherwise', async () => {
   const full = (await fixture(html`<lr-usage-badge tokens-in="12345"></lr-usage-badge>`)) as LyraUsageBadge;
   expect(full.shadowRoot!.querySelector('[part="tokens-in"]')!.textContent!.trim()).to.equal('12,345 in');
 
-  const compact = (await fixture(
-    html`<lr-usage-badge tokens-in="12345" compact></lr-usage-badge>`,
+  const abbreviated = (await fixture(
+    html`<lr-usage-badge tokens-in="12345" abbreviate></lr-usage-badge>`,
   )) as LyraUsageBadge;
-  expect(compact.shadowRoot!.querySelector('[part="tokens-in"]')!.textContent!.trim()).to.equal('12K in');
+  expect(abbreviated.shadowRoot!.querySelector('[part="tokens-in"]')!.textContent!.trim()).to.equal('12K in');
 });
 
 it('is a focusable non-button group named "Usage" whenever any segment is set', async () => {
@@ -111,7 +126,7 @@ describe('tooltip breakdown', () => {
         tokens-out="386"
         cost-text="$0.012"
         latency-ms="2350"
-        compact
+        abbreviate
       ></lr-usage-badge>`,
     )) as LyraUsageBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -312,7 +327,7 @@ it('contains all badge states with long localized content in an exact 320px RTL 
         }}
       ></lr-usage-badge>
       <lr-usage-badge
-        compact
+        abbreviate
         style="inline-size:100%"
         tokens-in="1204"
         tokens-out="386"

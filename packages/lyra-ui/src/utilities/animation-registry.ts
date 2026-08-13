@@ -1,3 +1,5 @@
+import { prefersReducedMotion } from '../internal/motion.js';
+
 /** A component animation expressed in the native Web Animations API vocabulary. */
 export interface ElementAnimation {
   keyframes: Keyframe[];
@@ -129,11 +131,6 @@ function inferredDirection(element: Element): 'ltr' | 'rtl' {
   return view.getComputedStyle(element).direction === 'rtl' ? 'rtl' : 'ltr';
 }
 
-function hasReducedMotion(element: Element): boolean {
-  const view = element.ownerDocument?.defaultView;
-  return Boolean(view?.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
-}
-
 function disabledAnimation(): ResolvedElementAnimation {
   return { keyframes: [], options: { duration: 0 } };
 }
@@ -177,7 +174,12 @@ export function getAnimation(
     ...selected.options,
   };
 
-  if (options.respectReducedMotion !== false && hasReducedMotion(element)) {
+  // The element's OWN browsing context is what is queried: an element adopted into an iframe can
+  // sit in a document whose media state differs from the top-level window's.
+  if (
+    options.respectReducedMotion !== false &&
+    prefersReducedMotion(element.ownerDocument?.defaultView)
+  ) {
     resolvedOptions.delay = 0;
     resolvedOptions.duration = 0;
     resolvedOptions.endDelay = 0;

@@ -84,9 +84,17 @@ unaffected.
   scroll controls described below, and neither is deprecated: a consumer arriving from either
   upstream finds their own attribute working. Left unset, an overflowing horizontal strip gets the
   controls.
-- `fixedScrollControls: boolean = false` (reflected, attribute `fixed-scroll-controls`) — Shoelace
-  compatibility flag. Lyra's overflow controls already remain at both logical edges whenever the
-  row overflows, so the flag explicitly preserves that fixed behavior without changing it.
+- `fixedScrollControls: boolean = false` (reflected, attribute `fixed-scroll-controls`) —
+  `sl-tab-group` parity flag, accepted and reflected but **inert**. Upstream it means "prevent the
+  scroll buttons from being hidden when *inactive*": Shoelace tracks scroll position and hides an
+  individual control once that direction has nothing left to scroll to, and this flag opts out of
+  that per-edge hiding. It never makes controls appear on a row that fits — that stays gated on the
+  overflow measurement in both libraries. Lyra implements no per-edge hiding at all: both controls
+  stay present for the whole overflowing range, which is exactly upstream's
+  `fixed-scroll-controls="true"` rendering, so setting the flag changes nothing. It exists so a
+  mechanical `sl-` → `lr-` rename does not drop an attribute. **Corrected in 9.0.0:** the previous
+  wording implied Shoelace's flag governed whether controls appear at all; it governs only
+  hide-when-inactive.
 - `defaultSlot: HTMLSlotElement` (property only) — the real unnamed shadow slot expected by mapped
   integrations. Lyra exposes it for slot observation but keeps it hidden because every accepted
   tab and panel is projected through a deterministic named slot.

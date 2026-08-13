@@ -38,7 +38,7 @@ describe('defaults', () => {
     expect(el.mimeType).to.equal('');
     expect(el.filename).to.equal('');
     expect(el.progress).to.be.undefined;
-    expect(el.errorMessage).to.equal('');
+    expect(el.errorText).to.equal('');
   });
 
   it('hides the header entirely when filename is unset', async () => {
@@ -694,11 +694,11 @@ describe('status="converting"', () => {
 });
 
 describe('status="error"', () => {
-  it('renders errorMessage as ordinary visible text, regardless of mime-type', async () => {
+  it('renders errorText as ordinary visible text, regardless of mime-type', async () => {
     const el = (await fixture(html`
       <lr-document-preview
         status="error"
-        error-message="Conversion failed: unsupported source encoding."
+        error-text="Conversion failed: unsupported source encoding."
         mime-type="text/plain"
         src="https://example.test/a.txt"
       ></lr-document-preview>
@@ -710,9 +710,24 @@ describe('status="error"', () => {
     expect((el.shadowRoot!.querySelector('pre')) == null).to.equal(true);
   });
 
+  // 9.0.0 renamed `errorMessage`/`error-message` -> `errorText`/`error-text`, the spelling every
+  // other component carrying caller-supplied failure copy already uses.
+  it('exposes the failure copy only as errorText; the removed error-message spelling is inert', async () => {
+    const el = (await fixture(html`
+      <lr-document-preview status="error" error-message="Legacy failure"></lr-document-preview>
+    `)) as LyraDocumentPreview;
+    expect('errorMessage' in el).to.equal(false);
+    const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    expect(error.textContent).to.equal('Something went wrong.');
+
+    el.errorText = 'Current failure';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal('Current failure');
+  });
+
   it('suppresses a mounted error, then announces a later identical transition in light DOM', async () => {
     const el = await fixture<LyraDocumentPreview>(html`
-      <lr-document-preview status="error" error-message="Conversion failed."></lr-document-preview>
+      <lr-document-preview status="error" error-text="Conversion failed."></lr-document-preview>
     `);
     const selector = `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`;
     const sink = document.querySelector(selector);
@@ -822,7 +837,7 @@ describe('accessibility', () => {
 
   it('is accessible in the error state', async () => {
     const el = await fixture(html`
-      <lr-document-preview status="error" error-message="Conversion failed." filename="deck.pptx"></lr-document-preview>
+      <lr-document-preview status="error" error-text="Conversion failed." filename="deck.pptx"></lr-document-preview>
     `);
     await expect(el).to.be.accessible();
   });
@@ -957,7 +972,7 @@ describe('localization', () => {
     }
   });
 
-  it('defaults status="error" with no error-message to "Something went wrong."', async () => {
+  it('defaults status="error" with no error-text to "Something went wrong."', async () => {
     const el = (await fixture(
       html`<lr-document-preview status="error"></lr-document-preview>`,
     )) as LyraDocumentPreview;

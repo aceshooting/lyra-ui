@@ -89,7 +89,7 @@ export const Virtualized: Story = {
   render: () => html`
     <div style="max-inline-size: 40rem;">
       <lr-ingestion-queue
-        virtualize-threshold="50"
+        virtualize-at="50"
         style="--lr-ingestion-queue-max-height: 20rem;"
         .items=${Array.from({ length: 500 }, (_, i) => ({
           id: String(i),

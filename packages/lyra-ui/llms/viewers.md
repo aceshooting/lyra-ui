@@ -44,12 +44,13 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
   is used; an explicit empty string keeps a decorative preview's `alt=""` intact.
 - `status: 'idle' | 'converting' | 'ready' | 'error' = 'idle'` (reflected) — host-owned lifecycle
   state. `"converting"` shows the spinner regardless of `mimeType`/`src`; `"error"` shows
-  `errorMessage` regardless of either. `"idle"`/`"ready"` both resume normal format dispatch — a host
+  `errorText` regardless of either. `"idle"`/`"ready"` both resume normal format dispatch — a host
   with no conversion step never has to explicitly set `"ready"`.
 - `progress?: number` (type `Number`) — 0-100. Only consulted while `status="converting"`. Unset (the
   default) renders an indeterminate spinner instead of a determinate progress bar.
-- `errorMessage: string = ''` (attribute `error-message`) — shown via `[part="error"]` while
-  `status="error"`.
+- `errorText: string = ''` (attribute `error-text`; spelled `errorMessage`/`error-message` before
+  9.0.0) — shown via `[part="error"]` while `status="error"`. Caller-supplied text, not localized;
+  left empty, the localized `documentPreviewGenericError` fallback shows instead.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"24rem"`); once set,
   `[part="body"]` scrolls internally past this height instead of growing the page — same contract as
   `lr-json-viewer`'s identically-named prop. Invalid CSS `max-height` values, declaration breaks,
@@ -516,8 +517,11 @@ Renders EPUB ebooks through the optional `epubjs` peer. `src` is fetched as an `
 epub.js renders the reading area into its stable `mount` element, using an internal iframe for
 chapter content.
 
-**Properties:** `src: string = ''` and `name: string = ''`. `accessibleLabel: string = ''`
-(attribute `aria-label`) overrides the reading region's accessible name. `maxHeight: string = ''`
+**Properties:** `src: string = ''` and `name: string = ''`. A plain `aria-label` attribute on the
+host overrides the reading region's accessible name — by attribute presence, so an explicitly empty
+`aria-label=""` still wins over `name`. (There is no matching JS property: the `accessibleLabel`
+property was removed in 9.0.0, where it had never been readable or writable to any effect — set the
+attribute.) `maxHeight: string = ''`
 (attribute `max-height`) caps the `mount` area epub.js renders into; invalid CSS `max-height`
 values, declaration breaks, and `url()` are ignored. `location: string = ''`
 (not reflected — CFIs are long) is
@@ -550,9 +554,10 @@ applied; `lr-highlight-activate` (`detail: { id }`) when a painted CFI highlight
 **CSS parts:** `base` (explicit `aria-busy="true"|"false"`; visible loading text is ordinary
 non-live shadow content and later loading transitions use the shared document-level polite sink),
 `toolbar`, `previous-button`, `next-button`, `previous-icon`, `next-icon`,
-`mount`, `error` (ordinary visible text; later error transitions use the shared document-level
-assertive sink), and `announcer` (an aria-hidden, non-live shadow mirror retained for styling
-compatibility; search results are appended to the shared document-level polite sink).
+`mount`, and `error` (ordinary visible text; later error transitions use the shared document-level
+assertive sink). Search results are appended to the shared document-level polite sink, which lives
+in the host's light DOM; the empty `announcer` shadow mirror that used to carry a part of that name
+was removed in 9.0.0 (it had no styling of its own and never held any text).
 
 **Themeable custom properties:** `--lr-ebook-viewer-max-height` (default `none`) — maximum block
 size of `[part="mount"]` before it scrolls internally; also settable via the `max-height` property,
@@ -974,7 +979,9 @@ Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses one sheet's raw g
 its header row included, resolving the target sheet from the anchor's own `sheet` field (falling
 back to a `Sheet!`-prefixed `range`, then the active sheet); `scrollToAnchor()` switches
 `<lr-tab-group>`'s active tab first when needed, then scrolls the addressed row/column into view.
-`highlights` paint as a focusable `part="cell-highlight"`.
+`highlights` paint as a focusable `part="cell-highlight"`. A jump whose workbook is replaced by a
+concurrent `src` reassignment mid-flight reports `found: false` rather than a phantom success —
+matching `lr-csv-viewer`/`lr-dataset-viewer` (it wrongly reported `found: true` before 9.0.0).
 
 **Properties:** `src: string = ''` and `name: string = ''`. `maxHeight: string = ''` (attribute
 `max-height`) is a CSS length that caps the scrollable body — setting it writes
@@ -1375,7 +1382,10 @@ attribute. Invalid CSS `max-height` values, declaration breaks, and `url()` are 
 **Methods:** `search(query)` resolves the match count via a case-insensitive substring search over
 every element's tag name, attribute names/values, and own text (empty/whitespace query behaves like
 `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping);
-`clearSearch()` clears the query and matches. When the XML document reloads while a query remains
+`clearSearch()` clears the query and matches. All three resolve only after the newly active match's
+row has been scrolled into view (`block: 'center'`, `behavior: 'auto'` under
+`prefers-reduced-motion`) — before 9.0.0 they moved `data-active-match` without ever scrolling, so
+on a document taller than the viewport the reader never saw the match they had stepped to. When the XML document reloads while a query remains
 active, matches are recomputed, the active index is clamped to the new result set, and a fresh
 `lr-search-change` announces that state.
 

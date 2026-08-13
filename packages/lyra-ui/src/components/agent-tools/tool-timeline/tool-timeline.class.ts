@@ -134,8 +134,8 @@ function redactField(value: unknown, root: string, paths: readonly string[], pla
  * the controlled entries and call `finalizePendingApproval()`; after failure, call
  * `revertPendingApproval()` to restore the same open dialog and its draft for retry. A chip
  * belonging to an entry that isn't pending approval is left alone — its own
- * `lr-tool-call-chip-select` (and deprecated `lr-tool-chip-select` alias) still bubble out
- * normally for a host that wants to react to raw chip selection for its own purposes.
+ * `lr-tool-call-chip-select` still bubbles out normally, exactly once per activation, for a host
+ * that wants to react to raw chip selection for its own purposes.
  *
  * @customElement lr-tool-timeline
  * @event lr-tool-approval-decide - A pending entry's approval dialog was resolved.
@@ -367,7 +367,6 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
               .durationMs=${durationMs}
               call-id=${entry.id}
               @lr-tool-call-chip-select=${(event: Event) => this.onChipSelect(entry, event)}
-              @lr-tool-chip-select=${(event: Event) => this.onChipSelect(entry, event)}
             ></lr-tool-call-chip>
             ${retryCount > 0
               ? html`<span part="entry-retries">

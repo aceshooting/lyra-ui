@@ -91,6 +91,19 @@ it('renders the exact two-pane slots, shared panel part, divider slot, and wrapp
   expect(base(element).style.getPropertyValue('--_lr-split-panel-start-position')).to.equal('50%');
 });
 
+// `data-primary` used to be written onto [part~="base"]. Nothing ever read it: no stylesheet rule
+// matched it, and `::part(base)[data-primary]` can never match per Selectors L4 (a compound after
+// ::part() may only add pseudo-classes), so no consumer could have depended on it either.
+it('writes no unreadable state attributes onto the wrapper part', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel primary="end" style="inline-size: 400px; block-size: 200px"></lr-split-panel>
+  `)) as LyraSplitPanel;
+
+  expect(base(element).hasAttribute('data-primary')).to.equal(false);
+  // The orientation hook stays: [part~="base"][data-orientation] is a real rule in the stylesheet.
+  expect(base(element).getAttribute('data-orientation')).to.equal('horizontal');
+});
+
 const unbrokenNarrowPaneToken =
   'unbrokenpanecontentmustwrapinsideanarrowallocatedsplitpanelwithoutcreatingahorizontalscrollbar';
 

@@ -74,7 +74,9 @@ export interface LyraDialogEventMap {
  * scroll-locks the document for as long as it's open. While open it is promoted into the
  * browser top layer, so no consumer stacking context can render on top of it. The mapped
  * `label` property renders as a visible title and the close affordance is present by default;
- * `closable="false"`, `no-header`, and the legacy `without-header` alias support custom chrome.
+ * `closable="false"` plus either header-suppression spelling support custom chrome. `no-header` is
+ * Shoelace's name for it and `without-header` is Web Awesome's; both are current upstream
+ * spellings, neither is deprecated, and both are read.
  *
  * Lifecycle: `show()` emits `lr-show` (cancelable) and then, once the enter animation has
  * finished, `lr-after-show`. `hide()`/`close()` emit `lr-hide` (cancelable), then
@@ -241,10 +243,14 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   @property({ type: Boolean, converter: trueDefaultBooleanConverter, reflect: true }) closable = true;
 
   /** Suppresses the header row entirely, whatever `heading`, `closable`, the `label` slot or the
-   *  `header-actions` slot would otherwise render. For a dialog that owns its own chrome. */
+   *  `header-actions` slot would otherwise render. For a dialog that owns its own chrome. This is
+   *  Web Awesome's spelling (`wa-dialog`'s `without-header`); `noHeader` below is Shoelace's. Both
+   *  are current upstream names, both are read, and neither is deprecated. */
   @property({ type: Boolean, attribute: 'without-header', reflect: true }) withoutHeader = false;
 
-  /** Shoelace spelling for suppressing the header row. */
+  /** Shoelace's spelling (`sl-dialog`'s `no-header`) for suppressing the header row, read alongside
+   *  Web Awesome's `withoutHeader` above so a consumer arriving from either upstream finds their
+   *  own attribute working. Neither is deprecated. */
   @property({ type: Boolean, attribute: 'no-header', reflect: true }) noHeader = false;
 
   /** SSR hint that keeps the footer wrapper rendered before slot assignment is observable. */

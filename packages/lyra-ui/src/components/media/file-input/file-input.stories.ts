@@ -49,6 +49,36 @@ export const FormAssociatedSurface: Story = {
   },
 };
 
+export const CustomValidators: Story = {
+  render: () => {
+    const noSpreadsheets = (files: File[]): string | true =>
+      files.some((file) => file.name.endsWith('.xlsx'))
+        ? 'Spreadsheets are handled by the import wizard, not this uploader.'
+        : true;
+    return html`
+      <form style="display:grid; gap:var(--lr-space-s); max-inline-size:32rem;">
+        <lr-file-input
+          name="documents"
+          label="Supporting documents"
+          hint="Drop a file, then submit to see the validator run."
+          multiple
+          required
+          .validators=${[noSpreadsheets]}
+        ></lr-file-input>
+        <lr-button type="submit">Submit</lr-button>
+      </form>
+    `;
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`validators` runs additional JavaScript constraints after the intrinsic `required` check. A function validator receives the current `files` array; returning a string raises `customError` with that message. Object validators with `checkValidity()` and `observedAttributes` are supported too, and a thrown validator fails closed with the localized generic message.',
+      },
+    },
+  },
+};
+
 export const ErrorChrome: Story = {
   render: () => html`
     <lr-file-input

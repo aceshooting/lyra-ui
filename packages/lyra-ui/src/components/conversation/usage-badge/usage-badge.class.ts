@@ -53,6 +53,11 @@ function formatDuration(ms: number, locale: string): FormattedDuration {
  * over the localized default accessible name, same convention as `<lr-tool-call-chip>`'s own
  * `aria-label` precedence.
  *
+ * Number abbreviation is `abbreviate`, not `compact`. This badge has no density mode; `compact`
+ * (removed in 9.0.0) selected `Intl.NumberFormat`'s `notation: 'compact'` here while meaning
+ * visual density on every other component that spells it, so the name was moved to what it
+ * actually does. A stale `compact` attribute is inert.
+ *
  * @customElement lr-usage-badge
  * @slot - Extra rows appended below the built-in tooltip breakdown (e.g. cache-read tokens). The
  *   visible strip itself is prop-driven only.
@@ -113,8 +118,10 @@ export class LyraUsageBadge extends LyraElement {
   @property({ attribute: false }) formatLatency?: (ms: number) => string;
 
   /** Token counts render via `Intl.NumberFormat` `notation: 'compact'` (e.g. `12345 -> "12K"`)
-   *  when set; the tooltip always shows full grouped figures regardless. */
-  @property({ type: Boolean }) compact = false;
+   *  when set; the tooltip always shows full grouped figures regardless. Named for the number
+   *  formatting it selects, not for density: `compact` means visual density on twenty other
+   *  components in this library, and this one has no density mode at all. */
+  @property({ type: Boolean, reflect: true }) abbreviate = false;
 
   @state() private tooltipOpen = false;
   @state() private hasDefaultSlot = false;
@@ -203,7 +210,7 @@ export class LyraUsageBadge extends LyraElement {
   }
 
   private formatTokenCount(n: number): string {
-    return getNumberFormat(this.effectiveLocale, this.compact ? { notation: 'compact' } : {}).format(n);
+    return getNumberFormat(this.effectiveLocale, this.abbreviate ? { notation: 'compact' } : {}).format(n);
   }
   private formatTokenCountFull(n: number): string {
     return getNumberFormat(this.effectiveLocale).format(n);

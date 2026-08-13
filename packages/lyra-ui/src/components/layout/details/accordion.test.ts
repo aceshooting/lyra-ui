@@ -342,18 +342,49 @@ describe('<lr-accordion>', () => {
     expect(items.some((item) => item.expanded)).to.be.false;
   });
 
-  it('keeps direct lr-details children working with the legacy lifecycle', async () => {
+  // 9.0.0 removed direct <lr-details> panel support. An accordion coordinates
+  // <lr-accordion-item> children only; a slotted <lr-details> is now ordinary content that owns its
+  // own disclosure lifecycle, and the group neither enforces its single-panel invariant over it nor
+  // translates its Details events into group events.
+  it('no longer coordinates direct lr-details children', async () => {
     const accordion = (await fixture(html`<lr-accordion multiple="false">
       <lr-details id="legacy-one" summary="One" open>One</lr-details>
       <lr-details id="legacy-two" summary="Two">Two</lr-details>
     </lr-accordion>`)) as LyraAccordion;
     const details = [...accordion.querySelectorAll('lr-details')] as LyraDetails[];
+    let groupEvents = 0;
+    for (const name of ['lr-expand', 'lr-after-expand', 'lr-collapse', 'lr-after-collapse']) {
+      accordion.addEventListener(name, () => {
+        groupEvents += 1;
+      });
+    }
+
+    await details[1]!.show();
+    await Promise.all(details.map((item) => item.updateComplete));
+    expect(details.map((item) => item.open)).to.deep.equal([true, true]);
+    expect(groupEvents).to.equal(0);
+
+    accordion.collapseAll();
+    await Promise.all(details.map((item) => item.updateComplete));
+    expect(details.map((item) => item.open)).to.deep.equal([true, true]);
+  });
+
+  // The migration for the removal above: <lr-details> -> <lr-accordion-item>, which already accepts
+  // the same `summary` text and `open` state through its inherited Details vocabulary.
+  it('coordinates the migrated lr-accordion-item markup with the full group lifecycle', async () => {
+    const accordion = (await fixture(html`<lr-accordion multiple="false">
+      <lr-accordion-item id="migrated-one" summary="One" open style=${quickMotion}>One</lr-accordion-item>
+      <lr-accordion-item id="migrated-two" summary="Two" style=${quickMotion}>Two</lr-accordion-item>
+    </lr-accordion>`)) as LyraAccordion;
+    const items = [...accordion.querySelectorAll('lr-accordion-item')] as LyraAccordionItem[];
     const afterExpand = oneEvent(accordion, 'lr-after-expand');
-    details[1]!.show();
+    void items[1]!.show();
     const event = (await afterExpand) as CustomEvent<{ item: HTMLElement }>;
 
-    expect(event.detail.item.id).to.equal('legacy-two');
-    expect(details.map((item) => item.open)).to.deep.equal([false, true]);
+    expect(event.detail.item.id).to.equal('migrated-two');
+    await Promise.all(items.map((item) => item.updateComplete));
+    expect(items.map((item) => item.open)).to.deep.equal([false, true]);
+    expect(items.map((item) => item.expanded)).to.deep.equal([false, true]);
   });
 
   it('uses one roving tab stop, skips disabled items, and supports Home/End', async () => {

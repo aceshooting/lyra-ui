@@ -82,9 +82,6 @@ export class LyraSequenceStrip extends LyraElement {
 
   @property({ attribute: false }) items: SequenceStripItem[] = [];
   @property({ attribute: false }) categories: SequenceStripCategory[] = [];
-  /** Only `'horizontal'` (the default) is supported today — vertical is plausible future scope, not
-   *  built speculatively without a motivating case. */
-  @property({ reflect: true }) orientation: 'horizontal' = 'horizontal';
   /** Overrides the auto-generated `aria-label` (a per-category "label: count" summary). Unset
    *  computes the summary from `items`/`categories`. */
   @property({ attribute: 'accessible-label' }) accessibleLabel?: string;

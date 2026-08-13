@@ -27,11 +27,6 @@ export function setCustomState(internals: ElementInternals | undefined, name: st
   }
 }
 
-/** The six states {@linkcode syncValidityStates} publishes, in the order they are documented. */
-export const VALIDITY_STATES = ['required', 'optional', 'valid', 'invalid', 'user-valid', 'user-invalid'] as const;
-
-export type LyraValidityState = (typeof VALIDITY_STATES)[number];
-
 /**
  * Publishes the six validity custom states — `required`/`optional`, `valid`/`invalid`,
  * `user-valid`/`user-invalid` — so a consumer can style a control's validation state with

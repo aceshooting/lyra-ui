@@ -54,14 +54,14 @@ export interface KnowledgeSource {
 export interface LyraKnowledgeBaseEventMap {
   /** The toolbar's "Add source" affordance was activated. No `sourceId` -- there is nothing yet to
    *  reference; the host owns the actual creation flow (naming, connector picking, ...). */
-  'lr-kb-create': CustomEvent<undefined>;
+  'lr-source-create': CustomEvent<undefined>;
   /** A row's "Sync now" action was activated. */
-  'lr-kb-sync': CustomEvent<{ sourceId: string }>;
+  'lr-source-sync': CustomEvent<{ sourceId: string }>;
   /** A row's "Pause sync" action was activated. */
-  'lr-kb-pause': CustomEvent<{ sourceId: string }>;
+  'lr-source-pause': CustomEvent<{ sourceId: string }>;
   /** A row's "Delete source" action was activated. No built-in confirmation, matching
    *  `lr-thread-list`'s identical `lr-thread-delete` contract. */
-  'lr-kb-delete': CustomEvent<{ sourceId: string }>;
+  'lr-source-delete': CustomEvent<{ sourceId: string }>;
 }
 
 const SYNC_STATUS_VARIANT: Record<KnowledgeSourceSyncStatus, BadgeVariant> = {
@@ -127,8 +127,8 @@ function normalizeTimestamp(value: Date | string | undefined): Date | undefined 
  * `<lr-knowledge-base>` — a source list for a retrieval knowledge base: sync status, indexing
  * health, permissions, and per-row create/sync/pause/delete affordances. A controlled data view,
  * like every other Lyra data component: it never syncs or indexes anything itself, only presents
- * `sources` and emits request-only events (`lr-kb-create`/`-sync`/`-pause`/`-delete`) for the host
- * to act on and reflect back into a new `sources` value -- mirrors `lr-thread-list`'s
+ * `sources` and emits request-only events (`lr-source-create`/`-sync`/`-pause`/`-delete`) for the
+ * host to act on and reflect back into a new `sources` value -- mirrors `lr-thread-list`'s
  * `lr-thread-pin`/`-archive`/`-delete` convention exactly.
  *
  * `permission` is rendered informationally only (a badge in the permission column); this component
@@ -147,10 +147,10 @@ function normalizeTimestamp(value: Date | string | undefined): Date | undefined 
  * per-row action menu is interactive).
  *
  * @customElement lr-knowledge-base
- * @event lr-kb-create - The toolbar "Add source" affordance was activated. No detail.
- * @event lr-kb-sync - A row's "Sync now" action was activated. `detail: { sourceId }`.
- * @event lr-kb-pause - A row's "Pause sync" action was activated. `detail: { sourceId }`.
- * @event lr-kb-delete - A row's "Delete source" action was activated. `detail: { sourceId }`.
+ * @event lr-source-create - The toolbar "Add source" affordance was activated. No detail.
+ * @event lr-source-sync - A row's "Sync now" action was activated. `detail: { sourceId }`.
+ * @event lr-source-pause - A row's "Pause sync" action was activated. `detail: { sourceId }`.
+ * @event lr-source-delete - A row's "Delete source" action was activated. `detail: { sourceId }`.
  * @csspart base - The root.
  * @csspart toolbar - The heading + "Add source" row.
  * @csspart heading - The heading text.
@@ -322,9 +322,9 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   }
 
   private onRowAction(source: KnowledgeSource, action: string): void {
-    if (action === 'sync') this.emit('lr-kb-sync', { sourceId: source.id });
-    else if (action === 'pause') this.emit('lr-kb-pause', { sourceId: source.id });
-    else if (action === 'delete') this.emit('lr-kb-delete', { sourceId: source.id });
+    if (action === 'sync') this.emit('lr-source-sync', { sourceId: source.id });
+    else if (action === 'pause') this.emit('lr-source-pause', { sourceId: source.id });
+    else if (action === 'delete') this.emit('lr-source-delete', { sourceId: source.id });
   }
 
   private renderActionsCell(source: KnowledgeSource): TemplateResult {
@@ -437,7 +437,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
                 part="create-button"
                 variant="brand"
                 size="s"
-                @click=${() => this.emit('lr-kb-create')}
+                @click=${() => this.emit('lr-source-create')}
               >
                 ${this.localize('knowledgeBaseCreateSource')}
               </lr-button>`

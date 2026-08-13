@@ -27,7 +27,7 @@ import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } fr
 import { FILE_SIZE_UNIT_KEYS, formatFileSize } from '../attachment-chip/file-size.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileInputAcceptedMany, LYRA_DEFAULT_fileInputAcceptedOne, LYRA_DEFAULT_fileInputDefaultLabel, LYRA_DEFAULT_fileInputFolderRejected, LYRA_DEFAULT_fileInputRejectedCount, LYRA_DEFAULT_fileInputRejectedMany, LYRA_DEFAULT_fileInputRejectedOne, LYRA_DEFAULT_fileInputRejectedSize, LYRA_DEFAULT_fileInputRejectedType, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_open, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileInputAcceptedMany, LYRA_DEFAULT_fileInputAcceptedOne, LYRA_DEFAULT_fileInputDefaultLabel, LYRA_DEFAULT_fileInputFolderRejected, LYRA_DEFAULT_fileInputRejectedCount, LYRA_DEFAULT_fileInputRejectedMany, LYRA_DEFAULT_fileInputRejectedOne, LYRA_DEFAULT_fileInputRejectedSize, LYRA_DEFAULT_fileInputRejectedType, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_open, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -37,6 +37,47 @@ type DroppedFolderReadResult =
   | { status: 'cancelled' }
   | { status: 'limit' };
 export type LyraFileInputCapture = '' | 'user' | 'environment';
+
+/** What a `validators` entry may return: nothing/`true` passes, a string is the message, `false` is
+ *  a generic failure, and an object of {@linkcode ValidityStateFlags} names the flags to raise. */
+export type LyraFileInputValidatorResult = void | boolean | string | ValidityStateFlags;
+/** Result shape accepted from object validators used by the upstream form-control contract. */
+export interface LyraFileInputObjectValidatorResult {
+  message: string;
+  isValid: boolean;
+  invalidKeys: Exclude<keyof ValidityState, 'valid'>[];
+}
+/** Structural compatibility shape for an object validator. The `never` callback input is
+ * intentional: it lets an array typed by another custom-element package remain assignable while
+ * Lyra invokes the callback with this host at runtime. Author new Lyra validators with the
+ * strongly typed function or `validate()` branches of {@linkcode LyraFileInputValidator}. */
+export interface LyraFileInputObjectValidator {
+  /** Host attributes that trigger a fresh validity check when they change. */
+  observedAttributes?: string[];
+  checkValidity: (input: never) => LyraFileInputObjectValidatorResult;
+  message?: string | ((input: never) => string);
+}
+export type LyraFileInputValidator =
+  | ((value: File[], input: LyraFileInput) => LyraFileInputValidatorResult)
+  | { validate(value: File[], input: LyraFileInput): LyraFileInputValidatorResult }
+  | LyraFileInputObjectValidator;
+
+const VALIDITY_FLAG_KEYS: ReadonlySet<string> = new Set<keyof ValidityStateFlags>([
+  'badInput',
+  'customError',
+  'patternMismatch',
+  'rangeOverflow',
+  'rangeUnderflow',
+  'stepMismatch',
+  'tooLong',
+  'tooShort',
+  'typeMismatch',
+  'valueMissing',
+]);
+
+function isValidityFlagKey(value: unknown): value is keyof ValidityStateFlags {
+  return typeof value === 'string' && VALIDITY_FLAG_KEYS.has(value);
+}
 
 export const DEFAULT_MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 const MAX_DROPPED_FOLDER_ENTRIES = 10_000;
@@ -212,6 +253,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     open: LYRA_DEFAULT_open,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
     restore: LYRA_DEFAULT_restore,
+    valueInvalid: LYRA_DEFAULT_valueInvalid,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -256,8 +298,15 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   /** SSR slot-presence hint for rich error content. */
   @property({ type: Boolean, attribute: 'with-error' }) withError = false;
   @property({ reflect: true }) size: LyraSize = 'm';
-  /** Consumer-managed validator inventory retained for public-surface compatibility. */
-  @property({ attribute: false }) validators: unknown[] = [];
+  /** Additional JavaScript validators run after the intrinsic `required` constraint — the same
+   * contract `lr-date-input` and `lr-combobox` implement. Accepts a function, an object with
+   * `validate(value, input)`, or the mapped object-validator shape with `checkValidity(input)` and
+   * `{ isValid, message, invalidKeys }` results. The value handed to a function/`validate()`
+   * validator is the current `files` array. Object validators can list host `observedAttributes`
+   * that should trigger live revalidation. A validator that throws fails closed with the generic
+   * localized message. Barred (own or fieldset-cascaded `disabled`) exactly like the intrinsic
+   * constraint. */
+  @property({ attribute: false }) validators: LyraFileInputValidator[] = [];
   /** Accessible name forwarded to the semantic dropzone and native file input.
    * When unset, the effective `label` text is used. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
@@ -277,6 +326,10 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   *  subsequent classification rejects nothing. */
   @state() private rejectedFiles: RejectedFile[] = [];
   @state() private touched = false;
+  /** Bumped whenever an out-of-band revalidation (a validator's `observedAttributes` firing)
+   *  changes published validity, so the rendered `[part="error"]` text refreshes without any
+   *  reactive property of this host having changed. */
+  @state() private validityRevision = 0;
   // Server renderers do not necessarily expose Element.children. The shared controller treats
   // missing DOM surfaces as empty and seeds real light-DOM slot presence after browser hydration.
   private readonly slotPresence = new SlotPresenceController(this);
@@ -303,6 +356,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   private _disabled = false;
   private _required = false;
   private validationTargetOverride?: HTMLElement;
+  private validatorAttributeObserver?: { observer: MutationObserver; owner: Window };
   private _fieldsetDisabled = false;
   private thumbnailUrls = new Map<File, { url: string; owner: typeof URL; revoke: () => void }>();
 
@@ -456,6 +510,9 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     super.connectedCallback();
     this.syncThumbnailUrls();
     this.updateValidity();
+    // Rebuilt on every reconnect: `disconnectedCallback()` tears the observer down, and a
+    // re-parent can also move this host into another document/window.
+    if (this.hasUpdated) this.syncValidatorAttributeObserver();
     // Acquired on connect, not on the first announcement: assistive tech has to have been
     // observing a live region *before* text arrives for the change to be announced at all, and a
     // drag can start in the same task this element is appended in.
@@ -471,6 +528,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
 
   override disconnectedCallback(): void {
     this.dropToken++;
+    this.disconnectValidatorAttributeObserver();
     this.resetDragSession();
     for (const thumbnail of this.thumbnailUrls.values()) thumbnail.revoke();
     this.thumbnailUrls.clear();
@@ -486,6 +544,10 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   // Untyped `PropertyValues` (not `PropertyValues<this>`): the announced transitions are tracked
   // on private `@state()` fields, which `keyof this` does not include.
   protected override updated(changed: PropertyValues): void {
+    if (changed.has('validators')) {
+      this.updateValidity();
+      this.syncValidatorAttributeObserver();
+    }
     // The very first render is a mount, not a transition: a component appearing on the page must
     // not announce its resting state.
     if (this.announcementsArmed) {
@@ -541,14 +603,114 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     return isBarredFromValidation(this, this.internals);
   }
 
+  /** Runs `validators` in order and returns the first failure. Mirrors `lr-date-input`'s and
+   *  `lr-combobox`'s reading of the same contract: a thrown validator fails closed with the
+   *  generic localized message rather than escaping into the caller that happened to write
+   *  `files`. */
+  private validatorResult(): { flags?: ValidityStateFlags; message?: string } {
+    for (const validator of Array.isArray(this.validators) ? this.validators : []) {
+      let result: LyraFileInputValidatorResult;
+      try {
+        if (typeof validator === 'object' && validator !== null && 'checkValidity' in validator) {
+          const checked = validator.checkValidity(this as never);
+          if (checked?.isValid === true) continue;
+          const flags: ValidityStateFlags = {};
+          for (const key of Array.isArray(checked?.invalidKeys) ? checked.invalidKeys : []) {
+            if (isValidityFlagKey(key)) flags[key] = true;
+          }
+          if (!Object.values(flags).some(Boolean)) flags.customError = true;
+          let message = typeof checked?.message === 'string' ? checked.message : '';
+          if (!message && typeof validator.message === 'string') message = validator.message;
+          if (!message && typeof validator.message === 'function') {
+            message = validator.message(this as never);
+          }
+          return { flags, message: message || this.localize('valueInvalid') };
+        }
+        result = typeof validator === 'function'
+          ? validator(this.files, this)
+          : validator?.validate(this.files, this);
+      } catch {
+        return { flags: { customError: true }, message: this.localize('valueInvalid') };
+      }
+      if (result === undefined || result === true) continue;
+      if (typeof result === 'string') return { flags: { customError: true }, message: result };
+      if (result === false) return { flags: { customError: true }, message: this.localize('valueInvalid') };
+      if (result && typeof result === 'object' && Object.values(result).some(Boolean)) {
+        return { flags: result, message: this.localize('valueInvalid') };
+      }
+    }
+    return {};
+  }
+
+  /** Watches the host attributes any object validator listed in `observedAttributes`, so changing
+   *  one revalidates live. Bound to the owning window so a re-parent into another document (or a
+   *  disconnect) can never leave the previous document's observer firing into this host. */
+  private syncValidatorAttributeObserver(): void {
+    this.disconnectValidatorAttributeObserver();
+    const owner = this.ownerDocument.defaultView;
+    const MutationObserverCtor = owner?.MutationObserver;
+    if (!this.isConnected || !owner || typeof MutationObserverCtor !== 'function') return;
+
+    const attributes = new Set<string>();
+    for (const validator of Array.isArray(this.validators) ? this.validators : []) {
+      if (typeof validator !== 'object' || validator === null || !('checkValidity' in validator)) continue;
+      let observed: unknown;
+      try {
+        observed = validator.observedAttributes;
+      } catch {
+        continue;
+      }
+      if (!Array.isArray(observed)) continue;
+      for (const name of observed) {
+        if (typeof name === 'string' && name.length > 0) attributes.add(name);
+      }
+    }
+    if (attributes.size === 0) return;
+
+    const binding = {} as { observer: MutationObserver; owner: Window };
+    const observer = new MutationObserverCtor(() => {
+      if (
+        this.validatorAttributeObserver !== binding
+        || !this.isConnected
+        || this.ownerDocument.defaultView !== owner
+      ) return;
+      this.updateValidity();
+      this.validityRevision++;
+    });
+    binding.observer = observer;
+    binding.owner = owner;
+    try {
+      observer.observe(this, { attributes: true, attributeFilter: [...attributes] });
+      this.validatorAttributeObserver = binding;
+    } catch {
+      observer.disconnect();
+    }
+  }
+
+  private disconnectValidatorAttributeObserver(): void {
+    const binding = this.validatorAttributeObserver;
+    this.validatorAttributeObserver = undefined;
+    binding?.observer.disconnect();
+  }
+
   private updateValidity(): void {
     if (this.barredFromValidation) {
+      // A barred control reports no violation at all, exactly like a native disabled input.
+      // Configured validators are barred with it, the same way the intrinsic constraint is.
       this.validityController.setValidity({});
-    } else if (this.required && this._files.length === 0) {
-      this.validityController.setValidity({ valueMissing: true }, this.localize('fieldRequired'));
-    } else {
-      this.validityController.setValidity({});
+      this.publishCustomStates();
+      return;
     }
+    const flags: ValidityStateFlags = {};
+    let message = '';
+    if (this.required && this._files.length === 0) {
+      flags.valueMissing = true;
+      message = this.localize('fieldRequired');
+    }
+    const configured = this.validatorResult();
+    if (configured.flags) Object.assign(flags, configured.flags);
+    if (configured.message) message = configured.message;
+    this.validityController.setValidity(flags, message);
     this.publishCustomStates();
   }
 
@@ -564,11 +726,18 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   }
 
   checkValidity(): boolean {
+    // Recomputed at call time, like a native control: `validators` is a plain JS array whose
+    // entries can start failing without any property on this host changing, so a check that read
+    // only the last published state would answer from a stale snapshot.
+    this.updateValidity();
     return this.internals.checkValidity();
   }
 
   reportValidity(): boolean {
+    // Reporting is what a submit attempt does, and a failed submit is precisely when native
+    // `:user-invalid` starts matching — so it counts as interaction.
     this.touched = true;
+    this.updateValidity();
     this.publishCustomStates();
     return this.internals.reportValidity();
   }

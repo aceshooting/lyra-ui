@@ -34,7 +34,7 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   (`index-axis`), `hiddenDatasets`, `legend`, `legendPosition` (`legend-position`), `max`, `min`, `plugins`,
   `withoutAnimation` (`without-animation`), `withoutLegend` (`without-legend`), `withoutTooltip`
   (`without-tooltip`), `valueFormatter`, `area`, `zoom`, `config`, `height`, `xLabel` (`x-label`),
-  `yLabel` (`y-label`), `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`), `horizontal`,
+  `yLabel` (`y-label`), `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`),
   `stacked`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `accessibleLabel`
   (`accessible-label`), `accessibleDescription` (`accessible-description`), `showDataTable`
   (`show-data-table`), `chartArea` (readonly).

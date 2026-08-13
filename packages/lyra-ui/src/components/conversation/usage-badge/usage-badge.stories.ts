@@ -25,9 +25,9 @@ export const Default: Story = {
     html`<lr-usage-badge tokens-in="1204" tokens-out="386" cost-text="$0.012" latency-ms="2350"></lr-usage-badge>`,
 };
 
-export const Compact: Story = {
+export const Abbreviated: Story = {
   render: () =>
-    html`<lr-usage-badge compact tokens-in="12345" tokens-out="4210" cost-text="$0.31" latency-ms="61500"></lr-usage-badge>`,
+    html`<lr-usage-badge abbreviate tokens-in="12345" tokens-out="4210" cost-text="$0.31" latency-ms="61500"></lr-usage-badge>`,
 };
 
 export const CostOnly: Story = {
@@ -74,7 +74,7 @@ export const Narrow320: Story = {
         }}
       ></lr-usage-badge>
       <lr-usage-badge
-        compact
+        abbreviate
         style="inline-size:100%"
         tokens-in="1204"
         tokens-out="386"

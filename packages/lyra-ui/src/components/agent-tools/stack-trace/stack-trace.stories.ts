@@ -95,6 +95,24 @@ export const ScopedStateColors: Story = {
   `,
 };
 
+export const Compact: Story = {
+  name: 'compact (dense error row)',
+  render: () => html`
+    <div style="max-width:40rem; display:grid; gap:0.75rem;">
+      <lr-stack-trace .trace=${jsTrace}></lr-stack-trace>
+      <lr-stack-trace compact .trace=${jsTrace}></lr-stack-trace>
+    </div>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`compact` tightens the root padding and between-group spacing for dense contexts. It is a density knob only — the card border, radius and background stay; reach for `frame="plain"` to drop the chrome.',
+      },
+    },
+  },
+};
+
 export const PlainInsideCard: Story = {
   name: 'frame="plain" (nested in a bordered host)',
   render: () => html`

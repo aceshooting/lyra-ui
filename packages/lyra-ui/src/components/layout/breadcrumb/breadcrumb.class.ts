@@ -46,11 +46,13 @@ export class LyraBreadcrumb extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
-  /** Host-level `aria-label` override for the trail's accessible name --
-   *  wins over the localized default ("Breadcrumb"). Set as a plain
-   *  `aria-label` attribute on `<lr-breadcrumb>` itself, not a public JS
-   *  property, since the `<nav>` landmark that owns the role lives in the
-   *  shadow root and never inherits a host attribute automatically. */
+  /** Accessible-name override for the trail, mapped to the host's `aria-label` attribute the same
+   *  way every other Lyra component spells this member. The `<nav>` landmark that owns the role
+   *  lives in the shadow root and never inherits a host attribute automatically, so the value is
+   *  copied onto it. Both spellings work: an `aria-label` attribute on `<lr-breadcrumb>` (which the
+   *  attribute mapping also surfaces here) and a plain property assignment
+   *  (`el.accessibleLabel = 'Docs trail'`). Wins over `label` and over the localized default
+   *  ("Breadcrumb"); an explicitly empty `aria-label` attribute stays empty. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
 
   /** Accessible name matching both pinned upstream breadcrumb contracts. A host `aria-label`
@@ -95,8 +97,15 @@ export class LyraBreadcrumb extends LyraElement {
   };
 
   override render(): TemplateResult {
+    // Attribute presence first, so an explicitly empty `aria-label=""` stays empty. When the
+    // attribute is absent the property is still consulted: a JS-only assignment never writes an
+    // attribute back (this property does not reflect), so reading the attribute alone would make
+    // `el.accessibleLabel = 'Docs trail'` silently inert.
     const hostLabel = this.getAttribute('aria-label');
-    const label = hostLabel === null ? this.label || this.localize('breadcrumb') : hostLabel;
+    const label =
+      hostLabel === null
+        ? this.accessibleLabel || this.label || this.localize('breadcrumb')
+        : hostLabel;
     return html`<nav part="base breadcrumb" aria-label=${label}>
       <div part="list" role="list"><slot @slotchange=${this.syncSeparators}></slot></div>
       <slot class="separator-source" name="separator" @slotchange=${this.syncSeparators}></slot>

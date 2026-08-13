@@ -856,7 +856,7 @@ describe('lr-button', () => {
       expect(anchor.getAttribute('rel')).to.equal('noopener noreferrer');
     });
 
-    it('omits rel entirely when target is unset (no standalone settable rel)', async () => {
+    it('omits rel entirely when neither target nor an author rel is set', async () => {
       const el = (await fixture(
         html`<lr-button href="https://example.com">Go</lr-button>`,
       )) as LyraButton;
@@ -1840,18 +1840,45 @@ describe('lr-button — mapped Shoelace and Web Awesome surface', () => {
     expect(states.has('disabled')).to.be.true;
   });
 
-  it('exposes rel as a target-derived compatibility surface and ignores an unsafe author value', async () => {
+  it('strips opener and force-adds the guard whenever target is set, even against an unsafe author rel', async () => {
     const el = (await fixture(html`
       <lr-button href="https://example.com" target="_blank" rel="opener">Open</lr-button>
     `)) as LyraButton;
     const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
-    expect(el.rel).to.equal('noopener noreferrer');
-    expect(anchor.rel).to.equal('noopener noreferrer');
+    // The author value round-trips on the property (it is settable now) ...
+    expect(el.rel).to.equal('opener');
+    // ... but `opener` never reaches the rendered anchor, and the guard is force-added.
+    const rendered = anchor.getAttribute('rel')!.split(' ');
+    expect(rendered).to.not.include('opener');
+    expect(rendered).to.include('noopener');
+    expect(rendered).to.include('noreferrer');
+  });
 
+  it('preserves author rel tokens a migrating wa-/sl- consumer actually uses', async () => {
+    // The whole point of making `rel` settable: these survive a wa-/sl- -> lr- rename instead of
+    // being silently dropped. With no `target` there is no new browsing context, so no guard is
+    // added and the author's tokens render verbatim.
+    const el = (await fixture(html`
+      <lr-button href="https://example.com" rel="nofollow me">Profile</lr-button>
+    `)) as LyraButton;
+    const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
+    expect(anchor.getAttribute('rel')).to.equal('nofollow me');
+  });
+
+  it('merges author tokens with the guard rather than replacing either', async () => {
+    const el = (await fixture(html`
+      <lr-button href="https://example.com" target="_blank" rel="nofollow">Go</lr-button>
+    `)) as LyraButton;
+    const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
+    const rendered = anchor.getAttribute('rel')!.split(' ');
+    expect(rendered).to.include('nofollow');
+    expect(rendered).to.include('noopener');
+    expect(rendered).to.include('noreferrer');
+
+    // Clearing target drops only the guard, leaving the author's own token intact.
     el.target = undefined;
     await el.updateComplete;
-    expect(el.rel).to.be.undefined;
-    expect(anchor.hasAttribute('rel')).to.be.false;
+    expect(anchor.getAttribute('rel')).to.equal('nofollow');
   });
 });
 

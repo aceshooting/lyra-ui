@@ -1,6 +1,11 @@
+import type { LyraToolStatus } from '../../../internal/shared-unions.js';
+
 export type LyraSpanKind = 'agent' | 'llm' | 'tool' | 'retriever' | 'embedding' | 'other';
 
-export type LyraSpanStatus = 'pending' | 'running' | 'success' | 'error' | 'denied';
+/** The same tool-lifecycle vocabulary `<lr-tool-call-chip>`'s `ToolCallStatus` and
+ *  `<lr-tool-result-dialog>`'s `ToolResultStatus` resolve to -- a span standing in for a call reads
+ *  identically to the call itself. */
+export type LyraSpanStatus = LyraToolStatus;
 
 /** Normalizes foreign provider data before it reaches closed span-kind maps. */
 export function normalizeLyraSpanKind(value: unknown): LyraSpanKind {

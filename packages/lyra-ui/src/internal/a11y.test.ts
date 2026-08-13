@@ -8,8 +8,27 @@ import {
   isAccessibilityVisibilityHidden,
   nextId,
   resolveAccessibleTrigger,
+  srOnly,
 } from './a11y.js';
 import { tag } from './prefix.js';
+
+describe('srOnly', () => {
+  it('clips through clip-path, not the deprecated clip shorthand', async () => {
+    const host = await fixture<HTMLElement>(html`<div></div>`);
+    // The class is authored against the shared token scale, which a bare fixture does not inherit.
+    host.style.setProperty('--lr-size-1px', '1px');
+    const root = host.attachShadow({ mode: 'open' });
+    // The rendered result is asserted rather than the stylesheet text: silently-inert CSS is
+    // invisible to every other kind of check.
+    root.innerHTML = `<style>${srOnly.cssText}</style><span class="sr-only">Announcement</span>`;
+    const hidden = root.querySelector<HTMLElement>('.sr-only')!;
+    const styles = getComputedStyle(hidden);
+
+    expect(styles.clipPath).to.equal('inset(50%)');
+    expect(styles.clip, 'the deprecated `clip` declaration must be gone').to.equal('auto');
+    expect(hidden.getBoundingClientRect().width).to.be.at.most(1);
+  });
+});
 
 it('generates a distinct id on every call for the same scope', () => {
   const a = nextId('listbox');

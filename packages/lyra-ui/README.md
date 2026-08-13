@@ -386,9 +386,10 @@ Some upstream behavior is intentionally not made automatic:
 - `<lr-include>` sanitizes every fetched or same-page fragment, has no script-executing mode, and
   defaults `mode` to `same-origin` instead of `cors`. A migration that depends on cross-origin or
   script execution remains unchanged with a location-aware warning.
-- Link-like Lyra controls derive `rel="noopener noreferrer"` whenever `target` is set; they do not
-  expose an independently settable `rel`. A caller-authored `rel` therefore requires manual review
-  instead of a silent rewrite.
+- Link-like Lyra controls always contribute `noopener noreferrer` to `rel` whenever `target` is set,
+  and always strip `opener`. Author `rel` tokens are merged rather than ignored, so `nofollow`, `me`
+  and `license` survive the rename — `<lr-button>` and `<lr-breadcrumb-item>` therefore migrate
+  automatically as of 9.0.0. `<lr-app-rail-item>` still derives `rel` from `target` alone.
 - `<lr-zoomable-frame>` rejects active/non-embeddable URL schemes, always renders a sandbox, and
   will not combine `allow-scripts` with `allow-same-origin`. `<lr-video>` validates media and
   thumbnail URLs and byte-caps remote thumbnail VTT input.

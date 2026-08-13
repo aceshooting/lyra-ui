@@ -167,6 +167,10 @@ export interface LyraTabGroupEventMap {
  * `no-scroll-controls`) opts out, leaving the pre-8.0.0 behavior: native scrolling plus the fade.
  * The fade is deliberately kept alongside the controls — it says "the row continues past this
  * edge", which the controls themselves cannot show, and both appear on exactly the same condition.
+ * Neither control is ever hidden individually once the row overflows, including at the two extremes
+ * of the scroll range. Shoelace does hide an inactive control there and exposes
+ * `fixed-scroll-controls` to opt out; Lyra's always-present rendering already *is* that opted-out
+ * behavior, so the mirrored flag is accepted and reflected but changes nothing (see its own doc).
  * A vertical `start`/`end` nav stays shrinkable and is capped at
  * `--lr-tab-group-vertical-nav-max-inline-size` (default `var(--lr-size-12rem)`), so long labels
  * ellipsize rather than consuming the panel's allocation.
@@ -269,8 +273,26 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   @property({ type: Boolean, attribute: 'no-scroll-controls', reflect: true })
   noScrollControls = false;
 
-  /** Shoelace compatibility flag. Lyra's controls remain present at both edges whenever the row
-   * overflows, so enabling this preserves that fixed behavior explicitly. */
+  /**
+   * `sl-tab-group` parity flag, accepted and reflected but inert here.
+   *
+   * Upstream it means *"prevent the scroll buttons from being hidden when inactive"*: Shoelace
+   * tracks the tablist's scroll position and hides an individual control once that direction has
+   * nothing left to scroll to (`shouldHideScrollStartButton`/`shouldHideScrollEndButton`), and
+   * `fixed-scroll-controls` opts out of that per-edge hiding. It never makes controls appear on a
+   * row that fits — that stays gated on the overflow measurement in both libraries.
+   *
+   * Lyra deliberately implements no per-edge hiding at all: both controls stay present for the
+   * whole overflowing range (see the class doc's Overflow section), which is exactly upstream's
+   * `fixed-scroll-controls="true"` rendering. So the flag is read by nothing and setting it changes
+   * nothing; it exists so a mechanical `sl-` -> `lr-` rename does not drop an attribute, and it
+   * remains harmless in both positions.
+   *
+   * The omission is deliberate. Position-tracked hiding would need a scroll listener plus
+   * direction-dependent `scrollLeft` math on a pair of controls that are already `aria-hidden` and
+   * `tabindex="-1"` — pure pointer affordances — to make them vanish exactly when the user is most
+   * likely to be dragging toward them.
+   */
   @property({ type: Boolean, attribute: 'fixed-scroll-controls', reflect: true })
   fixedScrollControls = false;
 

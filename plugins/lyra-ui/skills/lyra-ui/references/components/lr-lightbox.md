@@ -29,7 +29,11 @@ trap, Escape/backdrop dismissal, scroll lock, and focus return.
   event) when `images` shrinks.
 - `loop: boolean = false` (reflected) — wraps prev/next past the ends.
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop dismissal. Off by default, matching `lr-dialog`.
-- `showCounter: boolean = true` (attribute `show-counter`) — shows the visible `[part="counter"]`.
+- `showCounter: boolean = true` (attribute `show-counter`, **not reflected**) — shows the visible
+  `[part="counter"]`. `show-counter="false"` clears it from plain HTML (the attribute is parsed by
+  literal string, not by presence, so a true-defaulting boolean can actually be turned off), and a
+  `.showCounter=${false}` property binding does the same. Nothing is ever written back to the
+  attribute — no stylesheet or selector keys off `[show-counter]`.
   Spoken position updates remain active when the counter is hidden: the shadow
   `[part="live-region"]` is only an `aria-hidden` text mirror, while announcements append to the
   shared light-DOM polite sink. Announcements stay silent when the lightbox or a composed ancestor

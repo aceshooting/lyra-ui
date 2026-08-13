@@ -12,7 +12,7 @@ import {
 } from '../../../internal/resource-loader.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { chevronIcon } from '../../../internal/icons.js';
-import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
+import { srOnly } from '../../../internal/a11y.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { Announcer } from '../../../internal/announcer.js';
 import { announceSearchResult } from '../../../internal/viewer-search.js';
@@ -131,9 +131,8 @@ class LyraEbookViewerBase extends LyraElement<LyraEbookViewerEventMap> {}
  * @csspart next-icon - The next button icon.
  * @csspart mount - The stable element epub.js renders into.
  * @csspart error - Visible ordinary error text; transitions announce through the shared
- *   document-level assertive region.
- * @csspart announcer - The aria-hidden shadow-tree mirror retained for styling compatibility;
- *   search announcements are appended to the shared document-level polite region.
+ *   document-level assertive region. Search announcements are appended to the shared
+ *   document-level polite region, which lives in the host's light DOM and has no part here.
  * @cssprop [--lr-ebook-viewer-max-height=none] - Maximum block size of the mount area epub.js
  *   renders into, before it scrolls internally. Also settable via the `max-height` property.
  * @status stable
@@ -174,8 +173,12 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   @property() src = '';
   /** Display name used as the reading region's accessible-name fallback. */
   @property() name = '';
-  /** Host `aria-label` override for the internal reading region. */
-  @property({ attribute: 'aria-label' }) accessibleLabel = '';
+  /** Host-level `aria-label` override for the internal reading region -- wins by attribute
+   *  presence, including an explicitly empty value, over `name` and the localized fallback. Set as
+   *  a plain `aria-label` attribute on `<lr-ebook-viewer>` itself, not a public JS property: the
+   *  declaration exists only so Lit observes the attribute (the same private attribute-observer
+   *  `<lr-dialog>`, `<lr-page>`, `<lr-app-rail>` and `<lr-tour>` use). */
+  @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
 
   /** A CSS `max-height` that caps the mount area epub.js renders into; invalid values are
    *  ignored. */
@@ -741,9 +744,8 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
             <span part="next-icon" aria-hidden="true">${chevronIcon()}</span>
           </button>
         </div>
-        <div part="mount" role="region" aria-label=${hostAriaLabel(this) ?? (this.name || this.localize('ebookViewerRegionLabel'))} ${ref(this.mountRef)}></div>
+        <div part="mount" role="region" aria-label=${this.accessibleLabel ?? (this.name || this.localize('ebookViewerRegionLabel'))} ${ref(this.mountRef)}></div>
         ${this.renderStatus()}
-        <div part="announcer" class="sr-only" aria-hidden="true"></div>
         ${this.renderAnchorLiveRegion()}
       </div>
     `;

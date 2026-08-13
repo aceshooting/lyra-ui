@@ -515,6 +515,44 @@ describe('lr-spreadsheet-viewer', () => {
       } finally { restore(); }
     });
 
+    it('reports a failed jump when a concurrent src reassignment lands during the scroll wait', async () => {
+      // Byte-for-byte the guard <lr-csv-viewer>/<lr-dataset-viewer> already carry: this viewer used
+      // to `return true` unconditionally, so a document replaced mid-jump still fired
+      // `lr-anchor-result: { found: true }` for a coordinate nothing had scrolled to.
+      const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
+      try {
+        el.src = 'https://example.test/book.xlsx';
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+        // One attempt only: the mixin's retry loop would otherwise re-resolve against the newly
+        // loaded document, which is correct behavior but hides this call's own result.
+        (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 0;
+        (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 0;
+
+        // Reassign `src` through the real public setter from inside the await that jumpToCell is
+        // already suspended on -- exactly the citation/file-tab click that lands mid-jump.
+        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+        let swapped = false;
+        Object.defineProperty(list, 'updateComplete', {
+          configurable: true,
+          get: () => {
+            if (swapped) return Promise.resolve(true);
+            swapped = true;
+            return (async () => {
+              el.src = 'https://example.test/other.xlsx';
+              await el.updateComplete;
+              await aTimeout(0);
+              return true;
+            })();
+          },
+        });
+
+        const found = await el.scrollToAnchor({ kind: 'cell-range', range: 'A2' });
+        expect(swapped, 'the reassignment really landed inside the jump').to.equal(true);
+        expect(found, 'a jump whose document was replaced mid-flight is not a success').to.equal(false);
+      } finally { restore(); }
+    });
+
     it('resolves false for an anchor targeting a sheet that does not exist', async () => {
       const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
       shrinkAnchorRetry(el);

@@ -1,6 +1,7 @@
 import { fixture, expect, html, waitUntil } from "@open-wc/testing";
 import "./breadcrumb.js";
 import "./breadcrumb-item.js";
+import type { LyraBreadcrumb } from "./breadcrumb.js";
 
 class BreadcrumbSeparatorTestControl extends HTMLElement {
   constructor() {
@@ -45,6 +46,36 @@ it("localizes the nav landmark default accessible name via .strings, proving the
   expect(
     el.shadowRoot!.querySelector("nav")?.getAttribute("aria-label")
   ).to.equal("Fil d’Ariane");
+});
+
+it("names the trail from the accessibleLabel property, not only from the aria-label attribute", async () => {
+  const el = await fixture<LyraBreadcrumb>(html`<lr-breadcrumb>
+    <lr-breadcrumb-item href="/">Home</lr-breadcrumb-item>
+  </lr-breadcrumb>`);
+  const nav = (): string | null =>
+    el.shadowRoot!.querySelector("nav")?.getAttribute("aria-label") ?? null;
+  expect(nav()).to.equal("Breadcrumb");
+
+  // A plain property assignment writes no attribute (accessibleLabel does not reflect), so this
+  // only reaches the landmark if render() consults the property rather than the host attribute.
+  el.accessibleLabel = "Docs trail";
+  await el.updateComplete;
+  expect(el.hasAttribute("aria-label")).to.equal(false);
+  expect(nav()).to.equal("Docs trail");
+
+  // It outranks the mapped `label`, and a host attribute still outranks it.
+  el.label = "Mapped trail";
+  await el.updateComplete;
+  expect(nav()).to.equal("Docs trail");
+
+  el.setAttribute("aria-label", "Host trail");
+  await el.updateComplete;
+  expect(nav()).to.equal("Host trail");
+
+  // An explicitly empty host attribute stays empty rather than falling back.
+  el.setAttribute("aria-label", "");
+  await el.updateComplete;
+  expect(nav()).to.equal("");
 });
 
 it("accepts the mapped label property while preserving host aria-label priority", async () => {

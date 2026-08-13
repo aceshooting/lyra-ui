@@ -7,8 +7,6 @@ import type {
   SplitPanelOrientation,
   SplitPanelPrimary,
   SplitPanelSnapFunction,
-  SplitPanelSnapFunctionOptions,
-  SplitPanelSnapFunctionParams,
 } from '../src/lyra.js';
 
 const layoutConstructor: typeof LyraSplitPanel = LayoutLyraSplitPanel;
@@ -22,11 +20,11 @@ const snapParams: SnapFunctionParams = {
   size: 480,
   snapThreshold: 12,
 };
-const qualifiedOptions: SplitPanelSnapFunctionOptions = snapParams;
-const qualifiedParams: SplitPanelSnapFunctionParams = snapParams;
+// `SplitPanelSnapFunctionOptions`/`SplitPanelSnapFunctionParams` were removed in 9.0.0: both were
+// bare aliases of `SnapFunctionParams`, which is the one exported name for a snap callback's
+// argument. A stale import of either is now a compile error, not a silent behavior change.
 void qualifiedSnap;
-void qualifiedOptions;
-void qualifiedParams;
+void snapParams;
 
 declare const panel: LyraSplitPanel;
 panel.position = 35;

@@ -357,6 +357,67 @@ describe('lr-stack-trace chrome', () => {
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
+
+  it('defaults compact to false and reflects it as an attribute when set', async () => {
+    const plain = (await fixture(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`)) as LyraStackTrace;
+    expect(plain.compact).to.equal(false);
+    expect(plain.hasAttribute('compact')).to.equal(false);
+
+    plain.compact = true;
+    await plain.updateComplete;
+    expect(plain.hasAttribute('compact')).to.equal(true);
+  });
+
+  it('compact tightens padding and group spacing while keeping the card chrome', async () => {
+    const regular = (await fixture(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`)) as LyraStackTrace;
+    const el = (await fixture(html`<lr-stack-trace compact .trace=${trace}></lr-stack-trace>`)) as LyraStackTrace;
+
+    const dense = baseChrome(el);
+    const full = baseChrome(regular);
+    expect(dense.borderTopWidth).to.equal(full.borderTopWidth);
+    expect(dense.borderTopLeftRadius).to.equal(full.borderTopLeftRadius);
+    expect(dense.backgroundColor).to.equal(full.backgroundColor);
+    expect(parseFloat(dense.paddingTop)).to.be.greaterThan(0);
+    expect(parseFloat(dense.paddingTop)).to.be.lessThan(parseFloat(full.paddingTop));
+
+    const messageMargin = (host: LyraStackTrace) =>
+      parseFloat(getComputedStyle(host.shadowRoot!.querySelector('[part="message"]') as HTMLElement).marginBlockEnd);
+    expect(messageMargin(el)).to.be.greaterThan(0);
+    expect(messageMargin(el)).to.be.lessThan(messageMargin(regular));
+  });
+
+  it('keeps compact group spacing tighter than the default, and still zero on the last group', async () => {
+    const chained = ['Error: outer', '    at a (/app/a.js:1:1)', 'Caused by: Error: inner', '    at b (/app/b.js:2:2)']
+      .join('\n');
+    const regular = (await fixture(html`<lr-stack-trace .trace=${chained}></lr-stack-trace>`)) as LyraStackTrace;
+    const el = (await fixture(html`<lr-stack-trace compact .trace=${chained}></lr-stack-trace>`)) as LyraStackTrace;
+
+    const groups = (host: LyraStackTrace) =>
+      [...host.shadowRoot!.querySelectorAll<HTMLElement>('[part="group"]')].map((g) =>
+        parseFloat(getComputedStyle(g).marginBlockEnd));
+    const dense = groups(el);
+    const full = groups(regular);
+    expect(dense.length).to.be.greaterThan(1);
+    expect(dense[0]!).to.be.greaterThan(0);
+    expect(dense[0]!).to.be.lessThan(full[0]!);
+    expect(dense[dense.length - 1]!).to.equal(0);
+  });
+
+  it('lets frame="plain" win over compact padding, as on every sibling that pairs them', async () => {
+    const el = (await fixture(
+      html`<lr-stack-trace compact frame="plain" .trace=${trace}></lr-stack-trace>`,
+    )) as LyraStackTrace;
+    const chrome = baseChrome(el);
+    expect(chrome.paddingTop).to.equal('0px');
+    expect(chrome.paddingLeft).to.equal('0px');
+    expect(chrome.borderTopWidth).to.equal('0px');
+  });
+
+  it('is accessible in the compact presentation', async () => {
+    const el = (await fixture(html`<lr-stack-trace compact .trace=${trace}></lr-stack-trace>`)) as LyraStackTrace;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
 });
 
 it('exposes component-scoped internal-frame and interactive colors', async () => {

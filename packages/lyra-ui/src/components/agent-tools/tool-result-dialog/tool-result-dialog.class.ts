@@ -9,6 +9,7 @@ import {
 } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraToolStatus } from '../../../internal/shared-unions.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId } from '../../../internal/a11y.js';
 import { closeIcon, expandIcon } from '../../../internal/icons.js';
@@ -22,7 +23,7 @@ import { LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_D
 
 
 /** Same status vocabulary as `<lr-tool-call-chip>`. */
-export type ToolResultStatus = 'pending' | 'running' | 'success' | 'error' | 'denied';
+export type ToolResultStatus = LyraToolStatus;
 
 /**
  * Reason the dialog was dismissed, forwarded as the `lr-close` event

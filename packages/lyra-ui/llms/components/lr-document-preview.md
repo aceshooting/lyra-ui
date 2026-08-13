@@ -59,12 +59,13 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
   is used; an explicit empty string keeps a decorative preview's `alt=""` intact.
 - `status: 'idle' | 'converting' | 'ready' | 'error' = 'idle'` (reflected) — host-owned lifecycle
   state. `"converting"` shows the spinner regardless of `mimeType`/`src`; `"error"` shows
-  `errorMessage` regardless of either. `"idle"`/`"ready"` both resume normal format dispatch — a host
+  `errorText` regardless of either. `"idle"`/`"ready"` both resume normal format dispatch — a host
   with no conversion step never has to explicitly set `"ready"`.
 - `progress?: number` (type `Number`) — 0-100. Only consulted while `status="converting"`. Unset (the
   default) renders an indeterminate spinner instead of a determinate progress bar.
-- `errorMessage: string = ''` (attribute `error-message`) — shown via `[part="error"]` while
-  `status="error"`.
+- `errorText: string = ''` (attribute `error-text`; spelled `errorMessage`/`error-message` before
+  9.0.0) — shown via `[part="error"]` while `status="error"`. Caller-supplied text, not localized;
+  left empty, the localized `documentPreviewGenericError` fallback shows instead.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"24rem"`); once set,
   `[part="body"]` scrolls internally past this height instead of growing the page — same contract as
   `lr-json-viewer`'s identically-named prop. Invalid CSS `max-height` values, declaration breaks,

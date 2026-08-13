@@ -18,8 +18,8 @@ import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './locale-picker.styles.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import { attachLegacyNoopInternalsSafely } from '../../../internal/legacy-noop-internals.js';
 import {
+  attachInternalsSafely,
   getFormOwner,
   installCustomErrorProperty,
   isBarredFromValidation,
@@ -279,7 +279,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
 
   constructor() {
     super();
-    this.internals = attachLegacyNoopInternalsSafely(this);
+    this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, (init: { cancelable: true }) =>

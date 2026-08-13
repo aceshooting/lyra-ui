@@ -290,9 +290,10 @@ are `text`, `equals`, `number-range`, `date-range`, `set`, `includes-any`, and `
   explicit delimiter overrides the one normally selected by `format`.
 - `exportDataAsCsv(options?: DataGridExportOptions)` downloads formula-safe delimited data (CSV by
   default); `getDataAsCsv(options?: DataGridCsvOptions)` returns it without downloading. Options include `delimiter`,
-  `includeHeaders`, `columnIds`, `escapeFormulas`, and `fileName`. The additive
-  `columns` and `filename` spellings remain deprecated runtime aliases on their corresponding
-  option interfaces. Formula escaping is on by default for string cells beginning with `=`, `+`,
+  `includeHeaders`, `columnIds`, `escapeFormulas`, and `fileName`. The Lyra-only `columns` and
+  `filename` aliases were **removed in 9.0.0** — rename them to `columnIds` and `fileName` (the
+  spellings `wa-data-grid` uses); an unrenamed call silently falls back to every visible column and
+  `data.csv`. Formula escaping is on by default for string cells beginning with `=`, `+`,
   `-`, or `@`; numeric values remain numeric.
 - `focus(options?)` focuses the current roving header/cell stop.
 - `getColumnFacets(columnId)` returns `{ uniqueValues: Map, minMax? }`, computed after every other
@@ -1572,8 +1573,6 @@ accessibility surface.
   declaration-breaking input, `url()`, and unmatched categories render `transparent`. `label` is
   used in the auto-generated `aria-label` summary and as the hover-tooltip fallback text, falling
   back to `key` itself when unset
-- `orientation: 'horizontal' = 'horizontal'` (reflected) — only `'horizontal'` is supported today;
-  vertical is plausible future scope, not built speculatively without a motivating case
 - `accessibleLabel?: string` (attribute `accessible-label`) — overrides the auto-generated
   `aria-label` (a per-category "label: count" summary, e.g. `"Text: 2, Tool: 1"`). Unset computes the
   summary from `items`/`categories`; a standard host `aria-label` takes precedence over this alias
@@ -1591,6 +1590,10 @@ accessibility surface.
   treatment, and it adds the marker to the auto-generated `aria-label` summary, which is otherwise
   per-category only. The marker count is reported as its own clause rather than folded into any
   category's count. Unset (the default) changes nothing: no extra legend row, no extra summary clause
+
+The single-member `orientation: 'horizontal'` property was **removed in 9.0.0**: nothing read it and
+the stylesheet never mentioned it, so the reflected attribute styled nothing. Delete the attribute;
+the strip has always laid out horizontally.
 
 **Events:** none.
 
@@ -2033,7 +2036,9 @@ position, previous }`), `lr-connect` (`detail: { source, target, sourceHandle, t
 unpositioned nodes).
 
 **Slots:** default (`lr-flow-node` children adopted by `node-id`; a non-matching child is ignored
-with a console warning), `top-start`, `top-end` (floating top-rail content), `bottom-start` (e.g.
+with a console warning). Adoption reads the `node-id` **attribute** and runs only when `nodes`
+changes, so a child must carry its id (declaratively, or via `lr-flow-node`'s reflected `nodeId`
+property) before the canvas is given the matching `nodes` array. `top-start`, `top-end` (floating top-rail content), `bottom-start` (e.g.
 `lr-flow-controls`), `bottom-end` (e.g. `lr-flow-minimap`). Opposite-side slots share wrapping top
 and bottom rails, so wide companions stack without intersecting in narrow allocations.
 
@@ -2059,7 +2064,7 @@ property-derived fallback. Each edge tone colors its stroke and the arrowhead ma
 `var(--lr-duration-ambient)`, running-edge march animation duration; this is a time-only value, not
 the `--lr-transition-ambient` duration/easing shorthand, because the animation supplies its own
 `linear` timing function), and
-`--lr-flow-canvas-node-current-outline-color` (default `var(--lr-color-brand)`) — the outline color
+`--lr-flow-canvas-node-selected-outline-color` (default `var(--lr-color-brand)`) — the outline color
 of the current (`aria-current`) node. Like every state-scoped custom property in this library it is
 an inline `var()` fallback at its point of use rather than a `:host` declaration, so it can be set on
 the element _or any ancestor_. It exists because Shadow Parts forbids an attribute selector after
@@ -2126,7 +2131,7 @@ treatment entirely.
 
 - `part="edge-hit-area"` — The transparent wide pointer target behind an edge.
 - `part="node-control"` — The visually hidden, roving selection button for a node.
-- `--lr-flow-canvas-node-selected-outline-color` — Outline color of a selected node. Default: `var(--lr-flow-canvas-node-current-outline-color,var(--lr-color-brand))`.
+- `--lr-flow-canvas-node-selected-outline-color` — Outline color of a selected node. Default: `var(--lr-color-brand)`.
 
 ---
 
@@ -2140,7 +2145,11 @@ owns none of that.
 
 **Properties:**
 
-- `nodeId: string = ''` (attribute `node-id`)
+- `nodeId: string = ''` (attribute `node-id`, reflected) — the identity `lr-flow-canvas` adopts this
+  card by. It reflects because that adoption reads the *attribute*, so a property-only
+  `card.nodeId = 'fetch'` reaches the canvas too; the empty default stays absent from the DOM. Set it
+  before the canvas receives the matching `nodes` entry — the canvas reconciles its light-DOM
+  children only when `nodes` changes
 - `heading: string = ''`
 - `status: 'pending' | 'running' | 'success' | 'error' | 'denied' | null = null` (reflected)
 - `progress: number | null = null` — renders a determinate `[part="progress"]` bar when set

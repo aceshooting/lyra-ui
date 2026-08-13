@@ -15,7 +15,7 @@ const checker = readFileSync(
   "utf8"
 );
 
-assert.equal(budgets["dist/components/forms/button/button.js"], 31);
+assert.equal(budgets["dist/components/forms/button/button.js"], 33);
 assert.equal(budgets["dist/all.js"], 1075);
 assert.equal(budgets["dist/autoloader.js"], 1075);
 assert.equal(budgets["dist/autoloader-cdn.js"], 1075);

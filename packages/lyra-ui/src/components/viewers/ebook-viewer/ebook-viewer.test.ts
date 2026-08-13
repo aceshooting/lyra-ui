@@ -1013,9 +1013,10 @@ describe('lr-ebook-viewer search', () => {
       await aTimeout(600); // the shared Announcer's default throttle window
       const sink = document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
       expect(sink?.lastElementChild?.textContent).to.equal('Match 1 of 1');
-      const mirror = el.shadowRoot!.querySelector('[part="announcer"]')!;
-      expect(mirror.textContent).to.equal('');
-      expect(mirror.getAttribute('aria-hidden')).to.equal('true');
+      // 9.0.0 removed `[part="announcer"]`: once announcements moved to the shared document-level
+      // sink the shadow mirror was a permanently-empty div with no rule anywhere in the stylesheet,
+      // so it was a part consumers could target but never see anything in.
+      expect(el.shadowRoot!.querySelectorAll('[part="announcer"]').length).to.equal(0);
     } finally {
       restore();
     }

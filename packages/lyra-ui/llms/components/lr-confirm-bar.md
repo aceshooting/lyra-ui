@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 19 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -35,13 +35,20 @@ genuine two-member subset of the library-wide `LyraVariant` vocabulary (spelled 
 it, so the two can never drift): a confirmation is either routine or destructive, and
 `brand`/`success`/`warning` have no meaning for a proposal awaiting a yes/no. The exported alias
 `ConfirmBarTone` is retained as a name for the same union. `compact: boolean = false`
-(reflected) — collapses the bar from a full card (bordered, padded, `display: block` surface) to a
-single inline row with no chrome of its own, for a confirmation that has to live inside an existing
-container: a table cell, a card's action row, a toolbar. The host becomes `inline-flex`, and the
-narrow-allocation `@container` treatment is switched off — a compact bar is *expected* to be narrow,
-so stretching the buttons to fill would be exactly wrong. Re-chrome it through the
-`--lr-confirm-bar-compact-*` properties below. Everything else is unchanged: the event shapes, the
-focus-to-`[part="status"]`-before-unmount contract, and `role="group"` with its heading label.
+(reflected) — collapses the bar from a stacked `display: block` card into a single tightly-padded
+inline row, for a confirmation that has to live inside an existing container: a table cell, a card's
+action row, a toolbar. The host becomes `inline-flex`, and the narrow-allocation `@container`
+treatment is switched off — a compact bar is *expected* to be narrow, so stretching the buttons to
+fill would be exactly wrong. It is a density knob only: the border, corner radius and background
+stay. Retune it through `--lr-confirm-bar-compact-padding`/`-gap`. Everything else is unchanged: the
+event shapes, the focus-to-`[part="status"]`-before-unmount contract, and `role="group"` with its
+heading label. `frame: LyraFrame = 'card'` (reflected) — `'card' | 'plain'`, imported from the
+library's shared container-frame vocabulary and behaving exactly as it does on `lr-agent-run`,
+`lr-commit-card`, `lr-result-card`, `lr-task-list`, `lr-terminal` and `lr-thinking-panel`:
+`'plain'` removes the border, background, padding and corner radius so a bar nested inside a
+container that already draws a border doesn't double it, and wins over `compact` when both are set.
+Before 9.0.0 `compact` alone did both jobs; a bar that relied on that now needs
+`compact frame="plain"`.
 `pending: 'approved' | 'denied' | null = null` (reflected) — which decision is awaiting host
 resolution while an `lr-approve`/`lr-deny` listener has called `preventDefault()` on the
 now-cancelable event; the pending button shows `loading`, the other is `disabled`. Set `.decision`
@@ -63,16 +70,17 @@ details/json-viewer wrapper, only rendered when `args` is defined), `footer`, `d
 `button` wrapper aliases), `status` (the decided-state text, always present in the DOM as a focus
 landing spot).
 
-**Themeable custom properties:** the `compact` presentation is deliberately chrome-less by default
-and re-chromed entirely through five properties, all scoped to `[part="base"]` while `compact`:
-`--lr-confirm-bar-compact-padding` (default `0`, any padding shorthand),
-`--lr-confirm-bar-compact-gap` (default `var(--lr-space-s)`, the gap between the row's items),
-`--lr-confirm-bar-compact-border` (default `none`, any `border` shorthand),
-`--lr-confirm-bar-compact-background` (default `transparent`) and
-`--lr-confirm-bar-compact-radius` (default `0` — only visible once the border or background is set).
-They are inline `var()` fallbacks at their point of use rather than `:host` declarations, so any of
-them can be set on the element *or on any ancestor*, which is what makes "give every compact confirm
-bar in this panel a hairline border" a one-rule change on the panel.
+**Themeable custom properties:** the `compact` density is retunable through two properties, both
+scoped to `[part="base"]` while `compact`: `--lr-confirm-bar-compact-padding` (default
+`var(--lr-space-s)`, any padding shorthand — overridden entirely by `frame="plain"`) and
+`--lr-confirm-bar-compact-gap` (default `var(--lr-space-s)`, the gap between the row's items). They
+are inline `var()` fallbacks at their point of use rather than `:host` declarations, so either can
+be set on the element *or on any ancestor*, which is what makes "tighten every compact confirm bar
+in this panel" a one-rule change on the panel. The chrome-removing
+`--lr-confirm-bar-compact-border`, `--lr-confirm-bar-compact-background` and
+`--lr-confirm-bar-compact-radius` properties were removed in 9.0.0 along with `compact`'s chrome
+behavior: chrome is now `frame`'s job, so keep the default `frame="card"` (and restyle via
+`::part(base)`) instead of re-chroming a chrome-less compact bar.
 
 Two further properties recolor the decided state: `--lr-confirm-bar-approved-color` (default
 `var(--lr-color-success)`) and `--lr-confirm-bar-denied-color` (default `var(--lr-color-danger)`) —

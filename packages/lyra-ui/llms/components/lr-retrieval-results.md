@@ -65,10 +65,10 @@ Large sets window through an internal `lr-virtual-list`.
 - `loading: boolean = false` (reflected)
 - `hasMore: boolean = false` (attribute `has-more`, reflected) — while virtualized, forwarded to the
   virtual list so scroll-near-bottom fires `lr-load-more`; otherwise shows the built-in footer button
-- `error: string = ''` — non-empty replaces the whole result view with a neutral visible message.
-  Caller-supplied text is not localized (app/network data, not library copy). A new non-empty value
-  is announced through a shared assertive light-DOM region; initial and reconnect content is not
-  replayed
+- `errorText: string = ''` (attribute `error-text`; spelled plain `error` before 9.0.0) — non-empty
+  replaces the whole result view with a neutral visible message. Caller-supplied text is not
+  localized (app/network data, not library copy). A new non-empty value is announced through a
+  shared assertive light-DOM region; initial and reconnect content is not replayed
 - `label: string = ''` — accessible name; defaults to the localized `chunkInspectorLabel`
 
 **Events:**
@@ -83,9 +83,9 @@ Large sets window through an internal `lr-virtual-list`.
 
 **Slots:** none.
 
-**CSS parts:** `base`, `error` (neutral visible message while `error` is non-empty), `spinner`
+**CSS parts:** `base`, `error` (neutral visible message while `errorText` is non-empty), `spinner`
 (initial-load `lr-spinner`, while `loading` and `chunks` is still empty), `empty` (when `chunks` is
-empty and neither `error` nor `loading` is set), `row` (a plain element in this shadow root below the
+empty and neither `errorText` nor `loading` is set), `row` (a plain element in this shadow root below the
 virtualization threshold; exported from the internal `lr-virtual-list`'s own `row` part while
 virtualized — `::part(row)` reaches it either way), `group-header` (exported from the virtual list's
 `group` part; grouped/virtualized mode only), `select` (per-row `lr-checkbox`, omitted when

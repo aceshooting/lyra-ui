@@ -1187,20 +1187,7 @@ const REQUIRED_TARGETS = new Map([
   ['wa-video-playlist', 'lr-video-playlist'],
 ]);
 
-const DERIVED_REL_DRIFT = [
-  { code: 'missing-attribute', section: 'attributes', member: 'rel' },
-  { code: 'missing-property', section: 'properties', member: 'rel' },
-];
 
-const READONLY_DERIVED_REL_DRIFT = [
-  {
-    code: 'readonly-mismatch',
-    section: 'properties',
-    member: 'rel',
-    expected: false,
-    actual: true,
-  },
-];
 
 const INCLUDE_SECURITY_DRIFT = [
   { code: 'missing-attribute', section: 'attributes', member: 'allow-scripts' },
@@ -1288,42 +1275,6 @@ const DECISION_OVERRIDES = new Map([
       rationale:
         'Light-DOM candidate eligibility and selection behavior require an explicit compatibility review. Lyra also applies reduced-motion autoplay suppression and renders a visible pause/resume control; migration leaves the use unchanged instead of assuming behavioral equivalence from matching members.',
       expectedDrift: [],
-    },
-  ],
-  [
-    'wa-breadcrumb-item',
-    {
-      classification: 'warning-required',
-      rationale:
-        'Lyra derives safe rel="noopener noreferrer" behavior from target and does not expose an independently settable rel; migration leaves the use unchanged and reports the security-sensitive difference.',
-      expectedDrift: DERIVED_REL_DRIFT,
-    },
-  ],
-  [
-    'sl-breadcrumb-item',
-    {
-      classification: 'warning-required',
-      rationale:
-        'Lyra derives safe rel="noopener noreferrer" behavior from target and does not expose an independently settable rel; migration leaves the use unchanged and reports the security-sensitive difference.',
-      expectedDrift: DERIVED_REL_DRIFT,
-    },
-  ],
-  [
-    'wa-button',
-    {
-      classification: 'warning-required',
-      rationale:
-        'Lyra derives safe rel="noopener noreferrer" behavior from target and ignores an independently authored rel; migration leaves the use unchanged and reports the security-sensitive difference.',
-      expectedDrift: READONLY_DERIVED_REL_DRIFT,
-    },
-  ],
-  [
-    'sl-button',
-    {
-      classification: 'warning-required',
-      rationale:
-        'Lyra derives safe rel="noopener noreferrer" behavior from target and ignores an independently authored rel; migration leaves the use unchanged and reports the security-sensitive difference.',
-      expectedDrift: READONLY_DERIVED_REL_DRIFT,
     },
   ],
   [
@@ -2924,7 +2875,7 @@ const REVIEWED_OPAQUE_TYPE_EQUIVALENCE_GROUPS = new Map([
         '(option: WaOption, index: number) => TemplateResult | string | HTMLElement',
         'LyraComboboxTagRenderer | undefined',
       ],
-      ['property', ['validators'], 'Validator[]', 'unknown[]'],
+      ['property', ['validators'], 'Validator[]', 'LyraComboboxValidator[]'],
     ],
   ],
   [
@@ -2980,7 +2931,7 @@ const REVIEWED_OPAQUE_TYPE_EQUIVALENCE_GROUPS = new Map([
       'Placement',
     ]],
   ],
-  ['wa-file-input', [['property', ['validators'], 'Validator[]', 'unknown[]']]],
+  ['wa-file-input', [['property', ['validators'], 'Validator[]', 'LyraFileInputValidator[]']]],
   ['wa-format-date', [['attribute', ['time-zone'], 'string', "Intl.DateTimeFormatOptions['timeZone'] | undefined"]]],
   ['wa-known-date', [['attribute', ['appearance'], "'filled' | 'outlined' | 'filled-outlined'", 'LyraKnownDateAppearance']]],
   [

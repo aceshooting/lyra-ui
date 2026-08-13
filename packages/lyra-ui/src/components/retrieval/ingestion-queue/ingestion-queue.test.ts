@@ -28,11 +28,11 @@ async function nextFrame(): Promise<void> {
   await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 }
 
-it('defaults to items=[], label="", virtualizeThreshold=100', async () => {
+it('defaults to items=[], label="", virtualizeAt=100', async () => {
   const el = (await fixture(html`<lr-ingestion-queue></lr-ingestion-queue>`)) as LyraIngestionQueue;
   expect(el.items).to.deep.equal([]);
   expect(el.label).to.equal('');
-  expect(el.virtualizeThreshold).to.equal(100);
+  expect(el.virtualizeAt).to.equal(100);
 });
 
 it('renders the built-in lr-empty state with no items', async () => {
@@ -482,10 +482,10 @@ describe('.strings overrides', () => {
 });
 
 describe('virtualization', () => {
-  it('renders a plain [part="list"] below virtualizeThreshold', async () => {
+  it('renders a plain [part="list"] at or below virtualizeAt', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
-        virtualize-threshold="5"
+        virtualize-at="5"
         .items=${[item({ id: '1', stage: 'queued' }), item({ id: '2', stage: 'queued' })]}
       ></lr-ingestion-queue>`,
     )) as LyraIngestionQueue;
@@ -493,10 +493,10 @@ describe('virtualization', () => {
     expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.not.exist;
   });
 
-  it('switches to an internal lr-virtual-list at/above virtualizeThreshold, wired with items/keyFunction', async () => {
+  it('switches to an internal lr-virtual-list above virtualizeAt, wired with items/keyFunction', async () => {
     const items = [item({ id: '1', stage: 'queued' }), item({ id: '2', stage: 'uploading' })];
     const el = (await fixture(
-      html`<lr-ingestion-queue virtualize-threshold="2" .items=${items}></lr-ingestion-queue>`,
+      html`<lr-ingestion-queue virtualize-at="1" .items=${items}></lr-ingestion-queue>`,
     )) as LyraIngestionQueue;
     const virtualList = el.shadowRoot!.querySelector('lr-virtual-list') as unknown as {
       items: unknown[];
@@ -510,12 +510,39 @@ describe('virtualization', () => {
     await nextFrame();
   });
 
+  // 9.0.0 renamed `virtualizeThreshold`/`virtualize-threshold` -> `virtualizeAt`/`virtualize-at`
+  // AND switched the comparison from `>=` to `>`, so `="2"` now means the same thing here as it
+  // does on <lr-chunk-inspector>, <lr-retrieval-results> and <lr-neighbor-list>: exactly 2 items
+  // stay a plain list, the 3rd one switches to the virtual list.
+  it('treats virtualize-at as an exclusive bound and no longer answers to virtualize-threshold', async () => {
+    const two = [item({ id: '1', stage: 'queued' }), item({ id: '2', stage: 'queued' })];
+    const el = (await fixture(
+      html`<lr-ingestion-queue virtualize-at="2" .items=${two}></lr-ingestion-queue>`,
+    )) as LyraIngestionQueue;
+    expect('virtualizeThreshold' in el).to.equal(false);
+    expect(el.shadowRoot!.querySelectorAll('lr-virtual-list').length, 'exactly at the bound').to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="list"]').length).to.equal(1);
+
+    el.items = [...two, item({ id: '3', stage: 'queued' })];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('lr-virtual-list').length, 'one past the bound').to.equal(1);
+
+    // The retired attribute is inert: it must not resurrect the old threshold through Lit's
+    // attribute observation.
+    const stale = (await fixture(
+      html`<lr-ingestion-queue virtualize-threshold="1" .items=${two}></lr-ingestion-queue>`,
+    )) as LyraIngestionQueue;
+    expect(stale.virtualizeAt).to.equal(100);
+    expect(stale.shadowRoot!.querySelectorAll('lr-virtual-list').length).to.equal(0);
+    await nextFrame();
+  });
+
   it('preserves an explicitly empty host aria-label through the nested virtual-list owner and restores label after removal', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
         aria-label="Author queue"
         label="Uploads"
-        virtualize-threshold="1"
+        virtualize-at="0"
         .items=${[item({ id: '1', stage: 'queued' })]}
       ></lr-ingestion-queue>`,
     )) as LyraIngestionQueue;
@@ -562,7 +589,7 @@ describe('virtualization', () => {
     try {
       const el = (await fixture(
         html`<lr-ingestion-queue
-          virtualize-threshold="1"
+          virtualize-at="1"
           .items=${[
             item({ id: '1', stage: 'failed', error: 'Boom', attempts: 1, chunkCount: 4 }),
             item({ id: '2', stage: 'uploading', progress: 30 }),
@@ -589,7 +616,7 @@ describe('virtualization', () => {
     // sizing, so -- matching <lr-activity-feed>'s own equivalent test -- this invokes the
     // internal lr-virtual-list's .renderItem callback directly against a scratch container.
     const el = (await fixture(
-      html`<lr-ingestion-queue virtualize-threshold="1"></lr-ingestion-queue>`,
+      html`<lr-ingestion-queue virtualize-at="1"></lr-ingestion-queue>`,
     )) as LyraIngestionQueue;
     const target = item({ id: '1', stage: 'failed', error: 'Boom' });
     el.items = [target, item({ id: '2', stage: 'queued' })];

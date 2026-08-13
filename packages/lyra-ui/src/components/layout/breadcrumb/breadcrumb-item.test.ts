@@ -115,14 +115,41 @@ it('supports both upstream adornment vocabularies and part aliases', async () =>
   }
 });
 
-it('forwards target and derives a safe rel without exposing an independent rel property', async () => {
+it('forwards target and force-adds the security guard to a settable rel', async () => {
   const el = (await fixture(html`
     <lr-breadcrumb-item href="https://example.com" target="_blank">Example</lr-breadcrumb-item>
   `)) as LyraBreadcrumbItem;
   const anchor = el.shadowRoot!.querySelector('a')!;
   expect(anchor.getAttribute('target')).to.equal('_blank');
-  expect(anchor.getAttribute('rel')).to.equal('noopener noreferrer');
-  expect('rel' in el).to.be.false;
+  // Order-insensitive: rel is an unordered token set, and the rendered order depends on whether a
+  // token came from the author's value or from the forced guard.
+  const rendered = anchor.getAttribute('rel')!.split(' ');
+  expect(rendered).to.include('noopener');
+  expect(rendered).to.include('noreferrer');
+  expect('rel' in el).to.equal(true);
+});
+
+it('strips opener from an author rel and keeps the guard when target is set', async () => {
+  const el = (await fixture(html`
+    <lr-breadcrumb-item href="https://example.com" target="_blank" rel="opener nofollow"
+      >Example</lr-breadcrumb-item
+    >
+  `)) as LyraBreadcrumbItem;
+  const rendered = el.shadowRoot!.querySelector('a')!.getAttribute('rel')!.split(' ');
+  expect(rendered).to.not.include('opener');
+  expect(rendered).to.include('nofollow');
+  expect(rendered).to.include('noopener');
+  expect(rendered).to.include('noreferrer');
+});
+
+it('renders the upstream default rel on a same-tab link', async () => {
+  // Both wa-breadcrumb-item and sl-breadcrumb-item default rel to 'noreferrer noopener'.
+  const el = (await fixture(html`
+    <lr-breadcrumb-item href="https://example.com">Example</lr-breadcrumb-item>
+  `)) as LyraBreadcrumbItem;
+  const rendered = el.shadowRoot!.querySelector('a')!.getAttribute('rel')!.split(' ');
+  expect(rendered).to.include('noreferrer');
+  expect(rendered).to.include('noopener');
 });
 
 it('shows a focus ring on the link via :focus-visible', async () => {

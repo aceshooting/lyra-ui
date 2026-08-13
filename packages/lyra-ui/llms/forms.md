@@ -128,7 +128,17 @@ therefore cannot widen a 320px LTR or RTL picker.
 - `getTag: ((option: LyraOption, index: number) => unknown) | undefined` (attribute: false) —
   replaces a built-in multiple-selection tag with consumer Lit/DOM/text output; strings render as
   text, never as HTML
-- `validators: unknown[] = []` (attribute: false)
+- `validators: LyraComboboxValidator[] = []` (attribute: false) — extra JavaScript validators run
+  after the intrinsic `required` constraint, the same contract `lr-date-input` implements. Each
+  entry may be a `(value, input) => void | boolean | string | ValidityStateFlags` function (`value`
+  is the live `string | string[]`), an object with `validate(value, input)` returning that same
+  vocabulary, or a Web Awesome-compatible object with `checkValidity(input)` returning
+  `{ isValid, message, invalidKeys }`, where `invalidKeys` names `ValidityState` flags; that object
+  may also expose `observedAttributes` and a string or callback `message`. Changing any listed host
+  attribute revalidates automatically. `isValid: true` (or `true`/`undefined` from a function)
+  passes; otherwise the listed flags are set (`customError` when the list maps to nothing) and the
+  returned message wins over the validator-level fallback. A throwing validator fails closed with
+  the localized generic message. `disabled` bars them exactly as it bars `required`
 - `validationTarget: HTMLElement | undefined` — writable native-validity focus anchor. After the
   first render it defaults to the internal filter input; assign another element to override it, or
   assign `undefined` to restore that input. It is `undefined` before the input exists
@@ -294,7 +304,10 @@ attribute when provided), plus two adornment slots:
 `start` and `end` (the two
 adornment-slot wrappers, each `hidden` while nothing is slotted into it), `tags`, `tag`,
 `tag-label`, `tag__content`, `tag__remove-button`, `tag__remove-button__base`, `combobox-input`,
-`clear-button`, `expand-icon`, `listbox`, `option`,
+`clear-button`, `expand-icon`, `listbox`,
+`group-label` (the heading of an option group — rows sharing a `group` — named as on `lr-select` and
+`lr-emoji-picker` so one rule styles every grouped list; it labels the `role="group"` wrapper here),
+`option`,
 `option-dot` (the leading status dot, when a row's `dotColor` is set), `option-icon` (the decorative
 leading visual for an async row), `option-label`, `option-sub` (a row's secondary line, when `sub`
 is set), `option-badge` (an async row's trailing metadata), `option-overflow` (the "+N more"

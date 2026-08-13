@@ -38,7 +38,10 @@ attribute. Invalid CSS `max-height` values, declaration breaks, and `url()` are 
 **Methods:** `search(query)` resolves the match count via a case-insensitive substring search over
 every element's tag name, attribute names/values, and own text (empty/whitespace query behaves like
 `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping);
-`clearSearch()` clears the query and matches. When the XML document reloads while a query remains
+`clearSearch()` clears the query and matches. All three resolve only after the newly active match's
+row has been scrolled into view (`block: 'center'`, `behavior: 'auto'` under
+`prefers-reduced-motion`) — before 9.0.0 they moved `data-active-match` without ever scrolling, so
+on a document taller than the viewport the reader never saw the match they had stepped to. When the XML document reloads while a query remains
 active, matches are recomputed, the active index is clamped to the new result set, and a fresh
 `lr-search-change` announces that state.
 

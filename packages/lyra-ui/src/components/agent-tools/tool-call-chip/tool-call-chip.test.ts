@@ -224,17 +224,21 @@ it('forwards a host click() to the internal base button', async () => {
   expect(ev.detail).to.deep.equal({ name: 'web_search', callId: 'call-42' });
 });
 
-it('also emits the deprecated lr-tool-chip-select alias during its compatibility window', async () => {
+it('emits only lr-tool-call-chip-select — the removed lr-tool-chip-select alias never fires', async () => {
   const el = (await fixture(
     html`<lr-tool-call-chip name="web_search" call-id="call-42"></lr-tool-call-chip>`,
   )) as LyraToolCallChip;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+  let canonical = 0;
+  let removed = 0;
+  el.addEventListener('lr-tool-call-chip-select', () => canonical++);
+  el.addEventListener('lr-tool-chip-select', () => removed++);
 
-  setTimeout(() => base.click());
-  const ev = await oneEvent(el, 'lr-tool-chip-select');
-  expect(ev.detail).to.deep.equal({ name: 'web_search', callId: 'call-42' });
-  expect(ev.bubbles).to.be.true;
-  expect(ev.composed).to.be.true;
+  base.click();
+  await el.updateComplete;
+
+  expect(canonical).to.equal(1);
+  expect(removed).to.equal(0);
 });
 
 it('builds an aria-label from name, summary, status and duration', async () => {

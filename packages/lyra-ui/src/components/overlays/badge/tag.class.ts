@@ -1,10 +1,9 @@
 import { html, nothing, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import {
-  composedParentElement,
-  isAccessibilitySubtreeExcluded,
-  isAccessibilityVisibilityHidden,
-} from '../../../internal/a11y.js';
+  bindAccessibleTextObserver,
+  composedAccessibleVisibleText,
+} from '../../../internal/accessibility-visibility.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { variants } from '../../../internal/variants.styles.js';
@@ -143,61 +142,20 @@ export class LyraTag extends LyraBadge<LyraTagEventMap> {
     this.bindLabelObserverTargets();
   }
 
-  private observeLabelNode(node: Node): void {
-    if (!this.labelObserver) return;
-    if (node.nodeType === 3) {
-      this.labelObserver.observe(node, { characterData: true });
-      return;
-    }
-    if (node.nodeType !== 1) return;
-    this.labelObserver.observe(node, {
-      attributes: true,
-      attributeFilter: ['aria-hidden', 'aria-label', 'class', 'hidden', 'inert', 'slot', 'style'],
-      childList: true,
-      characterData: true,
-      subtree: true,
-    });
-  }
-
+  // `'slot'` widens the shared content-node filter: only the default slot's content names the
+  // remove button, so a light-DOM child moving to or from the decorative `start`/`end` slots
+  // changes the name. Mirrors `<lr-chip>`'s identical binding.
   private bindLabelObserverTargets(): void {
-    if (!this.labelObserver) return;
-    this.labelObserver.disconnect();
-    this.observeLabelNode(this);
-    let ancestor = composedParentElement(this);
-    while (ancestor) {
-      this.labelObserver.observe(ancestor, {
-        attributes: true,
-        attributeFilter: ['aria-hidden', 'class', 'hidden', 'inert', 'style'],
-      });
-      ancestor = composedParentElement(ancestor);
-    }
-    for (const slot of this.querySelectorAll<HTMLSlotElement>('slot')) {
-      for (const assigned of slot.assignedNodes({ flatten: true })) this.observeLabelNode(assigned);
-    }
+    bindAccessibleTextObserver(this.labelObserver, this, ['slot']);
   }
 
   // Only the default slot's own content names the remove button -- text living in the decorative
-  // `start`/`end` slots must not leak into "Remove {label}". Restricting to Text and Element nodes
-  // also excludes Comment nodes: when a consumer interpolates the label through a lit-html
-  // expression rather than a static string, lit-html inserts a marker comment alongside the text
-  // node, and that comment's own data is internal bookkeeping, not label content.
-  private accessibleLabelText(node: Node): string {
-    if (node.nodeType === 3) return node.textContent ?? '';
-    if (node.nodeType !== 1) return '';
-    const element = node as Element;
-    if (isAccessibilitySubtreeExcluded(element)) return '';
-    const visibilityHidden = isAccessibilityVisibilityHidden(element);
-    const accessibleLabel = visibilityHidden ? null : element.getAttribute('aria-label');
-    if (accessibleLabel?.trim()) return accessibleLabel;
-    const childNodes =
-      element.localName === 'slot' && (element as HTMLSlotElement).assignedNodes().length > 0
-        ? (element as HTMLSlotElement).assignedNodes({ flatten: true })
-        : element.childNodes;
-    return Array.from(childNodes, (child) =>
-      child.nodeType === 3 && visibilityHidden ? '' : this.accessibleLabelText(child),
-    ).join(' ');
-  }
-
+  // `start`/`end` slots must not leak into "Remove {label}", which is what the node selection below
+  // is for. The extraction itself is the library's shared `composedAccessibleVisibleText()`: it
+  // walks slots, honors hidden/inert/`aria-hidden`/CSS-hidden branches, and counts only Text and
+  // Element nodes. That last part matters here: when a consumer interpolates the label through a
+  // lit-html expression rather than a static string, lit-html inserts a marker comment alongside
+  // the text node, and that comment's own data is internal bookkeeping, not label content.
   private recomputeLabelText(): void {
     const renderRoot = (this as unknown as { renderRoot?: ParentNode }).renderRoot;
     const slot = renderRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
@@ -210,7 +168,7 @@ export class LyraTag extends LyraBadge<LyraTagEventMap> {
           return slotName !== 'start' && slotName !== 'end';
         });
     this.labelText = nodes
-      .map((node) => this.accessibleLabelText(node))
+      .map(composedAccessibleVisibleText)
       .join(' ')
       .replace(/\s+/g, ' ')
       .trim();

@@ -32,8 +32,11 @@ embedding counts, retry attempts, errors, and retry/cancel requests. Never inges
   `error` renders only while `stage === 'failed'`. Controlled — pass a new array to update
 - `label: string = ''` — accessible name for the region; defaults to the localized
   `ingestionQueueLabel`
-- `virtualizeThreshold: number = 100` (attribute `virtualize-threshold`) — item count above which the
-  list renders through an internal `lr-virtual-list`
+- `virtualizeAt: number = 100` (attribute `virtualize-at`) — item count above which the list renders
+  through an internal `lr-virtual-list`. Exclusive, like every other `virtualize-at` in this family:
+  exactly this many items still render as a plain list. Before 9.0.0 this was spelled
+  `virtualizeThreshold`/`virtualize-threshold` *and* compared inclusively (`>=`), so a migration
+  that only renames the attribute shifts the switchover point by one item
 
 **Events:**
 - `lr-retry` (`detail: IngestionRetryEventDetail` = `RetryEventDetail & { itemId: string }` =
@@ -64,7 +67,7 @@ is unchanged: only failures added or transitioned *after* mount, so historical f
 visible without being re-announced. Assert against that document-level region rather than
 `::part(failure-live)`.
 
-In virtualized mode (at or above `virtualizeThreshold`) the rows live in the internal
+In virtualized mode (above `virtualizeAt`) the rows live in the internal
 `lr-virtual-list`'s shadow root, and `item`, `item-header`, `item-name`, `item-progress`,
 `item-meta`, `item-error`, `item-actions`, `retry-button` and `cancel-button` are forwarded out
 through `exportparts`, so `lr-ingestion-queue::part(item)` and the rest keep working from a consumer

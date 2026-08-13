@@ -5,6 +5,7 @@ import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../
 import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraTextWrap } from '../../../internal/shared-unions.js';
 import { styles } from './prompt-studio.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -13,7 +14,8 @@ import { LYRA_DEFAULT_moveDown, LYRA_DEFAULT_moveUp, LYRA_DEFAULT_promptStudioAd
 
 
 export type PromptStudioRole = 'system' | 'user' | 'assistant' | 'tool';
-export type PromptStudioWrap = 'hard' | 'soft' | 'off';
+/** Retained name for the shared native `<textarea wrap>` vocabulary. */
+export type PromptStudioWrap = LyraTextWrap;
 export interface PromptStudioMessage {
   id: string;
   role: PromptStudioRole;

@@ -1,4 +1,5 @@
 import { html, type TemplateResult } from 'lit';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { property } from 'lit/decorators.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -22,15 +23,6 @@ export interface ToastCreateOptions {
   /** Item size. Long upstream spellings normalize through the created item's canonical setter. */
   size?: LyraSize;
   withIcon?: boolean;
-}
-
-function attachInternalsSafely(host: HTMLElement): ElementInternals | undefined {
-  if (typeof host.attachInternals !== 'function') return undefined;
-  try {
-    return host.attachInternals();
-  } catch {
-    return undefined;
-  }
 }
 
 /**

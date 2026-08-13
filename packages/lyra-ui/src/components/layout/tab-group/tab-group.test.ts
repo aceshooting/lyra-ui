@@ -1764,6 +1764,40 @@ it("accepts the Shoelace spelling no-scroll-controls for the same opt-out", asyn
   expect(scrollControls(el)).to.have.lengthOf(0);
 });
 
+// `fixed-scroll-controls` is an sl-tab-group parity name for "do not hide an individual control
+// once that direction has nothing left to scroll to". Lyra never hides one per edge in the first
+// place, so its default rendering already equals upstream's opted-out rendering and the flag is
+// inert. This pins both halves of that contract: the attribute round-trips, and neither position
+// changes what is rendered or laid out -- including at the extremes of the scroll range, where
+// upstream would hide the inactive control.
+it("accepts fixed-scroll-controls as an inert Shoelace parity flag", async () => {
+  const el = await crowded();
+  const laidOut = (): string[] =>
+    scrollControls(el).map((button) => getComputedStyle(button).display);
+  const baseline = laidOut();
+  expect(baseline).to.have.lengthOf(2);
+  expect(baseline.some((display) => display === "none")).to.equal(false);
+  expect(el.fixedScrollControls).to.equal(false);
+  expect(el.hasAttribute("fixed-scroll-controls")).to.equal(false);
+
+  // Sitting at the inline start is where upstream hides the start control without the flag.
+  const tablist = el.shadowRoot!.querySelector('[part~="tablist"]') as HTMLElement;
+  expect(tablist.scrollLeft).to.equal(0);
+  expect(laidOut()).to.deep.equal(baseline);
+
+  el.fixedScrollControls = true;
+  await el.updateComplete;
+  await nextFrames();
+  expect(el.hasAttribute("fixed-scroll-controls")).to.equal(true);
+  expect(laidOut()).to.deep.equal(baseline);
+
+  el.fixedScrollControls = false;
+  await el.updateComplete;
+  await nextFrames();
+  expect(el.hasAttribute("fixed-scroll-controls")).to.equal(false);
+  expect(laidOut()).to.deep.equal(baseline);
+});
+
 it("never renders scroll controls for a vertical placement", async () => {
   const el = (await fixture(html`
     <lr-tab-group placement="start" style="display: block; max-inline-size: 220px">

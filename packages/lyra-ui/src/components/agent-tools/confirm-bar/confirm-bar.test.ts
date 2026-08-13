@@ -220,7 +220,7 @@ it('is accessible before and after a decision, with and without args', async () 
   await expect(decided).to.be.accessible();
 });
 
-describe('compact', () => {
+describe('compact and frame', () => {
   const part = (el: LyraConfirmBar, name: string) => el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
 
   it('defaults compact to false and reflects it as an attribute when set', async () => {
@@ -233,9 +233,51 @@ describe('compact', () => {
     expect(el.hasAttribute('compact')).to.be.true;
   });
 
-  it('renders as an inline row with no border, padding or background, even with variant="danger"', async () => {
+  it('defaults frame to "card" and reflects it, in the shared container-frame vocabulary', async () => {
+    const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
+    expect(el.frame).to.equal('card');
+    expect(el.getAttribute('frame')).to.equal('card');
+
+    el.frame = 'plain';
+    await el.updateComplete;
+    expect(el.getAttribute('frame')).to.equal('plain');
+  });
+
+  it('compact is density only — it keeps the card border, radius and background', async () => {
+    const regular = (await fixture(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`)) as LyraConfirmBar;
+    const el = (await fixture(html`<lr-confirm-bar compact tool-name="run_shell"></lr-confirm-bar>`)) as LyraConfirmBar;
+
+    const compactStyle = getComputedStyle(part(el, 'base'));
+    const regularStyle = getComputedStyle(part(regular, 'base'));
+
+    // Chrome stays exactly as the default card draws it.
+    expect(compactStyle.borderTopWidth).to.equal(regularStyle.borderTopWidth);
+    expect(compactStyle.borderTopWidth).to.not.equal('0px');
+    expect(compactStyle.borderTopLeftRadius).to.equal(regularStyle.borderTopLeftRadius);
+    expect(compactStyle.backgroundColor).to.equal(regularStyle.backgroundColor);
+    expect(compactStyle.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+
+    // Density genuinely tightens: non-zero, but smaller than the full card padding.
+    expect(parseFloat(compactStyle.paddingTop)).to.be.greaterThan(0);
+    expect(parseFloat(compactStyle.paddingTop)).to.be.lessThan(parseFloat(regularStyle.paddingTop));
+  });
+
+  it('frame="plain" is the chrome escape — border, radius, padding and background all go', async () => {
     const el = (await fixture(
-      html`<lr-confirm-bar compact variant="danger" tool-name="delete_row"></lr-confirm-bar>`,
+      html`<lr-confirm-bar frame="plain" variant="danger" tool-name="delete_row"></lr-confirm-bar>`,
+    )) as LyraConfirmBar;
+    const baseStyle = getComputedStyle(part(el, 'base'));
+    expect(baseStyle.borderTopWidth).to.equal('0px');
+    expect(baseStyle.borderInlineStartWidth).to.equal('0px');
+    expect(baseStyle.borderTopLeftRadius).to.equal('0px');
+    expect(baseStyle.paddingTop).to.equal('0px');
+    expect(baseStyle.paddingInlineStart).to.equal('0px');
+    expect(baseStyle.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('compact frame="plain" reproduces the pre-9.0.0 compact presentation, even with variant="danger"', async () => {
+    const el = (await fixture(
+      html`<lr-confirm-bar compact frame="plain" variant="danger" tool-name="delete_row"></lr-confirm-bar>`,
     )) as LyraConfirmBar;
 
     // The host itself must flip too -- restyling only [part='base'] still leaves a
@@ -249,6 +291,21 @@ describe('compact', () => {
     expect(baseStyle.paddingTop).to.equal('0px');
     expect(baseStyle.paddingInlineStart).to.equal('0px');
     expect(baseStyle.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('drops the compact chrome custom properties — re-chroming is frame="card" now', async () => {
+    const el = (await fixture(html`
+      <lr-confirm-bar
+        compact
+        frame="plain"
+        tool-name="run_shell"
+        style="--lr-confirm-bar-compact-background:rgb(1, 2, 3);--lr-confirm-bar-compact-border:2px solid rgb(4, 5, 6);--lr-confirm-bar-compact-radius:9px;"
+      ></lr-confirm-bar>
+    `)) as LyraConfirmBar;
+    const baseStyle = getComputedStyle(part(el, 'base'));
+    expect(baseStyle.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    expect(baseStyle.borderTopWidth).to.equal('0px');
+    expect(baseStyle.borderTopLeftRadius).to.equal('0px');
   });
 
   it('neutralizes the narrow-container query so the buttons are not stretched inside a table cell', async () => {
@@ -336,15 +393,26 @@ describe('compact', () => {
     expect(baseStyle.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
   });
 
-  it('is accessible in the compact presentation, before and after a decision', async () => {
+  it('is accessible in the compact and chrome-less presentations, before and after a decision', async () => {
     const el = (await fixture(
-      html`<lr-confirm-bar compact variant="danger" tool-name="delete_row" .args=${{ id: 7 }}></lr-confirm-bar>`,
+      html`<lr-confirm-bar
+        compact
+        frame="plain"
+        variant="danger"
+        tool-name="delete_row"
+        .args=${{ id: 7 }}
+      ></lr-confirm-bar>`,
     )) as LyraConfirmBar;
     await expect(el).to.be.accessible();
 
     (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     await el.updateComplete;
     await expect(el).to.be.accessible();
+
+    const dense = (await fixture(
+      html`<lr-confirm-bar compact tool-name="delete_row" .args=${{ id: 7 }}></lr-confirm-bar>`,
+    )) as LyraConfirmBar;
+    await expect(dense).to.be.accessible();
   });
 });
 

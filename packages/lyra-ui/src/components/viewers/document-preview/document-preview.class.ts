@@ -251,7 +251,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   @property() alt?: string;
 
   /** Host-owned lifecycle state. `"converting"` shows the spinner regardless
-   *  of `mime-type`/`src`; `"error"` shows `errorMessage` regardless of
+   *  of `mime-type`/`src`; `"error"` shows `errorText` regardless of
    *  either. `"idle"`/`"ready"` both resume normal format dispatch — this
    *  component doesn't require a host that has no conversion step to ever
    *  set `"ready"` explicitly. */
@@ -261,8 +261,9 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
    *  renders the indeterminate spinner instead of a determinate progress bar. */
   @property({ type: Number }) progress?: number;
 
-  /** Shown (via `[part="error"]`) while `status="error"`. */
-  @property({ attribute: 'error-message' }) errorMessage = '';
+  /** Shown (via `[part="error"]`) while `status="error"`. Caller-supplied text, not routed through
+   *  `localize()` -- app/network data, not library copy. */
+  @property({ attribute: 'error-text' }) errorText = '';
 
   /** A CSS length (e.g. `"24rem"`); once set, `[part="body"]` scrolls
    *  internally past this height instead of growing the page — same
@@ -371,7 +372,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
       this.announcements.transition(
         'preview',
         'error',
-        this.errorMessage || this.localize('documentPreviewGenericError'),
+        this.errorText || this.localize('documentPreviewGenericError'),
       );
       return;
     }
@@ -701,7 +702,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   private renderBody(): TemplateResult {
     if (this.status === 'converting')
       return this.renderSpinner(this.localize('convertingDocument'), this.progress);
-    if (this.status === 'error') return this.renderError(this.errorMessage);
+    if (this.status === 'error') return this.renderError(this.errorText);
 
     switch (classifyFormat(this.mimeType)) {
       case 'text':

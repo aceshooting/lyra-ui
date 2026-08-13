@@ -631,6 +631,24 @@ describe('showCounter', () => {
     expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.equal('Image 1 of 2');
     el.open = false;
   });
+
+  // The converter is parse-only on purpose: nothing styles or queries `[show-counter]`, so the
+  // property does not reflect and no attribute is ever written back from a property assignment.
+  it('never writes the attribute back from a property assignment', async () => {
+    const el = (await fixture(
+      html`<lr-lightbox .images=${[image, { ...image, caption: 'Second' }]} open></lr-lightbox>`,
+    )) as LyraLightbox;
+    el.showCounter = false;
+    await el.updateComplete;
+    expect(el.hasAttribute('show-counter')).to.equal(false);
+    expect(el.shadowRoot!.querySelector('[part="counter"]') === null).to.be.true;
+
+    el.showCounter = true;
+    await el.updateComplete;
+    expect(el.hasAttribute('show-counter')).to.equal(false);
+    expect(el.shadowRoot!.querySelectorAll('[part="counter"]').length).to.equal(1);
+    el.open = false;
+  });
 });
 
 it('treats non-finite goTo() indexes as no-ops and emits no terminal index event', async () => {

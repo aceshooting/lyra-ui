@@ -8,7 +8,11 @@ import {
   sanitizeSwatchColor,
 } from './safe-css.js';
 
-describe('sanitizeSwatchColor', () => {
+describe('sanitizeCssColor (the swatch guard)', () => {
+  it('is the one implementation the historical sanitizeSwatchColor name resolves to', () => {
+    expect(sanitizeSwatchColor === sanitizeCssColor, 'one guard, not two policies').to.equal(true);
+  });
+
   it('allows hex, keyword, function, and custom-property color syntax', () => {
     for (const color of [
       '#fff',
@@ -23,12 +27,12 @@ describe('sanitizeSwatchColor', () => {
       'oklch(0.7 0.1 200)',
       'var(--lr-color-brand)',
     ]) {
-      expect(sanitizeSwatchColor(color), color).to.equal(color);
+      expect(sanitizeCssColor(color), color).to.equal(color);
     }
   });
 
   it('trims surrounding whitespace on an otherwise-safe value', () => {
-    expect(sanitizeSwatchColor('  red  ')).to.equal('  red  ');
+    expect(sanitizeCssColor('  red  ')).to.equal('  red  ');
   });
 
   it('rejects url() and CSS-injection payloads', () => {
@@ -39,7 +43,7 @@ describe('sanitizeSwatchColor', () => {
       '',
       '   ',
     ]) {
-      expect(sanitizeSwatchColor(color), color).to.be.undefined;
+      expect(sanitizeCssColor(color), color).to.be.undefined;
     }
   });
 });

@@ -13,8 +13,9 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
   `accessibleDescription` remains a fallback alias
 - `grid: 'x'|'y'|'both'|'none' = 'both'` — controls cartesian grid lines. On a radial chart, `x`
   controls angle lines and `y` controls concentric grid lines
-- `indexAxis: 'x'|'y' = 'x'` (attribute `index-axis`) — Chart.js index axis. The additive
-  `horizontal` boolean remains a positive alias for `'y'`
+- `indexAxis: 'x'|'y' = 'x'` (attribute `index-axis`) — Chart.js index axis. `'y'` is Chart.js's own
+  mechanism for horizontal bars (it also flips `line`/`area` types onto a horizontal category axis).
+  The `horizontal` boolean that used to alias `'y'` was removed in 9.0.0 — use `index-axis="y"`
 - `label: string | null = null` — accessible chart label. Host `aria-label` has highest precedence;
   additive `accessibleLabel` remains the fallback alias
 - `max: number | null = null`, `min: number | null = null` — finite value-axis bounds. They apply to
@@ -76,8 +77,6 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
 - `yLabel: string | null = null` (attribute `y-label`)
 - `y2Label: string = ''` (attribute `y2-label`)
 - `beginAtZero: boolean = true` (attribute `begin-at-zero`)
-- `horizontal: boolean = false` — sets `options.indexAxis = 'y'`, Chart.js's own mechanism for
-  horizontal bars (also flips `line`/`area` types onto a horizontal category axis)
 - `stacked: boolean = false` — stacks the `x`/`y`(/`y2`) scale entries `buildScales()` returns; only
   meaningful for `bar`/`line` types (scatter/bubble's linear `x` scale and the radial `r` scale used
   by radar/polar-area are out of scope)
@@ -360,7 +359,7 @@ announced. In particular, unavailable data labels do not remove generated table 
   Chart.js when at least one of `type`, `labels`, `datasets`, `description`, `grid`, `indexAxis`,
   `label`, `hiddenDatasets`, `legend`, `legendPosition`, `min`, `max`, `plugins`, the internal resolved auto legend
   position, `valueFormatter`, `area`, `height`, `xLabel`, `yLabel`, `y2Label`, `beginAtZero`,
-  `horizontal`, `stacked`, any `without*` control, `dataLabels`, `stackTotals`, `config`, the parsed
+  `stacked`, any `without*` control, `dataLabels`, `stackTotals`, `config`, the parsed
   slotted config, `zoom`, `locale`, `strings`, or the internal loading state actually changed in
   that update (so an
   unrelated property/state update, or a bare `requestUpdate()`, draws nothing). Resize callbacks
@@ -560,8 +559,8 @@ substituted.
 ```
 
 **Known gotchas:**
-- No `horizontal` mode (unlike `lr-chart`) — deliberately cut from scope, not a stub: bars are
-  always vertical.
+- No horizontal-bar mode (unlike `lr-chart`'s `index-axis="y"`) — deliberately cut from scope, not a
+  stub: bars are always vertical.
 - No dual y-axis (`Series.axis: 'y2'`) — every series shares one y-axis/domain.
 - Series colors default to the shared categorical ramp (round-robin by dataset index) when `color`
   is unset or invalid — the same eight `--lr-color-chart-1..8` tokens `lr-chart` uses, so both
@@ -601,7 +600,7 @@ of every entry in these lists.**
 (`legend-position`), `max`, `min`, `plugins`, `stacked`, `withoutAnimation` (`without-animation`),
 `withoutLegend` (`without-legend`), `withoutTooltip` (`without-tooltip`), `xLabel` (`x-label`),
 `yLabel` (`y-label`), plus additive `labels`, `datasets`, `legend`, `valueFormatter`, `area`, `zoom`,
-`height`, `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`), `horizontal`, `dataLabels`
+`height`, `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`), `dataLabels`
 (`data-labels`), `stackTotals` (`stack-totals`), `config`, `accessibleLabel`
 (`accessible-label`), `accessibleDescription` (`accessible-description`), `showDataTable`
 (`show-data-table`), `chartArea` (readonly). `type` is the only member that differs: read-only,
@@ -683,7 +682,7 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   (`index-axis`), `hiddenDatasets`, `legend`, `legendPosition` (`legend-position`), `max`, `min`, `plugins`,
   `withoutAnimation` (`without-animation`), `withoutLegend` (`without-legend`), `withoutTooltip`
   (`without-tooltip`), `valueFormatter`, `area`, `zoom`, `config`, `height`, `xLabel` (`x-label`),
-  `yLabel` (`y-label`), `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`), `horizontal`,
+  `yLabel` (`y-label`), `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`),
   `stacked`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `accessibleLabel`
   (`accessible-label`), `accessibleDescription` (`accessible-description`), `showDataTable`
   (`show-data-table`), `chartArea` (readonly).

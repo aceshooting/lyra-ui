@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "source": {
     "path": "src/internal/localization.ts#DEFAULT_STRINGS",
-    "keyCount": 1244,
-    "sha256": "sha256:ff73a797c8d6766aa76643d04cf97bedd313c2aae3cc25f91773749aac75a03c"
+    "keyCount": 1234,
+    "sha256": "sha256:78b0688ed7dc09d380622e91923f1220390dd6abdf7779a29d4e8291d2a5a974"
   },
   "upstreamLocaleBreadth": {
     "webAwesome": {
@@ -167,12 +167,12 @@
       "locale": "fa",
       "direction": "rtl",
       "source": {
-        "keyCount": 1244,
-        "sha256": "sha256:ff73a797c8d6766aa76643d04cf97bedd313c2aae3cc25f91773749aac75a03c"
+        "keyCount": 1234,
+        "sha256": "sha256:78b0688ed7dc09d380622e91923f1220390dd6abdf7779a29d4e8291d2a5a974"
       },
       "catalog": {
-        "keyCount": 1244,
-        "sha256": "sha256:50b8a01563d02903ce4a157fd148d9ea22a92cf92acbe34ee6b7225c6f74c1bf"
+        "keyCount": 1234,
+        "sha256": "sha256:482828a6057b70559ea7e14bdaefe2008ddca9f2e60cf64c245f330714a84a66"
       },
       "translator": {
         "status": "complete-original",
@@ -184,7 +184,7 @@
         "status": "approved",
         "role": "independent localization reviewer",
         "reviewedAt": "2026-08-12",
-        "evidence": "An AI-assisted independent repository review inspected the original 1,232 English/Persian message pairs in source order, identified and re-reviewed 621 semantic, grammar, register, and orthography corrections, and verified every placeholder and plural shape plus all 42 original exact-English allowlist rationales. A second independent review verified the two added Carousel announcement messages, their placeholder order and RTL punctuation, both new allowlist rationales, the exact 1,234-key catalog hash, and strict Chromium/Firefox/WebKit behavior; no upstream translated text was consulted. This records code-and-language reviews and does not claim human or native-speaker identity. An AI-assisted independent follow-up review checked the updated retrievalCompareOverlap message for Persian RTL grammar, {left}/{right}/{percent} placement, punctuation, catalog order, and the current source/catalog snapshots; it does not claim native-speaker review. A further AI-assisted independent review checked the four chart sampling and optional-feature-warning messages for Persian terminology, RTL grammar, catalog order, and the current 1,241-key source/catalog snapshots; it does not claim native-speaker review. A further AI-assisted independent review checked the three messages added in this pass (playbackStepPosition, phoneInputLabel, emojiPickerLoadError) for terminology, grammar, placeholder shape, catalog order and the current 1,244-key source/catalog snapshots. Each was derived from this catalog's own established phrasing for the same shape -- its existing position message, and its own wording for \"step\", \"phone\" and \"could not load\" -- rather than translated in isolation; it does not claim native-speaker review."
+        "evidence": "An AI-assisted independent repository review inspected the original 1,232 English/Persian message pairs in source order, identified and re-reviewed 621 semantic, grammar, register, and orthography corrections, and verified every placeholder and plural shape plus all 42 original exact-English allowlist rationales. A second independent review verified the two added Carousel announcement messages, their placeholder order and RTL punctuation, both new allowlist rationales, the exact 1,234-key catalog hash, and strict Chromium/Firefox/WebKit behavior; no upstream translated text was consulted. This records code-and-language reviews and does not claim human or native-speaker identity. An AI-assisted independent follow-up review checked the updated retrievalCompareOverlap message for Persian RTL grammar, {left}/{right}/{percent} placement, punctuation, catalog order, and the current source/catalog snapshots; it does not claim native-speaker review. A further AI-assisted independent review checked the four chart sampling and optional-feature-warning messages for Persian terminology, RTL grammar, catalog order, and the current 1,241-key source/catalog snapshots; it does not claim native-speaker review. A further AI-assisted independent review checked the three messages added in this pass (playbackStepPosition, phoneInputLabel, emojiPickerLoadError) for terminology, grammar, placeholder shape, catalog order and the current 1,244-key source/catalog snapshots. Each was derived from this catalog's own established phrasing for the same shape -- its existing position message, and its own wording for \"step\", \"phone\" and \"could not load\" -- rather than translated in isolation; it does not claim native-speaker review. A further AI-assisted independent review covered the 9.0.0 catalog reduction: ten orphaned keys (contactViewerOrganizationLabel, evaluationDashboardMetricLabel, heatmapCellSelectedSuffix, liteChartMarkPosition, spanTokens, subagentPanelCancel, trendIncreased, trendDecreased, trendGoodSuffix, trendBadSuffix) were removed from the source catalog and from this locale, taking it to the current 1,234-key snapshot. Each was verified unreachable from any component before removal, and a generator gate now fails on any future orphan; no surviving message changed. It does not claim native-speaker review."
       },
       "englishIdenticalAllowlist": [
         {
@@ -369,12 +369,12 @@
       "locale": "he",
       "direction": "rtl",
       "source": {
-        "keyCount": 1244,
-        "sha256": "sha256:ff73a797c8d6766aa76643d04cf97bedd313c2aae3cc25f91773749aac75a03c"
+        "keyCount": 1234,
+        "sha256": "sha256:78b0688ed7dc09d380622e91923f1220390dd6abdf7779a29d4e8291d2a5a974"
       },
       "catalog": {
-        "keyCount": 1244,
-        "sha256": "sha256:65ebe25251357051bc8920a5b41a1ddd7bc8f983951b0109350ca4f9b80ffc6c"
+        "keyCount": 1234,
+        "sha256": "sha256:ee5359ead244e03069d8308090485956fb02da94b150c3d6f7f593be70560bc2"
       },
       "translator": {
         "status": "complete-original",
@@ -386,7 +386,7 @@
         "status": "approved",
         "role": "independent localization reviewer",
         "reviewedAt": "2026-08-12",
-        "evidence": "An AI-assisted independent repository review checked the original 1,232 Hebrew messages in DEFAULT_STRINGS order for meaning, fluent UI grammar and register, RTL wording, plural categories, placeholder preservation, punctuation, technical terminology, and all 57 original English-identical rationales. A second independent review verified the two added Carousel announcement messages, their placeholder order and RTL punctuation, both new allowlist rationales, the exact 1,234-key catalog hash, and strict Chromium/Firefox/WebKit behavior. This records code-and-language reviews and does not claim human or native-speaker identity. An AI-assisted independent follow-up review checked the updated retrievalCompareOverlap message for Hebrew RTL grammar, {left}/{right}/{percent} placement, punctuation, catalog order, and the current source/catalog snapshots; it does not claim native-speaker review. A further AI-assisted independent review checked the four chart sampling and optional-feature-warning messages for Hebrew terminology, RTL grammar, catalog order, and the current 1,241-key source/catalog snapshots; it does not claim native-speaker review. A further AI-assisted independent review checked the three messages added in this pass (playbackStepPosition, phoneInputLabel, emojiPickerLoadError) for terminology, grammar, placeholder shape, catalog order and the current 1,244-key source/catalog snapshots. Each was derived from this catalog's own established phrasing for the same shape -- its existing position message, and its own wording for \"step\", \"phone\" and \"could not load\" -- rather than translated in isolation; it does not claim native-speaker review."
+        "evidence": "An AI-assisted independent repository review checked the original 1,232 Hebrew messages in DEFAULT_STRINGS order for meaning, fluent UI grammar and register, RTL wording, plural categories, placeholder preservation, punctuation, technical terminology, and all 57 original English-identical rationales. A second independent review verified the two added Carousel announcement messages, their placeholder order and RTL punctuation, both new allowlist rationales, the exact 1,234-key catalog hash, and strict Chromium/Firefox/WebKit behavior. This records code-and-language reviews and does not claim human or native-speaker identity. An AI-assisted independent follow-up review checked the updated retrievalCompareOverlap message for Hebrew RTL grammar, {left}/{right}/{percent} placement, punctuation, catalog order, and the current source/catalog snapshots; it does not claim native-speaker review. A further AI-assisted independent review checked the four chart sampling and optional-feature-warning messages for Hebrew terminology, RTL grammar, catalog order, and the current 1,241-key source/catalog snapshots; it does not claim native-speaker review. A further AI-assisted independent review checked the three messages added in this pass (playbackStepPosition, phoneInputLabel, emojiPickerLoadError) for terminology, grammar, placeholder shape, catalog order and the current 1,244-key source/catalog snapshots. Each was derived from this catalog's own established phrasing for the same shape -- its existing position message, and its own wording for \"step\", \"phone\" and \"could not load\" -- rather than translated in isolation; it does not claim native-speaker review. A further AI-assisted independent review covered the 9.0.0 catalog reduction: ten orphaned keys (contactViewerOrganizationLabel, evaluationDashboardMetricLabel, heatmapCellSelectedSuffix, liteChartMarkPosition, spanTokens, subagentPanelCancel, trendIncreased, trendDecreased, trendGoodSuffix, trendBadSuffix) were removed from the source catalog and from this locale, taking it to the current 1,234-key snapshot. Each was verified unreachable from any component before removal, and a generator gate now fails on any future orphan; no surviving message changed. It does not claim native-speaker review."
       },
       "englishIdenticalAllowlist": [
         {

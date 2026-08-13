@@ -2,7 +2,12 @@ import { expect, fixture, html, oneEvent } from "@open-wc/testing";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import "./data-grid.js";
 import type { LyraDataGrid } from "./data-grid.js";
-import type { DataGridColumn, DataGridState } from "./data-grid-types.js";
+import type {
+  DataGridColumn,
+  DataGridCsvOptions,
+  DataGridExportOptions,
+  DataGridState,
+} from "./data-grid-types.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import {
   aggregateValues,
@@ -2093,7 +2098,7 @@ it("honors exact CSV/copy/export options, compatibility aliases, and formula esc
       escapeFormulas: false,
     })
   ).to.equal("=1+1");
-  expect(element.getDataAsCsv({ columns: ["team"] })).to.equal(
+  expect(element.getDataAsCsv({ columnIds: ["team"] })).to.equal(
     "Team\r\n'@COMPILER"
   );
 
@@ -2136,8 +2141,55 @@ it("honors exact CSV/copy/export options, compatibility aliases, and formula esc
     downloaded = this.download;
   };
   try {
-    element.exportDataAsCsv({ filename: "legacy.csv", columns: ["name"] });
-    expect(downloaded).to.equal("legacy.csv");
+    element.exportDataAsCsv({ fileName: "people.csv", columnIds: ["name"] });
+    expect(downloaded).to.equal("people.csv");
+  } finally {
+    URL.createObjectURL = originalCreateObjectUrl;
+    URL.revokeObjectURL = originalRevokeObjectUrl;
+    HTMLAnchorElement.prototype.click = originalAnchorClick;
+  }
+});
+
+it("no longer resolves the removed `columns`/`filename` export option spellings", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="Export people"
+      row-key="id"
+      .columns=${columns}
+      .data=${rows.slice(0, 1)}
+      .selectedKeys=${[1]}
+    ></lr-data-grid>
+  `);
+  // The Lyra-only aliases were removed in 9.0.0; `wa-data-grid` never had them. A stale caller
+  // still passing them gets the documented default behavior (every visible column, `data.csv`),
+  // never a silent half-migration.
+  const legacyCsvOptions = { columns: ["team"] } as unknown as DataGridCsvOptions;
+  expect(element.getDataAsCsv(legacyCsvOptions)).to.equal(
+    element.getDataAsCsv({})
+  );
+  expect(element.getDataAsCsv({ columnIds: ["team"] })).to.not.equal(
+    element.getDataAsCsv({})
+  );
+  expect(rowsAsDelimited(rows.slice(0, 1), columns, legacyCsvOptions)).to.equal(
+    rowsAsDelimited(rows.slice(0, 1), columns, {})
+  );
+
+  const originalCreateObjectUrl = URL.createObjectURL;
+  const originalRevokeObjectUrl = URL.revokeObjectURL;
+  const originalAnchorClick = HTMLAnchorElement.prototype.click;
+  let downloaded = "";
+  URL.createObjectURL = () => "blob:data-grid-test";
+  URL.revokeObjectURL = () => undefined;
+  HTMLAnchorElement.prototype.click = function click(): void {
+    downloaded = this.download;
+  };
+  try {
+    element.exportDataAsCsv({
+      filename: "legacy.csv",
+    } as unknown as DataGridExportOptions);
+    expect(downloaded).to.equal("data.csv");
+    element.exportDataAsCsv({ fileName: "current.csv" });
+    expect(downloaded).to.equal("current.csv");
   } finally {
     URL.createObjectURL = originalCreateObjectUrl;
     URL.revokeObjectURL = originalRevokeObjectUrl;
@@ -5635,7 +5687,7 @@ describe("data-grid processing helpers", () => {
       'Other\r\n"a,b"'
     );
     expect(
-      rowsAsDelimited(tricky, cols, { columns: ["amount"], delimiter: "\t" })
+      rowsAsDelimited(tricky, cols, { columnIds: ["amount"], delimiter: "\t" })
     ).to.equal("Amount\r\n-5");
     expect(
       rowsAsDelimited(

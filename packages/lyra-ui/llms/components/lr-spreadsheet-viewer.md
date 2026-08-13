@@ -22,7 +22,9 @@ Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses one sheet's raw g
 its header row included, resolving the target sheet from the anchor's own `sheet` field (falling
 back to a `Sheet!`-prefixed `range`, then the active sheet); `scrollToAnchor()` switches
 `<lr-tab-group>`'s active tab first when needed, then scrolls the addressed row/column into view.
-`highlights` paint as a focusable `part="cell-highlight"`.
+`highlights` paint as a focusable `part="cell-highlight"`. A jump whose workbook is replaced by a
+concurrent `src` reassignment mid-flight reports `found: false` rather than a phantom success —
+matching `lr-csv-viewer`/`lr-dataset-viewer` (it wrongly reported `found: true` before 9.0.0).
 
 **Properties:** `src: string = ''` and `name: string = ''`. `maxHeight: string = ''` (attribute
 `max-height`) is a CSS length that caps the scrollable body — setting it writes

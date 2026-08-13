@@ -242,6 +242,19 @@ it('renders the sink visually hidden but present in the accessibility tree', () 
   }
 });
 
+it('clips the sink with clip-path, not the deprecated clip shorthand', () => {
+  const sink = acquireAnnouncementSink('polite');
+  try {
+    expect(getComputedStyle(sink.element).clipPath).to.equal('inset(50%)');
+    expect(
+      (sink.element.getAttribute('style') ?? '').includes('clip:'),
+      'the deprecated `clip` declaration must be gone, not merely supplemented',
+    ).to.equal(false);
+  } finally {
+    sink.release();
+  }
+});
+
 it('announces by appending a child node rather than rewriting one text node', () => {
   const sink = acquireAnnouncementSink('polite');
   try {

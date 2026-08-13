@@ -9,6 +9,7 @@ import {
 } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraToolStatus } from '../../../internal/shared-unions.js';
 import { place } from '../../../internal/positioner.js';
 import { nextId } from '../../../internal/a11y.js';
 import { finiteRange } from '../../../internal/numbers.js';
@@ -23,7 +24,7 @@ import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFA
 
 /** Same status vocabulary as `<lr-tool-result-dialog>`, so a call's chip
  *  and its detail dialog always agree on icon/label/tone. */
-export type ToolCallStatus = 'pending' | 'running' | 'success' | 'error' | 'denied';
+export type ToolCallStatus = LyraToolStatus;
 
 export interface ToolChipSelectDetail {
   name: string;
@@ -32,7 +33,6 @@ export interface ToolChipSelectDetail {
 
 export interface LyraToolCallChipEventMap {
   'lr-tool-call-chip-select': CustomEvent<ToolChipSelectDetail>;
-  'lr-tool-chip-select': CustomEvent<ToolChipSelectDetail>;
 }
 
 // Mirrors the shared icon set's viewBox/stroke conventions
@@ -161,10 +161,8 @@ function formatDuration(ms: number): {
  * function call an agent made mid-conversation, e.g.
  * `web_search: Searching web…` with a `running` spinner. It owns no detail
  * surface of its own: clicking (or Enter/Space-activating) it only fires
- * `lr-tool-call-chip-select` (plus the deprecated `lr-tool-chip-select`
- * compatibility alias, retained through the documented removal window) —
- * a consumer wires that to opening a `<lr-tool-result-dialog>` (or
- * anything else) at the call site. Keeping
+ * `lr-tool-call-chip-select` — a consumer wires that to opening a
+ * `<lr-tool-result-dialog>` (or anything else) at the call site. Keeping
  * the two decoupled means a chip can be reused wherever a compact call
  * summary is useful, with or without a detail surface behind it.
  *
@@ -194,10 +192,8 @@ function formatDuration(ms: number): {
  * (no hover affordance at all) when this slot is empty.
  * @slot icon - Overrides the built-in status glyph entirely.
  * @event lr-tool-call-chip-select - The chip was activated (click or
- * Enter/Space while focused). `detail: { name, callId }`.
- * @event lr-tool-chip-select - Deprecated alias for
- * `lr-tool-call-chip-select`, fired alongside it so existing listeners keep
- * working. Deprecated since 4.0.0; removal is not permitted before 9.0.0.
+ * Enter/Space while focused). `detail: { name, callId }`. The `lr-tool-chip-select`
+ * alias this event replaced was removed in 9.0.0.
  * @csspart base - The clickable pill (`<button>`).
  * @csspart icon - Wrapper around the status glyph / `icon` slot.
  * @csspart label - Wrapper around `category`, `name` and `summary`.
@@ -380,11 +376,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   };
 
   private onClick = (): void => {
-    const detail: ToolChipSelectDetail = { name: this.name, callId: this.callId };
-    this.emit('lr-tool-call-chip-select', detail);
-    // Deprecated alias retained through its documented compatibility window
-    // so existing `lr-tool-chip-select` listeners keep working.
-    this.emit('lr-tool-chip-select', detail);
+    this.emit('lr-tool-call-chip-select', { name: this.name, callId: this.callId });
   };
 
   @query('[part="base"]') private baseEl?: HTMLButtonElement;

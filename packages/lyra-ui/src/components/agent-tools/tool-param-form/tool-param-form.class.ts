@@ -14,8 +14,8 @@ import '../../forms/select/select.class.js';
 import '../../forms/combobox/option.class.js';
 import '../../forms/checkbox/checkbox.class.js';
 import { getListFormat } from '../../../internal/intl-cache.js';
-import { attachLegacyNoopInternalsSafely } from '../../../internal/legacy-noop-internals.js';
 import {
+  attachInternalsSafely,
   getFormOwner,
   installCustomErrorProperty,
   isBarredFromValidation,
@@ -284,7 +284,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
   constructor() {
     super();
-    this.internals = attachLegacyNoopInternalsSafely(this);
+    this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, () => this.emit('lr-invalid'));

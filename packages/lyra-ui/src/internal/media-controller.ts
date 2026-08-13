@@ -16,7 +16,6 @@ export const NATIVE_MEDIA_RELAY_EVENTS = [
   'volumechange',
 ] as const;
 
-export type NativeMediaRelayEvent = (typeof NATIVE_MEDIA_RELAY_EVENTS)[number];
 
 const CONTROLLER_EVENT_NAMES = [
   ...NATIVE_MEDIA_RELAY_EVENTS,

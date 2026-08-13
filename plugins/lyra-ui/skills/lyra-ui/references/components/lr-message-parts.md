@@ -6,7 +6,7 @@
 - **Class** `LyraMessageParts`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecated event** `lr-tool-chip-select` since `7.0.0`; use event `lr-tool-call-chip-select`; removal not before `9.0.0` — The replacement names the selected tool-call component precisely; the shorter event remains as a bubbling compatibility alias.
+- **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 14 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -35,8 +35,8 @@ discriminated part shapes come from the `@aceshooting/lyra-ui/ai` subpath.
 **Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`). Composed child
 events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`,
 `lr-highlight-activate`, `lr-link-click`, `lr-preview`, `lr-remove`, `lr-render-error`, `lr-retry`,
-`lr-search-change`, `lr-text-select`, `lr-toggle`, `lr-tool-call-chip-select`,
-`lr-tool-chip-select`, `lr-widget-action`, and `lr-widget-state-change`.
+`lr-search-change`, `lr-text-select`, `lr-toggle`, `lr-tool-call-chip-select`, `lr-widget-action`,
+and `lr-widget-state-change`. The `lr-tool-chip-select` alias passthrough was removed in 9.0.0.
 
 **CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-result`,
 `citation`, `attachment`, `data`, `audio`, `audio-transcript`, `error`, `retry`.
@@ -77,7 +77,7 @@ import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts
 - `lr-search-change` event — Passthrough from rendered JSON content.
 - `lr-text-select` event — Passthrough from rendered Markdown.
 - `lr-toggle` event — Passthrough from a rendered reasoning panel.
-- `lr-tool-call-chip-select` event — Passthrough from a rendered tool-call chip.
-- `lr-tool-chip-select` event — Deprecated tool-call selection alias passthrough.
+- `lr-tool-call-chip-select` event — Passthrough from a rendered tool-call chip. The
+  `lr-tool-chip-select` alias it replaced was removed in 9.0.0.
 - `lr-widget-action` event — Passthrough from a rendered declarative widget.
 - `lr-widget-state-change` event — Passthrough from a rendered controlled widget.

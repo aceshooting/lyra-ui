@@ -104,9 +104,10 @@ are `text`, `equals`, `number-range`, `date-range`, `set`, `includes-any`, and `
   explicit delimiter overrides the one normally selected by `format`.
 - `exportDataAsCsv(options?: DataGridExportOptions)` downloads formula-safe delimited data (CSV by
   default); `getDataAsCsv(options?: DataGridCsvOptions)` returns it without downloading. Options include `delimiter`,
-  `includeHeaders`, `columnIds`, `escapeFormulas`, and `fileName`. The additive
-  `columns` and `filename` spellings remain deprecated runtime aliases on their corresponding
-  option interfaces. Formula escaping is on by default for string cells beginning with `=`, `+`,
+  `includeHeaders`, `columnIds`, `escapeFormulas`, and `fileName`. The Lyra-only `columns` and
+  `filename` aliases were **removed in 9.0.0** — rename them to `columnIds` and `fileName` (the
+  spellings `wa-data-grid` uses); an unrenamed call silently falls back to every visible column and
+  `data.csv`. Formula escaping is on by default for string cells beginning with `=`, `+`,
   `-`, or `@`; numeric values remain numeric.
 - `focus(options?)` focuses the current roving header/cell stop.
 - `getColumnFacets(columnId)` returns `{ uniqueValues: Map, minMax? }`, computed after every other

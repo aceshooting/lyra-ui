@@ -29,6 +29,11 @@ import {
 import { activateOverlay, composedContains, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { animateRegistered } from '../../../internal/registered-animation.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from './overlay-arrow.js';
+import {
+  normalizeVirtualRect,
+  resolveOverlayAnchor,
+  type OverlayVirtualRect,
+} from './overlay-shared.js';
 import { tooltipStyles } from './overlay.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -53,13 +58,8 @@ export type LyraTooltipTrigger = 'hover' | 'focus' | 'click' | 'manual';
 
 export type { LyraArrowPlacement };
 
-type TooltipVirtualRect = {
-  x: number;
-  y: number;
-  width?: number;
-  height?: number;
-  contextElement?: Element;
-};
+/** The `showAt()` rectangle, shared verbatim with `<lr-popover>` (see `./overlay-shared.ts`). */
+type TooltipVirtualRect = OverlayVirtualRect;
 
 type TooltipContentSnapshot = {
   actionable: boolean;
@@ -74,19 +74,6 @@ type TooltipContentSnapshot = {
 const ACTIONABLE_SELECTOR =
   'a[href],button,input,select,textarea,[contenteditable]:not([contenteditable="false"]),' +
   '[tabindex]:not([tabindex="-1"]),[role="button"],[role="link"],[role="menuitem"]';
-
-function normalizeVirtualRect(rect: TooltipVirtualRect): TooltipVirtualRect | undefined {
-  const width = rect.width ?? 0;
-  const height = rect.height ?? 0;
-  if (![rect.x, rect.y, width, height].every(Number.isFinite)) return undefined;
-  return {
-    x: rect.x,
-    y: rect.y,
-    width: Math.max(0, width),
-    height: Math.max(0, height),
-    contextElement: rect.contextElement,
-  };
-}
 
 export interface LyraTooltipEventMap {
   'lr-show': CustomEvent<undefined>;
@@ -602,16 +589,15 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   }
 
   /** Resolves what the popup is positioned against: an explicit virtual anchor first, then the
-   *  `for` idref, then the slotted trigger. */
+   *  direct `anchor`, then the `for` idref, then the slotted trigger. Shared with `<lr-popover>`,
+   *  which resolves the identical chain. */
   private resolveAnchor(): Element | VirtualAnchor | null {
-    if (this.virtualAnchor) return this.virtualAnchor;
-    if (this.anchor) return this.anchor;
-    if (this.for) {
-      const root = this.getRootNode() as Document | ShadowRoot;
-      const target = root.getElementById?.(this.for) ?? null;
-      if (target) return target;
-    }
-    return this.triggerElement ?? null;
+    return resolveOverlayAnchor(this, {
+      virtualAnchor: this.virtualAnchor,
+      anchor: this.anchor,
+      for: this.for,
+      trigger: this.triggerElement,
+    });
   }
   private position(): void {
     const popup = this.renderRoot.querySelector('[part~="popup"]') as HTMLElement | null;

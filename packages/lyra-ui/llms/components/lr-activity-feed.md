@@ -18,7 +18,7 @@
 An append-only streaming log of granular agent actions ("Searching the web…", "Read
 src/index.ts"), collapsing to a localized "Completed N steps" summary once the run is over. Entries
 never change state once added — a step whose status mutates in place belongs to `<lr-task-list>`
-instead. Implements the shared follow (stick-to-bottom) contract. At/above `virtualizeThreshold`
+instead. Implements the shared follow (stick-to-bottom) contract. At/above `virtualizeAt`
 entries, the body renders through an internal `<lr-virtual-list>` instead of a plain keyed list.
 
 **Properties:** `entries: ActivityEntry[] = []` (attribute: false) — `ActivityEntry { id: string;
@@ -34,8 +34,8 @@ retained as a name for it. An invalid `timestamp` string is treated as unset. `m
 => TemplateResult` (attribute: false) — overrides the default plain-text `entry-text` rendering with
 arbitrary rich content (e.g. rendered markdown, or markdown plus a trailing tool-call chip list),
 identically whether or not the feed is currently virtualized; fully replaces `[part="entry-text"]`
-rather than augmenting it, and `virtualizeThreshold: number = 200` (attribute
-`virtualize-threshold`).
+rather than augmenting it, and `virtualizeAt: number = 199` (attribute
+`virtualize-at`).
 
 **Events:** `lr-toggle` (`detail: { expanded }`, the header was activated) and
 `lr-follow-change` (`detail: { following }`, `follow` released or re-engaged).

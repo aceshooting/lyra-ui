@@ -6,7 +6,7 @@
 - **Class** `LyraToolCallChip`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-call-chip/tool-call-chip.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecated event** `lr-tool-chip-select` since `4.0.0`; use event `lr-tool-call-chip-select`; removal not before `9.0.0` — The replacement retains the full tool-call component name; the shorter event has remained as a compatibility alias across prior majors.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 10 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -38,9 +38,9 @@ a compact call summary is useful, with or without a detail surface behind it.
   in `lr-tool-call-chip-select`'s detail so a listener can correlate the click with the call it fired for
 
 **Events:** `lr-tool-call-chip-select` (`detail: { name: string; callId: string }`) — fired on
-click or Enter/Space activation of the pill. The deprecated `lr-tool-chip-select` alias is fired
-alongside it throughout its documented compatibility window (deprecated since 4.0.0; removal is
-not permitted before 9.0.0).
+click or Enter/Space activation of the pill, exactly once per activation. The `lr-tool-chip-select`
+alias (deprecated since 4.0.0) was removed in 9.0.0; listen for `lr-tool-call-chip-select` instead —
+the detail is identical.
 
 **Slots:** default (rich tooltip/detail content — e.g. the tool's raw arguments or a short preview —
 shown in a floating tooltip on hover/focus; nothing renders at all, no hover affordance, when this

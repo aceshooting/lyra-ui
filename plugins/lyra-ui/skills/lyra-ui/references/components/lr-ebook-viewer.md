@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `epubjs` — see `llms/peers.md`
-- **Themeable via** 9 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,8 +19,11 @@ Renders EPUB ebooks through the optional `epubjs` peer. `src` is fetched as an `
 epub.js renders the reading area into its stable `mount` element, using an internal iframe for
 chapter content.
 
-**Properties:** `src: string = ''` and `name: string = ''`. `accessibleLabel: string = ''`
-(attribute `aria-label`) overrides the reading region's accessible name. `maxHeight: string = ''`
+**Properties:** `src: string = ''` and `name: string = ''`. A plain `aria-label` attribute on the
+host overrides the reading region's accessible name — by attribute presence, so an explicitly empty
+`aria-label=""` still wins over `name`. (There is no matching JS property: the `accessibleLabel`
+property was removed in 9.0.0, where it had never been readable or writable to any effect — set the
+attribute.) `maxHeight: string = ''`
 (attribute `max-height`) caps the `mount` area epub.js renders into; invalid CSS `max-height`
 values, declaration breaks, and `url()` are ignored. `location: string = ''`
 (not reflected — CFIs are long) is
@@ -53,9 +56,10 @@ applied; `lr-highlight-activate` (`detail: { id }`) when a painted CFI highlight
 **CSS parts:** `base` (explicit `aria-busy="true"|"false"`; visible loading text is ordinary
 non-live shadow content and later loading transitions use the shared document-level polite sink),
 `toolbar`, `previous-button`, `next-button`, `previous-icon`, `next-icon`,
-`mount`, `error` (ordinary visible text; later error transitions use the shared document-level
-assertive sink), and `announcer` (an aria-hidden, non-live shadow mirror retained for styling
-compatibility; search results are appended to the shared document-level polite sink).
+`mount`, and `error` (ordinary visible text; later error transitions use the shared document-level
+assertive sink). Search results are appended to the shared document-level polite sink, which lives
+in the host's light DOM; the empty `announcer` shadow mirror that used to carry a part of that name
+was removed in 9.0.0 (it had no styling of its own and never held any text).
 
 **Themeable custom properties:** `--lr-ebook-viewer-max-height` (default `none`) — maximum block
 size of `[part="mount"]` before it scrolls internally; also settable via the `max-height` property,

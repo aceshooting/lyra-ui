@@ -34,8 +34,9 @@ the slide animation are its own.
   promotion, or global Escape ownership
 - `heading?: string`, `label: string`, `accessibleLabel: string = ''` (attribute
   `accessible-label`), `closable: boolean = true`, `noHeader: boolean = false` (attribute
-  `no-header`, reflected), `withoutHeader: boolean = false` (legacy attribute `without-header`,
-  reflected), `withFooter: boolean = false` (attribute `with-footer`, reflected; SSR hint), and
+  `no-header`, Shoelace's spelling, reflected), `withoutHeader: boolean = false` (attribute
+  `without-header`, Web Awesome's spelling, reflected; neither is deprecated),
+  `withFooter: boolean = false` (attribute `with-footer`, reflected; SSR hint), and
   `lightDismiss: boolean = false` (attribute `light-dismiss`) — inherited dialog naming, chrome and
   dismissal options. A plain `aria-label` attribute on the host is honored too, with the same
   wins-over-everything semantics documented under `lr-dialog` below.

@@ -2545,14 +2545,14 @@
             "default": false
           },
           {
-            "name": "virtualize-threshold",
-            "property": "virtualizeThreshold",
+            "name": "virtualize-at",
+            "property": "virtualizeAt",
             "type": "number",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": 200
+            "default": 199
           }
         ],
         "properties": [
@@ -2645,14 +2645,14 @@
             "default": false
           },
           {
-            "name": "virtualizeThreshold",
-            "attribute": "virtualize-threshold",
+            "name": "virtualizeAt",
+            "attribute": "virtualize-at",
             "type": "number",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": 200
+            "default": 199
           }
         ],
         "slots": [],
@@ -9814,16 +9814,6 @@
             "default": "280px"
           },
           {
-            "name": "horizontal",
-            "property": "horizontal",
-            "type": "boolean",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": false
-          },
-          {
             "name": "index-axis",
             "property": "indexAxis",
             "type": "LyraChartIndexAxis",
@@ -10103,16 +10093,6 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "280px"
-          },
-          {
-            "name": "horizontal",
-            "attribute": "horizontal",
-            "type": "boolean",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": false
           },
           {
             "name": "indexAxis",
@@ -11350,13 +11330,13 @@
           "upstream": "shoelace",
           "tag": "sl-breadcrumb-item",
           "tier": "free",
-          "classification": "warning-required"
+          "classification": "exact"
         },
         {
           "upstream": "webawesome",
           "tag": "wa-breadcrumb-item",
           "tier": "free",
-          "classification": "warning-required"
+          "classification": "exact"
         }
       ],
       "surface": {
@@ -11390,6 +11370,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "rel",
+            "property": "rel",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "noreferrer noopener"
           },
           {
             "name": "target",
@@ -11431,6 +11421,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "rel",
+            "attribute": "rel",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "noreferrer noopener"
           },
           {
             "name": "target",
@@ -11946,16 +11946,6 @@
             "default": "280px"
           },
           {
-            "name": "horizontal",
-            "property": "horizontal",
-            "type": "boolean",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": false
-          },
-          {
             "name": "index-axis",
             "property": "indexAxis",
             "type": "LyraChartIndexAxis",
@@ -12235,16 +12225,6 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "280px"
-          },
-          {
-            "name": "horizontal",
-            "attribute": "horizontal",
-            "type": "boolean",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": false
           },
           {
             "name": "indexAxis",
@@ -12791,13 +12771,13 @@
           "upstream": "shoelace",
           "tag": "sl-button",
           "tier": "free",
-          "classification": "warning-required"
+          "classification": "rewritten"
         },
         {
           "upstream": "webawesome",
           "tag": "wa-button",
           "tier": "free",
-          "classification": "warning-required"
+          "classification": "rewritten"
         }
       ],
       "surface": {
@@ -13375,9 +13355,9 @@
           },
           {
             "name": "rel",
-            "attribute": null,
+            "attribute": "rel",
             "type": "string | undefined",
-            "readonly": true,
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
@@ -16329,16 +16309,6 @@
             "default": "280px"
           },
           {
-            "name": "horizontal",
-            "property": "horizontal",
-            "type": "boolean",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": false
-          },
-          {
             "name": "index-axis",
             "property": "indexAxis",
             "type": "LyraChartIndexAxis",
@@ -16636,16 +16606,6 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
-          },
-          {
-            "name": "horizontal",
-            "attribute": "horizontal",
-            "type": "boolean",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": false
           },
           {
             "name": "indexAxis",
@@ -25570,7 +25530,7 @@
           {
             "name": "validators",
             "attribute": null,
-            "type": "unknown[]",
+            "type": "LyraComboboxValidator[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -25792,6 +25752,10 @@
           },
           {
             "name": "form-control-label",
+            "deprecated": null
+          },
+          {
+            "name": "group-label",
             "deprecated": null
           },
           {
@@ -27501,6 +27465,16 @@
             "default": null
           },
           {
+            "name": "frame",
+            "property": "frame",
+            "type": "LyraFrame",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
+          },
+          {
             "name": "heading",
             "property": "heading",
             "type": "string",
@@ -27581,6 +27555,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "frame",
+            "attribute": "frame",
+            "type": "LyraFrame",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
           },
           {
             "name": "heading",
@@ -27743,18 +27727,6 @@
             "default": "var(--lr-color-success)"
           },
           {
-            "name": "--lr-confirm-bar-compact-background",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "transparent"
-          },
-          {
-            "name": "--lr-confirm-bar-compact-border",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "none"
-          },
-          {
             "name": "--lr-confirm-bar-compact-gap",
             "deprecated": null,
             "hasDefault": true,
@@ -27764,13 +27736,7 @@
             "name": "--lr-confirm-bar-compact-padding",
             "deprecated": null,
             "hasDefault": true,
-            "default": 0
-          },
-          {
-            "name": "--lr-confirm-bar-compact-radius",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": 0
+            "default": "var(--lr-space-s)"
           },
           {
             "name": "--lr-confirm-bar-denied-color",
@@ -37011,8 +36977,8 @@
             "hasDefault": false
           },
           {
-            "name": "error-message",
-            "property": "errorMessage",
+            "name": "error-text",
+            "property": "errorText",
             "type": "string",
             "reflects": false,
             "inferred": false,
@@ -37131,8 +37097,8 @@
             "default": "['region']"
           },
           {
-            "name": "errorMessage",
-            "attribute": "error-message",
+            "name": "errorText",
+            "attribute": "error-text",
             "type": "string",
             "readonly": false,
             "reflects": false,
@@ -38122,16 +38088,6 @@
             "default": "280px"
           },
           {
-            "name": "horizontal",
-            "property": "horizontal",
-            "type": "boolean",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": false
-          },
-          {
             "name": "index-axis",
             "property": "indexAxis",
             "type": "LyraChartIndexAxis",
@@ -38411,16 +38367,6 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "280px"
-          },
-          {
-            "name": "horizontal",
-            "attribute": "horizontal",
-            "type": "boolean",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": false
           },
           {
             "name": "indexAxis",
@@ -40850,12 +40796,12 @@
           {
             "name": "aria-label",
             "property": "accessibleLabel",
-            "type": "string",
+            "type": "string | null",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": ""
+            "default": null
           },
           {
             "name": "locale",
@@ -40909,16 +40855,6 @@
           }
         ],
         "properties": [
-          {
-            "name": "accessibleLabel",
-            "attribute": "aria-label",
-            "type": "string",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": ""
-          },
           {
             "name": "anchorKinds",
             "attribute": null,
@@ -41020,10 +40956,6 @@
           }
         ],
         "parts": [
-          {
-            "name": "announcer",
-            "deprecated": null
-          },
           {
             "name": "base",
             "deprecated": null
@@ -45481,7 +45413,7 @@
           {
             "name": "validators",
             "attribute": null,
-            "type": "unknown[]",
+            "type": "LyraFileInputValidator[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -46731,21 +46663,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-flow-canvas",
-            "kind": "css-property",
-            "name": "--lr-flow-canvas-node-current-outline-color",
-            "since": "7.0.0",
-            "replacement": {
-              "kind": "css-property",
-              "name": "--lr-flow-canvas-node-selected-outline-color",
-              "usage": "--lr-flow-canvas-node-selected-outline-color"
-            },
-            "removalNotBefore": "9.0.0",
-            "rationale": "The selected spelling matches the component's selection vocabulary; current remains a compatibility fallback for existing themes."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -47234,12 +47152,6 @@
             "default": "var(--lr-color-brand)"
           },
           {
-            "name": "--lr-flow-canvas-node-current-outline-color",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-color-brand)"
-          },
-          {
             "name": "--lr-flow-canvas-node-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
@@ -47249,7 +47161,7 @@
             "name": "--lr-flow-canvas-node-selected-outline-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-flow-canvas-node-current-outline-color,var(--lr-color-brand))"
+            "default": "var(--lr-color-brand)"
           }
         ],
         "cssStates": [],
@@ -47841,7 +47753,7 @@
             "name": "node-id",
             "property": "nodeId",
             "type": "string",
-            "reflects": false,
+            "reflects": true,
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
@@ -47944,7 +47856,7 @@
             "attribute": "node-id",
             "type": "string",
             "readonly": false,
-            "reflects": false,
+            "reflects": true,
             "deprecated": null,
             "hasDefault": true,
             "default": ""
@@ -52636,16 +52548,6 @@
             "default": "280px"
           },
           {
-            "name": "horizontal",
-            "property": "horizontal",
-            "type": "boolean",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": false
-          },
-          {
             "name": "index-axis",
             "property": "indexAxis",
             "type": "LyraChartIndexAxis",
@@ -52935,16 +52837,6 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "280px"
-          },
-          {
-            "name": "horizontal",
-            "attribute": "horizontal",
-            "type": "boolean",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": false
           },
           {
             "name": "indexAxis",
@@ -56057,14 +55949,14 @@
             "default": ""
           },
           {
-            "name": "virtualize-threshold",
-            "property": "virtualizeThreshold",
+            "name": "virtualize-at",
+            "property": "virtualizeAt",
             "type": "number",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "DEFAULT_VIRTUALIZE_THRESHOLD"
+            "default": "DEFAULT_VIRTUALIZE_AT"
           }
         ],
         "properties": [
@@ -56099,8 +55991,8 @@
             "default": ""
           },
           {
-            "name": "virtualizeThreshold",
-            "attribute": "virtualize-threshold",
+            "name": "virtualizeAt",
+            "attribute": "virtualize-at",
             "type": "number",
             "readonly": false,
             "reflects": false,
@@ -58527,25 +58419,25 @@
         "slots": [],
         "events": [
           {
-            "name": "lr-kb-create",
+            "name": "lr-source-create",
             "type": "CustomEvent<undefined>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-kb-delete",
+            "name": "lr-source-delete",
             "type": "CustomEvent<{ sourceId: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-kb-pause",
+            "name": "lr-source-pause",
             "type": "CustomEvent<{ sourceId: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-kb-sync",
+            "name": "lr-source-sync",
             "type": "CustomEvent<{ sourceId: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -60759,16 +60651,6 @@
             "default": "280px"
           },
           {
-            "name": "horizontal",
-            "property": "horizontal",
-            "type": "boolean",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": false
-          },
-          {
             "name": "index-axis",
             "property": "indexAxis",
             "type": "LyraChartIndexAxis",
@@ -61048,16 +60930,6 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "280px"
-          },
-          {
-            "name": "horizontal",
-            "attribute": "horizontal",
-            "type": "boolean",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": false
           },
           {
             "name": "indexAxis",
@@ -66895,21 +66767,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-message-parts",
-            "kind": "event",
-            "name": "lr-tool-chip-select",
-            "since": "7.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-tool-call-chip-select",
-              "usage": "lr-tool-call-chip-select"
-            },
-            "removalNotBefore": "9.0.0",
-            "rationale": "The replacement names the selected tool-call component precisely; the shorter event remains as a bubbling compatibility alias."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -67155,12 +67013,6 @@
           },
           {
             "name": "lr-tool-call-chip-select",
-            "type": "CustomEvent<ToolChipSelectDetail>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-tool-chip-select",
             "type": "CustomEvent<ToolChipSelectDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -78321,16 +78173,6 @@
             "default": "280px"
           },
           {
-            "name": "horizontal",
-            "property": "horizontal",
-            "type": "boolean",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": false
-          },
-          {
             "name": "index-axis",
             "property": "indexAxis",
             "type": "LyraChartIndexAxis",
@@ -78610,16 +78452,6 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "280px"
-          },
-          {
-            "name": "horizontal",
-            "attribute": "horizontal",
-            "type": "boolean",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": false
           },
           {
             "name": "indexAxis",
@@ -79621,16 +79453,6 @@
             "default": "280px"
           },
           {
-            "name": "horizontal",
-            "property": "horizontal",
-            "type": "boolean",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": false
-          },
-          {
             "name": "index-axis",
             "property": "indexAxis",
             "type": "LyraChartIndexAxis",
@@ -79910,16 +79732,6 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "280px"
-          },
-          {
-            "name": "horizontal",
-            "attribute": "horizontal",
-            "type": "boolean",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": false
           },
           {
             "name": "indexAxis",
@@ -85502,16 +85314,6 @@
             "default": "280px"
           },
           {
-            "name": "horizontal",
-            "property": "horizontal",
-            "type": "boolean",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": false
-          },
-          {
             "name": "index-axis",
             "property": "indexAxis",
             "type": "LyraChartIndexAxis",
@@ -85791,16 +85593,6 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "280px"
-          },
-          {
-            "name": "horizontal",
-            "attribute": "horizontal",
-            "type": "boolean",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": false
           },
           {
             "name": "indexAxis",
@@ -88518,8 +88310,8 @@
             "default": null
           },
           {
-            "name": "error",
-            "property": "error",
+            "name": "error-text",
+            "property": "errorText",
             "type": "string",
             "reflects": false,
             "inferred": false,
@@ -88600,8 +88392,8 @@
             "default": ""
           },
           {
-            "name": "error",
-            "attribute": "error",
+            "name": "errorText",
+            "attribute": "error-text",
             "type": "string",
             "readonly": false,
             "reflects": false,
@@ -91885,8 +91677,8 @@
             "default": true
           },
           {
-            "name": "error",
-            "property": "error",
+            "name": "error-text",
+            "property": "errorText",
             "type": "string",
             "reflects": false,
             "inferred": false,
@@ -92017,8 +91809,8 @@
             "default": true
           },
           {
-            "name": "error",
-            "attribute": "error",
+            "name": "errorText",
+            "attribute": "error-text",
             "type": "string",
             "readonly": false,
             "reflects": false,
@@ -93697,16 +93489,6 @@
             "default": "280px"
           },
           {
-            "name": "horizontal",
-            "property": "horizontal",
-            "type": "boolean",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": false
-          },
-          {
             "name": "index-axis",
             "property": "indexAxis",
             "type": "LyraChartIndexAxis",
@@ -93986,16 +93768,6 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "280px"
-          },
-          {
-            "name": "horizontal",
-            "attribute": "horizontal",
-            "type": "boolean",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": false
           },
           {
             "name": "indexAxis",
@@ -96918,16 +96690,6 @@
             "hasDefault": false
           },
           {
-            "name": "orientation",
-            "property": "orientation",
-            "type": "'horizontal'",
-            "reflects": true,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "horizontal"
-          },
-          {
             "name": "show-legend",
             "property": "showLegend",
             "type": "boolean",
@@ -96966,16 +96728,6 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
-          },
-          {
-            "name": "orientation",
-            "attribute": "orientation",
-            "type": "'horizontal'",
-            "readonly": false,
-            "reflects": true,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "horizontal"
           },
           {
             "name": "showLegend",
@@ -101225,6 +100977,16 @@
             "default": true
           },
           {
+            "name": "compact",
+            "property": "compact",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "copyable",
             "property": "copyable",
             "type": "boolean",
@@ -101285,6 +101047,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "compact",
+            "attribute": "compact",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "copyable",
@@ -101401,6 +101173,18 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-stack-trace-compact-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-stack-trace-compact-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
           {
             "name": "--lr-stack-trace-font",
             "deprecated": null,
@@ -107750,14 +107534,6 @@
         "slots": [
           {
             "name": "detail-{encodedSuiteId}:{encodedTestId}",
-            "deprecated": null
-          },
-          {
-            "name": "detail-{suiteId}-{testId}",
-            "deprecated": null
-          },
-          {
-            "name": "detail-{testId}",
             "deprecated": null
           }
         ],
@@ -114264,21 +114040,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-tool-call-chip",
-            "kind": "event",
-            "name": "lr-tool-chip-select",
-            "since": "4.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-tool-call-chip-select",
-              "usage": "lr-tool-call-chip-select"
-            },
-            "removalNotBefore": "9.0.0",
-            "rationale": "The replacement retains the full tool-call component name; the shorter event has remained as a compatibility alias across prior majors."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -114470,12 +114232,6 @@
         "events": [
           {
             "name": "lr-tool-call-chip-select",
-            "type": "CustomEvent<ToolChipSelectDetail>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-tool-chip-select",
             "type": "CustomEvent<ToolChipSelectDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -119210,10 +118966,10 @@
       "surface": {
         "attributes": [
           {
-            "name": "compact",
-            "property": "compact",
+            "name": "abbreviate",
+            "property": "abbreviate",
             "type": "boolean",
-            "reflects": false,
+            "reflects": true,
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
@@ -119269,11 +119025,11 @@
         ],
         "properties": [
           {
-            "name": "compact",
-            "attribute": "compact",
+            "name": "abbreviate",
+            "attribute": "abbreviate",
             "type": "boolean",
             "readonly": false,
-            "reflects": false,
+            "reflects": true,
             "deprecated": null,
             "hasDefault": true,
             "default": false
@@ -172839,8 +172595,8 @@
       "upstreamTag": "sl-breadcrumb-item",
       "upstreamTier": "free",
       "targetTag": "lr-breadcrumb-item",
-      "classification": "warning-required",
-      "rationale": "Lyra derives safe rel=\"noopener noreferrer\" behavior from target and does not expose an independently settable rel; migration leaves the use unchanged and reports the security-sensitive difference.",
+      "classification": "exact",
+      "rationale": null,
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -172864,9 +172620,7 @@
           },
           "rationale": "sl-breadcrumb-item and lr-breadcrumb-item share the reviewed behavior profile: A named link uses native keyboard activation and focus behavior."
         },
-        "behaviorReviewFlags": [
-          "warning-required-mapping"
-        ]
+        "behaviorReviewFlags": []
       },
       "rewrites": {
         "attributes": [],
@@ -172895,26 +172649,15 @@
         "cancelabilityEquivalences": [],
         "cancelabilityPathAdditions": []
       },
-      "drift": [
-        {
-          "code": "missing-attribute",
-          "section": "attributes",
-          "member": "rel"
-        },
-        {
-          "code": "missing-property",
-          "section": "properties",
-          "member": "rel"
-        }
-      ]
+      "drift": []
     },
     {
       "upstream": "shoelace",
       "upstreamTag": "sl-button",
       "upstreamTier": "free",
       "targetTag": "lr-button",
-      "classification": "warning-required",
-      "rationale": "Lyra derives safe rel=\"noopener noreferrer\" behavior from target and ignores an independently authored rel; migration leaves the use unchanged and reports the security-sensitive difference.",
+      "classification": "rewritten",
+      "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -172938,9 +172681,7 @@
           },
           "rationale": "sl-button and lr-button share the reviewed behavior profile: A named button uses native activation and exposes disabled and pressed state."
         },
-        "behaviorReviewFlags": [
-          "warning-required-mapping"
-        ]
+        "behaviorReviewFlags": []
       },
       "rewrites": {
         "attributes": [],
@@ -173038,15 +172779,7 @@
         "cancelabilityEquivalences": [],
         "cancelabilityPathAdditions": []
       },
-      "drift": [
-        {
-          "code": "readonly-mismatch",
-          "section": "properties",
-          "member": "rel",
-          "expected": false,
-          "actual": true
-        }
-      ]
+      "drift": []
     },
     {
       "upstream": "shoelace",
@@ -177499,8 +177232,8 @@
       "upstreamTag": "wa-breadcrumb-item",
       "upstreamTier": "free",
       "targetTag": "lr-breadcrumb-item",
-      "classification": "warning-required",
-      "rationale": "Lyra derives safe rel=\"noopener noreferrer\" behavior from target and does not expose an independently settable rel; migration leaves the use unchanged and reports the security-sensitive difference.",
+      "classification": "exact",
+      "rationale": null,
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -177524,9 +177257,7 @@
           },
           "rationale": "wa-breadcrumb-item and lr-breadcrumb-item share the reviewed behavior profile: A named link uses native keyboard activation and focus behavior."
         },
-        "behaviorReviewFlags": [
-          "warning-required-mapping"
-        ]
+        "behaviorReviewFlags": []
       },
       "rewrites": {
         "attributes": [],
@@ -177555,18 +177286,7 @@
         "cancelabilityEquivalences": [],
         "cancelabilityPathAdditions": []
       },
-      "drift": [
-        {
-          "code": "missing-attribute",
-          "section": "attributes",
-          "member": "rel"
-        },
-        {
-          "code": "missing-property",
-          "section": "properties",
-          "member": "rel"
-        }
-      ]
+      "drift": []
     },
     {
       "upstream": "webawesome",
@@ -177662,8 +177382,8 @@
       "upstreamTag": "wa-button",
       "upstreamTier": "free",
       "targetTag": "lr-button",
-      "classification": "warning-required",
-      "rationale": "Lyra derives safe rel=\"noopener noreferrer\" behavior from target and ignores an independently authored rel; migration leaves the use unchanged and reports the security-sensitive difference.",
+      "classification": "rewritten",
+      "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -177687,9 +177407,7 @@
           },
           "rationale": "wa-button and lr-button share the reviewed behavior profile: A named button uses native activation and exposes disabled and pressed state."
         },
-        "behaviorReviewFlags": [
-          "warning-required-mapping"
-        ]
+        "behaviorReviewFlags": []
       },
       "rewrites": {
         "attributes": [],
@@ -177766,15 +177484,7 @@
         "cancelabilityEquivalences": [],
         "cancelabilityPathAdditions": []
       },
-      "drift": [
-        {
-          "code": "readonly-mismatch",
-          "section": "properties",
-          "member": "rel",
-          "expected": false,
-          "actual": true
-        }
-      ]
+      "drift": []
     },
     {
       "upstream": "webawesome",
@@ -178598,7 +178308,7 @@
             "memberKind": "property",
             "member": "validators",
             "upstream": "Validator[]",
-            "target": "unknown[]"
+            "target": "LyraComboboxValidator[]"
           },
           {
             "memberKind": "event",
@@ -179978,7 +179688,7 @@
             "memberKind": "property",
             "member": "validators",
             "upstream": "Validator[]",
-            "target": "unknown[]"
+            "target": "LyraFileInputValidator[]"
           },
           {
             "memberKind": "event",

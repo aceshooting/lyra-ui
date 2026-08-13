@@ -401,8 +401,9 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
    *  by `applyAnchor()` and every search navigation method, so both stay byte-identical in how a
    *  coordinate becomes a scroll. */
   private async jumpToCell(sheetIndex: number, rawRow: number, col: number): Promise<boolean> {
-    if (this.fetchState.kind !== 'loaded') return false;
-    const { sheets } = this.fetchState;
+    const loadedState = this.fetchState;
+    if (loadedState.kind !== 'loaded') return false;
+    const { sheets } = loadedState;
     if (sheetIndex < 0 || sheetIndex >= sheets.length) return false;
     const sheet = sheets[sheetIndex]!;
     if (
@@ -424,7 +425,13 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
     this.activeRowKey = bodyIndex;
     await this.updateComplete;
     await this.scrollColumnIntoView(sheetIndex, col);
-    return true;
+    // `fetchState` is only ever reassigned by load(), so an identity change across the awaits above
+    // means a concurrent `src` reassignment replaced the workbook mid-jump (a citation/file-tab
+    // click landing on top of a still-resolving jump). The coordinate this call resolved belongs to
+    // the previous document and nothing was scrolled into view for the current one, so report the
+    // failure rather than letting the shared retry loop accept a phantom success and fire
+    // `lr-anchor-result: { found: true }`.
+    return this.fetchState === loadedState;
   }
 
   protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {

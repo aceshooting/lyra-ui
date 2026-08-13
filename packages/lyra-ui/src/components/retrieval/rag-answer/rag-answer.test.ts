@@ -40,7 +40,7 @@ describe('lr-rag-answer', () => {
     };
     const el = (await fixture(html`
       <lr-rag-answer
-        error="Retrieval failed"
+        error-text="Retrieval failed"
         .citations=${[{ id: 'c1', sourceId: 'd1' }]}
         .sources=${[{ id: 'd1', name: 'guide.md' }]}
         .strings=${strings}
@@ -61,7 +61,7 @@ describe('lr-rag-answer', () => {
     expect(sources?.querySelector('[part="section-heading"]')?.textContent?.trim()).to.equal('Documents');
     expect(sourceList?.label).to.equal('Documents');
 
-    el.error = '';
+    el.errorText = '';
     el.loading = true;
     await el.updateComplete;
     const spinnerName = el.shadowRoot!
@@ -172,14 +172,14 @@ describe('lr-rag-answer', () => {
   });
   it('announces only new errors through an assertive light-DOM sink', async () => {
     const el = (await fixture(
-      html`<lr-rag-answer error="Initial failure"></lr-rag-answer>`,
+      html`<lr-rag-answer error-text="Initial failure"></lr-rag-answer>`,
     )) as LyraRagAnswer;
     const sink = () => document.querySelector('[data-lr-live-region="assertive"]')!;
     const visibleError = el.shadowRoot!.querySelector('[part="error"]')!;
     expect(visibleError.getAttribute('role'), 'the visible error is not a shadow live region').to.be.null;
     expect(sink().children.length, 'initial content is not replayed as an announcement').to.equal(0);
 
-    el.error = 'A newer failure';
+    el.errorText = 'A newer failure';
     await el.updateComplete;
     expect(sink().lastElementChild?.textContent).to.equal('A newer failure');
 
@@ -188,6 +188,19 @@ describe('lr-rag-answer', () => {
     parent.append(el);
     await el.updateComplete;
     expect(sink().children.length, 'reconnect does not replay the current error').to.equal(0);
+  });
+  // 9.0.0 renamed `error` -> `errorText`/`error-text`, the spelling 25 other components (including
+  // this one's own sibling `<lr-retrieval-search>`) already use for exactly this member.
+  it('exposes caller-supplied failure text only as errorText; the removed `error` spelling is inert', async () => {
+    const el = (await fixture(
+      html`<lr-rag-answer error="Legacy failure"></lr-rag-answer>`,
+    )) as LyraRagAnswer;
+    expect('error' in el).to.equal(false);
+    expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
+
+    el.errorText = 'Current failure';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal('Current failure');
   });
   it('forwards late host aria-label changes and removal to the loading spinner semantic owner', async () => {
     const el = (await fixture(
@@ -220,7 +233,7 @@ describe('lr-rag-answer', () => {
   });
   it('emits lr-retry from the underlying button click contract', async () => {
     const el = (await fixture(
-      html`<lr-rag-answer error="Retrieval failed"></lr-rag-answer>`,
+      html`<lr-rag-answer error-text="Retrieval failed"></lr-rag-answer>`,
     )) as LyraRagAnswer;
     const pending = oneEvent(el, 'lr-retry');
     (el.shadowRoot!.querySelector('[part="retry"]') as HTMLElement).shadowRoot!

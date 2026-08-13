@@ -132,6 +132,13 @@ export type {
   LyraComboboxSelectionDirection,
   LyraComboboxTagRenderer,
 } from './components/forms/combobox/combobox.class.js';
+export type {
+  LyraComboboxValidator,
+  LyraComboboxValidatorResult,
+  LyraComboboxObjectValidator,
+  LyraComboboxObjectValidatorResult,
+} from './components/forms/combobox/combobox.class.js';
+
 export { LyraOption } from './components/forms/combobox/option.class.js';
 export { LyraSelect } from './components/forms/select/select.class.js';
 export type {
@@ -178,6 +185,11 @@ export type {
 } from './utilities/animation-registry.js';
 export { invalidateLyraTheme } from './utilities/theme.js';
 export type { LyraThemeRoot } from './utilities/theme.js';
+export { bridgeLyraLocale, subscribeLyraLocale } from './utilities/localization.js';
+export type {
+  LyraLocaleBridgeCleanup,
+  LyraLocaleBridgeOptions,
+} from './utilities/localization.js';
 export { LyraAvatarGroup } from './components/media/avatar-group/avatar-group.class.js';
 export type {
   AvatarGroupOverflowClickDetail,
@@ -309,8 +321,6 @@ export type {
   SplitPanelPrimary,
   SplitPanelRepositionDetail,
   SplitPanelSnapFunction,
-  SplitPanelSnapFunctionOptions,
-  SplitPanelSnapFunctionParams,
 } from './components/layout/split-panel/split-panel.class.js';
 export { LyraPage } from './components/layout/page/page.class.js';
 export type {
@@ -432,6 +442,13 @@ export type {
 } from './components/media/map/map.class.js';
 export { DEFAULT_MAX_FILE_SIZE_BYTES, LyraFileInput } from './components/media/file-input/file-input.class.js';
 export type { LyraFileInputCapture, RejectedFile } from './components/media/file-input/file-input.class.js';
+export type {
+  LyraFileInputValidator,
+  LyraFileInputValidatorResult,
+  LyraFileInputObjectValidator,
+  LyraFileInputObjectValidatorResult,
+} from './components/media/file-input/file-input.class.js';
+
 export { LyraPhoneInput, loadLibphonenumberAdapter } from './components/forms/phone-input/phone-input.class.js';
 export type {
   PhoneNumberStatus,

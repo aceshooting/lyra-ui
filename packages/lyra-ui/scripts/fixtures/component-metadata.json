@@ -429,19 +429,6 @@
       "rationale": "The date-picker part identifies the visible shell explicitly; base remains on that same node during the compatibility window."
     },
     {
-      "tag": "lr-flow-canvas",
-      "kind": "css-property",
-      "name": "--lr-flow-canvas-node-current-outline-color",
-      "since": "7.0.0",
-      "replacement": {
-        "kind": "css-property",
-        "name": "--lr-flow-canvas-node-selected-outline-color",
-        "usage": "--lr-flow-canvas-node-selected-outline-color"
-      },
-      "removalNotBefore": "9.0.0",
-      "rationale": "The selected spelling matches the component's selection vocabulary; current remains a compatibility fallback for existing themes."
-    },
-    {
       "tag": "lr-icon",
       "kind": "property",
       "name": "autoWidth",
@@ -469,19 +456,6 @@
       "rationale": "The form-control-label part matches the shared form-control vocabulary; label remains on that same node during the compatibility window."
     },
     {
-      "tag": "lr-message-parts",
-      "kind": "event",
-      "name": "lr-tool-chip-select",
-      "since": "7.0.0",
-      "replacement": {
-        "kind": "event",
-        "name": "lr-tool-call-chip-select",
-        "usage": "lr-tool-call-chip-select"
-      },
-      "removalNotBefore": "9.0.0",
-      "rationale": "The replacement names the selected tool-call component precisely; the shorter event remains as a bubbling compatibility alias."
-    },
-    {
       "tag": "lr-sparkline",
       "kind": "part",
       "name": "base",
@@ -493,19 +467,6 @@
       },
       "removalNotBefore": "10.0.0",
       "rationale": "The sparkline part names the rendered SVG wrapper unambiguously; base remains on that same node during the compatibility window."
-    },
-    {
-      "tag": "lr-tool-call-chip",
-      "kind": "event",
-      "name": "lr-tool-chip-select",
-      "since": "4.0.0",
-      "replacement": {
-        "kind": "event",
-        "name": "lr-tool-call-chip-select",
-        "usage": "lr-tool-call-chip-select"
-      },
-      "removalNotBefore": "9.0.0",
-      "rationale": "The replacement retains the full tool-call component name; the shorter event has remained as a compatibility alias across prior majors."
     },
     {
       "tag": "lr-video-playlist",
@@ -10532,7 +10493,7 @@
     "current": {
       "version": "8.2.3",
       "sourceCommit": null,
-      "manifestSha256": "52d6bd8aa2c57d8560bc83f1ad1b7902d32e105131604772ff7a50bdc3d79d88",
+      "manifestSha256": "867f32c96a948e39606e8d576bdec4affef93b2b88d384fb910f6b5f10caf646",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",

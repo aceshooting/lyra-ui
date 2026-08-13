@@ -1,0 +1,81 @@
+/**
+ * Leaf module shared by `<lr-progress-bar>` and `<lr-progress-ring>`.
+ *
+ * The two components render completely different geometry (a track/indicator pair versus two SVG
+ * circles) and neither inherits from the other, but they publish the *same* `value`/`max`/`label`
+ * contract: identical normalization, identical percent formatting, and identical accessible-name
+ * precedence. Those three had been maintained as byte-identical copies in both class files, which
+ * is exactly the shape this library's `x-shared.ts` convention exists for -- a divergence between
+ * the two copies would be invisible until a consumer noticed the ring and the bar disagreeing about
+ * the same numbers.
+ *
+ * Pure functions rather than a mixin: everything here is a projection of already-public property
+ * values onto a string or number, so nothing needs the element's lifecycle.
+ */
+
+import { hostAriaLabel } from '../../../internal/a11y.js';
+import { composedAccessibleVisibleText } from '../../../internal/accessibility-visibility.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { finiteRange } from '../../../internal/numbers.js';
+
+/** Fallback `max` for both progress components, and the value a non-positive `max` falls back to. */
+export const PROGRESS_DEFAULT_MAX = 100;
+
+/** `max`, normalized to a finite number and guarded against `<= 0` -- which would otherwise
+ *  divide-by-zero in `progressPercent()` -- falling back to `PROGRESS_DEFAULT_MAX`. */
+export function progressSafeMax(max: number): number {
+  const normalized = finiteRange(max, PROGRESS_DEFAULT_MAX, 0);
+  return normalized > 0 ? normalized : PROGRESS_DEFAULT_MAX;
+}
+
+/** `value`, normalized to a finite number clamped to `[0, safeMax]`. Takes an already-normalized
+ *  `safeMax` so a caller that needs both does not run the guard above twice. */
+export function progressSafeValue(value: number, safeMax: number): number {
+  return finiteRange(value, 0, 0, safeMax);
+}
+
+/** Completion as a percentage in `[0, 100]`, from already-normalized inputs. */
+export function progressPercent(safeValue: number, safeMax: number): number {
+  return (safeValue / safeMax) * 100;
+}
+
+/** The percentage rendered as text, in the element's own effective locale (never `'en'`, never a
+ *  bare `undefined`). */
+export function formatProgressPercent(locale: string, percent: number): string {
+  return getNumberFormat(locale, {
+    style: 'percent',
+    maximumFractionDigits: 0,
+  }).format(percent / 100);
+}
+
+/** Collapses the accessible, visible text of `nodes` into one whitespace-normalized string. */
+export function joinAccessibleVisibleText(nodes: Iterable<Node>): string {
+  return Array.from(nodes)
+    .map(composedAccessibleVisibleText)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Accessible name for the `role="progressbar"` node, in the precedence both components document.
+ *
+ * A host `aria-label` wins by attribute *presence*, so an explicitly empty value stays empty rather
+ * than reviving a fallback. Otherwise: the mapped `label` property, then `accessibleLabel`, then the
+ * visible slotted label text, then the localized default the caller passes in (never a literal
+ * string here -- the caller resolves it through `localize()` so `registerLyraLocale()` keeps
+ * working).
+ */
+export function resolveProgressLabel(
+  host: Element,
+  parts: {
+    label: string;
+    accessibleLabel: string;
+    visibleText: string;
+    localizedFallback: string;
+  },
+): string {
+  const authored = hostAriaLabel(host);
+  if (authored !== null) return authored;
+  return parts.label || parts.accessibleLabel || parts.visibleText || parts.localizedFallback;
+}

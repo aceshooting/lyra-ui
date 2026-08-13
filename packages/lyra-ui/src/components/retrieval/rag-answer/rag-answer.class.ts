@@ -65,7 +65,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   /** Caller-supplied error text. The visible message is deliberately not a shadow live region;
    *  new non-empty values are announced through a shared assertive light-DOM region. Content
    *  present on the initial render or reconnect is not replayed. */
-  @property() error = '';
+  @property({ attribute: 'error-text' }) errorText = '';
   @property({ type: Boolean, attribute: 'show-sources', reflect: true, converter: trueDefaultBooleanConverter }) showSources = true;
   @property({ type: Boolean, attribute: 'show-claims', reflect: true, converter: trueDefaultBooleanConverter }) showClaims = true;
   @property() label = '';
@@ -117,8 +117,8 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
     super.updated(changed);
     const wasMounting = this.isMounting;
     this.isMounting = false;
-    if (!wasMounting && changed.has('error') && this.error !== '' && this.isConnected) {
-      this.errorAnnouncementSink?.announce(this.error);
+    if (!wasMounting && changed.has('errorText') && this.errorText !== '' && this.isConnected) {
+      this.errorAnnouncementSink?.announce(this.errorText);
     }
   }
 
@@ -142,9 +142,9 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   }
   override render(): TemplateResult {
     const label = this.accessibleLabel || this.label || this.localize('ragAnswerLabel');
-    if (this.loading && !this.answer && !this.hasSlot('answer') && !this.error) return html`<div part="base" role="article" aria-label=${label} aria-busy="true"><lr-spinner part="loading" aria-label=${label}></lr-spinner></div>`;
+    if (this.loading && !this.answer && !this.hasSlot('answer') && !this.errorText) return html`<div part="base" role="article" aria-label=${label} aria-busy="true"><lr-spinner part="loading" aria-label=${label}></lr-spinner></div>`;
     return html`<article part="base" aria-label=${label}>
-      ${this.error ? html`<div part="error">${this.error}</div><lr-button part="retry" variant="neutral" @click=${() => this.emit('lr-retry')}>${this.localize('ragAnswerRetry')}</lr-button>` : nothing}
+      ${this.errorText ? html`<div part="error">${this.errorText}</div><lr-button part="retry" variant="neutral" @click=${() => this.emit('lr-retry')}>${this.localize('ragAnswerRetry')}</lr-button>` : nothing}
       ${this.answer || this.hasSlot('answer') ? html`<div part="answer"><slot name="answer"><lr-markdown .content=${this.answer}></lr-markdown></slot></div>` : nothing}
       ${this.assessment ? html`<lr-grounding-summary part="grounding" .assessment=${this.assessment} .citations=${this.citations} .showClaims=${this.showClaims}></lr-grounding-summary>` : nothing}
       ${this.citations.length ? html`<section part="citations" aria-label=${this.localize('ragAnswerCitations')}><h3 part="section-heading">${this.localize('ragAnswerCitations')}</h3><div part="citation-list">${this.citations.map((citation, index) => html`<lr-citation-badge .index=${index + 1} .sourceId=${citation.sourceId ?? ''} .label=${citation.label ?? ''} @lr-citation-activate=${this.onCitationActivate}></lr-citation-badge>`)}</div></section>` : nothing}

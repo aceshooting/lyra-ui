@@ -1425,34 +1425,6 @@ export type LyraInvalidEvent =
   | LyraVoicePickerEventMap['lr-invalid'];
 
 /**
- * `lr-kb-create` — dispatched by `<lr-knowledge-base>`.
- *
- * Detail type: `LyraKnowledgeBaseEventMap['lr-kb-create']`.
- */
-export type LyraKbCreateEvent = LyraKnowledgeBaseEventMap['lr-kb-create'];
-
-/**
- * `lr-kb-delete` — dispatched by `<lr-knowledge-base>`.
- *
- * Detail type: `LyraKnowledgeBaseEventMap['lr-kb-delete']`.
- */
-export type LyraKbDeleteEvent = LyraKnowledgeBaseEventMap['lr-kb-delete'];
-
-/**
- * `lr-kb-pause` — dispatched by `<lr-knowledge-base>`.
- *
- * Detail type: `LyraKnowledgeBaseEventMap['lr-kb-pause']`.
- */
-export type LyraKbPauseEvent = LyraKnowledgeBaseEventMap['lr-kb-pause'];
-
-/**
- * `lr-kb-sync` — dispatched by `<lr-knowledge-base>`.
- *
- * Detail type: `LyraKnowledgeBaseEventMap['lr-kb-sync']`.
- */
-export type LyraKbSyncEvent = LyraKnowledgeBaseEventMap['lr-kb-sync'];
-
-/**
  * `lr-layout-change` — dispatched by 2 components: `<lr-dashboard-grid>`, `<lr-flow-canvas>`.
  *
  * A union of 2 component entries, so `event.detail` here exposes only what all of them share. For
@@ -2595,32 +2567,52 @@ export type LyraSortEvent =
 export type LyraSortChangeEvent = LyraDataGridEventMap['lr-sort-change'];
 
 /**
- * `lr-source-create` — dispatched by `<lr-knowledge-base-admin>`.
+ * `lr-source-create` — dispatched by 2 components: `<lr-knowledge-base-admin>`,
+ * `<lr-knowledge-base>`.
  *
- * Detail type: `LyraKnowledgeBaseAdminEventMap['lr-source-create']`.
+ * A union of 2 component entries, so `event.detail` here exposes only what all of them share. For
+ * one component's exact detail, index its own map — e.g.
+ * `LyraKnowledgeBaseAdminEventMap['lr-source-create']`.
  */
-export type LyraSourceCreateEvent = LyraKnowledgeBaseAdminEventMap['lr-source-create'];
+export type LyraSourceCreateEvent =
+  | LyraKnowledgeBaseAdminEventMap['lr-source-create']
+  | LyraKnowledgeBaseEventMap['lr-source-create'];
 
 /**
- * `lr-source-delete` — dispatched by `<lr-knowledge-base-admin>`.
+ * `lr-source-delete` — dispatched by 2 components: `<lr-knowledge-base-admin>`,
+ * `<lr-knowledge-base>`.
  *
- * Detail type: `LyraKnowledgeBaseAdminEventMap['lr-source-delete']`.
+ * A union of 2 component entries, so `event.detail` here exposes only what all of them share. For
+ * one component's exact detail, index its own map — e.g.
+ * `LyraKnowledgeBaseAdminEventMap['lr-source-delete']`.
  */
-export type LyraSourceDeleteEvent = LyraKnowledgeBaseAdminEventMap['lr-source-delete'];
+export type LyraSourceDeleteEvent =
+  | LyraKnowledgeBaseAdminEventMap['lr-source-delete']
+  | LyraKnowledgeBaseEventMap['lr-source-delete'];
 
 /**
- * `lr-source-pause` — dispatched by `<lr-knowledge-base-admin>`.
+ * `lr-source-pause` — dispatched by 2 components: `<lr-knowledge-base-admin>`,
+ * `<lr-knowledge-base>`.
  *
- * Detail type: `LyraKnowledgeBaseAdminEventMap['lr-source-pause']`.
+ * A union of 2 component entries, so `event.detail` here exposes only what all of them share. For
+ * one component's exact detail, index its own map — e.g.
+ * `LyraKnowledgeBaseAdminEventMap['lr-source-pause']`.
  */
-export type LyraSourcePauseEvent = LyraKnowledgeBaseAdminEventMap['lr-source-pause'];
+export type LyraSourcePauseEvent =
+  | LyraKnowledgeBaseAdminEventMap['lr-source-pause']
+  | LyraKnowledgeBaseEventMap['lr-source-pause'];
 
 /**
- * `lr-source-sync` — dispatched by `<lr-knowledge-base-admin>`.
+ * `lr-source-sync` — dispatched by 2 components: `<lr-knowledge-base-admin>`,
+ * `<lr-knowledge-base>`.
  *
- * Detail type: `LyraKnowledgeBaseAdminEventMap['lr-source-sync']`.
+ * A union of 2 component entries, so `event.detail` here exposes only what all of them share. For
+ * one component's exact detail, index its own map — e.g.
+ * `LyraKnowledgeBaseAdminEventMap['lr-source-sync']`.
  */
-export type LyraSourceSyncEvent = LyraKnowledgeBaseAdminEventMap['lr-source-sync'];
+export type LyraSourceSyncEvent =
+  | LyraKnowledgeBaseAdminEventMap['lr-source-sync']
+  | LyraKnowledgeBaseEventMap['lr-source-sync'];
 
 /**
  * `lr-sources-change` — dispatched by 2 components: `<lr-prompt-input>`, `<lr-source-picker>`.
@@ -2915,13 +2907,6 @@ export type LyraToolApprovalDecideEvent =
  * Detail type: `LyraToolCallChipEventMap['lr-tool-call-chip-select']`.
  */
 export type LyraToolCallChipSelectEvent = LyraToolCallChipEventMap['lr-tool-call-chip-select'];
-
-/**
- * `lr-tool-chip-select` — dispatched by `<lr-tool-call-chip>`.
- *
- * Detail type: `LyraToolCallChipEventMap['lr-tool-chip-select']`.
- */
-export type LyraToolChipSelectEvent = LyraToolCallChipEventMap['lr-tool-chip-select'];
 
 /**
  * `lr-topic-select` — dispatched by `<lr-mind-map>`.
@@ -3249,10 +3234,6 @@ export interface LyraGlobalEventMap {
   'lr-intersect': LyraIntersectEvent;
   'lr-intersection': LyraIntersectionEvent;
   'lr-invalid': LyraInvalidEvent;
-  'lr-kb-create': LyraKbCreateEvent;
-  'lr-kb-delete': LyraKbDeleteEvent;
-  'lr-kb-pause': LyraKbPauseEvent;
-  'lr-kb-sync': LyraKbSyncEvent;
   'lr-layout-change': LyraLayoutChangeEvent;
   'lr-lazy-change': LyraLazyChangeEvent;
   'lr-lazy-load': LyraLazyLoadEvent;
@@ -3415,7 +3396,6 @@ export interface LyraGlobalEventMap {
   'lr-token-edit': LyraTokenEditEvent;
   'lr-tool-approval-decide': LyraToolApprovalDecideEvent;
   'lr-tool-call-chip-select': LyraToolCallChipSelectEvent;
-  'lr-tool-chip-select': LyraToolChipSelectEvent;
   'lr-topic-select': LyraTopicSelectEvent;
   'lr-topic-toggle': LyraTopicToggleEvent;
   'lr-tour-end': LyraTourEndEvent;

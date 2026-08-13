@@ -1,20 +1,21 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
-import {
-  bindAccessibleTextObserver,
-  composedAccessibleVisibleText,
-} from '../../../internal/accessibility-visibility.js';
+import { bindAccessibleTextObserver } from '../../../internal/accessibility-visibility.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { finiteRange } from '../../../internal/numbers.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import {
+  formatProgressPercent,
+  joinAccessibleVisibleText,
+  progressPercent,
+  progressSafeMax,
+  progressSafeValue,
+  resolveProgressLabel,
+} from './progress-shared.js';
 import { ringStyles } from './progress.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_progress } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
-const DEFAULT_MAX = 100;
 
 /**
  * `<lr-progress-ring>` — a circular determinate or indeterminate progress indicator.
@@ -54,12 +55,17 @@ export class LyraProgressRing extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, ringStyles];
+  // numeric-guard-exempt: normalized by progressSafeValue() in ./progress-shared.ts, which is where this component's finiteRange() guard now lives
   @property({ type: Number, reflect: true }) value = 0;
+  // numeric-guard-exempt: normalized by progressSafeMax() in ./progress-shared.ts, which is where this component's finiteRange() guard now lives
   @property({ type: Number }) max = 100;
   @property({ type: Boolean, reflect: true }) indeterminate = false;
   /** Mapped accessible-label property. */
   @property() label = '';
-  /** Lyra compatibility alias for `label`. */
+  /** Explicit accessible name, on the library-wide `accessibleLabel`/`accessible-label` convention
+   *  shared by every Lyra component that names a shadow-owned role. Not an alias kept for one
+   *  upstream: `label` is the mapped upstream name and this is Lyra's own spelling; both are read,
+   *  with `label` first and a host `aria-label` above both. */
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
   // Assigned nodes do not exist in Lit's server DOM. Cache their accessible text only when the
   // browser can sample it, before a client-only first paint or just after the hydration render.
@@ -114,11 +120,7 @@ export class LyraProgressRing extends LyraElement {
       : Array.from(lightDomNodes ?? []).filter(
           (node) => node.nodeType !== 1 || ((node as Element).getAttribute('slot') ?? '') === '',
         );
-    return nodes
-      .map(composedAccessibleVisibleText)
-      .join(' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    return joinAccessibleVisibleText(nodes);
   }
 
   private recomputeVisibleLabelText(): void {
@@ -128,38 +130,34 @@ export class LyraProgressRing extends LyraElement {
     this.requestUpdate();
   }
 
-  /** `max`, normalized to a finite number and guarded against `<= 0` — which would otherwise
-   *  divide-by-zero in `percent` below — falling back to the property's own default of `100`. */
+  // Value normalization, percent formatting and accessible-name precedence live in
+  // ./progress-shared.ts, so the ring and the bar can never disagree about the same numbers.
   private get safeMax(): number {
-    const max = finiteRange(this.max, DEFAULT_MAX, 0);
-    return max > 0 ? max : DEFAULT_MAX;
+    return progressSafeMax(this.max);
   }
 
-  /** `value`, normalized to a finite number clamped to `[0, safeMax]`. */
   private get safeValue(): number {
-    return finiteRange(this.value, 0, 0, this.safeMax);
+    return progressSafeValue(this.value, this.safeMax);
   }
 
   private get percent(): number {
-    return (this.safeValue / this.safeMax) * 100;
+    return progressPercent(this.safeValue, this.safeMax);
   }
 
   private get formattedPercent(): string {
-    return getNumberFormat(this.effectiveLocale, {
-      style: 'percent',
-      maximumFractionDigits: 0,
-    }).format(this.percent / 100);
+    return formatProgressPercent(this.effectiveLocale, this.percent);
   }
 
   override render(): TemplateResult {
     const radius = 42;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference * (1 - this.percent / 100);
-    const hostLabel = this.getAttribute('aria-label');
-    const label =
-      hostLabel !== null
-        ? hostLabel
-        : this.label || this.accessibleLabel || this.cachedVisibleLabelText || this.localize('progress');
+    const label = resolveProgressLabel(this, {
+      label: this.label,
+      accessibleLabel: this.accessibleLabel,
+      visibleText: this.cachedVisibleLabelText,
+      localizedFallback: this.localize('progress'),
+    });
     return html`<div part="base progress-ring" role="progressbar" aria-label=${label}
       aria-valuemin="0" aria-valuemax=${this.safeMax} aria-valuenow=${this.indeterminate ? nothing : this.safeValue}
       aria-valuetext=${this.indeterminate ? nothing : this.formattedPercent}>

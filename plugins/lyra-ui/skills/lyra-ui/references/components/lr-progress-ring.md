@@ -19,7 +19,8 @@ A circular progress indicator with the same value contract as `lr-progress-bar`.
 
 **Properties:** `value: number = 0` (reflected), `max: number = 100`, `indeterminate: boolean = false`
 (reflected), `label: string = ''` (the mapped accessible-name property), and
-`accessibleLabel: string = ''` (attribute `accessible-label`; Lyra compatibility alias). Host
+`accessibleLabel: string = ''` (attribute `accessible-label`; the library-wide explicit
+accessible-name convention, not an upstream alias). Host
 `aria-label` takes precedence; otherwise the name falls back to `label`, `accessibleLabel`, the
 visible default-slot text when supplied, then the localized "Progress". Non-finite/out-of-range
 `value`/`max` are normalized (`max <= 0` falls

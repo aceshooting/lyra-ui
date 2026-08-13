@@ -231,14 +231,14 @@ export const ConfigDataAsEffectiveModel: Story = {
   `,
 };
 
-/** `horizontal` sets Chart.js's `indexAxis: 'y'`, flipping bars onto a horizontal axis. */
+/** `index-axis="y"` is Chart.js's own `indexAxis: 'y'`, flipping bars onto a horizontal axis. */
 export const Horizontal: Story = {
   render: () => {
     const series: Series[] = [{ label: 'Revenue', data: [12, 19, 14, 22] }];
     return html`
       <lr-chart
         type="bar"
-        horizontal
+        index-axis="y"
         height="16rem"
         style="width: 22rem"
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}

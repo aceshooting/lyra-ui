@@ -3,6 +3,7 @@ import { property, query } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraVariant } from '../../../internal/variants.js';
+import type { LyraTranscriptMode } from '../../../internal/shared-unions.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getDateTimeFormat, getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
@@ -32,7 +33,9 @@ export interface ActivityEntry {
   variant?: LyraVariant;
 }
 
-export type ActivityFeedMode = 'live' | 'post-hoc';
+/** Whether the feed is streaming a run live or replaying a finished one -- the library's shared
+ *  transcript-mode vocabulary, identical to `<lr-thinking-panel>`'s `ThinkingPanelMode`. */
+export type ActivityFeedMode = LyraTranscriptMode;
 
 export interface ActivityFeedToggleDetail {
   expanded: boolean;
@@ -90,7 +93,7 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * `<lr-task-list>` instead). Implements the shared follow (stick-to-bottom) contract: `follow`
  * is a component-managed, host-assignable property, released on user scroll-up and re-engaged at
  * the bottom, firing `lr-follow-change` on every transition (mount excluded). At/above
- * `virtualizeThreshold` entries, the body renders through an internal `<lr-virtual-list>`
+ * `virtualizeAt` entries, the body renders through an internal `<lr-virtual-list>`
  * instead of a plain keyed list — same list semantics either way, keyed by `id`.
  *
  * Each entry's `text` renders as plain text by default; a host needing richer per-entry content
@@ -183,7 +186,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   @property({ attribute: false }) renderText?: (entry: ActivityEntry) => TemplateResult;
 
   /** At/above this entry count, the body renders through an internal `<lr-virtual-list>`. */
-  @property({ type: Number, attribute: 'virtualize-threshold' }) virtualizeThreshold = 200;
+  @property({ type: Number, attribute: 'virtualize-at' }) virtualizeAt = 199;
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
   @query('lr-virtual-list') private virtualListEl?: LyraVirtualList;
@@ -220,16 +223,16 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     if (this.isConnected && this.shouldFollowLiveTail) this.scrollToLatest();
   }
 
-  /** `virtualizeThreshold`, normalized to a finite non-negative integer (falling back to the
-   *  property's own default of `200`) -- a raw `NaN` (e.g. an invalid `virtualize-threshold`
-   *  attribute) would otherwise make `entries.length >= virtualizeThreshold` always false,
+  /** `virtualizeAt`, normalized to a finite non-negative integer (falling back to the
+   *  property's own default of `199`) -- a raw `NaN` (e.g. an invalid `virtualize-at`
+   *  attribute) would otherwise make `entries.length > virtualizeAt` always false,
    *  silently disabling virtualization instead of falling back to the default threshold. */
-  private get effectiveVirtualizeThreshold(): number {
-    return finiteCount(this.virtualizeThreshold, 200);
+  private get effectiveVirtualizeAt(): number {
+    return finiteCount(this.virtualizeAt, 199);
   }
 
   private get isVirtualized(): boolean {
-    return this.entries.length >= this.effectiveVirtualizeThreshold;
+    return this.entries.length > this.effectiveVirtualizeAt;
   }
 
   private get shouldFollowLiveTail(): boolean {
@@ -292,7 +295,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
 
     const justAnchored = (changed.has('expanded') || changed.has('mode')) && this.expanded && this.mode === 'live';
     const followingChangedRenderPath =
-      changed.has('virtualizeThreshold') && this.expanded && this.mode === 'live' && this.follow;
+      changed.has('virtualizeAt') && this.expanded && this.mode === 'live' && this.follow;
     if (
       justAnchored ||
       followingChangedRenderPath ||

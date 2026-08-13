@@ -10,13 +10,11 @@ import type {
   LyraAccordionHeadingLevel,
   LyraAccordionIconPlacement,
 } from './accordion-item.class.js';
-import type { LyraDetails } from './details.class.js';
 import { styles } from './accordion.styles.js';
 
 export type LyraAccordionMode = 'single' | 'single-collapsible' | 'multiple';
-export type LyraAccordionPanel = LyraAccordionItem | LyraDetails;
 type LyraAccordionTransition = 'expand' | 'collapse';
-export interface LyraAccordionEventDetail { item: LyraAccordionPanel }
+export interface LyraAccordionEventDetail { item: LyraAccordionItem }
 export interface LyraAccordionEventMap {
   'lr-expand': CustomEvent<LyraAccordionEventDetail>;
   'lr-after-expand': CustomEvent<LyraAccordionEventDetail>;
@@ -33,12 +31,17 @@ function normalizeMode(value: unknown): LyraAccordionMode {
  *
  * `mode="multiple"` allows any number of items to expand. `single` permits at most one and keeps
  * the active item open when it is activated again. `single-collapsible` also permits at most one,
- * but allows all items to be collapsed. Direct `<lr-details>` children remain supported for
- * compatibility; the full accordion presentation and roving-keyboard contract applies to
- * `<lr-accordion-item>` children.
+ * but allows all items to be collapsed.
+ *
+ * Only direct `<lr-accordion-item>` children are coordinated. Direct `<lr-details>` panels were
+ * accepted before 9.0.0 and no longer are: replace them with `<lr-accordion-item>`, which accepts
+ * the same `summary` text and `open` state through its own inherited Details vocabulary. A
+ * `<lr-details>` slotted into an accordion today is ordinary content that owns its own disclosure
+ * lifecycle -- the group does not apply its presentation, its single-panel invariant, its roving
+ * keyboard model, or its `lr-expand`/`lr-collapse` lifecycle to it.
  *
  * @customElement lr-accordion
- * @slot - Direct `<lr-accordion-item>` elements, or legacy `<lr-details>` panels.
+ * @slot - Direct `<lr-accordion-item>` elements.
  * @event lr-expand - Emitted before a direct item expands. `detail: { item }`. Cancelable.
  * @event lr-after-expand - Emitted after a direct item finishes expanding. `detail: { item }`.
  * @event lr-collapse - Emitted before a direct item collapses. `detail: { item }`. Cancelable.
@@ -59,9 +62,9 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   #_mode: LyraAccordionMode = 'multiple';
-  private readonly panels = new Set<LyraAccordionPanel>();
-  #pendingTransitions = new WeakMap<LyraAccordionPanel, LyraAccordionTransition>();
-  #performingTransitions = new WeakMap<LyraAccordionPanel, LyraAccordionTransition>();
+  private readonly panels = new Set<LyraAccordionItem>();
+  #pendingTransitions = new WeakMap<LyraAccordionItem, LyraAccordionTransition>();
+  #performingTransitions = new WeakMap<LyraAccordionItem, LyraAccordionTransition>();
   #rovingItem?: LyraAccordionItem;
   #lastFocusedItem?: LyraAccordionItem;
   #availabilityObserver?: MutationObserver;
@@ -145,34 +148,23 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
   expandAll(): void {
     if (this.mode !== 'multiple') return;
     for (const panel of this.panels) {
-      if (panel.disabled || this.#isExpanded(panel)) continue;
-      if (this.#isAccordionItem(panel)) panel.expand();
-      else panel.show();
+      if (panel.disabled || panel.expanded) continue;
+      panel.expand();
     }
   }
 
   /** Collapse every direct expanded item. */
   collapseAll(): void {
     for (const panel of this.panels) {
-      if (!this.#isExpanded(panel)) continue;
+      if (!panel.expanded) continue;
       this.#requestCollapse(panel);
     }
   }
 
-  #isAccordionItem(panel: LyraAccordionPanel): panel is LyraAccordionItem {
-    return panel.localName === tag('accordion-item');
-  }
-
-  #isExpanded(panel: LyraAccordionPanel): boolean {
-    return this.#isAccordionItem(panel) ? panel.expanded : panel.open;
-  }
-
   #bindPanels(assigned: Element[]): void {
     const itemTag = tag('accordion-item');
-    const detailsTag = tag('details');
     const next = assigned.filter(
-      (element): element is LyraAccordionPanel =>
-        element.localName === itemTag || element.localName === detailsTag,
+      (element): element is LyraAccordionItem => element.localName === itemTag,
     );
     this.panels.clear();
     for (const panel of next) this.panels.add(panel);
@@ -183,7 +175,6 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
 
   #syncPresentation(): void {
     for (const panel of this.panels) {
-      if (!this.#isAccordionItem(panel)) continue;
       panel.iconPlacement = this.iconPlacement;
       panel.headingLevel = this.headingLevel;
       panel.appearance = this.appearance;
@@ -194,7 +185,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
     if (this.mode === 'multiple') return;
     let foundExpanded = false;
     for (const panel of this.panels) {
-      if (!this.#isExpanded(panel)) continue;
+      if (!panel.expanded) continue;
       if (!foundExpanded) {
         foundExpanded = true;
         continue;
@@ -214,9 +205,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
   }
 
   #navigableItems(): LyraAccordionItem[] {
-    return [...this.panels].filter(
-      (panel): panel is LyraAccordionItem => this.#isAccordionItem(panel) && this.#isNavigableItem(panel),
-    );
+    return [...this.panels].filter((panel) => this.#isNavigableItem(panel));
   }
 
   #syncRovingTabIndex(preferred?: LyraAccordionItem): LyraAccordionItem | undefined {
@@ -227,16 +216,12 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
         ? this.#rovingItem
         : items.find((item) => item.isTabbable) ?? items[0];
     if (active) this.#rovingItem = active;
-    for (const panel of this.panels) {
-      if (this.#isAccordionItem(panel)) panel.isTabbable = panel === active;
-    }
+    for (const panel of this.panels) panel.isTabbable = panel === active;
     return active;
   }
 
   #nextNavigableItem(displaced: LyraAccordionItem): LyraAccordionItem | undefined {
-    const items = [...this.panels].filter(
-      (panel): panel is LyraAccordionItem => this.#isAccordionItem(panel),
-    );
+    const items = [...this.panels];
     const index = items.indexOf(displaced);
     if (index < 0) return this.#navigableItems()[0];
     return items.slice(index + 1).find((item) => this.#isNavigableItem(item))
@@ -294,42 +279,45 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
     this.#availabilityObserver = undefined;
   }
 
-  #markPending(panel: LyraAccordionPanel, transition: LyraAccordionTransition): void {
+  #markPending(panel: LyraAccordionItem, transition: LyraAccordionTransition): void {
     this.#pendingTransitions.set(panel, transition);
     queueMicrotask(() => {
       if (this.#pendingTransitions.get(panel) !== transition) return;
       const expectedExpanded = transition === 'expand';
-      if (this.#isExpanded(panel) !== expectedExpanded) this.#pendingTransitions.delete(panel);
+      if (panel.expanded !== expectedExpanded) this.#pendingTransitions.delete(panel);
     });
   }
 
-  #performPanelState(panel: LyraAccordionPanel, expanded: boolean): boolean {
+  #performPanelState(panel: LyraAccordionItem, expanded: boolean): boolean {
     const transition: LyraAccordionTransition = expanded ? 'expand' : 'collapse';
     this.#performingTransitions.set(panel, transition);
     try {
-      if (expanded) panel.show();
-      else panel.hide();
+      // The inherited Details `show()`/`hide()` rather than `expand()`/`collapse()`: a group-owned
+      // change must still be able to close a disabled panel, which the item's own disabled guard
+      // would refuse.
+      if (expanded) void panel.show();
+      else void panel.hide();
     } finally {
       this.#performingTransitions.delete(panel);
     }
-    const changed = this.#isExpanded(panel) === expanded;
+    const changed = panel.expanded === expanded;
     if (!changed && this.#pendingTransitions.get(panel) === transition) {
       this.#pendingTransitions.delete(panel);
     }
     return changed;
   }
 
-  #requestCollapse(panel: LyraAccordionPanel): boolean {
-    if (!this.#isExpanded(panel)) return true;
+  #requestCollapse(panel: LyraAccordionItem): boolean {
+    if (!panel.expanded) return true;
     const before = this.emit('lr-collapse', { item: panel }, { cancelable: true });
     if (before.defaultPrevented) return false;
     this.#markPending(panel, 'collapse');
     return this.#performPanelState(panel, false);
   }
 
-  #collapseSiblings(source: LyraAccordionPanel): boolean {
+  #collapseSiblings(source: LyraAccordionItem): boolean {
     for (const panel of this.panels) {
-      if (panel === source || !this.#isExpanded(panel)) continue;
+      if (panel === source || !panel.expanded) continue;
       if (!this.#requestCollapse(panel)) return false;
     }
     return true;
@@ -399,8 +387,8 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
     if (item.disabled || (item.expanded && this.mode === 'single')) event.preventDefault();
   };
 
-  #directPanel(event: Event): LyraAccordionPanel | undefined {
-    const panel = event.target as LyraAccordionPanel;
+  #directPanel(event: Event): LyraAccordionItem | undefined {
+    const panel = event.target as LyraAccordionItem;
     return this.panels.has(panel) ? panel : undefined;
   }
 
@@ -426,13 +414,9 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
     if (!panel || event.defaultPrevented) return;
     event.stopPropagation();
     if (this.#performingTransitions.get(panel) === 'collapse') return;
-    // Legacy Details panels do not expose the item's internal activation request, so retain the
-    // historical single-mode guard for them. Group-owned sibling/collapseAll changes carry the
-    // `performingTransitions` marker above and can still close them.
-    if (!this.#isAccordionItem(panel) && this.mode === 'single') {
-      event.preventDefault();
-      return;
-    }
+    // `single` mode's "activating the expanded item is a no-op" rule is enforced at the item's own
+    // activation request (see #handleItemTrigger), not here -- a programmatic hide() must still be
+    // able to close the panel.
     if (this.emit('lr-collapse', { item: panel }, { cancelable: true }).defaultPrevented) {
       event.preventDefault();
       return;
@@ -444,7 +428,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
     const panel = this.#directPanel(event);
     if (!panel) return;
     event.stopPropagation();
-    if (this.#pendingTransitions.get(panel) !== 'expand' || !this.#isExpanded(panel)) return;
+    if (this.#pendingTransitions.get(panel) !== 'expand' || !panel.expanded) return;
     this.#pendingTransitions.delete(panel);
     this.emit('lr-after-expand', { item: panel });
   };
@@ -453,7 +437,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
     const panel = this.#directPanel(event);
     if (!panel) return;
     event.stopPropagation();
-    if (this.#pendingTransitions.get(panel) !== 'collapse' || this.#isExpanded(panel)) return;
+    if (this.#pendingTransitions.get(panel) !== 'collapse' || panel.expanded) return;
     this.#pendingTransitions.delete(panel);
     this.emit('lr-after-collapse', { item: panel });
   };

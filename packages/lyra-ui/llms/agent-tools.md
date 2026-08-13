@@ -23,9 +23,9 @@ a compact call summary is useful, with or without a detail surface behind it.
   in `lr-tool-call-chip-select`'s detail so a listener can correlate the click with the call it fired for
 
 **Events:** `lr-tool-call-chip-select` (`detail: { name: string; callId: string }`) — fired on
-click or Enter/Space activation of the pill. The deprecated `lr-tool-chip-select` alias is fired
-alongside it throughout its documented compatibility window (deprecated since 4.0.0; removal is
-not permitted before 9.0.0).
+click or Enter/Space activation of the pill, exactly once per activation. The `lr-tool-chip-select`
+alias (deprecated since 4.0.0) was removed in 9.0.0; listen for `lr-tool-call-chip-select` instead —
+the detail is identical.
 
 **Slots:** default (rich tooltip/detail content — e.g. the tool's raw arguments or a short preview —
 shown in a floating tooltip on hover/focus; nothing renders at all, no hover affordance, when this
@@ -666,8 +666,14 @@ non-activatable text. Falls back to verbatim raw text when nothing parses. First
   vocabulary (`'card' | 'plain'`). `'card'` keeps the bordered, filled, padded box. `'plain'` removes
   the border, background, padding and corner radius, so a trace nested inside an
   `lr-result-card`/`lr-agent-run` — which already draws a border — doesn't double the frame. The
-  `max-height` scroll cap and the copy/frame affordances are unaffected either way. The exported
-  alias `StackTraceAppearance` is retained as a name for the same union.
+  `max-height` scroll cap and the copy/frame affordances are unaffected either way, and `'plain'`
+  wins over `compact` when both are set. The exported alias `StackTraceAppearance` is retained as a
+  name for the same union.
+- `compact: boolean = false` (reflected) — tighter root padding and between-group spacing for dense
+  contexts (a trace as a row in an error list, a side panel), the same density convention
+  `lr-agent-run`, `lr-commit-card`, `lr-result-card`, `lr-task-list`, `lr-terminal` and
+  `lr-thinking-panel` already pair with `frame`. Purely density: the border, corner radius and
+  background stay, so reach for `frame="plain"` to drop the chrome. Added in 9.0.0.
 
 **Events:**
 - `lr-frame-select` (`detail: { file: string; line: number; column?: number; raw: string }`) — a
@@ -679,8 +685,8 @@ non-activatable text. Falls back to verbatim raw text when nothing parses. First
 
 **Slots:** none.
 
-**CSS parts:** `base` (the root wrapper; respects `max-height`, and drops its card chrome under
-`frame="plain"`), `message` (the leading error
+**CSS parts:** `base` (the root wrapper; respects `max-height`, tightens its padding under
+`compact`, and drops its card chrome under `frame="plain"`), `message` (the leading error
 message text for a group), `group` (one chained-error group of frames), `frame` (a selectable
 frame button, carrying `data-internal` for internal frames, or a non-activatable raw row for an
 unsafe location), `frame-function` (the frame's function name), `frame-location` (the frame's
@@ -691,8 +697,12 @@ while `copyable`).
 **Themeable custom properties:** `--lr-stack-trace-max-height` (default `none`),
 `--lr-stack-trace-font` (default `var(--lr-font-mono)`),
 `--lr-stack-trace-internal-frame-color` (default `var(--lr-color-text-quiet)`) — internal-frame
-foreground, and `--lr-stack-trace-interactive-color` (default `var(--lr-color-brand)`) — frame
-hover/focus, internal-toggle, and copy-button-hover accent. The scoped color hooks avoid changing
+foreground, `--lr-stack-trace-interactive-color` (default `var(--lr-color-brand)`) — frame
+hover/focus, internal-toggle, and copy-button-hover accent, plus the two density hooks
+`--lr-stack-trace-compact-padding` (default `var(--lr-space-2xs)`, `[part="base"]` padding while
+`compact`, overridden entirely by `frame="plain"`) and `--lr-stack-trace-compact-gap` (default
+`var(--lr-space-2xs)`, the space below `[part="message"]` and between `[part="group"]`s while
+`compact`). The scoped color hooks avoid changing
 the shared quiet/brand tokens used by surrounding UI. Plus shared tokens
 `--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`, `--lr-radius`,
 `--lr-border-width-thin`, `--lr-space-xs`/`-s`/`-2xs`, `--lr-font-size-sm`/`-xs`,
@@ -1541,7 +1551,7 @@ against the new tint as well.
 An append-only streaming log of granular agent actions ("Searching the web…", "Read
 src/index.ts"), collapsing to a localized "Completed N steps" summary once the run is over. Entries
 never change state once added — a step whose status mutates in place belongs to `<lr-task-list>`
-instead. Implements the shared follow (stick-to-bottom) contract. At/above `virtualizeThreshold`
+instead. Implements the shared follow (stick-to-bottom) contract. At/above `virtualizeAt`
 entries, the body renders through an internal `<lr-virtual-list>` instead of a plain keyed list.
 
 **Properties:** `entries: ActivityEntry[] = []` (attribute: false) — `ActivityEntry { id: string;
@@ -1557,8 +1567,8 @@ retained as a name for it. An invalid `timestamp` string is treated as unset. `m
 => TemplateResult` (attribute: false) — overrides the default plain-text `entry-text` rendering with
 arbitrary rich content (e.g. rendered markdown, or markdown plus a trailing tool-call chip list),
 identically whether or not the feed is currently virtualized; fully replaces `[part="entry-text"]`
-rather than augmenting it, and `virtualizeThreshold: number = 200` (attribute
-`virtualize-threshold`).
+rather than augmenting it, and `virtualizeAt: number = 199` (attribute
+`virtualize-at`).
 
 **Events:** `lr-toggle` (`detail: { expanded }`, the header was activated) and
 `lr-follow-change` (`detail: { following }`, `follow` released or re-engaged).
@@ -1643,13 +1653,13 @@ a test. Derive the complete name with the exported
 `testResultDetailSlotName(suiteId, testId)` helper. Well-formed ids use `encodeURIComponent`
 segments; isolated UTF-16 surrogates, which that built-in rejects, use deterministic uppercase
 `%uXXXX` code-unit escapes. It renders after the plain `message` once expanded (for example, suite
-`unit` and test `same` use `slot="detail-unit:same"`). This canonical form distinguishes duplicate
-and delimiter-containing ids and wins when multiple forms are supplied. The prior
-`detail-{suiteId}-{testId}` form remains an unambiguous compatibility fallback; it is ignored when
-the same name could address multiple rows or collide with another row's canonical name. The older
-`detail-{testId}` form remains supported only while that test id is globally unique across all
-suites. Slot listeners remain mounted while detail is absent, so appending matching slotted
-content after the component's first render immediately enables the row's disclosure.
+`unit` and test `same` use `slot="detail-unit:same"`). This is the only detail slot the component
+reads, and exactly one is mounted per row. The legacy `detail-{suiteId}-{testId}` and
+`detail-{testId}` spellings were removed in 9.0.0 — content assigned to either is never slotted and
+never makes a row expandable; migrate by deriving the name with
+`testResultDetailSlotName(suiteId, testId)`. Slot listeners remain mounted while detail is absent,
+so appending matching slotted content after the component's first render immediately enables the
+row's disclosure.
 
 **Events:** `lr-test-select` (`detail: { suiteId: string; testId: string }`, a test row's name was
 activated), `lr-filter-change` (`detail: { statuses: TestStatus[] }` — the complete next filter set; the
@@ -1707,13 +1717,20 @@ genuine two-member subset of the library-wide `LyraVariant` vocabulary (spelled 
 it, so the two can never drift): a confirmation is either routine or destructive, and
 `brand`/`success`/`warning` have no meaning for a proposal awaiting a yes/no. The exported alias
 `ConfirmBarTone` is retained as a name for the same union. `compact: boolean = false`
-(reflected) — collapses the bar from a full card (bordered, padded, `display: block` surface) to a
-single inline row with no chrome of its own, for a confirmation that has to live inside an existing
-container: a table cell, a card's action row, a toolbar. The host becomes `inline-flex`, and the
-narrow-allocation `@container` treatment is switched off — a compact bar is *expected* to be narrow,
-so stretching the buttons to fill would be exactly wrong. Re-chrome it through the
-`--lr-confirm-bar-compact-*` properties below. Everything else is unchanged: the event shapes, the
-focus-to-`[part="status"]`-before-unmount contract, and `role="group"` with its heading label.
+(reflected) — collapses the bar from a stacked `display: block` card into a single tightly-padded
+inline row, for a confirmation that has to live inside an existing container: a table cell, a card's
+action row, a toolbar. The host becomes `inline-flex`, and the narrow-allocation `@container`
+treatment is switched off — a compact bar is *expected* to be narrow, so stretching the buttons to
+fill would be exactly wrong. It is a density knob only: the border, corner radius and background
+stay. Retune it through `--lr-confirm-bar-compact-padding`/`-gap`. Everything else is unchanged: the
+event shapes, the focus-to-`[part="status"]`-before-unmount contract, and `role="group"` with its
+heading label. `frame: LyraFrame = 'card'` (reflected) — `'card' | 'plain'`, imported from the
+library's shared container-frame vocabulary and behaving exactly as it does on `lr-agent-run`,
+`lr-commit-card`, `lr-result-card`, `lr-task-list`, `lr-terminal` and `lr-thinking-panel`:
+`'plain'` removes the border, background, padding and corner radius so a bar nested inside a
+container that already draws a border doesn't double it, and wins over `compact` when both are set.
+Before 9.0.0 `compact` alone did both jobs; a bar that relied on that now needs
+`compact frame="plain"`.
 `pending: 'approved' | 'denied' | null = null` (reflected) — which decision is awaiting host
 resolution while an `lr-approve`/`lr-deny` listener has called `preventDefault()` on the
 now-cancelable event; the pending button shows `loading`, the other is `disabled`. Set `.decision`
@@ -1735,16 +1752,17 @@ details/json-viewer wrapper, only rendered when `args` is defined), `footer`, `d
 `button` wrapper aliases), `status` (the decided-state text, always present in the DOM as a focus
 landing spot).
 
-**Themeable custom properties:** the `compact` presentation is deliberately chrome-less by default
-and re-chromed entirely through five properties, all scoped to `[part="base"]` while `compact`:
-`--lr-confirm-bar-compact-padding` (default `0`, any padding shorthand),
-`--lr-confirm-bar-compact-gap` (default `var(--lr-space-s)`, the gap between the row's items),
-`--lr-confirm-bar-compact-border` (default `none`, any `border` shorthand),
-`--lr-confirm-bar-compact-background` (default `transparent`) and
-`--lr-confirm-bar-compact-radius` (default `0` — only visible once the border or background is set).
-They are inline `var()` fallbacks at their point of use rather than `:host` declarations, so any of
-them can be set on the element *or on any ancestor*, which is what makes "give every compact confirm
-bar in this panel a hairline border" a one-rule change on the panel.
+**Themeable custom properties:** the `compact` density is retunable through two properties, both
+scoped to `[part="base"]` while `compact`: `--lr-confirm-bar-compact-padding` (default
+`var(--lr-space-s)`, any padding shorthand — overridden entirely by `frame="plain"`) and
+`--lr-confirm-bar-compact-gap` (default `var(--lr-space-s)`, the gap between the row's items). They
+are inline `var()` fallbacks at their point of use rather than `:host` declarations, so either can
+be set on the element *or on any ancestor*, which is what makes "tighten every compact confirm bar
+in this panel" a one-rule change on the panel. The chrome-removing
+`--lr-confirm-bar-compact-border`, `--lr-confirm-bar-compact-background` and
+`--lr-confirm-bar-compact-radius` properties were removed in 9.0.0 along with `compact`'s chrome
+behavior: chrome is now `frame`'s job, so keep the default `frame="card"` (and restyle via
+`::part(base)`) instead of re-chroming a chrome-less compact bar.
 
 Two further properties recolor the decided state: `--lr-confirm-bar-approved-color` (default
 `var(--lr-color-success)`) and `--lr-confirm-bar-denied-color` (default `var(--lr-color-danger)`) —

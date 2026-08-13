@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
+import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { AnchoredPopoverController } from '../../../internal/anchored-popover-controller.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -14,8 +15,8 @@ import {
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import { spellcheckFromAttributeConverter as spellcheckConverter } from '../../../internal/converters.js';
-import { attachLegacyNoopInternalsSafely } from '../../../internal/legacy-noop-internals.js';
 import {
+  attachInternalsSafely,
   getFormOwner,
   installCustomErrorProperty,
   isBarredFromValidation,
@@ -56,7 +57,7 @@ export interface LyraModelCatalogEntry {
 export type LyraModelCatalog = string[] | LyraModelCatalogEntry[];
 
 /** Direction reported by the free-text input's native selection APIs. */
-export type LyraModelSelectSelectionDirection = 'forward' | 'backward' | 'none';
+export type LyraModelSelectSelectionDirection = LyraSelectionDirection;
 
 /** A catalog row plus whether it's the synthetic "stale value" row — see `effectiveEntries`. */
 type DisplayEntry = DisplayCatalogEntry<LyraModelCatalogEntry>;
@@ -284,7 +285,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
 
   constructor() {
     super();
-    this.internals = attachLegacyNoopInternalsSafely(this);
+    this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, (init: { cancelable: true }) =>

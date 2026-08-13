@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraFrame } from '../../../internal/variants.js';
+import type { LyraTranscriptMode } from '../../../internal/shared-unions.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { finiteRange } from '../../../internal/numbers.js';
@@ -13,7 +14,9 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilli
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export type ThinkingPanelMode = 'live' | 'post-hoc';
+/** Whether the panel is streaming a run live or replaying a finished one -- the library's shared
+ *  transcript-mode vocabulary, identical to `<lr-activity-feed>`'s `ActivityFeedMode`. */
+export type ThinkingPanelMode = LyraTranscriptMode;
 
 /** Visual chrome for `<lr-thinking-panel>`'s root — the library's shared container-frame vocabulary. */
 export type ThinkingPanelAppearance = LyraFrame;

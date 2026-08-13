@@ -435,7 +435,7 @@ export type LyraActivityFeedReactProps = LyraReactElementProps<
   | 'renderText'
   | 'showTimestamps'
   | 'strings'
-  | 'virtualizeThreshold',
+  | 'virtualizeAt',
   LyraActivityFeedEventMap,
   | 'lr-follow-change'
   | 'lr-toggle',
@@ -443,7 +443,7 @@ export type LyraActivityFeedReactProps = LyraReactElementProps<
   | '--lr-activity-feed-max-height',
   {
     'show-timestamps'?: LyraActivityFeed['showTimestamps'];
-    'virtualize-threshold'?: LyraActivityFeed['virtualizeThreshold'];
+    'virtualize-at'?: LyraActivityFeed['virtualizeAt'];
   }
 >;
 
@@ -1041,7 +1041,6 @@ export type LyraBarChartReactProps = LyraReactElementProps<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
-  | 'horizontal'
   | 'indexAxis'
   | 'label'
   | 'labels'
@@ -1181,6 +1180,7 @@ export type LyraBreadcrumbItemReactProps = LyraReactElementProps<
   | 'current'
   | 'href'
   | 'locale'
+  | 'rel'
   | 'strings'
   | 'target',
   {},
@@ -1228,7 +1228,6 @@ export type LyraBubbleChartReactProps = LyraReactElementProps<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
-  | 'horizontal'
   | 'indexAxis'
   | 'label'
   | 'labels'
@@ -1327,6 +1326,7 @@ export type LyraButtonReactProps = LyraReactElementProps<
   | 'name'
   | 'outline'
   | 'pill'
+  | 'rel'
   | 'required'
   | 'size'
   | 'strings'
@@ -1391,7 +1391,6 @@ export type LyraButtonReactProps = LyraReactElementProps<
     'formmethod'?: LyraButton['formMethod'];
     'formnovalidate'?: LyraButton['formNoValidate'];
     'formtarget'?: LyraButton['formTarget'];
-    'rel'?: LyraUnknownAttributeValue;
     'with-caret'?: LyraButton['withCaret'];
     'with-end'?: LyraButton['withEnd'];
     'with-start'?: LyraButton['withStart'];
@@ -1589,7 +1588,6 @@ export type LyraChartReactProps = LyraReactElementProps<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
-  | 'horizontal'
   | 'indexAxis'
   | 'label'
   | 'labels'
@@ -2411,6 +2409,7 @@ export type LyraConfirmBarReactProps = LyraReactElementProps<
   | 'args'
   | 'compact'
   | 'decision'
+  | 'frame'
   | 'heading'
   | 'locale'
   | 'pending'
@@ -2421,11 +2420,8 @@ export type LyraConfirmBarReactProps = LyraReactElementProps<
   | 'lr-approve'
   | 'lr-deny',
   | '--lr-confirm-bar-approved-color'
-  | '--lr-confirm-bar-compact-background'
-  | '--lr-confirm-bar-compact-border'
   | '--lr-confirm-bar-compact-gap'
   | '--lr-confirm-bar-compact-padding'
-  | '--lr-confirm-bar-compact-radius'
   | '--lr-confirm-bar-denied-color',
   {
     'tool-name'?: LyraConfirmBar['toolName'];
@@ -3132,7 +3128,7 @@ export type LyraDocumentPreviewReactProps = LyraReactElementProps<
   LyraDocumentPreview,
   | 'activeHighlightId'
   | 'alt'
-  | 'errorMessage'
+  | 'errorText'
   | 'filename'
   | 'highlights'
   | 'locale'
@@ -3159,7 +3155,7 @@ export type LyraDocumentPreviewReactProps = LyraReactElementProps<
   | '--lr-document-preview-spin-duration',
   {
     'active-highlight-id'?: LyraDocumentPreview['activeHighlightId'];
-    'error-message'?: LyraDocumentPreview['errorMessage'];
+    'error-text'?: LyraDocumentPreview['errorText'];
     'max-height'?: LyraDocumentPreview['maxHeight'];
     'mime-type'?: LyraDocumentPreview['mimeType'];
   }
@@ -3229,7 +3225,6 @@ export type LyraDoughnutChartReactProps = LyraReactElementProps<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
-  | 'horizontal'
   | 'indexAxis'
   | 'label'
   | 'labels'
@@ -3458,7 +3453,6 @@ export type LyraDropdownItemReactProps = LyraReactElementProps<
 
 export type LyraEbookViewerReactProps = LyraReactElementProps<
   LyraEbookViewer,
-  | 'accessibleLabel'
   | 'locale'
   | 'location'
   | 'maxHeight'
@@ -3474,7 +3468,7 @@ export type LyraEbookViewerReactProps = LyraReactElementProps<
   | 'lr-text-select',
   | '--lr-ebook-viewer-max-height',
   {
-    'aria-label'?: LyraEbookViewer['accessibleLabel'];
+    'aria-label'?: LyraUnknownAttributeValue;
     'max-height'?: LyraEbookViewer['maxHeight'];
   }
 >;
@@ -3949,7 +3943,6 @@ export type LyraFlowCanvasReactProps = LyraReactElementProps<
   | '--lr-flow-canvas-march-duration'
   | '--lr-flow-canvas-node-connect-invalid-outline-color'
   | '--lr-flow-canvas-node-connect-target-outline-color'
-  | '--lr-flow-canvas-node-current-outline-color'
   | '--lr-flow-canvas-node-hover-outline-color'
   | '--lr-flow-canvas-node-selected-outline-color',
   {
@@ -4435,7 +4428,6 @@ export type LyraHistogramReactProps = LyraReactElementProps<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
-  | 'horizontal'
   | 'indexAxis'
   | 'label'
   | 'labels'
@@ -4746,13 +4738,13 @@ export type LyraIngestionQueueReactProps = LyraReactElementProps<
   | 'label'
   | 'locale'
   | 'strings'
-  | 'virtualizeThreshold',
+  | 'virtualizeAt',
   LyraIngestionQueueEventMap,
   | 'lr-cancel'
   | 'lr-retry',
   | '--lr-ingestion-queue-max-height',
   {
-    'virtualize-threshold'?: LyraIngestionQueue['virtualizeThreshold'];
+    'virtualize-at'?: LyraIngestionQueue['virtualizeAt'];
   }
 >;
 
@@ -4921,10 +4913,10 @@ export type LyraKnowledgeBaseReactProps = LyraReactElementProps<
   | 'sources'
   | 'strings',
   LyraKnowledgeBaseEventMap,
-  | 'lr-kb-create'
-  | 'lr-kb-delete'
-  | 'lr-kb-pause'
-  | 'lr-kb-sync',
+  | 'lr-source-create'
+  | 'lr-source-delete'
+  | 'lr-source-pause'
+  | 'lr-source-sync',
 never,
   {
     'hide-create'?: LyraKnowledgeBase['hideCreate'];
@@ -5102,7 +5094,6 @@ export type LyraLineChartReactProps = LyraReactElementProps<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
-  | 'horizontal'
   | 'indexAxis'
   | 'label'
   | 'labels'
@@ -5629,7 +5620,6 @@ export type LyraMessagePartsReactProps = LyraReactElementProps<
   | 'lr-text-select'
   | 'lr-toggle'
   | 'lr-tool-call-chip-select'
-  | 'lr-tool-chip-select'
   | 'lr-widget-action'
   | 'lr-widget-state-change',
   | '--lr-message-parts-audio-transcript-color'
@@ -6422,7 +6412,6 @@ export type LyraPieChartReactProps = LyraReactElementProps<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
-  | 'horizontal'
   | 'indexAxis'
   | 'label'
   | 'labels'
@@ -6537,7 +6526,6 @@ export type LyraPolarAreaChartReactProps = LyraReactElementProps<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
-  | 'horizontal'
   | 'indexAxis'
   | 'label'
   | 'labels'
@@ -7035,7 +7023,6 @@ export type LyraRadarChartReactProps = LyraReactElementProps<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
-  | 'horizontal'
   | 'indexAxis'
   | 'label'
   | 'labels'
@@ -7257,7 +7244,7 @@ export type LyraRagAnswerReactProps = LyraReactElementProps<
   | 'answer'
   | 'assessment'
   | 'citations'
-  | 'error'
+  | 'errorText'
   | 'label'
   | 'loading'
   | 'locale'
@@ -7272,6 +7259,7 @@ export type LyraRagAnswerReactProps = LyraReactElementProps<
 never,
   {
     'aria-label'?: LyraRagAnswer['accessibleLabel'];
+    'error-text'?: LyraRagAnswer['errorText'];
     'show-claims'?: LyraRagAnswer['showClaims'];
     'show-sources'?: LyraRagAnswer['showSources'];
   }
@@ -7535,7 +7523,7 @@ export type LyraRetrievalResultsReactProps = LyraReactElementProps<
   | 'activeId'
   | 'chunks'
   | 'dedupe'
-  | 'error'
+  | 'errorText'
   | 'groupBy'
   | 'grouping'
   | 'groupLabel'
@@ -7558,6 +7546,7 @@ export type LyraRetrievalResultsReactProps = LyraReactElementProps<
   | '--lr-retrieval-results-selected-border',
   {
     'active-id'?: LyraRetrievalResults['activeId'];
+    'error-text'?: LyraRetrievalResults['errorText'];
     'has-more'?: LyraRetrievalResults['hasMore'];
     'virtualize-at'?: LyraRetrievalResults['virtualizeAt'];
   }
@@ -7668,7 +7657,6 @@ export type LyraScatterChartReactProps = LyraReactElementProps<
   | 'grid'
   | 'height'
   | 'hiddenDatasets'
-  | 'horizontal'
   | 'indexAxis'
   | 'label'
   | 'labels'
@@ -7940,7 +7928,6 @@ export type LyraSequenceStripReactProps = LyraReactElementProps<
   | 'items'
   | 'locale'
   | 'markerLabel'
-  | 'orientation'
   | 'showLegend'
   | 'strings',
   {},
@@ -8298,6 +8285,7 @@ export type LyraSpreadsheetViewerReactProps = LyraReactElementProps<
 export type LyraStackTraceReactProps = LyraReactElementProps<
   LyraStackTrace,
   | 'collapseInternal'
+  | 'compact'
   | 'copyable'
   | 'frame'
   | 'internalPatterns'
@@ -8308,6 +8296,8 @@ export type LyraStackTraceReactProps = LyraReactElementProps<
   LyraStackTraceEventMap,
   | 'lr-copy'
   | 'lr-frame-select',
+  | '--lr-stack-trace-compact-gap'
+  | '--lr-stack-trace-compact-padding'
   | '--lr-stack-trace-font'
   | '--lr-stack-trace-interactive-color'
   | '--lr-stack-trace-internal-frame-color'
@@ -9351,8 +9341,7 @@ export type LyraToolCallChipReactProps = LyraReactElementProps<
   | 'strings'
   | 'summary',
   LyraToolCallChipEventMap,
-  | 'lr-tool-call-chip-select'
-  | 'lr-tool-chip-select',
+  | 'lr-tool-call-chip-select',
   | '--lr-tool-call-chip-accent'
   | '--lr-tool-call-chip-bg'
   | '--lr-tool-call-chip-border'
@@ -9727,7 +9716,7 @@ never,
 
 export type LyraUsageBadgeReactProps = LyraReactElementProps<
   LyraUsageBadge,
-  | 'compact'
+  | 'abbreviate'
   | 'costText'
   | 'formatLatency'
   | 'latencyMs'

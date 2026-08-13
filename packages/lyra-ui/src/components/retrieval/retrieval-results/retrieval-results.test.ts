@@ -51,7 +51,7 @@ function clickCheckbox(checkbox: LyraCheckbox): void {
   (checkbox.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click();
 }
 
-it('defaults to empty chunks/selectedIds, selectable, dedupe, sort="score", grouping="none", presentation="expanded", virtualizeAt=50, loading=false, hasMore=false, error=""', async () => {
+it('defaults to empty chunks/selectedIds, selectable, dedupe, sort="score", grouping="none", presentation="expanded", virtualizeAt=50, loading=false, hasMore=false, errorText=""', async () => {
   const el = (await fixture(html`<lr-retrieval-results></lr-retrieval-results>`)) as LyraRetrievalResults;
   expect(el.chunks).to.deep.equal([]);
   expect(el.selectedIds).to.deep.equal([]);
@@ -63,7 +63,7 @@ it('defaults to empty chunks/selectedIds, selectable, dedupe, sort="score", grou
   expect(el.virtualizeAt).to.equal(50);
   expect(el.loading).to.be.false;
   expect(el.hasMore).to.be.false;
-  expect(el.error).to.equal('');
+  expect(el.errorText).to.equal('');
 });
 
 it('shows chunkInspectorEmpty when chunks is empty and not loading', async () => {
@@ -100,7 +100,7 @@ it('keeps the initial-load spinner semantic owner named after late host aria-lab
 
 it('renders a neutral error message and announces only later errors from light DOM', async () => {
   const el = (await fixture(
-    html`<lr-retrieval-results error="Retrieval failed" .chunks=${chunks}></lr-retrieval-results>`,
+    html`<lr-retrieval-results error-text="Retrieval failed" .chunks=${chunks}></lr-retrieval-results>`,
   )) as LyraRetrievalResults;
   await el.updateComplete;
   const alert = el.shadowRoot!.querySelector('[part="error"]')!;
@@ -110,7 +110,7 @@ it('renders a neutral error message and announces only later errors from light D
   const sink = () => document.querySelector('[data-lr-live-region="assertive"]')!;
   expect(sink().children.length, 'initial content is not replayed as an announcement').to.equal(0);
 
-  el.error = 'A newer failure';
+  el.errorText = 'A newer failure';
   await el.updateComplete;
   expect(sink().lastElementChild?.textContent).to.equal('A newer failure');
 
@@ -119,6 +119,22 @@ it('renders a neutral error message and announces only later errors from light D
   parent.append(el);
   await el.updateComplete;
   expect(sink().children.length, 'reconnect does not replay the current error').to.equal(0);
+});
+
+// 9.0.0 renamed `error` -> `errorText`/`error-text`, matching the sibling `<lr-retrieval-search>`
+// (and the 25 other components that already spell this member that way).
+it('exposes caller-supplied failure text only as errorText; the removed `error` spelling is inert', async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-results error="Legacy failure" .chunks=${chunks}></lr-retrieval-results>`,
+  )) as LyraRetrievalResults;
+  await el.updateComplete;
+  expect('error' in el).to.equal(false);
+  expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
+  expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.be.greaterThan(0);
+
+  el.errorText = 'Current failure';
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.include('Current failure');
 });
 
 it('renders one row per chunk (unsorted input), sorted descending by score by default', async () => {
@@ -623,7 +639,7 @@ it('moves focus to the stable base when a controlled transition removes every re
   const firstCheckbox = flatRows(el)[0]!.querySelector('lr-checkbox') as LyraCheckbox;
   firstCheckbox.focus();
 
-  el.error = 'Unavailable';
+  el.errorText = 'Unavailable';
   await el.updateComplete;
   await nextFrame();
 

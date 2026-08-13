@@ -1,10 +1,9 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import {
-  composedParentElement,
-  isAccessibilitySubtreeExcluded,
-  isAccessibilityVisibilityHidden,
-} from '../../../internal/a11y.js';
+  bindAccessibleTextObserver,
+  composedAccessibleVisibleText,
+} from '../../../internal/accessibility-visibility.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { closeIcon } from '../../../internal/icons.js';
 import type { LyraSizeStep, LyraVariant } from '../../../internal/variants.js';
@@ -234,37 +233,11 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     else this.seedFirstRenderState(sampleBrowserState);
   }
 
-  private observeLabelNode(node: Node): void {
-    if (!this.labelObserver) return;
-    if (node.nodeType === 3) {
-      this.labelObserver.observe(node, { characterData: true });
-      return;
-    }
-    if (node.nodeType !== 1) return;
-    this.labelObserver.observe(node, {
-      attributes: true,
-      attributeFilter: ['aria-hidden', 'aria-label', 'class', 'hidden', 'inert', 'slot', 'style'],
-      childList: true,
-      characterData: true,
-      subtree: true,
-    });
-  }
-
+  // `'slot'` widens the shared content-node filter: only the default slot's content names this
+  // chip's actions, so a light-DOM child moving to or from the decorative `icon`/`end` slots
+  // changes the name.
   private bindLabelObserverTargets(): void {
-    if (!this.labelObserver) return;
-    this.labelObserver.disconnect();
-    this.observeLabelNode(this);
-    let ancestor = composedParentElement(this);
-    while (ancestor) {
-      this.labelObserver.observe(ancestor, {
-        attributes: true,
-        attributeFilter: ['aria-hidden', 'class', 'hidden', 'inert', 'style'],
-      });
-      ancestor = composedParentElement(ancestor);
-    }
-    for (const slot of this.querySelectorAll<HTMLSlotElement>('slot')) {
-      for (const assigned of slot.assignedNodes({ flatten: true })) this.observeLabelNode(assigned);
-    }
+    bindAccessibleTextObserver(this.labelObserver, this, ['slot']);
   }
 
   override disconnectedCallback(): void {
@@ -294,32 +267,15 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     this.hasEndSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
-  // Only the default slot's own content counts toward the remove button's
-  // accessible name — text incidentally living inside the (decorative)
-  // `icon` slot shouldn't leak into "Remove {text}". Restricting to Text and
-  // Element nodes also excludes Comment nodes: when a consumer interpolates
-  // the label via a lit-html expression (`html\`<lr-chip>${label}</lr-chip>\``,
-  // the ordinary way a data-driven label gets bound) rather than a static
-  // string, lit-html inserts a marker Comment node alongside the Text node in
-  // the light DOM. That comment's own (non-empty) data is internal
-  // bookkeeping, not label content, so it must never reach `textContent`.
-  private accessibleLabelText(node: Node): string {
-    if (node.nodeType === 3) return node.textContent ?? '';
-    if (node.nodeType !== 1) return '';
-    const element = node as Element;
-    if (isAccessibilitySubtreeExcluded(element)) return '';
-    const visibilityHidden = isAccessibilityVisibilityHidden(element);
-    const accessibleLabel = visibilityHidden ? null : element.getAttribute('aria-label');
-    if (accessibleLabel?.trim()) return accessibleLabel;
-    const childNodes =
-      element.localName === 'slot' && (element as HTMLSlotElement).assignedNodes().length > 0
-        ? (element as HTMLSlotElement).assignedNodes({ flatten: true })
-        : element.childNodes;
-    return Array.from(childNodes, (child) =>
-      child.nodeType === 3 && visibilityHidden ? '' : this.accessibleLabelText(child),
-    ).join(' ');
-  }
-
+  // Only the default slot's own content counts toward the remove/toggle button's accessible name --
+  // text incidentally living inside the (decorative) `icon`/`end` slots shouldn't leak into
+  // "Remove {text}", which is what the node selection below is for. The extraction itself is the
+  // library's shared `composedAccessibleVisibleText()`: it walks slots, honors hidden/inert/
+  // `aria-hidden`/CSS-hidden branches, and counts only Text and Element nodes. That last part
+  // matters here: when a consumer interpolates the label via a lit-html expression
+  // (`html\`<lr-chip>${label}</lr-chip>\``, the ordinary way a data-driven label gets bound) rather
+  // than a static string, lit-html inserts a marker Comment node alongside the Text node in the
+  // light DOM, and that comment's own (non-empty) data is internal bookkeeping, not label content.
   private computeLabelText(): string {
     const renderRoot = this.renderRoot as ParentNode | undefined;
     const slot = renderRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
@@ -330,7 +286,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
           (node) => node.nodeType !== 1 || ((node as Element).getAttribute('slot') ?? '') === '',
         );
     return nodes
-      .map((node) => this.accessibleLabelText(node))
+      .map(composedAccessibleVisibleText)
       .join(' ')
       .replace(/\s+/g, ' ')
       .trim();

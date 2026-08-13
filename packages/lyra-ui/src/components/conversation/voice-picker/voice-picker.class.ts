@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
+import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { AnchoredPopoverController } from '../../../internal/anchored-popover-controller.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -65,7 +66,7 @@ export type LyraVoiceCatalog = string[] | LyraVoiceCatalogEntry[];
 export type LyraVoicePickerSize = LyraSizeStep;
 
 /** Direction reported by the free-text input's native selection APIs. */
-export type LyraVoicePickerSelectionDirection = 'forward' | 'backward' | 'none';
+export type LyraVoicePickerSelectionDirection = LyraSelectionDirection;
 
 /** A catalog row plus whether it's the synthetic "stale value" row — see `effectiveEntries`. */
 type DisplayEntry = DisplayCatalogEntry<LyraVoiceCatalogEntry>;

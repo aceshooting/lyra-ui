@@ -100,12 +100,10 @@ export interface LyraTestResultsEventMap {
  * @event lr-toggle - `detail: { id, suiteId?, expanded }` — a row's failure detail was
  *   expanded/collapsed. `suiteId` is included when the test id is not globally unique.
  * @slot detail-{encodedSuiteId}:{encodedTestId} - Collision-free suite-scoped rich detail for a
- *   test. Derive it with `testResultDetailSlotName(suiteId, testId)`; this form takes precedence
- *   over legacy slots.
- * @slot detail-{suiteId}-{testId} - Legacy suite-scoped detail, supported only when its name maps
- *   unambiguously to one suite/test pair and does not collide with another pair's canonical name.
- * @slot detail-{testId} - Legacy rich detail for a test whose id is globally unique across all
- *   suites.
+ *   test, and the only detail slot this component reads. Derive it with
+ *   `testResultDetailSlotName(suiteId, testId)` rather than assembling it by hand. The legacy
+ *   `detail-{suiteId}-{testId}` and `detail-{testId}` spellings were removed in 9.0.0; content
+ *   assigned to either is simply never slotted.
  * @csspart base - The root wrapper; carries `role="group"`. Its `aria-label` defaults to the
  *   localized "Test results", but a host `aria-label` on `<lr-test-results>` itself wins over
  *   that default.
@@ -121,8 +119,7 @@ export interface LyraTestResultsEventMap {
  * @csspart test-name - The activatable test-name button.
  * @csspart test-duration - The duration text.
  * @csspart test-expand-toggle - The expand/collapse button for a row's failure detail. Rendered
- *   for any failed test, or any test with suite-scoped detail content (or the eligible globally
- *   unique legacy `detail-{testId}` form).
+ *   for any failed test, or any test with canonical suite-scoped detail content.
  * @csspart failure - The failure-detail wrapper; hidden while collapsed.
  * @csspart failure-message - The failure's plain message text.
  * @cssprop [--lr-test-results-filter-active-bg=var(--lr-color-brand-quiet)] - Background of a pressed
@@ -194,14 +191,12 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   /** Text queued by `willUpdate` for the completion announcement, flushed once the live region
    *  has rendered (it may not exist yet on the very first update). */
   private pendingCompletionAnnouncement: string | null = null;
-  /** All canonical and compatibility slot names mapped to the row identities that could consume
-   *  them. Rebuilt once per render so an ambiguous legacy name is never mounted on two rows (or
-   *  allowed to steal another row's canonical content). */
-  private detailSlotOwners = new Map<string, Set<string>>();
 
-  /** test.id -> number of rows across all suites sharing that id. Rebuilt alongside
-   *  `detailSlotOwners` in `rebuildDetailSlotOwners()` so `isGloballyUniqueTestId()` is an O(1)
-   *  lookup instead of a nested per-call rescan of every suite/test. */
+  /** test.id -> number of rows across all suites sharing that id. Rebuilt once per render by
+   *  `rebuildTestIdCounts()` so `isGloballyUniqueTestId()` -- which decides whether `lr-toggle`
+   *  carries a disambiguating `suiteId` -- is an O(1) lookup instead of a nested per-call rescan
+   *  of every suite/test. Detail slots no longer consult it: the canonical
+   *  `testResultDetailSlotName()` form is collision-free by construction. */
   private testIdCounts = new Map<string, number>();
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -252,36 +247,12 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     return testResultDetailSlotName(suiteId, testId);
   }
 
-  private legacyScopedDetailSlot(suiteId: string, testId: string): string {
-    return `detail-${suiteId}-${testId}`;
-  }
-
-  private rebuildDetailSlotOwners(): void {
-    const rows = this.suites.flatMap((suite) =>
-      suite.tests.map((test) => ({ suiteId: suite.id, testId: test.id })),
-    );
+  private rebuildTestIdCounts(): void {
     const testIdCounts = new Map<string, number>();
-    for (const { testId } of rows) testIdCounts.set(testId, (testIdCounts.get(testId) ?? 0) + 1);
-    this.testIdCounts = testIdCounts;
-
-    const owners = new Map<string, Set<string>>();
-    const add = (name: string, owner: string): void => {
-      const existing = owners.get(name) ?? new Set<string>();
-      existing.add(owner);
-      owners.set(name, existing);
-    };
-    for (const { suiteId, testId } of rows) {
-      const owner = this.testKey(suiteId, testId);
-      add(this.scopedDetailSlot(suiteId, testId), owner);
-      add(this.legacyScopedDetailSlot(suiteId, testId), owner);
-      if (testIdCounts.get(testId) === 1) add(`detail-${testId}`, owner);
+    for (const suite of this.suites) {
+      for (const test of suite.tests) testIdCounts.set(test.id, (testIdCounts.get(test.id) ?? 0) + 1);
     }
-    this.detailSlotOwners = owners;
-  }
-
-  private unambiguousLegacySlot(name: string, suiteId: string, testId: string): string | null {
-    const owners = this.detailSlotOwners.get(name);
-    return owners?.size === 1 && owners.has(this.testKey(suiteId, testId)) ? name : null;
+    this.testIdCounts = testIdCounts;
   }
 
   private isGloballyUniqueTestId(testId: string): boolean {
@@ -293,23 +264,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   }
 
   private hasDetail(suiteId: string, testId: string): boolean {
-    const scopedSlot = this.scopedDetailSlot(suiteId, testId);
-    const legacyScopedSlot = this.unambiguousLegacySlot(
-      this.legacyScopedDetailSlot(suiteId, testId),
-      suiteId,
-      testId,
-    );
-    const legacyTestSlot = this.isGloballyUniqueTestId(testId)
-      ? this.unambiguousLegacySlot(`detail-${testId}`, suiteId, testId)
-      : null;
-    return (
-      this.hasSlottedChild(scopedSlot) ||
-      (legacyScopedSlot !== null && legacyScopedSlot !== scopedSlot && this.hasSlottedChild(legacyScopedSlot)) ||
-      (legacyTestSlot !== null &&
-        legacyTestSlot !== scopedSlot &&
-        legacyTestSlot !== legacyScopedSlot &&
-        this.hasSlottedChild(legacyTestSlot))
-    );
+    return this.hasSlottedChild(this.scopedDetailSlot(suiteId, testId));
   }
 
   private isExpanded(suiteId: string, test: TestCaseResult): boolean {
@@ -388,21 +343,6 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     // across suites or contain characters that aren't valid in an HTML id.
     const expanded = this.isExpanded(suiteId, test);
     const scopedSlot = this.scopedDetailSlot(suiteId, test.id);
-    const scopedDetail = this.hasSlottedChild(scopedSlot);
-    const legacyScopedCandidate = this.legacyScopedDetailSlot(suiteId, test.id);
-    const legacyScopedSlot =
-      legacyScopedCandidate === scopedSlot
-        ? null
-        : this.unambiguousLegacySlot(legacyScopedCandidate, suiteId, test.id);
-    const legacyScopedDetail =
-      legacyScopedSlot !== null && this.hasSlottedChild(legacyScopedSlot);
-    const legacyTestCandidate = `detail-${test.id}`;
-    const legacyTestSlot =
-      this.isGloballyUniqueTestId(test.id) &&
-      legacyTestCandidate !== scopedSlot &&
-      legacyTestCandidate !== legacyScopedSlot
-        ? this.unambiguousLegacySlot(legacyTestCandidate, suiteId, test.id)
-        : null;
     const canExpand = test.status === 'failed' || this.hasDetail(suiteId, test.id);
     const domKey = `${suiteIndex}-${testIndex}`;
     const failureId = `${this.idPrefix}-${domKey}-failure`;
@@ -448,20 +388,6 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
         <div part="failure" id=${failureId} ?hidden=${!canExpand || !expanded}>
           ${test.message ? html`<div part="failure-message">${test.message}</div>` : nothing}
           <slot name=${scopedSlot} @slotchange=${this.onDetailSlotChange}></slot>
-          ${legacyScopedSlot
-            ? html`<slot
-                name=${legacyScopedSlot}
-                ?hidden=${scopedDetail}
-                @slotchange=${this.onDetailSlotChange}
-              ></slot>`
-            : nothing}
-          ${legacyTestSlot
-            ? html`<slot
-                name=${legacyTestSlot}
-                ?hidden=${scopedDetail || legacyScopedDetail}
-                @slotchange=${this.onDetailSlotChange}
-              ></slot>`
-            : nothing}
         </div>
       </div>
     `;
@@ -484,7 +410,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   }
 
   override render(): TemplateResult {
-    this.rebuildDetailSlotOwners();
+    this.rebuildTestIdCounts();
     const ariaLabel = this.getAttribute('aria-label') || this.localize('testResultsLabel');
     return html`
       ${this.suites.length === 0

@@ -30,11 +30,26 @@ it('rejects declaration-breaking and url category paint values', async () => {
   );
 });
 
-it('defaults to empty items/categories and orientation horizontal', async () => {
+it('defaults to empty items/categories', async () => {
   const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
   expect(el.items).to.deep.equal([]);
   expect(el.categories).to.deep.equal([]);
-  expect(el.orientation).to.equal('horizontal');
+});
+
+it('exposes no `orientation` property or attribute (removed in 9.0.0)', async () => {
+  // The single-member `'horizontal'` union was read by nothing -- neither the template nor the
+  // stylesheet ever mentioned it -- so the reflected attribute styled nothing either.
+  const el = (await fixture(
+    html`<lr-sequence-strip orientation="vertical"></lr-sequence-strip>`,
+  )) as LyraSequenceStrip;
+  el.items = items;
+  el.categories = categories;
+  await el.updateComplete;
+  expect('orientation' in el).to.equal(false);
+  // A stray authored attribute is inert: it neither reflects back nor changes the rendered strip.
+  expect(el.getAttribute('orientation')).to.equal('vertical');
+  const strip = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(strip).flexDirection).to.equal('row');
 });
 
 it('renders one cell per item, colored by its category', async () => {

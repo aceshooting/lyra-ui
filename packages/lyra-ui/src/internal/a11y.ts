@@ -65,7 +65,13 @@ export function resolveAccessibleTrigger(trigger: HTMLElement): HTMLElement {
  * physical width/height/margin, matching every component stylesheet in the library -- this module
  * is shared by dozens of components, so an untokenized copy here would exempt all of them at once
  * from the token scale -- and no automated gate would notice, since check-style-policy.mjs only
- * walks component-level `.styles.ts` files and never this directory. */
+ * walks component-level `.styles.ts` files and never this directory.
+ *
+ * Clipping uses `clip-path: inset(50%)`, not the deprecated `clip: rect(0 0 0 0)` shorthand --
+ * matching `styles/utilities.css`'s `.lr-visually-hidden` and every component stylesheet that
+ * ships its own copy. Two consequences worth knowing: a consumer that reveals a `.sr-only`
+ * element on focus resets `clip-path: none` rather than `clip: auto`, and `clip-path` (unlike
+ * `clip`) establishes a containing block for absolutely-positioned descendants. */
 export const srOnly = css`
   .sr-only {
     position: absolute;
@@ -75,7 +81,7 @@ export const srOnly = css`
     margin-inline: calc(-1 * var(--lr-size-1px));
     margin-block: calc(-1 * var(--lr-size-1px));
     overflow: hidden;
-    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
     white-space: nowrap;
     border: 0;
   }

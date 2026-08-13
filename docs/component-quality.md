@@ -331,7 +331,7 @@ complete enrolled set. Axe is not assistive-technology testing.
 | [`lr-widget`](component-integration.md#lr-widget) | stable | automated | source signal | source signal | source signal | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
 | [`lr-widget-renderer`](component-integration.md#lr-widget-renderer) | stable | automated | N/A | source signal | N/A | source signal | configured CI | render-and-hydrate | not enrolled | not recorded | source signal | not enrolled | not verified |
 | [`lr-word-cloud`](component-integration.md#lr-word-cloud) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | client-render | pending human | N/A | N/A | not enrolled | not verified |
-| [`lr-xml-viewer`](component-integration.md#lr-xml-viewer) | stable | automated | not recorded | not recorded | not recorded | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | source signal | not enrolled | not verified |
+| [`lr-xml-viewer`](component-integration.md#lr-xml-viewer) | stable | automated | not recorded | not recorded | source signal | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | source signal | not enrolled | not verified |
 | [`lr-zoomable-frame`](component-integration.md#lr-zoomable-frame) | stable | automated | source signal | not recorded | N/A | source signal | configured CI | render-and-hydrate | not enrolled | N/A | source signal | not enrolled | not verified |
 
 ## Evidence interpretation

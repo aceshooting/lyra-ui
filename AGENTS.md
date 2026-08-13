@@ -35,7 +35,7 @@ several Web Awesome **Pro** components plus original extras. Positioning, non-ne
 
 ## Monorepo layout
 
-pnpm workspace (`pnpm-workspace.yaml`: `packages/*`), Node ≥ 20, `pnpm@11.20.0`.
+pnpm workspace (`pnpm-workspace.yaml`: `packages/*`), Node ≥ 20, `pnpm@11.21.0`.
 
 ```
 lyra-ui/                          (repo root — this file lives here)
@@ -153,8 +153,14 @@ Full rules, incidents, and patterns:
   types, never a real TS `enum` — `enum` is nominal (breaks `el.prop = 'value'`) and ships a
   runtime object against the tree-shaking budget; extract a repeated inline union to a named type.
 - Interactive elements carrying `part=` get a `--lr-icon-button-size` min hit-area floor.
-- Never a settable `rel` independent of `target` — derive `rel="noopener noreferrer"` from
-  `target` (reverse-tabnabbing vector otherwise).
+- `rel` is settable, but the `target`-derived guard is not removable: merge author tokens, always
+  strip `opener`, and force-add `noopener noreferrer` whenever `target` is set (reverse-tabnabbing
+  vector otherwise). Never let `target` alone produce an anchor with no guard. The former rule —
+  "never a settable `rel`" — over-fired: it also refused a same-tab link, which opens no new
+  browsing context and needs no guard, while silently dropping every `nofollow`/`me`/`license` a
+  migrating `wa-*`/`sl-*` consumer wrote. `button.class.ts`/`breadcrumb-item.class.ts`'s
+  `resolvedRel` getters are the reference implementation; `app-rail-item.class.ts` still uses the
+  simpler derive-only shape, which remains correct for a control with no author `rel`.
 - Resolve colors through `getComputedStyle` before `ctx.fillStyle`/`strokeStyle` — canvas
   silently ignores unparseable strings.
 - Resolve token units live (`rem` → root `fontSize`, `em` → own); never hardcode `* 16`.
@@ -316,6 +322,17 @@ Full rules and incident write-ups: **[docs/agents/testing.md](docs/agents/testin
 
 - `wtr` + Playwright Chromium + `@open-wc/testing`; TDD failing-test-first; colocated
   `<name>.test.ts`; `pnpm test` / `pnpm test:watch`.
+- **The local gate is Chromium-only and cannot see a contract that is absent on another engine.**
+  Run `WTR_BROWSER=firefox|webkit pnpm exec wtr --files <path>` for anything touching an `<iframe>`,
+  a re-emitted non-composed native event, or pointer/`:active` state — a full local single-engine
+  sweep also catches what CI's *sharding* hides.
+- **Reading a pointer-driven `:hover`/`:active` state, or a transitioning paint, straight after
+  `sendMouse` is racy per engine.** Poll with `waitUntil` and/or zero `--lr-transition-fast` on the
+  fixture. Three separate tests here have been fixed for exactly this.
+- **Regenerate component-quality after ANY change under `src/`, test files included** — rebuild,
+  then `node scripts/generate-component-quality.mjs --write --measure-gzip`. It measures built gzip
+  size *and* per-component test quality, and a byte-identical `pnpm manifest` is not evidence it is
+  clean.
 - Set up `oneEvent()` BEFORE the dispatch that triggers it, or the test hangs.
 - Axe-check every component against its own tag AND in populated/open states — the coverage
   gate's substring check proves neither.

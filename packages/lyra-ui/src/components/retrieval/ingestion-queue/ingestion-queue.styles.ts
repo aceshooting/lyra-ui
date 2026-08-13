@@ -35,7 +35,7 @@ export const styles = css`
     --lr-virtual-list-height: var(--lr-size-24rem);
   }
   /* [part='item'] and its descendants below also target lr-virtual-list::part(x): above
-     virtualize-threshold, itemTemplate()'s return value is <lr-virtual-list>'s .renderItem, and
+     virtualize-at, itemTemplate()'s return value is <lr-virtual-list>'s .renderItem, and
      Lit commits that content wherever virtual-list's own render() is currently updating --
      i.e. inside *its* shadow root, not this component's. A plain [part=] selector here, scoped
      to this component's own shadow root, would never match a node living in that different

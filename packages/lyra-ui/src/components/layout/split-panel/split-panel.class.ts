@@ -29,10 +29,9 @@ export interface SnapFunctionParams {
 }
 
 export type SnapFunction = (options: SnapFunctionParams) => number;
-/** Lyra-specific aliases for consumers that prefer component-qualified type names. */
+/** Component-qualified alias of `SnapFunction`, for consumers that prefer the longer name. The
+ *  parameter object keeps its single canonical name, `SnapFunctionParams`. */
 export type SplitPanelSnapFunction = SnapFunction;
-export type SplitPanelSnapFunctionOptions = SnapFunctionParams;
-export type SplitPanelSnapFunctionParams = SnapFunctionParams;
 
 /** A proposed user-driven divider position, normalized after constraints and snapping. */
 export interface SplitPanelRepositionDetail {
@@ -775,7 +774,6 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
       <div
         part="base split-panel"
         data-orientation=${orientation}
-        data-primary=${this.primary ?? 'start'}
         style=${`--_lr-split-panel-start-position: ${startPosition}%`}
       >
         <div part="start panel"><slot name="start"></slot></div>

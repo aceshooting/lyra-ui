@@ -13,14 +13,12 @@ import type {
   MarkedExtension,
 } from '../src/components/conversation/markdown/markdown-loader.js';
 import { DocumentAnchorTarget } from '../src/internal/anchor-target.js';
-import type { OptionalPeerApi } from '../src/internal/optional-peer-types.js';
 import { TextViewerTarget } from '../src/internal/text-viewer-target.js';
 
 type IsAny<Value> = 0 extends (1 & Value) ? true : false;
 type AssertFalse<Value extends false> = Value;
 type AssertTrue<Value extends true> = Value;
 
-type _OptionalPeerApiIsNotAny = AssertFalse<IsAny<OptionalPeerApi>>;
 type _ChartConfigIsNotAny = AssertFalse<IsAny<NonNullable<LyraChart['config']>>>;
 type _ChartPluginIsNotAny = AssertFalse<IsAny<LyraChart['plugins'][number]>>;
 type _MarkdownParserIsNotAny = AssertFalse<IsAny<NonNullable<LyraMarkdown['marked']>>>;
@@ -56,7 +54,6 @@ type _MapGetterUsesPeerNeutralSurface = AssertTrue<
 >;
 
 export type OptionalPeerPublicTypeAssertions =
-  | _OptionalPeerApiIsNotAny
   | _ChartConfigIsNotAny
   | _ChartPluginIsNotAny
   | _MarkdownParserIsNotAny

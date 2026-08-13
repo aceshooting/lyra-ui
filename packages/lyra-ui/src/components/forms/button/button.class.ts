@@ -490,14 +490,41 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
    *  renders with no `href` (see the class doc comment), so a disabled link button cannot navigate. */
   @property({ reflect: true }) href?: string;
   /** Native anchor `target`, used only while `href` resolves to a link. Setting this to `'_blank'`
-   *  (or any other target) automatically derives `rel="noopener noreferrer"` on the rendered anchor
-   *  — matching `lr-card`'s/`lr-stat`'s identical pattern; `rel` is never independently settable, to
-   *  close the reverse-tabnabbing vector. Ignored in `<button>` mode. */
+   *  (or any other target) always contributes `noopener noreferrer` to the rendered anchor's `rel`
+   *  — matching `lr-card`'s/`lr-stat`'s identical pattern. Author `rel` tokens are merged rather
+   *  than ignored (see `rel`), but the guard is not removable and `opener` is always stripped.
+   *  Ignored in `<button>` mode. */
   @property() target?: string;
-  /** Security-derived compatibility surface. Author `rel` input is intentionally ignored: target
-   *  alone decides whether the rendered anchor receives the reverse-tabnabbing guard. */
-  get rel(): string | undefined {
-    return this.target ? 'noopener noreferrer' : undefined;
+  /** Author-settable link relationship, merged with a non-negotiable security floor.
+   *
+   *  Mirrors `wa-button`/`sl-button`'s `rel`, so values the platform defines and upstream consumers
+   *  actually use -- `nofollow`, `me`, `license`, `external`, `tag` -- survive a `wa-`/`sl-` -> `lr-`
+   *  rename instead of being silently dropped. Two rules are enforced regardless of what an author
+   *  writes, which is what keeps this safe to expose:
+   *
+   *  1. `opener` is always stripped. It is the one token that re-opens the reverse-tabnabbing vector.
+   *  2. Whenever `target` is set, `noopener noreferrer` is force-added. A named/new browsing context
+   *     always gets the guard, author input or not.
+   *
+   *  With no `target` there is no new browsing context to protect, so a same-tab link renders exactly
+   *  the author's tokens. Deliberately left with NO default: `wa-button` declares none, and defaulting
+   *  it (as `sl-button` does) would start suppressing the `Referer` header on every same-tab Lyra
+   *  link -- a real behavior change well beyond parity. */
+  @property() rel?: string;
+
+  /** Resolved `rel` for the rendered anchor: author tokens minus `opener`, plus the
+   *  `noopener noreferrer` guard whenever `target` is set. `undefined` when nothing remains, so the
+   *  attribute is omitted rather than rendered empty. */
+  private get resolvedRel(): string | undefined {
+    const authored = (this.rel ?? '')
+      .split(/\s+/)
+      .filter((token) => token !== '' && token.toLowerCase() !== 'opener');
+    const tokens = new Set(authored);
+    if (this.target) {
+      tokens.add('noopener');
+      tokens.add('noreferrer');
+    }
+    return tokens.size > 0 ? [...tokens].join(' ') : undefined;
   }
   /** Native anchor `download` attribute, used only while `href` resolves to a link. Ignored in
    *  `<button>` mode. */
@@ -820,7 +847,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
         ?data-icon-button=${this.isIconButton}
         href=${disabled ? nothing : href}
         target=${this.target || nothing}
-        rel=${this.rel ?? nothing}
+        rel=${this.resolvedRel ?? nothing}
         download=${this.download || nothing}
         aria-label=${this.accessibleLabel || nothing}
         aria-haspopup=${this.triggerHasPopup ?? nothing}

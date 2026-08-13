@@ -1,4 +1,4 @@
-import type { LyraLocaleStrings, LyraMessage } from './localization.js';
+import type { LyraMessage } from './localization.js';
 
 /**
  * A deterministic synthetic-message transform used by Lyra's test-only pseudo locales.
@@ -65,5 +65,3 @@ export const pseudoMirror: LyraPseudoTransform = (literal) =>
     .map((character) => MIRRORED_PUNCTUATION[character] ?? character)
     .join('');
 
-/** Catalog shape accepted by `registerLyraLocale`; exported for granular pseudo-locale modules. */
-export type LyraPseudoLocaleStrings = LyraLocaleStrings;

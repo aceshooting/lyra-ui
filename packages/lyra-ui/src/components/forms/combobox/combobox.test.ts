@@ -1415,6 +1415,29 @@ it('renders a group-label header when option rows are grouped', async () => {
   expect(groups).to.deep.equal(['Fruits', 'Vegetables']);
 });
 
+it('exposes each option-group heading as part="group-label", the name lr-select uses', async () => {
+  const el = (await fixture(html`
+    <lr-combobox>
+      <lr-option value="a" group="Fruits">Apple</lr-option>
+      <lr-option value="b" group="Vegetables">Carrot</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  el.open = true;
+  await el.updateComplete;
+
+  const labels = [...el.shadowRoot!.querySelectorAll('[part~="group-label"]')];
+  expect(labels.map((node) => node.textContent)).to.deep.equal(['Fruits', 'Vegetables']);
+  // The part is the styling handle: an outer ::part() rule must reach it.
+  const style = document.createElement('style');
+  style.textContent = 'lr-combobox::part(group-label) { letter-spacing: 3px; }';
+  document.head.append(style);
+  try {
+    expect(getComputedStyle(labels[0] as HTMLElement).letterSpacing).to.equal('3px');
+  } finally {
+    style.remove();
+  }
+});
+
 it('caps visible tags at maxOptionsVisible and shows a "+N" overflow tag', async () => {
   const el = (await fixture(html`
     <lr-combobox multiple max-options-visible="2">
@@ -4616,4 +4639,188 @@ it('resolves an external form owner, and exposes labels/willValidate/getForm()/v
   expect(el.validationTarget === override).to.equal(true);
   el.validationTarget = undefined;
   expect(el.validationTarget === (el.input ?? undefined)).to.equal(true);
+});
+
+describe('lr-combobox custom validators', () => {
+  it('runs a function/object-validate validator through every result shape', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+
+    el.validators = [() => true];
+    expect(el.checkValidity(), 'a true result passes').to.be.true;
+
+    el.validators = [() => 'Explicit message'];
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validity.customError).to.be.true;
+    expect(el.validationMessage).to.equal('Explicit message');
+
+    el.validators = [() => false];
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validity.customError).to.be.true;
+    expect(el.validationMessage.length).to.be.greaterThan(0);
+
+    el.validators = [() => ({ typeMismatch: true })];
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validity.typeMismatch).to.be.true;
+
+    el.validators = [() => { throw new Error('boom'); }];
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validity.customError).to.be.true;
+
+    el.validators = [{ validate: () => 'Object-shaped validator message' }];
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validationMessage).to.equal('Object-shaped validator message');
+
+    el.validators = [];
+    expect(el.checkValidity(), 'clearing the array clears the violation').to.be.true;
+  });
+
+  it('receives the live value and keeps the intrinsic required constraint ahead of a passing validator', async () => {
+    const el = (await fixture(html`
+      <lr-combobox required>
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    await el.updateComplete;
+    const seen: (string | string[])[] = [];
+    el.validators = [(value) => { seen.push(value); return true; }];
+
+    expect(el.checkValidity(), 'an empty required combobox still fails').to.be.false;
+    expect(el.validity.valueMissing).to.be.true;
+
+    el.value = 'a';
+    await el.updateComplete;
+    expect(el.checkValidity()).to.be.true;
+    expect(seen.at(-1)).to.equal('a');
+
+    el.validators = [() => 'Not that one'];
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validationMessage).to.equal('Not that one');
+  });
+
+  it('supports an object checkValidity() validator, mapping invalidKeys and revalidating through observedAttributes', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    let allowed = false;
+    el.validators = [{
+      observedAttributes: ['data-external-flag'],
+      checkValidity: () => allowed
+        ? { isValid: true, invalidKeys: [], message: '' }
+        : {
+            isValid: false,
+            invalidKeys: ['typeMismatch', 'not-a-real-key'] as unknown as Exclude<keyof ValidityState, 'valid'>[],
+            message: 'External system rejected this choice',
+          },
+    }];
+    await el.updateComplete;
+
+    expect(el.validity.typeMismatch, 'validity ran without an explicit checkValidity() call').to.be.true;
+    expect(el.validationMessage).to.equal('External system rejected this choice');
+
+    allowed = true;
+    const priv = el as unknown as { validityRevision: number };
+    const revisionBefore = priv.validityRevision;
+    el.setAttribute('data-external-flag', 'go');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(priv.validityRevision, 'the MutationObserver-driven revalidation ran').to.be.greaterThan(revisionBefore);
+    expect(el.validity.typeMismatch, 'revalidated without an explicit checkValidity() call').to.be.false;
+  });
+
+  it("falls back through checkValidity()'s own message to the validator's static or function message, and synthesizes customError when invalidKeys maps to nothing", async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+
+    el.validators = [{
+      checkValidity: () => ({ isValid: false, invalidKeys: [], message: '' }),
+      message: 'Static object message',
+    }];
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validity.customError, 'no mapped invalidKeys synthesizes customError').to.be.true;
+    expect(el.validationMessage).to.equal('Static object message');
+
+    el.validators = [{
+      checkValidity: () => ({ isValid: false, invalidKeys: [], message: '' }),
+      message: () => 'Function-derived object message',
+    }];
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validationMessage).to.equal('Function-derived object message');
+
+    el.validators = [{
+      checkValidity: () => ({
+        isValid: false,
+        invalidKeys: ['customError'] as unknown as Exclude<keyof ValidityState, 'valid'>[],
+        message: '',
+      }),
+    }];
+    expect(el.checkValidity()).to.be.false;
+    expect(el.validationMessage.length, 'falls back to the localized default').to.be.greaterThan(0);
+  });
+
+  it('ignores a validator whose observedAttributes getter throws, and disconnects an observer whose observe() throws', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.validators = [{
+      get observedAttributes(): string[] { throw new Error('boom'); },
+      checkValidity: () => ({ isValid: true, invalidKeys: [], message: '' }),
+    }];
+    await el.updateComplete;
+    expect(el.checkValidity()).to.be.true;
+
+    const originalObserve = MutationObserver.prototype.observe;
+    const originalDisconnect = MutationObserver.prototype.disconnect;
+    let disconnectCalls = 0;
+    MutationObserver.prototype.observe = function () {
+      throw new Error('forced failure for coverage');
+    };
+    MutationObserver.prototype.disconnect = function (...args: []) {
+      disconnectCalls += 1;
+      return originalDisconnect.apply(this, args);
+    };
+    try {
+      el.validators = [{
+        observedAttributes: ['data-flag'],
+        checkValidity: () => ({ isValid: true, invalidKeys: [], message: '' }),
+      }];
+      await el.updateComplete;
+    } finally {
+      MutationObserver.prototype.observe = originalObserve;
+      MutationObserver.prototype.disconnect = originalDisconnect;
+    }
+    expect(disconnectCalls, 'a failed observe() triggers a disconnect() cleanup').to.be.greaterThan(0);
+  });
+
+  it('bars configured validators while disabled, exactly like the intrinsic constraint', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.validators = [() => 'Always invalid'];
+    expect(el.checkValidity()).to.be.false;
+
+    el.disabled = true;
+    await el.updateComplete;
+    expect(el.checkValidity(), 'a barred control reports no violation at all').to.be.true;
+
+    el.disabled = false;
+    await el.updateComplete;
+    expect(el.checkValidity()).to.be.false;
+  });
+
+  it('stops observing validator attributes once disconnected', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.validators = [{
+      observedAttributes: ['data-external-flag'],
+      checkValidity: () => ({ isValid: true, invalidKeys: [], message: '' }),
+    }];
+    await el.updateComplete;
+    const priv = el as unknown as {
+      validityRevision: number;
+      validatorAttributeObserver?: unknown;
+    };
+    expect(priv.validatorAttributeObserver === undefined).to.equal(false);
+    const parent = el.parentElement!;
+    el.remove();
+    expect(priv.validatorAttributeObserver === undefined).to.equal(true);
+    const revisionBefore = priv.validityRevision;
+    el.setAttribute('data-external-flag', 'go');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(priv.validityRevision).to.equal(revisionBefore);
+    parent.append(el);
+    await el.updateComplete;
+    expect(priv.validatorAttributeObserver === undefined, 'a reconnect rebuilds it').to.equal(false);
+  });
 });

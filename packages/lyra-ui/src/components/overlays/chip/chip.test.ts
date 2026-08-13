@@ -384,6 +384,30 @@ describe('remove affordance', () => {
     expect(btn.getAttribute('aria-label')).to.equal('Remove research');
   });
 
+  // Slot *reassignment* (as opposed to insertion or removal) is its own path into the derived
+  // action name: the chip reaches it through both its `slotchange` listener and the `'slot'`
+  // entry its label observer adds to the shared accessible-text attribute filter.
+  it('re-derives the remove-button label when a child moves between the default and icon slots', async () => {
+    const el = (await fixture(html`<lr-chip removable>research</lr-chip>`)) as LyraChip;
+    const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
+    const badge = document.createElement('span');
+    badge.textContent = 'beta';
+    el.append(badge);
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await el.updateComplete;
+    expect(btn.getAttribute('aria-label')).to.equal('Remove research beta');
+
+    badge.setAttribute('slot', 'icon');
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await el.updateComplete;
+    expect(btn.getAttribute('aria-label')).to.equal('Remove research');
+
+    badge.removeAttribute('slot');
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await el.updateComplete;
+    expect(btn.getAttribute('aria-label')).to.equal('Remove research beta');
+  });
+
   it('falls back to the bare "Remove" label when the default slot has no text', async () => {
     const el = (await fixture(html`<lr-chip removable><span slot="icon">●</span></lr-chip>`)) as LyraChip;
     const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;

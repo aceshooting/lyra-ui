@@ -8,8 +8,8 @@ import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './checkbox-group.styles.js';
 import type { LyraCheckbox } from '../checkbox/checkbox.class.js';
-import { attachLegacyNoopInternalsSafely } from '../../../internal/legacy-noop-internals.js';
 import {
+  attachInternalsSafely,
   createStringArrayFormDataState,
   getFormOwner,
   installCustomErrorProperty,
@@ -268,7 +268,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
 
   constructor() {
     super();
-    this.internals = attachLegacyNoopInternalsSafely(this);
+    this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, (init: { cancelable: true }) =>

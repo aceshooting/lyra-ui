@@ -22,7 +22,9 @@ General-purpose modal/overlay plus a promise-based confirmation helper built on 
 A modal/overlay: `role="dialog"`, focus-trapped while open, dismissible via Escape or (opt-in) a
 backdrop click, and scroll-locks the document for as long as it's open. Mapped chrome is present by
 default: `label` renders as a visible title and `closable` renders a localized close button.
-`closable="false"`, `no-header`, or the legacy `without-header` alias support custom chrome.
+`closable="false"` plus either header-suppression spelling support custom chrome: `no-header` is
+Shoelace's name and `without-header` is Web Awesome's. Both are current upstream spellings, both are
+read, and neither is deprecated.
 
 **Properties:**
 - `open: boolean = false` (reflected) — **changed in 8.0.0:** `lr-dialog` now also has a
@@ -38,10 +40,11 @@ default: `label` renders as a visible title and `closable` renders a localized c
 - `closable: boolean = true` (attribute `closable`, reflected) — renders the localized close (X)
   button. This true-default boolean parses `closable="false"`; removing the attribute also restores
   the default.
-- `noHeader: boolean = false` (attribute `no-header`, reflected) — Shoelace spelling that suppresses
-  the entire header row
+- `noHeader: boolean = false` (attribute `no-header`, reflected) — Shoelace's spelling
+  (`sl-dialog`'s `no-header`), which suppresses the entire header row
 - `withoutHeader: boolean = false` (attribute `without-header`, reflected) — **new in 8.0.0.**
-  Web Awesome/legacy spelling for the same header suppression
+  Web Awesome's spelling (`wa-dialog`'s `without-header`) for the same header suppression. Both
+  names are current upstream spellings, both are read, and neither is deprecated or removable
 - `withFooter: boolean = false` (attribute `with-footer`, reflected) — keeps the footer wrapper
   rendered as an SSR/hydration presence hint even before assigned slot content is observable
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to a backdrop click closing

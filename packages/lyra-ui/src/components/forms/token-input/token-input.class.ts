@@ -10,8 +10,8 @@ import { submitOnEnter } from '../../../internal/submit-on-enter.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './token-input.styles.js';
-import { attachLegacyNoopInternalsSafely } from '../../../internal/legacy-noop-internals.js';
 import {
+  attachInternalsSafely,
   createStringArrayFormDataState,
   getFormOwner,
   installCustomErrorProperty,
@@ -356,7 +356,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
 
   constructor() {
     super();
-    this.internals = attachLegacyNoopInternalsSafely(this);
+    this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, (init: { cancelable: true }) =>

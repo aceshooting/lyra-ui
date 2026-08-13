@@ -56,7 +56,7 @@ test('checked-in metadata covers the current manifest and inventory', () => {
   assert.equal(state.metadata.assignments['introduced-mapped-experimental'].length, 2);
   assert.equal(state.metadata.assignments['compatibility-stable'].length, 1);
   assert.equal(state.metadata.assignments['introduced-stable'].length, 13);
-  assert.equal(state.metadata.deprecations.length, 13);
+  assert.equal(state.metadata.deprecations.length, 10);
 });
 
 test('new mirrors of experimental upstream media surfaces remain experimental everywhere authored', () => {
@@ -436,18 +436,18 @@ test('validation rejects unsorted, pre-introduction, and future deprecation reco
     finding.includes('lr-date-input:part:label: deprecation cannot start after the current package version')));
 });
 
-test('validation covers prose-only event, part, and CSS-property deprecations', () => {
+// Only `part` deprecations remain in the ledger: 9.0.0 removed the last recorded `event` records
+// (lr-tool-call-chip/lr-message-parts' `lr-tool-chip-select`) and the last `css-property` one
+// (lr-flow-canvas' `--lr-flow-canvas-node-current-outline-color`), all three having reached their
+// recorded `removalNotBefore: "9.0.0"`. Re-widen this to the kinds actually present if a future
+// release records an event or CSS-property deprecation again.
+test('validation covers prose-only part deprecations', () => {
   const state = fixture();
   const metadata = structuredClone(state.metadata);
-  metadata.deprecations = metadata.deprecations.filter((entry) =>
-    !['lr-tool-call-chip', 'lr-sparkline', 'lr-flow-canvas'].includes(entry.tag));
+  metadata.deprecations = metadata.deprecations.filter((entry) => entry.tag !== 'lr-sparkline');
 
   const findings = validateComponentMetadata(metadata, { ...state, metadata });
-  assert.ok(findings.includes('lr-tool-call-chip:event:lr-tool-chip-select: manifest deprecation has no policy record'));
   assert.ok(findings.includes('lr-sparkline:part:base: manifest deprecation has no policy record'));
-  assert.ok(findings.includes(
-    'lr-flow-canvas:css-property:--lr-flow-canvas-node-current-outline-color: manifest deprecation has no policy record',
-  ));
 });
 
 test('applying metadata changes only maturity records and remains deterministic', () => {

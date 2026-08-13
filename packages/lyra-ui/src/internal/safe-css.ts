@@ -23,11 +23,30 @@ function propertyAccepts(property: string, value: string, fallback: RegExp): boo
   return fallback.test(value.trim());
 }
 
-/** Returns a CSS color only when the browser parses it as the `color` property. */
+/**
+ * Returns a CSS color only when the browser parses it as the `color` property.
+ *
+ * This is also the swatch guard. A caller-supplied swatch color has to be rejected unless it is
+ * recognizable CSS color syntax -- both to stop it breaking out of the single declaration it is
+ * assigned to (`;`, `{`, `}` terminate/reopen a declaration) and to stop non-color values such as
+ * `url(...)` from being accepted, which `background` also parses and would fetch as soon as the
+ * swatch renders. That matters even when the value is applied through Lit's `styleMap` directive
+ * rather than raw string interpolation: `styleMap`'s FIRST commit for a given attribute part
+ * serializes the whole `style` value as one string (only later updates take the safe
+ * `CSSStyleDeclaration.setProperty()` path), so an unsanitized value could still inject on that
+ * first render.
+ */
 export function sanitizeCssColor(color: unknown): string | undefined {
   if (!structurallySafe(color)) return undefined;
   return propertyAccepts('color', color, SAFE_SWATCH_COLOR_FALLBACK) ? color : undefined;
 }
+
+/**
+ * @deprecated Historical name for {@linkcode sanitizeCssColor}. It was a wrapper that did nothing
+ * but call it -- one guard behind two names, which reads as two different policies. Call
+ * `sanitizeCssColor()`; this alias exists only so the remaining call sites keep resolving.
+ */
+export { sanitizeCssColor as sanitizeSwatchColor };
 
 /** Returns a CSS length only when it is valid for the named sizing property. */
 export function sanitizeCssLength(
@@ -87,19 +106,3 @@ export function sanitizePercentRect(value: unknown): SafePercentRect | undefined
   return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
 }
 
-/**
- * Rejects a caller-supplied swatch color that isn't recognizable CSS color
- * syntax -- both to stop it breaking out of the single `background`
- * declaration it's assigned to (e.g. `;`, `{`, `}`, which terminate/reopen a
- * declaration) and to stop non-color values such as `url(...)` from being
- * accepted, which `background` also parses and would fetch as soon as the
- * swatch renders. This matters even when the swatch's color is set via Lit's
- * `styleMap` directive (not raw string interpolation): `styleMap`'s first
- * commit for a given attribute part serializes the whole `style` value as a
- * single string (only later updates go through the safe
- * `CSSStyleDeclaration.setProperty()` path), so an unsanitized value could
- * still inject on that first render.
- */
-export function sanitizeSwatchColor(color: string): string | undefined {
-  return sanitizeCssColor(color);
-}

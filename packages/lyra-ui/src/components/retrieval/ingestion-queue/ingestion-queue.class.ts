@@ -122,7 +122,7 @@ function retryIcon(): SVGTemplateResult {
   `;
 }
 
-const DEFAULT_VIRTUALIZE_THRESHOLD = 100;
+const DEFAULT_VIRTUALIZE_AT = 100;
 
 /**
  * `<lr-ingestion-queue>` — a controlled list of documents moving through an ingestion pipeline
@@ -133,10 +133,10 @@ const DEFAULT_VIRTUALIZE_THRESHOLD = 100;
  * to supply an updated `items` array, the same request/response convention `<lr-thread-list>`'s
  * `lr-thread-pin`/`-archive`/`-delete` events already establish.
  *
- * At or above `virtualizeThreshold` items, the list renders through an internal
- * `<lr-virtual-list>` instead of a plain keyed list (same precedent as `<lr-thread-list>`'s data
- * mode and `<lr-activity-feed>`'s `virtualizeThreshold`) -- identical row markup and behavior
- * either way, keyed by `id`.
+ * Above `virtualizeAt` items, the list renders through an internal `<lr-virtual-list>` instead of a
+ * plain keyed list (same precedent as `<lr-thread-list>`'s data mode, and the same exclusive `>`
+ * bound `<lr-chunk-inspector>`/`<lr-retrieval-results>`/`<lr-neighbor-list>` apply to their own
+ * `virtualize-at`) -- identical row markup and behavior either way, keyed by `id`.
  *
  * @customElement lr-ingestion-queue
  * @event lr-retry - A row's retry affordance was activated (only rendered for `stage="failed"`
@@ -215,8 +215,10 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
    *  `aria-label` attribute wins over both. */
   @property() label = '';
 
-  /** At/above this item count, the list renders through an internal `<lr-virtual-list>`. */
-  @property({ type: Number, attribute: 'virtualize-threshold' }) virtualizeThreshold = DEFAULT_VIRTUALIZE_THRESHOLD;
+  /** Above this item count, the list renders through an internal `<lr-virtual-list>`. Exclusive,
+   *  like every other `virtualize-at` in this family: exactly this many items still render as a
+   *  plain list. */
+  @property({ type: Number, attribute: 'virtualize-at' }) virtualizeAt = DEFAULT_VIRTUALIZE_AT;
 
   @state() private failureLiveText = '';
   private isMounting = true;
@@ -225,16 +227,16 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
    *  one outright), so `[part="failure-live"]` is only an `aria-hidden` mirror. */
   private sink?: AnnouncementSink;
 
-  /** `virtualizeThreshold`, normalized to a finite non-negative integer (falling back to the
-   *  property's own default) -- a raw `NaN` (e.g. an invalid `virtualize-threshold` attribute)
-   *  would otherwise make `items.length >= virtualizeThreshold` always false, silently disabling
-   *  virtualization instead of falling back to the default threshold. */
-  private get effectiveVirtualizeThreshold(): number {
-    return finiteCount(this.virtualizeThreshold, DEFAULT_VIRTUALIZE_THRESHOLD);
+  /** `virtualizeAt`, normalized to a finite non-negative integer (falling back to the property's
+   *  own default) -- a raw `NaN` (e.g. an invalid `virtualize-at` attribute) would otherwise make
+   *  `items.length > virtualizeAt` always false, silently disabling virtualization instead of
+   *  falling back to the default threshold. */
+  private get effectiveVirtualizeAt(): number {
+    return finiteCount(this.virtualizeAt, DEFAULT_VIRTUALIZE_AT);
   }
 
   private get isVirtualized(): boolean {
-    return this.items.length >= this.effectiveVirtualizeThreshold;
+    return this.items.length > this.effectiveVirtualizeAt;
   }
 
   override connectedCallback(): void {

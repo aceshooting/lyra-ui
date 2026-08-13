@@ -899,8 +899,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     try {
       const anchor = ownerDocument.createElement("a");
       anchor.href = url;
-      const legacyFileName = options.filename;
-      anchor.download = options.fileName || legacyFileName || "data.csv";
+      anchor.download = options.fileName || "data.csv";
       anchor.hidden = true;
       ownerDocument.body?.append(anchor);
       anchor.click();

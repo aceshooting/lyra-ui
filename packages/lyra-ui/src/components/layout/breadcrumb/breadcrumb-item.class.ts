@@ -53,9 +53,30 @@ export class LyraBreadcrumbItem extends LyraElement {
     this._href = value ?? '';
     this.requestUpdate('href', old);
   }
-  /** Native link target. When present, the rendered anchor always derives
-   * `rel="noopener noreferrer"`; `rel` is intentionally not independently settable. */
+  /** Native link target. When present, the rendered anchor always contributes
+   * `noopener noreferrer` to `rel` — author tokens are merged, not ignored (see `rel`). */
   @property() target?: BreadcrumbItemTarget;
+  /** Author-settable link relationship, merged with a non-negotiable security floor: `opener` is
+   *  always stripped, and `noopener noreferrer` is force-added whenever `target` is set.
+   *
+   *  Defaults to `'noreferrer noopener'`, which is what BOTH `wa-breadcrumb-item` and
+   *  `sl-breadcrumb-item` declare — unlike `lr-button`, where the two upstreams disagree and Lyra
+   *  therefore keeps no default. */
+  @property() rel = 'noreferrer noopener';
+
+  /** Author tokens minus `opener`, plus the guard whenever `target` is set. `undefined` when
+   *  nothing remains, so the attribute is omitted rather than rendered empty. */
+  private get resolvedRel(): string | undefined {
+    const authored = (this.rel ?? '')
+      .split(/\s+/)
+      .filter((token) => token !== '' && token.toLowerCase() !== 'opener');
+    const tokens = new Set(authored);
+    if (this.target) {
+      tokens.add('noopener');
+      tokens.add('noreferrer');
+    }
+    return tokens.size > 0 ? [...tokens].join(' ') : undefined;
+  }
   @property({ type: Boolean, reflect: true }) current = false;
   private readonly slots = new SlotPresenceController(this);
   override connectedCallback(): void {
@@ -90,7 +111,7 @@ export class LyraBreadcrumbItem extends LyraElement {
             part="base"
             href=${href}
             target=${this.target || nothing}
-            rel=${this.target ? 'noopener noreferrer' : nothing}
+            rel=${this.resolvedRel ?? nothing}
             aria-label=${ariaLabel ?? nothing}
             aria-current="false"
           >${label}</a>`

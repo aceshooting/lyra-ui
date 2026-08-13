@@ -191,10 +191,10 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
         ${tab === 'sources'
           ? html`<lr-knowledge-base
               .sources=${this.sources}
-              @lr-kb-create=${(event: Event) => this.forward(event, 'lr-source-create', undefined)}
-              @lr-kb-sync=${(event: CustomEvent<{ sourceId: string }>) => this.forward(event, 'lr-source-sync', event.detail)}
-              @lr-kb-pause=${(event: CustomEvent<{ sourceId: string }>) => this.forward(event, 'lr-source-pause', event.detail)}
-              @lr-kb-delete=${(event: CustomEvent<{ sourceId: string }>) => this.forward(event, 'lr-source-delete', event.detail)}
+              @lr-source-create=${(event: Event) => this.forward(event, 'lr-source-create', undefined)}
+              @lr-source-sync=${(event: CustomEvent<{ sourceId: string }>) => this.forward(event, 'lr-source-sync', event.detail)}
+              @lr-source-pause=${(event: CustomEvent<{ sourceId: string }>) => this.forward(event, 'lr-source-pause', event.detail)}
+              @lr-source-delete=${(event: CustomEvent<{ sourceId: string }>) => this.forward(event, 'lr-source-delete', event.detail)}
             ></lr-knowledge-base>`
           : nothing}
       </div>

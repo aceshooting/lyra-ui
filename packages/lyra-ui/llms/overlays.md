@@ -369,8 +369,9 @@ the slide animation are its own.
   promotion, or global Escape ownership
 - `heading?: string`, `label: string`, `accessibleLabel: string = ''` (attribute
   `accessible-label`), `closable: boolean = true`, `noHeader: boolean = false` (attribute
-  `no-header`, reflected), `withoutHeader: boolean = false` (legacy attribute `without-header`,
-  reflected), `withFooter: boolean = false` (attribute `with-footer`, reflected; SSR hint), and
+  `no-header`, Shoelace's spelling, reflected), `withoutHeader: boolean = false` (attribute
+  `without-header`, Web Awesome's spelling, reflected; neither is deprecated),
+  `withFooter: boolean = false` (attribute `with-footer`, reflected; SSR hint), and
   `lightDismiss: boolean = false` (attribute `light-dismiss`) — inherited dialog naming, chrome and
   dismissal options. A plain `aria-label` attribute on the host is honored too, with the same
   wins-over-everything semantics documented under `lr-dialog` below.
@@ -436,7 +437,9 @@ General-purpose modal/overlay plus a promise-based confirmation helper built on 
 A modal/overlay: `role="dialog"`, focus-trapped while open, dismissible via Escape or (opt-in) a
 backdrop click, and scroll-locks the document for as long as it's open. Mapped chrome is present by
 default: `label` renders as a visible title and `closable` renders a localized close button.
-`closable="false"`, `no-header`, or the legacy `without-header` alias support custom chrome.
+`closable="false"` plus either header-suppression spelling support custom chrome: `no-header` is
+Shoelace's name and `without-header` is Web Awesome's. Both are current upstream spellings, both are
+read, and neither is deprecated.
 
 **Properties:**
 - `open: boolean = false` (reflected) — **changed in 8.0.0:** `lr-dialog` now also has a
@@ -452,10 +455,11 @@ default: `label` renders as a visible title and `closable` renders a localized c
 - `closable: boolean = true` (attribute `closable`, reflected) — renders the localized close (X)
   button. This true-default boolean parses `closable="false"`; removing the attribute also restores
   the default.
-- `noHeader: boolean = false` (attribute `no-header`, reflected) — Shoelace spelling that suppresses
-  the entire header row
+- `noHeader: boolean = false` (attribute `no-header`, reflected) — Shoelace's spelling
+  (`sl-dialog`'s `no-header`), which suppresses the entire header row
 - `withoutHeader: boolean = false` (attribute `without-header`, reflected) — **new in 8.0.0.**
-  Web Awesome/legacy spelling for the same header suppression
+  Web Awesome's spelling (`wa-dialog`'s `without-header`) for the same header suppression. Both
+  names are current upstream spellings, both are read, and neither is deprecated or removable
 - `withFooter: boolean = false` (attribute `with-footer`, reflected) — keeps the footer wrapper
   rendered as an SSR/hydration presence hint even before assigned slot content is observable
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to a backdrop click closing
@@ -1492,8 +1496,9 @@ A determinate or indeterminate progress bar with an independently visible label 
 formatted percentage.
 
 **Properties:** `value` (reflected), `max`, `indeterminate`, `variant`, `showValue` (`show-value`), and
-`label` (mapped accessible-name property), plus the Lyra compatibility alias `accessibleLabel`
-(`accessible-label`). Host `aria-label` has highest precedence.
+`label` (mapped accessible-name property), plus `accessibleLabel` (`accessible-label`) — the
+library-wide explicit-accessible-name convention carried by every Lyra component that names a
+shadow-owned role, not an alias retained for one upstream. Host `aria-label` has highest precedence.
 The rendered progressbar exposes `aria-valuemin`, `aria-valuemax`, and `aria-valuenow` when
 determinate. Slotted label content is always visible and names the progressbar unless an explicit
 label overrides it; `show-value` controls only whether the locale-formatted percentage is appended.
@@ -1530,7 +1535,8 @@ A circular progress indicator with the same value contract as `lr-progress-bar`.
 
 **Properties:** `value: number = 0` (reflected), `max: number = 100`, `indeterminate: boolean = false`
 (reflected), `label: string = ''` (the mapped accessible-name property), and
-`accessibleLabel: string = ''` (attribute `accessible-label`; Lyra compatibility alias). Host
+`accessibleLabel: string = ''` (attribute `accessible-label`; the library-wide explicit
+accessible-name convention, not an upstream alias). Host
 `aria-label` takes precedence; otherwise the name falls back to `label`, `accessibleLabel`, the
 visible default-slot text when supplied, then the localized "Progress". Non-finite/out-of-range
 `value`/`max` are normalized (`max <= 0` falls

@@ -48,8 +48,8 @@ export interface LyraMessagePartsEventMap
  * @event lr-citation-select - A citation part was activated. `detail: { citation }`.
  * @event lr-part-retry - Retry was requested for a retryable error part. `detail: { part }`.
  * @event lr-toggle - Passthrough from a rendered reasoning panel.
- * @event lr-tool-call-chip-select - Passthrough from a rendered tool-call chip.
- * @event lr-tool-chip-select - Deprecated tool-call selection alias passthrough.
+ * @event lr-tool-call-chip-select - Passthrough from a rendered tool-call chip. The
+ * `lr-tool-chip-select` alias it replaced was removed in 9.0.0.
  * @event lr-render-error - Passthrough from rendered Markdown, tool-result, or widget content.
  * @event lr-link-click - Passthrough from rendered Markdown.
  * @event lr-highlight-activate - Passthrough from rendered Markdown.

@@ -20,7 +20,7 @@ export const NarrowAllStates: Story = {
     <div style="display:grid; gap:1rem; inline-size:320px; max-inline-size:100%;">
       <lr-rag-answer loading label="Loading narrow grounded response"></lr-rag-answer>
       <lr-rag-answer
-        error="The retrieval service could not load a deliberately long evidence request. Retry when connectivity returns."
+        error-text="The retrieval service could not load a deliberately long evidence request. Retry when connectivity returns."
       ></lr-rag-answer>
       <lr-rag-answer
         answer="The grounded answer includes anUnbrokenEvidenceIdentifierThatMustWrapInsideTheNarrowAllocation and a longer explanatory sentence."

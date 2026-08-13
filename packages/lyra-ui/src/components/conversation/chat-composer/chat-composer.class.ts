@@ -9,6 +9,7 @@ import {
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraFrame } from '../../../internal/variants.js';
+import type { LyraSelectionDirection, LyraTextWrap } from '../../../internal/shared-unions.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './chat-composer.styles.js';
@@ -25,8 +26,10 @@ import { LYRA_DEFAULT_composerLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_se
  *  property name mean two unrelated things. */
 export type ChatComposerFrame = LyraFrame;
 export type ChatComposerStatus = 'idle' | 'sending' | 'streaming';
-export type ChatComposerWrap = 'hard' | 'soft' | 'off';
-export type ChatComposerSelectionDirection = 'forward' | 'backward' | 'none';
+/** Retained name for the shared native `<textarea wrap>` vocabulary. */
+export type ChatComposerWrap = LyraTextWrap;
+/** Retained name for the shared native `selectionDirection` vocabulary. */
+export type ChatComposerSelectionDirection = LyraSelectionDirection;
 
 // Mirrors the shared icon set's viewBox/stroke conventions
 // (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding

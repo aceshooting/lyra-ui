@@ -172,10 +172,7 @@ export const styles = css`
      still read on top of it when a selected node is hovered or press-dragged. */
   [part='node'][data-selected] {
     outline: var(--lr-size-2px) solid
-      var(
-        --lr-flow-canvas-node-selected-outline-color,
-        var(--lr-flow-canvas-node-current-outline-color, var(--lr-color-brand))
-      );
+      var(--lr-flow-canvas-node-selected-outline-color, var(--lr-color-brand));
     outline-offset: var(--lr-size-2px);
     border-radius: var(--lr-radius);
   }

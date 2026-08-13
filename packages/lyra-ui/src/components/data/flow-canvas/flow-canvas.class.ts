@@ -209,12 +209,10 @@ function isHtmlElement(value: EventTarget): value is HTMLElement {
  * @cssprop [--lr-flow-canvas-edge-warning-color=var(--lr-color-warning)] - Warning edge and arrowhead color.
  * @cssprop [--lr-flow-canvas-edge-danger-color=var(--lr-color-danger)] - Danger edge and arrowhead color.
  * @cssprop [--lr-flow-canvas-march-duration=var(--lr-duration-ambient)] - Running-edge march animation duration.
- * @cssprop [--lr-flow-canvas-node-selected-outline-color=var(--lr-flow-canvas-node-current-outline-color,var(--lr-color-brand))] - Outline color of a selected node.
- * @cssprop [--lr-flow-canvas-node-current-outline-color=var(--lr-color-brand)] - Deprecated fallback
- *   token for the selected-node outline; retained for compatibility.
+ * @cssprop [--lr-flow-canvas-node-selected-outline-color=var(--lr-color-brand)] - Outline color of a selected node.
  * @cssprop [--lr-flow-canvas-node-connect-invalid-outline-color=var(--lr-color-danger)] - Outline color
  *   of a node that is an invalid connect-gesture drop target. Same `::part()` attribute-selector
- *   restriction as `--lr-flow-canvas-node-current-outline-color` above.
+ *   restriction as `--lr-flow-canvas-node-selected-outline-color` above.
  * @cssprop [--lr-flow-canvas-node-connect-target-outline-color=var(--lr-color-brand)] - Outline color of
  *   a node that is a valid connect-gesture drop target.
  * @cssprop [--lr-flow-canvas-drop-active-outline-color=var(--lr-color-brand)] - Outline color of the

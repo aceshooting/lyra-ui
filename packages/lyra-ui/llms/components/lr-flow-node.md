@@ -23,7 +23,11 @@ owns none of that.
 
 **Properties:**
 
-- `nodeId: string = ''` (attribute `node-id`)
+- `nodeId: string = ''` (attribute `node-id`, reflected) — the identity `lr-flow-canvas` adopts this
+  card by. It reflects because that adoption reads the *attribute*, so a property-only
+  `card.nodeId = 'fetch'` reaches the canvas too; the empty default stays absent from the DOM. Set it
+  before the canvas receives the matching `nodes` entry — the canvas reconciles its light-DOM
+  children only when `nodes` changes
 - `heading: string = ''`
 - `status: 'pending' | 'running' | 'success' | 'error' | 'denied' | null = null` (reflected)
 - `progress: number | null = null` — renders a determinate `[part="progress"]` bar when set

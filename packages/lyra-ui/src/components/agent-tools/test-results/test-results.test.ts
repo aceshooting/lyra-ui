@@ -249,10 +249,12 @@ describe('lr-test-results', () => {
         tests: [{ id: 'same', name: 'shared name', status: 'failed', message: 'integration failed' }],
       },
     ];
+    const unitSlot = testResultDetailSlotName('unit', 'same');
+    const integrationSlot = testResultDetailSlotName('integration', 'same');
     const el = (await fixture(html`
       <lr-test-results .suites=${duplicateSuites} .autoExpandFailures=${false}>
-        <div slot="detail-unit-same">unit detail</div>
-        <div slot="detail-integration-same">integration detail</div>
+        <div slot=${unitSlot}>unit detail</div>
+        <div slot=${integrationSlot}>integration detail</div>
       </lr-test-results>
     `)) as LyraTestResults;
     await el.updateComplete;
@@ -273,10 +275,45 @@ describe('lr-test-results', () => {
     expect(nextToggles[0]!.getAttribute('aria-expanded')).to.equal('true');
     expect(nextToggles[1]!.getAttribute('aria-expanded')).to.equal('false');
     const failures = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="failure"]')];
-    const firstSlot = failures[0]!.querySelector<HTMLSlotElement>('slot[name="detail-unit-same"]')!;
+    const firstSlot = failures[0]!.querySelector<HTMLSlotElement>(`slot[name="${unitSlot}"]`)!;
     expect(firstSlot.assignedElements().length).to.equal(1);
     expect(firstSlot.assignedElements()[0]!.textContent).to.equal('unit detail');
-    expect(failures[0]!.querySelectorAll('slot[name="detail-integration-same"]').length).to.equal(0);
+    expect(failures[0]!.querySelectorAll(`slot[name="${integrationSlot}"]`).length).to.equal(0);
+  });
+
+  it('mounts exactly one detail slot per row — the legacy spellings are gone', async () => {
+    const el = (await fixture(html`
+      <lr-test-results .suites=${suites}>
+        <div slot=${testResultDetailSlotName('s1', 't2')}>canonical detail</div>
+      </lr-test-results>
+    `)) as LyraTestResults;
+    await el.updateComplete;
+
+    const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="failure"]')];
+    expect(rows.map((row) => row.querySelectorAll('slot').length)).to.deep.equal([1, 1, 1]);
+    expect(
+      [...el.shadowRoot!.querySelectorAll<HTMLSlotElement>('slot[name^="detail-"]')].map((slot) => slot.name),
+    ).to.deep.equal([
+      testResultDetailSlotName('s1', 't1'),
+      testResultDetailSlotName('s1', 't2'),
+      testResultDetailSlotName('s1', 't3'),
+    ]);
+  });
+
+  it('ignores the removed legacy detail-{suiteId}-{testId} and detail-{testId} slot spellings', async () => {
+    const el = (await fixture(html`
+      <lr-test-results .suites=${suites} .autoExpandFailures=${false}>
+        <div slot="detail-s1-t1">legacy scoped detail</div>
+        <div slot="detail-t3">legacy generic detail</div>
+      </lr-test-results>
+    `)) as LyraTestResults;
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelectorAll('slot[name="detail-s1-t1"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('slot[name="detail-t3"]').length).to.equal(0);
+    // Neither passing/skipped row becomes expandable off a legacy name any more; only the failed
+    // row keeps its own toggle.
+    expect(el.shadowRoot!.querySelectorAll('[part="test-expand-toggle"]').length).to.equal(1);
   });
 
   it('routes collision-prone suite/test ids through distinct canonical detail slots', async () => {
@@ -346,35 +383,32 @@ describe('lr-test-results', () => {
     expect(assignments).to.deep.include([secondSlot, 'second malformed detail']);
   });
 
-  it('preserves detail-{testId} as the fallback slot when the test id is globally unique', async () => {
-    const el = (await fixture(html`
-      <lr-test-results .suites=${suites}>
-        <div slot="detail-t2">legacy detail</div>
-      </lr-test-results>
-    `)) as LyraTestResults;
-    await el.updateComplete;
-    const slot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="detail-t2"]');
-    expect(slot?.assignedElements().length ?? 0).to.equal(1);
-    expect(slot?.assignedElements()[0]?.textContent).to.equal('legacy detail');
-  });
-
-  it('excludes the generic detail-{testId} legacy slot when the test id is duplicated across suites (testIdCounts regression)', async () => {
+  it('still scopes lr-toggle detail by suite only when the test id is duplicated across suites', async () => {
     const duplicateSuites: TestSuiteResult[] = [
-      { id: 'suite-one', name: 'One', tests: [{ id: 'dup', name: 'first', status: 'passed' }] },
-      { id: 'suite-two', name: 'Two', tests: [{ id: 'dup', name: 'second', status: 'passed' }] },
+      { id: 'suite-one', name: 'One', tests: [{ id: 'dup', name: 'first', status: 'failed', message: 'x' }] },
+      { id: 'suite-two', name: 'Two', tests: [{ id: 'solo', name: 'second', status: 'failed', message: 'y' }] },
+      { id: 'suite-three', name: 'Three', tests: [{ id: 'dup', name: 'third', status: 'failed', message: 'z' }] },
     ];
-    const el = (await fixture(html`
-      <lr-test-results .suites=${duplicateSuites}>
-        <div slot="detail-dup">legacy detail</div>
-      </lr-test-results>
-    `)) as LyraTestResults;
+    const el = (await fixture(
+      html`<lr-test-results .suites=${duplicateSuites} .autoExpandFailures=${false}></lr-test-results>`,
+    )) as LyraTestResults;
     await el.updateComplete;
 
-    // Neither row is failed, and `detail-dup` is only eligible as a legacy fallback when the test
-    // id is globally unique -- it is not here, so no `<slot name="detail-dup">` is even mounted
-    // and no expand toggle is rendered for either row.
-    expect(el.shadowRoot!.querySelectorAll('slot[name="detail-dup"]').length).to.equal(0);
-    expect(el.shadowRoot!.querySelectorAll('[part="test-expand-toggle"]').length).to.equal(0);
+    const toggles = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="test-expand-toggle"]')];
+    const duplicated = oneEvent(el, 'lr-toggle');
+    toggles[0]!.click();
+    expect(((await duplicated) as CustomEvent<{ id: string; suiteId?: string }>).detail).to.deep.equal({
+      id: 'dup',
+      suiteId: 'suite-one',
+      expanded: true,
+    });
+
+    const unique = oneEvent(el, 'lr-toggle');
+    toggles[1]!.click();
+    expect(((await unique) as CustomEvent<{ id: string; suiteId?: string }>).detail).to.deep.equal({
+      id: 'solo',
+      expanded: true,
+    });
   });
 
   it('discovers detail content appended after mount for a previously non-expandable test', async () => {
@@ -386,7 +420,7 @@ describe('lr-test-results', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="test-expand-toggle"]').length).to.equal(0);
 
     const detail = document.createElement('div');
-    detail.slot = 'detail-unit-late';
+    detail.slot = testResultDetailSlotName('unit', 'late');
     detail.textContent = 'appended detail';
     el.append(detail);
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -453,15 +487,19 @@ describe('lr-test-results', () => {
     expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
   });
 
-  it('slots detail-{testId} content after the plain message text', async () => {
+  it('slots canonical detail content after the plain message text', async () => {
+    const slotName = testResultDetailSlotName('s1', 't2');
     const el = (await fixture(html`
       <lr-test-results .suites=${suites}>
-        <div slot="detail-t2">rich diff here</div>
+        <div slot=${slotName}>rich diff here</div>
       </lr-test-results>
     `)) as LyraTestResults;
     await el.updateComplete;
-    const slot = el.shadowRoot!.querySelector('slot[name="detail-t2"]') as HTMLSlotElement;
+    const failure = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="failure"]')[1]!;
+    const slot = failure.querySelector(`slot[name="${slotName}"]`) as HTMLSlotElement;
     expect(slot.assignedElements()[0].textContent).to.equal('rich diff here');
+    expect(failure.querySelector('[part="failure-message"]')!.compareDocumentPosition(slot)
+      & Node.DOCUMENT_POSITION_FOLLOWING).to.be.greaterThan(0);
   });
 
   it('generates unique whitespace-free internal IDREF targets for duplicate and unsafe test ids', async () => {

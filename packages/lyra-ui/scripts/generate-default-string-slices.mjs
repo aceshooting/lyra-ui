@@ -531,14 +531,49 @@ export async function generateDefaultStringSlices({
   };
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const write = process.argv.includes('--write');
-  const result = await generateDefaultStringSlices({ write });
+/**
+ * The CLI's whole pass/fail decision, as data so it can be tested without spawning a process.
+ *
+ * Two independent failures, both reported in one run rather than one-at-a-time:
+ *
+ *   1. STALE SLICES -- the committed per-class slices no longer match the catalog. Only meaningful
+ *      in check mode; `--write` has just fixed them by definition.
+ *   2. ORPHANED KEYS -- a `DEFAULT_STRINGS` entry no component can reach. This walk already
+ *      computes exactly that set (it is the complement of `usedKeys`), and nothing else in the
+ *      repo does: `check-default-strings.mjs` proves every *used* key has an entry, the opposite
+ *      direction. An orphan is not free -- `check-translations.mjs` enforces key parity in BOTH
+ *      directions across all ten shipped catalogs, so one dead key is eleven dead strings that
+ *      every translator re-reviews and every consumer downloads forever. Reported in `--write`
+ *      mode too: regenerating cannot delete a catalog entry, so staying silent there would let an
+ *      orphan land in exactly the run most likely to be the one that introduced it.
+ */
+export function generationFailures(result, { write = false } = {}) {
+  const failures = [];
   if (!write && (result.rewrittenFileCount > 0 || result.generatedChanged)) {
-    console.error(
+    failures.push(
       `Default-string slices are stale (${result.rewrittenFileCount} class files, ` +
         `${result.generatedChanged ? 'generated catalog changed' : 'catalog current'}); rerun with --write.`,
     );
+  }
+  if (result.unusedKeys.length > 0) {
+    failures.push(
+      `DEFAULT_STRINGS has ${result.unusedKeys.length} orphaned key(s) that no component can ` +
+        `reach:\n${result.unusedKeys.map((key) => `  - ${key}`).join('\n')}\n` +
+        'Delete each one from src/internal/localization.ts, from the LyraMessageKey union in ' +
+        'src/internal/localization-types.ts, and from every src/translations/<tag>.ts catalog ' +
+        '(check-translations.mjs requires key parity in both directions, so an orphan ships as a ' +
+        'dead translated string in all ten locales).',
+    );
+  }
+  return failures;
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const write = process.argv.includes('--write');
+  const result = await generateDefaultStringSlices({ write });
+  const failures = generationFailures(result, { write });
+  if (failures.length > 0) {
+    for (const failure of failures) console.error(failure);
     process.exitCode = 1;
   } else {
     console.log(

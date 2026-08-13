@@ -1,6 +1,7 @@
-import { html, nothing, type ComplexAttributeConverter, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { isAccessibilityVisible, nextId, srOnly } from '../../../internal/a11y.js';
@@ -38,24 +39,6 @@ export interface LyraLightboxImage {
  * open by something other than its own `close()`; any other string is whatever a caller passes
  * to `close()` directly.
  */
-/** `true`-defaulting boolean attribute converter for `showCounter` -- Lit's default
- *  presence-based `type: Boolean` can never be set back to `false` from a plain-HTML attribute
- *  once the property's own default is `true` (removing an attribute that was never present fires
- *  no `attributeChangedCallback`), so `fromAttribute` checks the literal string instead.
- *  Duplicated locally rather than imported, matching this exact converter's repeated
- *  per-component convention elsewhere in this library (see e.g.
- *  `<lr-generation-status>`'s own `showStopConverter`). */
-const showCounterConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    // `true` is this property's default, so there's nothing worth reflecting for it; only the
-    // non-default `false` needs an attribute at all.
-    return value ? null : 'false';
-  },
-};
-
 export type LyraLightboxCloseReason =
   | 'escape'
   | 'backdrop'
@@ -217,11 +200,13 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   /** Shows/hides only the visible `part="counter"`. The accessibility `part="live-region"`
    *  announcement remains active so navigation is still conveyed when visual chrome is hidden.
-   *  Mirrors `<lr-carousel>`'s `showIndicators` (name shape, no reflect). Uses
-   *  {@link showCounterConverter} rather than Lit's default presence-based `type: Boolean`
-   *  handling, so a plain-HTML consumer with no way to write a `.showCounter` property binding
-   *  can still turn this off with `show-counter="false"`. */
-  @property({ attribute: 'show-counter', converter: showCounterConverter }) showCounter = true;
+   *  Mirrors `<lr-carousel>`'s `showIndicators` (name shape, no reflect). Uses the shared
+   *  parse-only `trueDefaultBooleanConverter` rather than Lit's default presence-based
+   *  `type: Boolean` handling, so a plain-HTML consumer with no way to write a `.showCounter`
+   *  property binding can still turn this off with `show-counter="false"`. Deliberately not
+   *  reflected: nothing styles or queries `[show-counter]`, so the serializing half of a
+   *  reflecting converter would be dead code on a modal that already churns attributes. */
+  @property({ attribute: 'show-counter', converter: trueDefaultBooleanConverter }) showCounter = true;
 
   /** Passed through to the embedded `<lr-pan-zoom>` as `.minZoom`. Same default as
    *  `<lr-pan-zoom>` itself. */

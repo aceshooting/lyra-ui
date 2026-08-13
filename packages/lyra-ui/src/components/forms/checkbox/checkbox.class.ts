@@ -11,8 +11,8 @@ import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 import { hasRealContent } from '../../../internal/a11y.js';
-import { attachLegacyNoopInternalsSafely } from '../../../internal/legacy-noop-internals.js';
 import {
+  attachInternalsSafely,
   getFormOwner,
   installCustomErrorProperty,
   isBarredFromValidation,
@@ -399,7 +399,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     super();
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
       this.emit('lr-invalid', undefined, init));
-    this.internals = attachLegacyNoopInternalsSafely(this);
+    this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     this.syncFormState();

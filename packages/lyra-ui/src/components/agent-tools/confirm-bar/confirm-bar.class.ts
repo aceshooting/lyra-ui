@@ -1,7 +1,7 @@
 import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraVariant } from '../../../internal/variants.js';
+import type { LyraFrame, LyraVariant } from '../../../internal/variants.js';
 import { hasRealContent, nextId } from '../../../internal/a11y.js';
 import { resolveLocalizedParts } from '../../../internal/localization-runtime.js';
 import '../../layout/details/details.class.js';
@@ -80,6 +80,12 @@ function deniedIcon(): SVGTemplateResult {
  * matters); no blocking/modality guarantee (a user can scroll past); no decision persistence or
  * "remember choice" logic (the `footer` slot + host own that).
  *
+ * Density and chrome are two knobs, not one: `compact` tightens the bar into a single dense inline
+ * row and `frame="plain"` removes the card border/radius/background/padding, exactly as they do on
+ * `<lr-agent-run>`, `<lr-commit-card>`, `<lr-result-card>`, `<lr-task-list>`, `<lr-terminal>` and
+ * `<lr-thinking-panel>`. Before 9.0.0 `compact` alone did both; a bar that relied on that now
+ * wants `compact frame="plain"`.
+ *
  * Deny/Approve are `<lr-button>`s. Deny is `variant="neutral" appearance="outlined"` and Approve is
  * `variant="brand"` (`"danger"` under `variant="danger"`) at lr-button's default `appearance="accent"`,
  * so the destructive-or-primary action is the loud one and the safe action recedes. Both appearances
@@ -132,15 +138,9 @@ function deniedIcon(): SVGTemplateResult {
  *   `spinner` part, present only while `pending` is `'approved'`.
  * @csspart status - The decided-state text. Always present in the DOM (`tabindex="-1"`) so focus has
  *   a stable, synchronous landing spot on activation.
- * @cssprop [--lr-confirm-bar-compact-padding=0] - Padding of `[part='base']` while `compact`.
- * Accepts any padding shorthand.
+ * @cssprop [--lr-confirm-bar-compact-padding=var(--lr-space-s)] - Padding of `[part='base']` while
+ * `compact`. Accepts any padding shorthand. Overridden entirely by `frame="plain"`.
  * @cssprop [--lr-confirm-bar-compact-gap=var(--lr-space-s)] - Gap between the row's items while
- * `compact`.
- * @cssprop [--lr-confirm-bar-compact-border=none] - Border of `[part='base']` while `compact`.
- * Accepts any `border` shorthand.
- * @cssprop [--lr-confirm-bar-compact-radius=0] - Border radius of `[part='base']` while `compact`
- * (only visible once `--lr-confirm-bar-compact-border`/`-background` are set).
- * @cssprop [--lr-confirm-bar-compact-background=transparent] - Background of `[part='base']` while
  * `compact`.
  * @cssprop [--lr-confirm-bar-approved-color=var(--lr-color-success)] - `[part='status']` text/icon
  * color once `decision` is `'approved'`.
@@ -194,15 +194,26 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   /** Token-mapped emphasis for destructive proposals. */
   @property({ reflect: true }) variant: ConfirmBarVariant = 'neutral';
 
-  /** Collapses the bar from a full card (bordered, padded, `display: block` surface) to a single
-   *  inline row with no chrome of its own, for a confirmation that has to live inside an existing
-   *  container -- a table cell, a card's action row, a toolbar. The host becomes `inline-flex`, and
-   *  the narrow-allocation `@container` treatment is switched off (a compact bar is *expected* to
-   *  be narrow, so stretching the buttons to fill would be exactly wrong). Re-chrome it through the
-   *  `--lr-confirm-bar-compact-*` properties. Everything else -- the event shapes, the
+  /** Collapses the bar from a stacked `display: block` card to a single tightly-padded inline row,
+   *  for a confirmation that has to live inside an existing container -- a table cell, a card's
+   *  action row, a toolbar. The host becomes `inline-flex`, and the narrow-allocation `@container`
+   *  treatment is switched off (a compact bar is *expected* to be narrow, so stretching the buttons
+   *  to fill would be exactly wrong). Purely a density/layout knob -- same convention as
+   *  `<lr-agent-run>`'s `compact`: the border, corner radius and background stay, so use
+   *  `frame="plain"` to drop the chrome. Retune the density through
+   *  `--lr-confirm-bar-compact-padding`/`-gap`. Everything else -- the event shapes, the
    *  focus-to-`[part='status']`-before-unmount contract, `role="group"` and its heading label --
-   *  is unchanged. `false` (the default) renders today's exact card presentation. */
+   *  is unchanged. */
   @property({ type: Boolean, reflect: true }) compact = false;
+
+  /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
+   *  keeps the bordered, filled, padded box. `'plain'` removes the border, background, padding and
+   *  corner radius, so a bar nested inside a host container that already draws a border (a table
+   *  cell, an `<lr-result-card>` action row) doesn't double it. `plain` wins over `compact` when
+   *  both are set -- there is no padding left to tighten. The Deny/Approve `<lr-button>`s keep
+   *  their own border/background either way, so a chrome-less bar still has a visible interactive
+   *  affordance. */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   @query('[part="status"]') private statusEl?: HTMLElement;
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;

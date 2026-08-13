@@ -2529,7 +2529,7 @@ describe('ElementInternals fallback (lr-select)', () => {
     // `LyraElement` itself declares an `override attachInternals()` (to capture form internals for
     // shared infrastructure), which always shadows `HTMLElement.prototype.attachInternals` -- so
     // deleting only the native one (as the sibling "is missing" test above does) never reaches
-    // `attachLegacyNoopInternalsSafely`'s own `typeof host.attachInternals !== 'function'` guard: the lookup
+    // `attachInternalsSafely`'s own `typeof host.attachInternals !== 'function'` guard: the lookup
     // still finds LyraElement's own method (a real function), which then *calls* the missing
     // native one and throws, exercising the catch branch instead (same as "throws" above). Removing
     // LyraElement's override too is the only way to actually hit the guard's early-return branch.

@@ -53,8 +53,8 @@ export interface LyraStackTraceEventMap {
  *   information). Malformed or unsafe locations render as raw text and never emit this event.
  * @event lr-copy - `detail: { text }` — the raw, unparsed trace text, fired regardless of
  *   whether the OS clipboard write actually succeeded.
- * @csspart base - The root wrapper; respects `max-height`. Drops its card chrome under
- *   `frame="plain"`.
+ * @csspart base - The root wrapper; respects `max-height`. Tightens its padding under `compact`
+ *   and drops its card chrome under `frame="plain"`.
  * @csspart message - The leading error message text for a group.
  * @csspart group - One chained-error group of frames.
  * @csspart frame - A selectable frame button (carrying `data-internal` for internal frames), or a
@@ -71,6 +71,10 @@ export interface LyraStackTraceEventMap {
  *   verbatim raw fallback.
  * @cssprop [--lr-stack-trace-internal-frame-color=var(--lr-color-text-quiet)] - Internal frame foreground.
  * @cssprop [--lr-stack-trace-interactive-color=var(--lr-color-brand)] - Interactive frame/toggle accent.
+ * @cssprop [--lr-stack-trace-compact-padding=var(--lr-space-2xs)] - `[part="base"]` padding while
+ *   `compact`. Overridden entirely by `frame="plain"`.
+ * @cssprop [--lr-stack-trace-compact-gap=var(--lr-space-2xs)] - Space below `[part="message"]` and
+ *   between `[part="group"]`s while `compact`.
  * @status stable
  * @since 4.0.0
  */
@@ -106,9 +110,16 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
    *  keeps the bordered, filled, padded box. `'plain'` removes the border, background, padding and
    *  corner radius so a trace nested inside an `lr-result-card`/`lr-agent-run` (which already draws
-   *  a border) doesn't double the box. The `max-height` scroll cap and the copy/stack-frame
-   *  affordances are unaffected. */
+   *  a border) doesn't double the box. `plain` wins over `compact` when both are set (nothing left
+   *  to tighten). The `max-height` scroll cap and the copy/stack-frame affordances are unaffected. */
   @property({ reflect: true }) frame: LyraFrame = 'card';
+
+  /** Tighter root padding and between-group spacing for dense contexts (a trace rendered as a row
+   *  in an error list, a side panel) -- same convention as `<lr-agent-run>`'s and
+   *  `<lr-thinking-panel>`'s `compact`, and the counterpart `frame` already had. Defaults to
+   *  `false`, i.e. the full card padding. Purely a density knob: the border, corner radius and
+   *  background stay, so use `frame="plain"` to drop the chrome entirely. */
+  @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Caps the rendered block size and enables an internal scrollbar once content exceeds it
    *  (any valid CSS length, e.g. `'20rem'`). Empty string (the default) grows with content. */

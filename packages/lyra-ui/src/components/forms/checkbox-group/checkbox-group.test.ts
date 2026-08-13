@@ -844,7 +844,11 @@ describe('ElementInternals fallback', () => {
       expect(el.validationMessage).to.equal('');
       expect(el.checkValidity()).to.be.true;
       expect(el.reportValidity()).to.be.true;
-      expect(el.validity).to.deep.equal({});
+      // The shared fallback reports a REAL ValidityState rather than `{}`: it is read back by
+      // components (`internals.validity.valid`), so an empty object answered *wrong* rather than
+      // "unavailable". See `internal/form-associated.ts`'s `createFallbackInternals()`.
+      expect(el.validity.valid).to.equal(true);
+      expect(el.validity.valueMissing).to.equal(false);
     });
   });
 

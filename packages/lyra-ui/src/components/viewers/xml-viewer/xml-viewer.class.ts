@@ -21,6 +21,7 @@ import {
 } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
+import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { styles } from './xml-viewer.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -190,8 +191,11 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  * Search is a purely imperative surface (`search()`/`searchNext()`/`searchPrevious()`/
  * `clearSearch()`), the same uniform contract every anchor-target, search-capable viewer in this
  * library implements (`lr-pdf-viewer`, `lr-ebook-viewer`, `lr-notebook-viewer`) rather than
- * a settable property. `node-path` anchors address an element by child-index chain from the
- * document root, with an optional trailing `'@attrName'` segment addressing one of that
+ * a settable property. Each of the three navigating methods resolves only once the newly active
+ * match's row has been scrolled into view, the same way `lr-docx-viewer` follows its own active
+ * match: marking `data-active-match` without scrolling leaves a find-in-page host stepping through
+ * matches the reader never sees. `node-path` anchors address an element by child-index chain from
+ * the document root, with an optional trailing `'@attrName'` segment addressing one of that
  * element's attributes. Resolving one paints `data-active` on the addressed `[part="node"]` row and,
  * for an attribute-addressing path, on that one `[part="attribute"]` pair -- so a citation pointing
  * at a single attribute value of a multi-attribute element stays distinguishable in the rendered
@@ -649,6 +653,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     this.activeSearchIndex = this.searchState.ordered.length ? 0 : -1;
     this.requestUpdate();
     this.emitSearchChange();
+    if (this.activeSearchIndex >= 0) await this.scrollActiveMatchIntoView();
     return this.searchState.ordered.length;
   }
 
@@ -660,6 +665,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     if (!this.searchState.ordered.length) return false;
     this.activeSearchIndex = (this.activeSearchIndex + 1) % this.searchState.ordered.length;
     this.emitSearchChange();
+    await this.scrollActiveMatchIntoView();
     return true;
   }
 
@@ -669,6 +675,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     if (!this.searchState.ordered.length) return false;
     this.activeSearchIndex = (this.activeSearchIndex - 1 + this.searchState.ordered.length) % this.searchState.ordered.length;
     this.emitSearchChange();
+    await this.scrollActiveMatchIntoView();
     return true;
   }
 
@@ -678,6 +685,21 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     this.activeSearchIndex = -1;
     this.requestUpdate();
     this.emitSearchChange();
+  }
+
+  /** Brings the row carrying `data-active-match` on screen once the state change that moved the
+   *  marker has actually rendered -- the tree is Lit-rendered, so unlike `<lr-docx-viewer>`'s
+   *  synchronously-painted marks the row does not exist yet at call time. Marking the active match
+   *  without scrolling to it leaves a find-in-page host stepping through matches the reader never
+   *  sees, which is what every other search-capable viewer here avoids. Reduced motion drops the
+   *  smooth behavior, matching the sibling viewers. */
+  private async scrollActiveMatchIntoView(): Promise<void> {
+    await this.updateComplete;
+    const active = this.renderRoot.querySelector('[data-active-match]') as HTMLElement | null;
+    active?.scrollIntoView({
+      behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth',
+      block: 'center',
+    });
   }
 
   private emitSearchChange(): void {

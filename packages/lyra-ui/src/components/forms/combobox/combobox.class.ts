@@ -21,8 +21,8 @@ import {
 } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
-import { attachLegacyNoopInternalsSafely } from '../../../internal/legacy-noop-internals.js';
 import {
+  attachInternalsSafely,
   getFormOwner,
   installCustomErrorProperty,
   isBarredFromValidation,
@@ -42,7 +42,7 @@ import {
 } from '../../../internal/option-selection.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_comboboxCreate, LYRA_DEFAULT_comboboxLabel, LYRA_DEFAULT_comboboxLoadError, LYRA_DEFAULT_comboboxOverflow, LYRA_DEFAULT_comboboxRequired, LYRA_DEFAULT_comboboxSelectedOverflow, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_removeWithContext } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_comboboxCreate, LYRA_DEFAULT_comboboxLabel, LYRA_DEFAULT_comboboxLoadError, LYRA_DEFAULT_comboboxOverflow, LYRA_DEFAULT_comboboxRequired, LYRA_DEFAULT_comboboxSelectedOverflow, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -53,6 +53,47 @@ export type LyraComboboxSize = LyraSizeStep;
 export type LyraComboboxAppearance = Extract<LyraAppearance, 'filled' | 'outlined' | 'filled-outlined'>;
 export type LyraComboboxPlacement = 'top' | 'bottom';
 export type LyraComboboxTagRenderer = (option: LyraOption, index: number) => unknown;
+
+/** What a `validators` entry may return: nothing/`true` passes, a string is the message, `false` is
+ *  a generic failure, and an object of {@linkcode ValidityStateFlags} names the flags to raise. */
+export type LyraComboboxValidatorResult = void | boolean | string | ValidityStateFlags;
+/** Result shape accepted from object validators used by the upstream form-control contract. */
+export interface LyraComboboxObjectValidatorResult {
+  message: string;
+  isValid: boolean;
+  invalidKeys: Exclude<keyof ValidityState, 'valid'>[];
+}
+/** Structural compatibility shape for an object validator. The `never` callback input is
+ * intentional: it lets an array typed by another custom-element package remain assignable while
+ * Lyra invokes the callback with this host at runtime. Author new Lyra validators with the
+ * strongly typed function or `validate()` branches of {@linkcode LyraComboboxValidator}. */
+export interface LyraComboboxObjectValidator {
+  /** Host attributes that trigger a fresh validity check when they change. */
+  observedAttributes?: string[];
+  checkValidity: (input: never) => LyraComboboxObjectValidatorResult;
+  message?: string | ((input: never) => string);
+}
+export type LyraComboboxValidator =
+  | ((value: string | string[], input: LyraCombobox) => LyraComboboxValidatorResult)
+  | { validate(value: string | string[], input: LyraCombobox): LyraComboboxValidatorResult }
+  | LyraComboboxObjectValidator;
+
+const VALIDITY_FLAG_KEYS: ReadonlySet<string> = new Set<keyof ValidityStateFlags>([
+  'badInput',
+  'customError',
+  'patternMismatch',
+  'rangeOverflow',
+  'rangeUnderflow',
+  'stepMismatch',
+  'tooLong',
+  'tooShort',
+  'typeMismatch',
+  'valueMissing',
+]);
+
+function isValidityFlagKey(value: unknown): value is keyof ValidityStateFlags {
+  return typeof value === 'string' && VALIDITY_FLAG_KEYS.has(value);
+}
 
 export interface ComboboxSourceRow {
   value: string;
@@ -181,6 +222,8 @@ export interface LyraComboboxEventMap {
  * @csspart end - Wrapper around the `end` adornment slot; `hidden` while nothing is slotted.
  * @csspart listbox - The managed nonmodal options popover; its stack depth comes from
  *   `--lr-overlay-stack-index` with `--lr-layer-dropdown` as the standalone fallback.
+ * @csspart group-label - The heading of an option group (rows sharing a `group`), named as on
+ *   `lr-select` and `lr-emoji-picker` so one rule can style every grouped list.
  * @csspart option - An option row.
  * @csspart option-dot - An option row's leading status dot (when `dot-color` is set).
  * @csspart option-icon - An async option row's optional decorative leading visual.
@@ -272,6 +315,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     loading: LYRA_DEFAULT_loading,
     noMatches: LYRA_DEFAULT_noMatches,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
+    valueInvalid: LYRA_DEFAULT_valueInvalid,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -329,8 +373,12 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
   /** Custom selected-tag renderer in multiple mode. Returned strings stay text, never markup. */
   @property({ attribute: false }) getTag?: LyraComboboxTagRenderer;
-  /** Consumer-managed validator inventory, retained for public-surface compatibility. */
-  @property({ attribute: false }) validators: unknown[] = [];
+  /** Additional JavaScript validators run after the intrinsic `required` constraint — the same
+   * contract `lr-date-input` implements. Accepts a function, an object with
+   * `validate(value, input)`, or the mapped object-validator shape with `checkValidity(input)` and
+   * `{ isValid, message, invalidKeys }` results. Object validators can list host
+   * `observedAttributes` that should trigger live revalidation. */
+  @property({ attribute: false }) validators: LyraComboboxValidator[] = [];
   /** Native editing-assistance attributes forwarded to the wrapped input. */
   @property() autocomplete = 'off';
   @property({ attribute: 'inputmode' }) override inputMode = '';
@@ -404,6 +452,10 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   // Set on the combobox input's first `blur`; gates the `data-invalid`
   // reflection below so validity styling never flashes on first render.
   @state() private touched = false;
+  // Bumped whenever validity is recomputed outside a property write (an observed-attribute change
+  // seen by a `validators` entry), so `updated()`'s `data-invalid` reflection re-runs for it.
+  @state() private validityRevision = 0;
+  private validatorAttributeObserver?: { observer: MutationObserver; owner: Window };
   // Applies to `form-control-label` too: leaving that box visible would orphan its required
   // asterisk. The default option slot keeps its identity-aware collection handler below.
   private readonly slotPresence = new SlotPresenceController(this);
@@ -493,7 +545,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
 
   constructor() {
     super();
-    this.internals = attachLegacyNoopInternalsSafely(this);
+    this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
@@ -624,6 +676,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     super.connectedCallback();
     this.syncSourceErrorAnnouncementSink();
     this.updateValidity();
+    // A reconnect rebuilds the observer against the (possibly new) owning document.
+    if (this.hasUpdated) this.syncValidatorAttributeObserver();
     if (this.hasUpdated) {
       queueMicrotask(() => {
         if (this.open) this.reconnectOpenPopup();
@@ -858,17 +912,115 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     return isBarredFromValidation(this, this.internals);
   }
 
+  /** Runs `validators` in order and returns the first failure. Mirrors `lr-date-input`'s reading of
+   *  the same contract: a thrown validator fails closed with the generic localized message rather
+   *  than escaping into the caller that happened to write `value`. */
+  private validatorResult(): { flags?: ValidityStateFlags; message?: string } {
+    for (const validator of Array.isArray(this.validators) ? this.validators : []) {
+      let result: LyraComboboxValidatorResult;
+      try {
+        if (typeof validator === 'object' && validator !== null && 'checkValidity' in validator) {
+          const checked = validator.checkValidity(this as never);
+          if (checked?.isValid === true) continue;
+          const flags: ValidityStateFlags = {};
+          for (const key of Array.isArray(checked?.invalidKeys) ? checked.invalidKeys : []) {
+            if (isValidityFlagKey(key)) flags[key] = true;
+          }
+          if (!Object.values(flags).some(Boolean)) flags.customError = true;
+          let message = typeof checked?.message === 'string' ? checked.message : '';
+          if (!message && typeof validator.message === 'string') message = validator.message;
+          if (!message && typeof validator.message === 'function') {
+            message = validator.message(this as never);
+          }
+          return { flags, message: message || this.localize('valueInvalid') };
+        }
+        result = typeof validator === 'function'
+          ? validator(this.value, this)
+          : validator?.validate(this.value, this);
+      } catch {
+        return { flags: { customError: true }, message: this.localize('valueInvalid') };
+      }
+      if (result === undefined || result === true) continue;
+      if (typeof result === 'string') return { flags: { customError: true }, message: result };
+      if (result === false) return { flags: { customError: true }, message: this.localize('valueInvalid') };
+      if (result && typeof result === 'object' && Object.values(result).some(Boolean)) {
+        return { flags: result, message: this.localize('valueInvalid') };
+      }
+    }
+    return {};
+  }
+
+  /** Watches the host attributes any object validator listed in `observedAttributes`, so changing
+   *  one revalidates live. Bound to the owning window so a re-parent into another document (or a
+   *  disconnect) can never leave the previous document's observer firing into this host. */
+  private syncValidatorAttributeObserver(): void {
+    this.disconnectValidatorAttributeObserver();
+    const owner = this.ownerDocument.defaultView;
+    const MutationObserverCtor = owner?.MutationObserver;
+    if (!this.isConnected || !owner || typeof MutationObserverCtor !== 'function') return;
+
+    const attributes = new Set<string>();
+    for (const validator of Array.isArray(this.validators) ? this.validators : []) {
+      if (typeof validator !== 'object' || validator === null || !('checkValidity' in validator)) continue;
+      let observed: unknown;
+      try {
+        observed = validator.observedAttributes;
+      } catch {
+        continue;
+      }
+      if (!Array.isArray(observed)) continue;
+      for (const name of observed) {
+        if (typeof name === 'string' && name.length > 0) attributes.add(name);
+      }
+    }
+    if (attributes.size === 0) return;
+
+    const binding = {} as { observer: MutationObserver; owner: Window };
+    const observer = new MutationObserverCtor(() => {
+      if (
+        this.validatorAttributeObserver !== binding
+        || !this.isConnected
+        || this.ownerDocument.defaultView !== owner
+      ) return;
+      this.updateValidity();
+      this.validityRevision++;
+    });
+    binding.observer = observer;
+    binding.owner = owner;
+    try {
+      observer.observe(this, { attributes: true, attributeFilter: [...attributes] });
+      this.validatorAttributeObserver = binding;
+    } catch {
+      observer.disconnect();
+    }
+  }
+
+  private disconnectValidatorAttributeObserver(): void {
+    const binding = this.validatorAttributeObserver;
+    this.validatorAttributeObserver = undefined;
+    binding?.observer.disconnect();
+  }
+
   private updateValidity(): void {
     if (this.barredFromValidation) {
       // A barred control reports no violation at all, exactly like a native disabled `<select>` --
       // leaving `valueMissing` raised is what leaked `:state(invalid)` onto disabled required
-      // comboboxes, and with it the documented `:state(user-invalid)` error styling.
+      // comboboxes, and with it the documented `:state(user-invalid)` error styling. Configured
+      // validators are barred with it, exactly as the intrinsic constraint is.
       this.validityController.setValidity({});
-    } else if (this.required && this._selected.length === 0) {
-      this.validityController.setValidity({ valueMissing: true }, this.localize('comboboxRequired'));
-    } else {
-      this.validityController.setValidity({});
+      this.syncCustomStates();
+      return;
     }
+    const flags: ValidityStateFlags = {};
+    let message = '';
+    if (this.required && this._selected.length === 0) {
+      flags.valueMissing = true;
+      message = this.localize('comboboxRequired');
+    }
+    const configured = this.validatorResult();
+    if (configured.flags) Object.assign(flags, configured.flags);
+    if (configured.message) message = configured.message;
+    this.validityController.setValidity(flags, message);
     this.syncCustomStates();
   }
 
@@ -970,6 +1122,10 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     this.requestUpdate();
   }
   checkValidity(): boolean {
+    // Recomputed at call time, like a native control: `validators` is a plain JS array whose
+    // entries can start failing without any property on this host changing, so a check that read
+    // only the last published state would answer from a stale snapshot.
+    this.updateValidity();
     return this.internals.checkValidity();
   }
   reportValidity(): boolean {
@@ -977,6 +1133,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     // `:user-invalid` starts matching — so it counts as interaction, exactly as it does in the
     // `FormAssociated` mixin.
     this.touched = true;
+    this.updateValidity();
     this.syncCustomStates();
     return this.internals.reportValidity();
   }
@@ -1003,6 +1160,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   override disconnectedCallback(): void {
     this.transitionToken++;
     this.releaseSourceErrorAnnouncementSink();
+    this.disconnectValidatorAttributeObserver();
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
@@ -1426,7 +1584,17 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       this.restoreFocusOnClose = true;
     }
     if (changed.has('name')) this.syncFormValue();
-    if (changed.has('touched') || changed.has('required') || changed.has('value')) {
+    if (changed.has('validators')) {
+      this.updateValidity();
+      this.syncValidatorAttributeObserver();
+    }
+    if (
+      changed.has('touched') ||
+      changed.has('required') ||
+      changed.has('value') ||
+      changed.has('validators') ||
+      changed.has('validityRevision')
+    ) {
       this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
     }
     // The listbox is a fixed-height, scrollable box (see combobox.styles.ts's
@@ -1808,7 +1976,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       if (currentGroup) {
         const labelId = `${this.listId}-group-${groupIndex++}`;
         out.push(html`<div role="group" aria-labelledby=${labelId}>
-          <div id=${labelId} class="group-label">${currentGroup}</div>
+          <div id=${labelId} part="group-label" class="group-label">${currentGroup}</div>
           ${currentGroupRows}
         </div>`);
       } else {

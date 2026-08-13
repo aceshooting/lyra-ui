@@ -1,12 +1,5 @@
 import type { Announcer } from './announcer.js';
 
-/** The `lr-search-change` event detail shape, uniform across every search-capable viewer. */
-export interface ViewerSearchChangeDetail {
-  query: string;
-  matchCount: number;
-  activeIndex: number;
-}
-
 type LocalizeFn = (key: string, fallback?: string, values?: Record<string, string | number>) => string;
 
 /**

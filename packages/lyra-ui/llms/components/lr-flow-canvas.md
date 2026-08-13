@@ -6,9 +6,9 @@
 - **Class** `LyraFlowCanvas`, also available unregistered from `@aceshooting/lyra-ui/components/data/flow-canvas/flow-canvas.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecated css-property** `--lr-flow-canvas-node-current-outline-color` since `7.0.0`; use css-property `--lr-flow-canvas-node-selected-outline-color`; removal not before `9.0.0` — The selected spelling matches the component's selection vocabulary; current remains a compatibility fallback for existing themes.
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -81,7 +81,9 @@ position, previous }`), `lr-connect` (`detail: { source, target, sourceHandle, t
 unpositioned nodes).
 
 **Slots:** default (`lr-flow-node` children adopted by `node-id`; a non-matching child is ignored
-with a console warning), `top-start`, `top-end` (floating top-rail content), `bottom-start` (e.g.
+with a console warning). Adoption reads the `node-id` **attribute** and runs only when `nodes`
+changes, so a child must carry its id (declaratively, or via `lr-flow-node`'s reflected `nodeId`
+property) before the canvas is given the matching `nodes` array. `top-start`, `top-end` (floating top-rail content), `bottom-start` (e.g.
 `lr-flow-controls`), `bottom-end` (e.g. `lr-flow-minimap`). Opposite-side slots share wrapping top
 and bottom rails, so wide companions stack without intersecting in narrow allocations.
 
@@ -107,7 +109,7 @@ property-derived fallback. Each edge tone colors its stroke and the arrowhead ma
 `var(--lr-duration-ambient)`, running-edge march animation duration; this is a time-only value, not
 the `--lr-transition-ambient` duration/easing shorthand, because the animation supplies its own
 `linear` timing function), and
-`--lr-flow-canvas-node-current-outline-color` (default `var(--lr-color-brand)`) — the outline color
+`--lr-flow-canvas-node-selected-outline-color` (default `var(--lr-color-brand)`) — the outline color
 of the current (`aria-current`) node. Like every state-scoped custom property in this library it is
 an inline `var()` fallback at its point of use rather than a `:host` declaration, so it can be set on
 the element _or any ancestor_. It exists because Shadow Parts forbids an attribute selector after
@@ -174,6 +176,6 @@ treatment entirely.
 
 - `part="edge-hit-area"` — The transparent wide pointer target behind an edge.
 - `part="node-control"` — The visually hidden, roving selection button for a node.
-- `--lr-flow-canvas-node-selected-outline-color` — Outline color of a selected node. Default: `var(--lr-flow-canvas-node-current-outline-color,var(--lr-color-brand))`.
+- `--lr-flow-canvas-node-selected-outline-color` — Outline color of a selected node. Default: `var(--lr-color-brand)`.
 
 ---

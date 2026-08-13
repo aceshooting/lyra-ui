@@ -36,18 +36,40 @@ function makeEntry(overrides: Partial<ToolTimelineEntry> = {}): ToolTimelineEntr
   };
 }
 
-it('suppresses both chip-selection events while opening a pending approval', async () => {
+it('suppresses the chip-selection event while opening a pending approval', async () => {
   const entry = makeEntry({ needsApproval: true, approved: undefined });
   const el = (await fixture(html`<lr-tool-timeline .entries=${[entry]}></lr-tool-timeline>`)) as LyraToolTimeline;
   let leaked = 0;
   el.addEventListener('lr-tool-call-chip-select', () => leaked++);
-  el.addEventListener('lr-tool-chip-select', () => leaked++);
   const chip = chipIn(entriesEl(el)[0]);
   chip.dispatchEvent(new CustomEvent('lr-tool-call-chip-select', { bubbles: true, composed: true }));
-  chip.dispatchEvent(new CustomEvent('lr-tool-chip-select', { bubbles: true, composed: true }));
   await el.updateComplete;
   expect(leaked).to.equal(0);
   expect(dialog(el).open).to.be.true;
+});
+
+it('handles one chip activation exactly once — the removed alias binding is gone', async () => {
+  const el = (await fixture(
+    html`<lr-tool-timeline .entries=${[makeEntry()]}></lr-tool-timeline>`,
+  )) as LyraToolTimeline;
+  let selections = 0;
+  el.addEventListener('lr-tool-call-chip-select', () => selections++);
+  el.addEventListener('lr-tool-chip-select', () => selections++);
+
+  chipIn(entriesEl(el)[0]).shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!.click();
+  await el.updateComplete;
+
+  expect(selections).to.equal(1);
+});
+
+it('ignores a stray lr-tool-chip-select on a pending-approval entry', async () => {
+  const entry = makeEntry({ needsApproval: true, approved: undefined });
+  const el = (await fixture(html`<lr-tool-timeline .entries=${[entry]}></lr-tool-timeline>`)) as LyraToolTimeline;
+  chipIn(entriesEl(el)[0]).dispatchEvent(
+    new CustomEvent('lr-tool-chip-select', { bubbles: true, composed: true }),
+  );
+  await el.updateComplete;
+  expect(dialog(el).open).to.be.false;
 });
 
 it('exposes a vetoed approval at the timeline boundary and lets a host revert it without losing edits', async () => {

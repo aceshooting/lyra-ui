@@ -80,7 +80,7 @@ export interface DataGridColumn<Row = Record<string, unknown>> {
   resizable?: boolean;
   movable?: boolean;
   pinnable?: boolean;
-  pinned?: Exclude<DataGridPinSide, null>;
+  pinned?: DataGridPinSide;
   footer?: string | ((rows: readonly Row[]) => unknown);
   aggregation?: DataGridAggregation<Row>;
   aggregatedFormatter?: (value: unknown, rows: readonly Row[]) => string | TemplateResult | Node | unknown;
@@ -144,8 +144,6 @@ export interface DataGridCsvOptions {
   includeHeaders?: boolean;
   columnIds?: string[];
   escapeFormulas?: boolean;
-  /** @deprecated Use `columnIds`. */
-  columns?: string[];
 }
 
 export interface DataGridCopyOptions {
@@ -155,14 +153,10 @@ export interface DataGridCopyOptions {
   escapeFormulas?: boolean;
   /** Overrides the delimiter that `format` would otherwise select. */
   delimiter?: string;
-  /** @deprecated Use `columnIds`. */
-  columns?: string[];
 }
 
 export interface DataGridExportOptions extends DataGridCsvOptions {
   fileName?: string;
-  /** @deprecated Use `fileName`. */
-  filename?: string;
 }
 
 export interface DataGridScrollOptions {

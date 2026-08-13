@@ -20,7 +20,7 @@ it('defaults to entries=[], mode="live", follow=true, expanded=false, label="Act
   expect(el.expanded).to.be.false;
   expect(el.label).to.equal('Activity');
   expect(el.showTimestamps).to.be.false;
-  expect(el.virtualizeThreshold).to.equal(200);
+  expect(el.virtualizeAt).to.equal(199);
 });
 
 it('renders one [part="entry"] row per entry, carrying data-variant', async () => {
@@ -230,7 +230,7 @@ describe('renderText', () => {
     expect(row.querySelector('em.chip')!.textContent).to.equal('tool: read');
   });
 
-  it('also applies through the internal lr-virtual-list at/above virtualizeThreshold', async () => {
+  it('also applies through the internal lr-virtual-list above virtualizeAt', async () => {
     // Both the non-virtualized repeat() path and the virtualized lr-virtual-list path render
     // every entry through the exact same entryTemplate() method, so there's no separate code path
     // for renderText to miss in virtualized mode -- proven here by invoking the internal
@@ -238,7 +238,7 @@ describe('renderText', () => {
     // reliably assertable without real browser layout, which none of this file's other
     // virtualized-mode tests attempt either -- they only assert on the lr-virtual-list element's
     // existence/attributes, not its rendered row content).
-    const el = (await fixture(html`<lr-activity-feed expanded virtualize-threshold="1"></lr-activity-feed>`)) as LyraActivityFeed;
+    const el = (await fixture(html`<lr-activity-feed expanded virtualize-at="0"></lr-activity-feed>`)) as LyraActivityFeed;
     el.renderText = (entry) => html`<strong class="rich">${entry.text}</strong>`;
     el.entries = [{ id: '1', text: 'virtualized narration' }, { id: '2', text: 'second' }];
     await el.updateComplete;
@@ -421,19 +421,19 @@ describe('follow contract (non-virtualized)', () => {
 });
 
 describe('follow contract (virtualized)', () => {
-  it('switches to an internal lr-virtual-list at/above virtualizeThreshold', async () => {
+  it('switches to an internal lr-virtual-list above virtualizeAt', async () => {
     const el = (await fixture(
-      html`<lr-activity-feed expanded virtualize-threshold="5" .entries=${makeEntries(5)}></lr-activity-feed>`,
+      html`<lr-activity-feed expanded virtualize-at="4" .entries=${makeEntries(5)}></lr-activity-feed>`,
     )) as LyraActivityFeed;
     expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.exist;
     expect(el.shadowRoot!.querySelector('[part="body"][role="list"]')).to.not.exist;
   });
 
-  it('normalizes a NaN virtualizeThreshold to the default (200) instead of silently disabling virtualization', async () => {
+  it('normalizes a NaN virtualizeAt to the default (199) instead of silently disabling virtualization', async () => {
     const el = (await fixture(
-      html`<lr-activity-feed expanded virtualize-threshold="not-a-number" .entries=${makeEntries(5)}></lr-activity-feed>`,
+      html`<lr-activity-feed expanded virtualize-at="not-a-number" .entries=${makeEntries(5)}></lr-activity-feed>`,
     )) as LyraActivityFeed;
-    expect(Number.isNaN(el.virtualizeThreshold)).to.be.true;
+    expect(Number.isNaN(el.virtualizeAt)).to.be.true;
     expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.not.exist;
     expect(el.shadowRoot!.querySelectorAll('[part="entry"]').length).to.equal(5);
 
@@ -458,7 +458,7 @@ describe('follow contract (virtualized)', () => {
       html`<lr-activity-feed
         expanded
         label="Steps"
-        virtualize-threshold="5"
+        virtualize-at="4"
         .entries=${makeEntries(5)}
       ></lr-activity-feed>`,
     )) as LyraActivityFeed;
@@ -467,7 +467,7 @@ describe('follow contract (virtualized)', () => {
 
   it('does not leak the internal lr-virtual-list lr-visible-range-changed event past the host under its own name', async () => {
     const el = (await fixture(
-      html`<lr-activity-feed expanded virtualize-threshold="1" .entries=${makeEntries(5)}></lr-activity-feed>`,
+      html`<lr-activity-feed expanded virtualize-at="0" .entries=${makeEntries(5)}></lr-activity-feed>`,
     )) as LyraActivityFeed;
     const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement;
     let count = 0;
@@ -485,15 +485,15 @@ describe('follow contract (virtualized)', () => {
     expect(count).to.equal(0);
   });
 
-  it('stays below virtualizeThreshold using a plain keyed list', async () => {
+  it('stays below virtualizeAt using a plain keyed list', async () => {
     const el = (await fixture(
-      html`<lr-activity-feed expanded virtualize-threshold="5" .entries=${makeEntries(4)}></lr-activity-feed>`,
+      html`<lr-activity-feed expanded virtualize-at="4" .entries=${makeEntries(4)}></lr-activity-feed>`,
     )) as LyraActivityFeed;
     expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.not.exist;
     expect(el.shadowRoot!.querySelectorAll('[part="entry"]').length).to.equal(4);
   });
 
-  it('keeps following the tail when virtualizeThreshold switches either rendering path', async () => {
+  it('keeps following the tail when virtualizeAt switches either rendering path', async () => {
     const VirtualList = customElements.get('lr-virtual-list') as
       | (CustomElementConstructor & {
           prototype: {
@@ -516,19 +516,19 @@ describe('follow contract (virtualized)', () => {
           expanded
           mode="live"
           style="--lr-activity-feed-max-height:48px"
-          virtualize-threshold="99"
+          virtualize-at="99"
           .entries=${makeEntries(20)}
         ></lr-activity-feed>
       `)) as LyraActivityFeed;
       await twoFrames();
 
-      el.virtualizeThreshold = 1;
+      el.virtualizeAt = 1;
       await el.updateComplete;
       await twoFrames();
       expect(calls.at(-1)).to.deep.equal([19, { align: 'end', behavior: 'auto' }]);
       expect(el.follow, 'programmatic path switch must not release follow').to.be.true;
 
-      el.virtualizeThreshold = 99;
+      el.virtualizeAt = 99;
       await el.updateComplete;
       await twoFrames();
       const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
@@ -553,7 +553,7 @@ describe('follow contract (virtualized)', () => {
           expanded
           mode="live"
           style="--lr-activity-feed-max-height:120px"
-          virtualize-threshold="5"
+          virtualize-at="4"
           row-height="24"
           .entries=${makeEntries(5)}
         ></lr-activity-feed>`,
@@ -608,7 +608,7 @@ describe('entry part styling reaches both rendering paths', () => {
   ];
 
   /** The shadow tree the entry rows actually live in: this component's own below
-   *  `virtualize-threshold`, the internal `<lr-virtual-list>`'s above it. */
+   *  `virtualize-at`, the internal `<lr-virtual-list>`'s above it. */
   function entryRoot(el: LyraActivityFeed): ShadowRoot {
     const list = el.shadowRoot!.querySelector('lr-virtual-list');
     return list ? list.shadowRoot! : el.shadowRoot!;
@@ -618,7 +618,7 @@ describe('entry part styling reaches both rendering paths', () => {
     const el = (await fixture(html`<lr-activity-feed
       expanded
       show-timestamps
-      virtualize-threshold=${threshold}
+      virtualize-at=${threshold}
       style=${`--lr-theme-color-success-fill-loud: rgb(1, 2, 3); --lr-theme-color-text-quiet: rgb(4, 5, 6); ${extraHostStyle}`}
       .entries=${variantEntries}
     ></lr-activity-feed>`)) as LyraActivityFeed;
@@ -694,7 +694,7 @@ describe('entry part styling reaches both rendering paths', () => {
             background: rgb(33, 55, 77);
           }
         </style>
-        <lr-activity-feed expanded virtualize-threshold="1" .entries=${variantEntries}></lr-activity-feed>
+        <lr-activity-feed expanded virtualize-at="0" .entries=${variantEntries}></lr-activity-feed>
       </div>
     `);
     const el = wrapper.querySelector('lr-activity-feed') as LyraActivityFeed;

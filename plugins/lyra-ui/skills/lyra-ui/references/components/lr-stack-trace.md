@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -36,8 +36,14 @@ non-activatable text. Falls back to verbatim raw text when nothing parses. First
   vocabulary (`'card' | 'plain'`). `'card'` keeps the bordered, filled, padded box. `'plain'` removes
   the border, background, padding and corner radius, so a trace nested inside an
   `lr-result-card`/`lr-agent-run` — which already draws a border — doesn't double the frame. The
-  `max-height` scroll cap and the copy/frame affordances are unaffected either way. The exported
-  alias `StackTraceAppearance` is retained as a name for the same union.
+  `max-height` scroll cap and the copy/frame affordances are unaffected either way, and `'plain'`
+  wins over `compact` when both are set. The exported alias `StackTraceAppearance` is retained as a
+  name for the same union.
+- `compact: boolean = false` (reflected) — tighter root padding and between-group spacing for dense
+  contexts (a trace as a row in an error list, a side panel), the same density convention
+  `lr-agent-run`, `lr-commit-card`, `lr-result-card`, `lr-task-list`, `lr-terminal` and
+  `lr-thinking-panel` already pair with `frame`. Purely density: the border, corner radius and
+  background stay, so reach for `frame="plain"` to drop the chrome. Added in 9.0.0.
 
 **Events:**
 - `lr-frame-select` (`detail: { file: string; line: number; column?: number; raw: string }`) — a
@@ -49,8 +55,8 @@ non-activatable text. Falls back to verbatim raw text when nothing parses. First
 
 **Slots:** none.
 
-**CSS parts:** `base` (the root wrapper; respects `max-height`, and drops its card chrome under
-`frame="plain"`), `message` (the leading error
+**CSS parts:** `base` (the root wrapper; respects `max-height`, tightens its padding under
+`compact`, and drops its card chrome under `frame="plain"`), `message` (the leading error
 message text for a group), `group` (one chained-error group of frames), `frame` (a selectable
 frame button, carrying `data-internal` for internal frames, or a non-activatable raw row for an
 unsafe location), `frame-function` (the frame's function name), `frame-location` (the frame's
@@ -61,8 +67,12 @@ while `copyable`).
 **Themeable custom properties:** `--lr-stack-trace-max-height` (default `none`),
 `--lr-stack-trace-font` (default `var(--lr-font-mono)`),
 `--lr-stack-trace-internal-frame-color` (default `var(--lr-color-text-quiet)`) — internal-frame
-foreground, and `--lr-stack-trace-interactive-color` (default `var(--lr-color-brand)`) — frame
-hover/focus, internal-toggle, and copy-button-hover accent. The scoped color hooks avoid changing
+foreground, `--lr-stack-trace-interactive-color` (default `var(--lr-color-brand)`) — frame
+hover/focus, internal-toggle, and copy-button-hover accent, plus the two density hooks
+`--lr-stack-trace-compact-padding` (default `var(--lr-space-2xs)`, `[part="base"]` padding while
+`compact`, overridden entirely by `frame="plain"`) and `--lr-stack-trace-compact-gap` (default
+`var(--lr-space-2xs)`, the space below `[part="message"]` and between `[part="group"]`s while
+`compact`). The scoped color hooks avoid changing
 the shared quiet/brand tokens used by surrounding UI. Plus shared tokens
 `--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`, `--lr-radius`,
 `--lr-border-width-thin`, `--lr-space-xs`/`-s`/`-2xs`, `--lr-font-size-sm`/`-xs`,

@@ -34,7 +34,17 @@ export function isAccessibilityExcluded(element: Element): boolean {
   return isAccessibilitySubtreeExcluded(element) || isAccessibilityVisibilityHidden(element);
 }
 
-function observeAccessibleTextNode(observer: MutationObserver, node: Node): void {
+/** Attributes on a content node that can change the accessible text it contributes. */
+const CONTENT_NODE_ATTRIBUTES = ['aria-hidden', 'aria-label', 'class', 'hidden', 'inert', 'style'];
+/** The subset of the above that matters on a composed *ancestor*: an ancestor cannot lend the
+ *  subtree its own `aria-label`, it can only hide or reveal it. */
+const ANCESTOR_ATTRIBUTES = ['aria-hidden', 'class', 'hidden', 'inert', 'style'];
+
+function observeAccessibleTextNode(
+  observer: MutationObserver,
+  node: Node,
+  extraAttributes: readonly string[],
+): void {
   if (node.nodeType === 3) {
     observer.observe(node, { characterData: true });
     return;
@@ -42,28 +52,41 @@ function observeAccessibleTextNode(observer: MutationObserver, node: Node): void
   if (node.nodeType !== 1) return;
   observer.observe(node, {
     attributes: true,
-    attributeFilter: ['aria-hidden', 'aria-label', 'class', 'hidden', 'inert', 'style'],
+    attributeFilter: [...CONTENT_NODE_ATTRIBUTES, ...extraAttributes],
     childList: true,
     characterData: true,
     subtree: true,
   });
 }
 
-/** Observes a host's label content, assigned nodes, and composed ancestors for accessible text. */
-export function bindAccessibleTextObserver(observer: MutationObserver | undefined, host: Element): void {
+/**
+ * Observes a host's label content, assigned nodes, and composed ancestors for accessible text.
+ *
+ * `extraAttributes` widens the *content-node* filter only (never the ancestor filter, which cannot
+ * lend a subtree its own name and only hides or reveals it). A component whose label text is drawn
+ * from one specific slot -- `<lr-chip>` and `<lr-tag>` both read the default slot and deliberately
+ * exclude the decorative `icon`/`start`/`end` ones -- passes `'slot'`, so a light-DOM child's own
+ * slot reassignment is a second, independent trigger alongside the `slotchange` those components
+ * also listen for. Components whose accessible text does not depend on slot assignment pass nothing
+ * and keep the narrower filter, so widening it here changes nothing for them.
+ */
+export function bindAccessibleTextObserver(
+  observer: MutationObserver | undefined,
+  host: Element,
+  extraAttributes: readonly string[] = [],
+): void {
   if (!observer) return;
   observer.disconnect();
-  observeAccessibleTextNode(observer, host);
+  observeAccessibleTextNode(observer, host, extraAttributes);
   let ancestor = composedParentElement(host);
   while (ancestor) {
-    observer.observe(ancestor, {
-      attributes: true,
-      attributeFilter: ['aria-hidden', 'class', 'hidden', 'inert', 'style'],
-    });
+    observer.observe(ancestor, { attributes: true, attributeFilter: ANCESTOR_ATTRIBUTES });
     ancestor = composedParentElement(ancestor);
   }
   for (const slot of host.querySelectorAll<HTMLSlotElement>('slot')) {
-    for (const assigned of slot.assignedNodes({ flatten: true })) observeAccessibleTextNode(observer, assigned);
+    for (const assigned of slot.assignedNodes({ flatten: true })) {
+      observeAccessibleTextNode(observer, assigned, extraAttributes);
+    }
   }
 }
 

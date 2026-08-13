@@ -57,8 +57,6 @@ accessibility surface.
   declaration-breaking input, `url()`, and unmatched categories render `transparent`. `label` is
   used in the auto-generated `aria-label` summary and as the hover-tooltip fallback text, falling
   back to `key` itself when unset
-- `orientation: 'horizontal' = 'horizontal'` (reflected) — only `'horizontal'` is supported today;
-  vertical is plausible future scope, not built speculatively without a motivating case
 - `accessibleLabel?: string` (attribute `accessible-label`) — overrides the auto-generated
   `aria-label` (a per-category "label: count" summary, e.g. `"Text: 2, Tool: 1"`). Unset computes the
   summary from `items`/`categories`; a standard host `aria-label` takes precedence over this alias
@@ -76,6 +74,10 @@ accessibility surface.
   treatment, and it adds the marker to the auto-generated `aria-label` summary, which is otherwise
   per-category only. The marker count is reported as its own clause rather than folded into any
   category's count. Unset (the default) changes nothing: no extra legend row, no extra summary clause
+
+The single-member `orientation: 'horizontal'` property was **removed in 9.0.0**: nothing read it and
+the stylesheet never mentioned it, so the reflected attribute styled nothing. Delete the attribute;
+the strip has always laid out horizontally.
 
 **Events:** none.
 

@@ -1253,8 +1253,11 @@ embedding counts, retry attempts, errors, and retry/cancel requests. Never inges
   `error` renders only while `stage === 'failed'`. Controlled — pass a new array to update
 - `label: string = ''` — accessible name for the region; defaults to the localized
   `ingestionQueueLabel`
-- `virtualizeThreshold: number = 100` (attribute `virtualize-threshold`) — item count above which the
-  list renders through an internal `lr-virtual-list`
+- `virtualizeAt: number = 100` (attribute `virtualize-at`) — item count above which the list renders
+  through an internal `lr-virtual-list`. Exclusive, like every other `virtualize-at` in this family:
+  exactly this many items still render as a plain list. Before 9.0.0 this was spelled
+  `virtualizeThreshold`/`virtualize-threshold` *and* compared inclusively (`>=`), so a migration
+  that only renames the attribute shifts the switchover point by one item
 
 **Events:**
 - `lr-retry` (`detail: IngestionRetryEventDetail` = `RetryEventDetail & { itemId: string }` =
@@ -1285,7 +1288,7 @@ is unchanged: only failures added or transitioned *after* mount, so historical f
 visible without being re-announced. Assert against that document-level region rather than
 `::part(failure-live)`.
 
-In virtualized mode (at or above `virtualizeThreshold`) the rows live in the internal
+In virtualized mode (above `virtualizeAt`) the rows live in the internal
 `lr-virtual-list`'s shadow root, and `item`, `item-header`, `item-name`, `item-progress`,
 `item-meta`, `item-error`, `item-actions`, `retry-button` and `cancel-button` are forwarded out
 through `exportparts`, so `lr-ingestion-queue::part(item)` and the rest keep working from a consumer
@@ -1326,10 +1329,13 @@ per-row create/sync/pause/delete requests. Composes `lr-table`, `lr-badge`, `lr-
 - `hideCreate: boolean = false` (attribute `hide-create`, reflected) — hides the "Add source"
   affordance, e.g. for a read-only or permission-gated view
 
-**Events:** `lr-kb-create` (`detail: undefined` — nothing exists yet to reference), `lr-kb-sync`
-(`detail: { sourceId: string }`), `lr-kb-pause` (`detail: { sourceId: string }`), `lr-kb-delete`
-(`detail: { sourceId: string }`, no built-in confirmation, matching `lr-thread-list`'s
-`lr-thread-delete`).
+**Events:** `lr-source-create` (`detail: undefined` — nothing exists yet to reference),
+`lr-source-sync` (`detail: { sourceId: string }`), `lr-source-pause` (`detail: { sourceId: string }`),
+`lr-source-delete` (`detail: { sourceId: string }`, no built-in confirmation, matching
+`lr-thread-list`'s `lr-thread-delete`). These were spelled `lr-kb-create`/`-sync`/`-pause`/`-delete`
+before 9.0.0 — the library's only abbreviated event prefix. `<lr-knowledge-base-admin>` already
+re-emitted them under the `lr-source-*` names, so a host listening on the admin shell needs no
+change; a host listening directly on `<lr-knowledge-base>` renames its four listeners.
 
 **Slots:** none.
 
@@ -1573,10 +1579,10 @@ Large sets window through an internal `lr-virtual-list`.
 - `loading: boolean = false` (reflected)
 - `hasMore: boolean = false` (attribute `has-more`, reflected) — while virtualized, forwarded to the
   virtual list so scroll-near-bottom fires `lr-load-more`; otherwise shows the built-in footer button
-- `error: string = ''` — non-empty replaces the whole result view with a neutral visible message.
-  Caller-supplied text is not localized (app/network data, not library copy). A new non-empty value
-  is announced through a shared assertive light-DOM region; initial and reconnect content is not
-  replayed
+- `errorText: string = ''` (attribute `error-text`; spelled plain `error` before 9.0.0) — non-empty
+  replaces the whole result view with a neutral visible message. Caller-supplied text is not
+  localized (app/network data, not library copy). A new non-empty value is announced through a
+  shared assertive light-DOM region; initial and reconnect content is not replayed
 - `label: string = ''` — accessible name; defaults to the localized `chunkInspectorLabel`
 
 **Events:**
@@ -1591,9 +1597,9 @@ Large sets window through an internal `lr-virtual-list`.
 
 **Slots:** none.
 
-**CSS parts:** `base`, `error` (neutral visible message while `error` is non-empty), `spinner`
+**CSS parts:** `base`, `error` (neutral visible message while `errorText` is non-empty), `spinner`
 (initial-load `lr-spinner`, while `loading` and `chunks` is still empty), `empty` (when `chunks` is
-empty and neither `error` nor `loading` is set), `row` (a plain element in this shadow root below the
+empty and neither `errorText` nor `loading` is set), `row` (a plain element in this shadow root below the
 virtualization threshold; exported from the internal `lr-virtual-list`'s own `row` part while
 virtualized — `::part(row)` reaches it either way), `group-header` (exported from the virtual list's
 `group` part; grouped/virtualized mode only), `select` (per-row `lr-checkbox`, omitted when
@@ -1768,9 +1774,10 @@ or source fetching.
 
 **Properties:** `answer: string = ''`; `citations: Citation[] = []` (attribute: false);
 `sources: DocumentRef[] = []` (attribute: false); `assessment: GroundingAssessment | null = null`
-(attribute: false); `loading: boolean = false`; `error: string = ''` (neutral visible caller text;
-new non-empty values announce through a shared assertive light-DOM region, while initial and
-reconnect content is not replayed); `showSources: boolean = true`; `showClaims: boolean = true`
+(attribute: false); `loading: boolean = false`; `errorText: string = ''` (attribute `error-text`;
+neutral visible caller text; new non-empty values announce through a shared assertive light-DOM
+region, while initial and reconnect content is not replayed — spelled plain `error` before 9.0.0);
+`showSources: boolean = true`; `showClaims: boolean = true`
 (attribute `show-claims`); `label: string = ''`; `accessibleLabel: string | null = null` (attribute
 `aria-label`).
 

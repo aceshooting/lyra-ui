@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { FlowHandle, FlowRunStatus } from '../flow-canvas/flow-canvas.class.js';
+import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -88,7 +89,13 @@ export class LyraFlowNode extends LyraElement {
 
   static override styles = [LyraElement.styles, styles];
 
-  @property({ attribute: 'node-id' }) nodeId = '';
+  /** This card's identity inside `lr-flow-canvas`, matched against a `nodes` entry's `id`. It
+   *  reflects because the canvas adopts light-DOM children by reading the `node-id` *attribute*: a
+   *  property-only `card.nodeId = 'fetch'` used to leave the card unslotted, rendering nowhere and
+   *  warning that it matched no node. The empty default stays absent from the DOM rather than
+   *  serializing as `node-id=""`, which the canvas would have to skip anyway. */
+  @property({ attribute: 'node-id', reflect: true, converter: omittedEmptyStringConverter })
+  nodeId = '';
   @property() heading = '';
   @property({ reflect: true }) status: FlowRunStatus | null = null;
   @property({ type: Number }) progress: number | null = null;

@@ -1,6 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { ComboboxFilterDetail, ComboboxSource, LyraCombobox, OptionFilter } from './combobox.js';
+import type {
+  ComboboxFilterDetail,
+  ComboboxSource,
+  LyraCombobox,
+  LyraComboboxValidator,
+  OptionFilter,
+} from './combobox.js';
 import '../color-picker/color-picker.js';
 
 const meta: Meta = {
@@ -362,6 +368,57 @@ export const States: Story = {
       </lr-combobox>
     </div>
   `,
+};
+
+const seatAvailabilityValidator: LyraComboboxValidator = {
+  observedAttributes: ['data-sold-out'],
+  checkValidity: (input) => {
+    const soldOut = (input as unknown as HTMLElement).getAttribute('data-sold-out') === 'true';
+    return {
+      isValid: !soldOut,
+      message: 'That performance just sold out — pick another.',
+      invalidKeys: ['customError'],
+    };
+  },
+};
+
+export const CustomValidators: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The `validators` property runs after the intrinsic `required` constraint and accepts ' +
+          'Lyra function and `validate(value, input)` forms plus Web Awesome-compatible ' +
+          '`{ observedAttributes?, checkValidity(), message? }` objects. Changing a listed host ' +
+          'attribute re-runs validity with no explicit `checkValidity()` call.',
+      },
+    },
+  },
+  render: () => {
+    const toggleSoldOut = (event: Event) => {
+      const container = (event.currentTarget as HTMLElement).parentElement;
+      const combobox = container?.querySelector('lr-combobox');
+      if (!combobox) return;
+      const soldOut = combobox.getAttribute('data-sold-out') === 'true';
+      combobox.setAttribute('data-sold-out', soldOut ? 'false' : 'true');
+      const output = container?.querySelector('output');
+      if (output) output.textContent = combobox.validationMessage || 'Valid';
+    };
+    return html`
+      <div style="display: grid; gap: var(--lr-space-s); max-width: 22rem">
+        <lr-combobox
+          label="Performance"
+          data-sold-out="true"
+          .validators=${[seatAvailabilityValidator]}
+        >
+          <lr-option value="fri">Friday</lr-option>
+          <lr-option value="sat">Saturday</lr-option>
+        </lr-combobox>
+        <button type="button" @click=${toggleSoldOut}>Toggle sold out</button>
+        <output aria-live="polite">That performance just sold out — pick another.</output>
+      </div>
+    `;
+  },
 };
 
 export const ExactToolbarHeight: Story = {

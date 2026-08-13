@@ -1804,7 +1804,7 @@ it('does not emit `lr-point-click` when the click misses every point/segment', a
   }
 });
 
-it('defaults `options.indexAxis` to "x" and keeps `horizontal` as a positive "y" alias', async () => {
+it('defaults `options.indexAxis` to "x" and flips it with `index-axis="y"`', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';
   el.labels = ['A', 'B'];
@@ -1813,9 +1813,22 @@ it('defaults `options.indexAxis` to "x" and keeps `horizontal` as a positive "y"
   await waitUntil(() => (el as any).chart != null);
   expect((el as any).buildConfig().options.indexAxis).to.equal('x');
 
-  el.horizontal = true;
+  el.setAttribute('index-axis', 'y');
   await el.updateComplete;
   expect((el as any).buildConfig().options.indexAxis).to.equal('y');
+});
+
+// 9.0.0 removed the `horizontal` boolean outright: it was exactly `indexAxis === 'y'`, and two
+// spellings for one axis flip meant a consumer could set both and get no warning about which won.
+it('no longer exposes a `horizontal` alias, and a stray horizontal attribute cannot flip the axis', async () => {
+  const el = (await fixture(html`<lr-chart horizontal></lr-chart>`)) as LyraChart;
+  el.type = 'bar';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  expect('horizontal' in el).to.equal(false);
+  expect((el as any).buildConfig().options.indexAxis).to.equal('x');
 });
 
 it('stacks the x/y (and y2) scale entries for a bar chart when `stacked` is true, and leaves them unstacked by default', async () => {

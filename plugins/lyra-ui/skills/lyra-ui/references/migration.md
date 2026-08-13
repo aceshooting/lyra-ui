@@ -67,9 +67,9 @@ set with a warning. Expand or classify them before applying, then rerun to verif
 
 | Ecosystem | Exact | Rewritten | Warning required | Conceptual only | Unsupported | Automatic | Manual |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Web Awesome | 36 | 43 | 8 | 0 | 0 | 79 | 8 |
-| Shoelace | 18 | 35 | 5 | 0 | 0 | 53 | 5 |
-| **Total** | **54** | **78** | **13** | **0** | **0** | **132** | **13** |
+| Web Awesome | 37 | 44 | 6 | 0 | 0 | 81 | 6 |
+| Shoelace | 19 | 36 | 3 | 0 | 0 | 55 | 3 |
+| **Total** | **56** | **80** | **9** | **0** | **0** | **136** | **9** |
 
 ## Web Awesome (87)
 
@@ -85,9 +85,9 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-badge>` | `<lr-badge>` | `rewritten` | Automatic: tag/import plus insert appearance=accent; insert variant=brand. |
 | `<wa-bar-chart>` | `<lr-bar-chart>` | `exact` | Automatic: tag and supported side-effect registration import. Typed `<lr-chart>` subclasses with `type` locked — same optional peer deps as `<lr-chart>`. |
 | `<wa-breadcrumb>` | `<lr-breadcrumb>` | `exact` | Automatic: tag and supported side-effect registration import. Responsive navigation trail. |
-| `<wa-breadcrumb-item>` | `<lr-breadcrumb-item>` | `warning-required` | Manual: Lyra derives safe rel="noopener noreferrer" behavior from target and does not expose an independently settable rel; migration leaves the use unchanged and reports the security-sensitive difference. |
+| `<wa-breadcrumb-item>` | `<lr-breadcrumb-item>` | `exact` | Automatic: tag and supported side-effect registration import. Responsive navigation trail. |
 | `<wa-bubble-chart>` | `<lr-bubble-chart>` | `exact` | Automatic: tag and supported side-effect registration import. Typed `<lr-chart>` subclasses with `type` locked — same optional peer deps as `<lr-chart>`. |
-| `<wa-button>` | `<lr-button>` | `warning-required` | Manual: Lyra derives safe rel="noopener noreferrer" behavior from target and ignores an independently authored rel; migration leaves the use unchanged and reports the security-sensitive difference. |
+| `<wa-button>` | `<lr-button>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
 | `<wa-button-group>` | `<lr-button-group>` | `exact` | Automatic: tag and supported side-effect registration import. Responsive semantic grouping for related action controls. |
 | `<wa-callout>` | `<lr-callout>` | `exact` | Automatic: tag and supported side-effect registration import. Dismissible inline status, warning, and error message surface. |
 | `<wa-card>` | `<lr-card>` | `exact` | Automatic: tag and supported side-effect registration import. Generic bordered content container (`header`/`media`/`footer`/`actions` slots) — a direct `<lr-*>` counterpart to `wa-card`. |
@@ -177,8 +177,8 @@ Shoelace relationships are classified independently; a same-suffix tag is never 
 | `<sl-avatar>` | `<lr-avatar>` | `rewritten` | Automatic: tag/import plus events: sl-error → lr-error. |
 | `<sl-badge>` | `<lr-badge>` | `rewritten` | Automatic: tag/import plus insert variant=primary. |
 | `<sl-breadcrumb>` | `<lr-breadcrumb>` | `exact` | Automatic: tag and supported side-effect registration import. Responsive navigation trail. |
-| `<sl-breadcrumb-item>` | `<lr-breadcrumb-item>` | `warning-required` | Manual: Lyra derives safe rel="noopener noreferrer" behavior from target and does not expose an independently settable rel; migration leaves the use unchanged and reports the security-sensitive difference. |
-| `<sl-button>` | `<lr-button>` | `warning-required` | Manual: Lyra derives safe rel="noopener noreferrer" behavior from target and ignores an independently authored rel; migration leaves the use unchanged and reports the security-sensitive difference. |
+| `<sl-breadcrumb-item>` | `<lr-breadcrumb-item>` | `exact` | Automatic: tag and supported side-effect registration import. Responsive navigation trail. |
+| `<sl-button>` | `<lr-button>` | `rewritten` | Automatic: tag/import plus events: sl-blur → lr-blur; events: sl-focus → lr-focus; events: sl-invalid → lr-invalid. Equivalent surface representation: href defaults  ≡ undefined; size defaults medium ≡ m; variant defaults default ≡ neutral; no source rewrite. |
 | `<sl-button-group>` | `<lr-button-group>` | `exact` | Automatic: tag and supported side-effect registration import. Responsive semantic grouping for related action controls. |
 | `<sl-card>` | `<lr-card>` | `exact` | Automatic: tag and supported side-effect registration import. Review appearance tokens and dismiss events. |
 | `<sl-carousel>` | `<lr-carousel>` | `warning-required` | Manual: Lyra accepts arbitrary HTMLElement slides, so its slide-change detail is wider than the upstream carousel-item class; migrated handlers that rely on item-specific members require review. |

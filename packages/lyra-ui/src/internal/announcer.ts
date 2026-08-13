@@ -183,9 +183,11 @@ const DEFAULT_MESSAGE_TTL_MS = 5000;
 // The standard visually-hidden algorithm, identical to `internal/a11y.ts`'s shared `srOnly` class.
 // These are algorithm literals (a 1px clipped box), not themeable design values, and they are set
 // inline because the sink lives in the *consumer's* light DOM where none of this package's
-// stylesheets apply.
+// stylesheets apply. Clipping is `clip-path: inset(50%)`, not the deprecated `clip` shorthand --
+// the same spelling `srOnly` and `styles/utilities.css` use.
 const SINK_HIDDEN_CSS_TEXT =
-  'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;';
+  'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;' +
+  'clip-path:inset(50%);white-space:nowrap;border:0;';
 
 interface SinkRecord {
   element: HTMLElement;

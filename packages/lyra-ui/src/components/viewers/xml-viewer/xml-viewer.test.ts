@@ -470,6 +470,55 @@ describe('search', () => {
     expect(el.shadowRoot!.querySelector('[data-active-match]')).to.not.exist;
   });
 
+  // Regression: this viewer moved `data-active-match` but never scrolled, so on a document taller
+  // than the viewport searchNext()/searchPrevious() silently walked matches off-screen. Every other
+  // search-capable viewer here brings the active match into view.
+  it('scrolls the active match into view on search and on every navigation step', async () => {
+    const rows = Array.from({ length: 40 }, (_unused, i) => `<item id="${i}">row ${i}</item>`).join('');
+    const el = (await fixture(
+      html`<lr-xml-viewer max-height="6rem" .xml=${`<root>${rows}<needle>found</needle><needle>found</needle></root>`}></lr-xml-viewer>`,
+    )) as LyraXmlViewer;
+    const original = HTMLElement.prototype.scrollIntoView;
+    const scrolled: Array<string | null> = [];
+    const behaviors: Array<ScrollBehavior | undefined> = [];
+    HTMLElement.prototype.scrollIntoView = function (this: HTMLElement, options?: boolean | ScrollIntoViewOptions) {
+      scrolled.push(this.getAttribute('part'));
+      behaviors.push(typeof options === 'object' ? options.behavior : undefined);
+    };
+    try {
+      expect(await el.search('needle')).to.equal(2);
+      expect(scrolled, 'search() brings its first match on screen').to.deep.equal(['node']);
+      expect(behaviors).to.deep.equal(['smooth']);
+
+      expect(await el.searchNext()).to.be.true;
+      expect(await el.searchPrevious()).to.be.true;
+      expect(scrolled.length, 'every navigation step scrolls too').to.equal(3);
+      expect(el.shadowRoot!.querySelectorAll('[data-active-match]').length).to.equal(1);
+    } finally {
+      HTMLElement.prototype.scrollIntoView = original;
+    }
+  });
+
+  it('honors reduced motion when scrolling to the active match', async () => {
+    const el = (await fixture(
+      html`<lr-xml-viewer .xml=${'<root><needle>found</needle></root>'}></lr-xml-viewer>`,
+    )) as LyraXmlViewer;
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    const originalMatchMedia = window.matchMedia;
+    const behaviors: Array<ScrollBehavior | undefined> = [];
+    HTMLElement.prototype.scrollIntoView = function (this: HTMLElement, options?: boolean | ScrollIntoViewOptions) {
+      behaviors.push(typeof options === 'object' ? options.behavior : undefined);
+    };
+    window.matchMedia = (() => ({ matches: true }) as MediaQueryList) as typeof window.matchMedia;
+    try {
+      expect(await el.search('needle')).to.equal(1);
+      expect(behaviors).to.deep.equal(['auto']);
+    } finally {
+      HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
   it('search()/clearSearch() fall back to an empty search state before any document is loaded', async () => {
     const el = (await fixture(html`<lr-xml-viewer></lr-xml-viewer>`)) as LyraXmlViewer;
     const count = await el.search('anything');

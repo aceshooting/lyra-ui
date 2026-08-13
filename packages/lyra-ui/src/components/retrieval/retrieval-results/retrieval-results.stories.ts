@@ -89,7 +89,7 @@ export const HasMore: Story = {
 };
 
 export const ErrorState: Story = {
-  render: () => html`<lr-retrieval-results error="Retrieval failed. Please try again."></lr-retrieval-results>`,
+  render: () => html`<lr-retrieval-results error-text="Retrieval failed. Please try again."></lr-retrieval-results>`,
 };
 
 export const Empty: Story = {
@@ -119,7 +119,7 @@ export const Narrow: Story = {
         ] satisfies RetrievalChunk[]}
       ></lr-retrieval-results>
       <lr-retrieval-results loading></lr-retrieval-results>
-      <lr-retrieval-results error="A long retrieval error remains contained in the narrow allocation."></lr-retrieval-results>
+      <lr-retrieval-results error-text="A long retrieval error remains contained in the narrow allocation."></lr-retrieval-results>
       <lr-retrieval-results></lr-retrieval-results>
     </div>
   `,

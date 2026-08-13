@@ -73,13 +73,29 @@ describe('lr-knowledge-base-admin', () => {
     expect(owners()).to.deep.equal(['Visible knowledge base', 'Visible knowledge base']);
   });
 
-  it('forwards source actions under namespaced events', async () => {
+  // 9.0.0 renamed the inner component's `lr-kb-*` events to `lr-source-*`, so forwarding is now a
+  // pure re-target: the inner event is still swallowed and re-emitted from this host exactly once,
+  // rather than the inner one simply being allowed to bubble through (which would report the inner
+  // element as the composed-path origin, and would double up once the host re-emitted as well).
+  it('forwards source actions under namespaced events, re-emitted from the admin host itself', async () => {
     const el = (await fixture(html`<lr-knowledge-base-admin></lr-knowledge-base-admin>`)) as LyraKnowledgeBaseAdmin;
     await el.updateComplete;
-    let fired = false;
-    el.addEventListener('lr-source-create', () => (fired = true));
-    el.shadowRoot!.querySelector('lr-knowledge-base')!.dispatchEvent(new CustomEvent('lr-kb-create', { bubbles: true, composed: true }));
-    expect(fired).to.be.true;
+    const origins: string[] = [];
+    const details: unknown[] = [];
+    el.addEventListener('lr-source-create', (event) => {
+      origins.push((event.composedPath()[0] as Element).tagName);
+    });
+    el.addEventListener('lr-source-sync', (event) => {
+      origins.push((event.composedPath()[0] as Element).tagName);
+      details.push(event.detail);
+    });
+    const inner = el.shadowRoot!.querySelector('lr-knowledge-base')!;
+    inner.dispatchEvent(new CustomEvent('lr-source-create', { bubbles: true, composed: true }));
+    inner.dispatchEvent(
+      new CustomEvent('lr-source-sync', { bubbles: true, composed: true, detail: { sourceId: 's1' } }),
+    );
+    expect(origins).to.deep.equal(['LR-KNOWLEDGE-BASE-ADMIN', 'LR-KNOWLEDGE-BASE-ADMIN']);
+    expect(details).to.deep.equal([{ sourceId: 's1' }]);
   });
 
   it('is accessible in both tabs', async () => {

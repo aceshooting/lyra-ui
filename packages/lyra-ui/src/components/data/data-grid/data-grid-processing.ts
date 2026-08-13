@@ -293,8 +293,7 @@ export function rowsAsDelimited<Row>(
   const delimiter = options.delimiter ?? ',';
   const includeHeaders = options.includeHeaders ?? true;
   const escapeFormulas = options.escapeFormulas ?? true;
-  const requestedIds = options.columnIds ?? options.columns;
-  const requested = requestedIds ? new Set(requestedIds) : undefined;
+  const requested = options.columnIds ? new Set(options.columnIds) : undefined;
   const visible = columns.filter(
     (column, index) => column.hidden !== true && (!requested || requested.has(columnId(column, index))),
   );

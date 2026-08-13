@@ -21,6 +21,18 @@ version. If an API is deprecated in major version M, it remains available for th
 release line and cannot be removed before M+2. This policy applies equally to stable and
 experimental public APIs.
 
+**9.0.0 took a one-time exception to that policy, and says so rather than quietly breaking it.**
+Three members whose recorded removal window had genuinely opened were removed normally
+(`lr-tool-call-chip`/`lr-message-parts`' `lr-tool-chip-select`, and `lr-flow-canvas`'
+`--lr-flow-canvas-node-current-outline-color`). Alongside them, a small set of members that had
+*never* been deprecated were renamed and their old spellings removed in the same release, without the
+customary M+1 warning period — `lr-usage-badge`'s `compact`, `lr-chart`'s `horizontal`,
+`lr-rag-answer`/`lr-retrieval-results`' `error`, `lr-ingestion-queue`'s `virtualizeThreshold`,
+`lr-knowledge-base`'s `lr-kb-*` events, `lr-data-grid`'s `columns`/`filename` option fields, and
+`lr-test-results`' two legacy detail-slot spellings. Every one has a mechanical one-token migration,
+listed in the 9.0.0 changelog entry and in `migration.md`. From 9.0.0 onward the M+2 rule applies as
+written; treat the above as a documented exception, not a precedent.
+
 ### The support window
 
 Compatibility promises are bounded by a published support window, not by "evergreen browsers":
@@ -1095,12 +1107,34 @@ import {
 } from '@aceshooting/lyra-ui/localization.js';
 
 registerLyraLocale('fr', { close: 'Fermer', retry: 'Réessayer' }); // app-wide, partial catalogs fine
-setLyraLocale('fr'); // …or just set <html lang="fr"> and let components inherit it
+setLyraLocale('fr'); // page-level selection; see the precedence order below
 ```
 
 ```html
 <lr-toast .strings=${{ close: 'Fermer' }}></lr-toast>
 ```
+
+**Which locale a component ends up using.** Four sources, first answer wins:
+
+1. **The component's own `locale`, then its own `lang`.**
+2. **The nearest ancestor declaring `locale` or `lang`** (crossing shadow boundaries), except that
+   `lang` on `<html>` is not read here — see 4. A `locale` attribute on `<html>` *is*, since that
+   attribute is this library's own and can only be a deliberate opt-in.
+3. **`setLyraLocale(tag)`**, the page-level selection.
+4. **`<html lang>`**, the document default.
+5. **`'en'`.**
+
+**Breaking in 9.0.0:** steps 3 and 4 were the other way round, which made `setLyraLocale()` inert on
+any page that declares `<html lang>` — i.e. essentially every well-formed page. `setLyraLocale('fr')`
+under `<html lang="en">` silently kept rendering English. It now wins. Two consequences: an
+application that switched locale by *rewriting* `<html lang>` still works only if it never also
+called `setLyraLocale()` (the explicit call now pins the locale until changed or cleared with
+`setLyraLocale('')`), and a per-subtree `lang`/`locale` override is unaffected — it still beats both.
+
+To keep `<html lang>`/`dir` in step with `setLyraLocale()` — which everything *outside* this library
+reads, from `:lang()` rules to spellcheck to a screen reader's pronunciation — use
+`bridgeLyraLocale()` from `@aceshooting/lyra-ui/utilities/localization.js` (see
+[Shared helpers](#shared-helpers-utilities)).
 
 The side-effect-free `@aceshooting/lyra-ui/localization.js` entry exports
 `registerLyraLocale`, `setLyraLocale`, `getLyraLocale`, `getLyraLocaleDirection`,
@@ -1158,9 +1192,10 @@ drops metadata, and the two-argument call remains the normal way to register a c
 `registerLyraLocale()`, plus `'en'` (always available through the built-in English fallback),
 sorted and deduped. `subscribeLyraLocaleRegistry(listener: () => void): () => void` fires whenever
 `registerLyraLocale()` registers *any* locale — including one that isn't the currently active
-locale — unlike the page-level locale-change subscription every component already uses
-internally, which only fires for the active locale's own string changes. `<lr-locale-picker>` is
-the built-in consumer of both; see `llms/components/lr-locale-picker.md`.
+locale — unlike `subscribeLyraLocale()` (on `@aceshooting/lyra-ui/utilities/localization.js`),
+the page-level locale-change subscription every component uses, which fires for the active
+locale's own changes. Both return an idempotent unsubscribe. `<lr-locale-picker>` is the built-in
+consumer of the registry one; see `llms/components/lr-locale-picker.md`.
 
 Gotcha: `localize()`'s optional second argument is a fallback string. Passing a defined literal there
 silently defeats a registered catalog — omit it, or pass `undefined`.
@@ -1629,6 +1664,34 @@ feature-request API described in "When no component fits" so it can be promoted 
   the `data-lr-live-region` marker those regions carry — so a consumer's DOM diffing, snapshot
   testing, or `MutationObserver` can recognize and ignore them. Both are documented in full in
   `llms/components/lr-live-region.md`.
+- **`localization` → `subscribeLyraLocale(listener): () => void` and
+  `bridgeLyraLocale(options?): () => void`** — the *active-locale* half of the locale runtime,
+  which the side-effect-free `@aceshooting/lyra-ui/localization.js` entry does not carry (that one
+  has `subscribeLyraLocaleRegistry()`, which answers a different question — see "Localization").
+  `subscribeLyraLocale()` fires whenever the locale in force changes, so an application can
+  re-render its **own** locale-dependent output in step with the components.
+
+  `bridgeLyraLocale()` mirrors the active locale onto an element's `lang` and — unless
+  `direction: false` — its `dir`, resolved through `getLyraLocaleDirection()`. `setLyraLocale()`
+  only tells *this library* which locale is in force; `:lang()` selectors, hyphenation and quote
+  marks, spelling dictionaries, a screen reader's pronunciation of untranslated prose and every
+  third-party widget all read the platform `lang`/`dir` cascade instead, so an application that
+  switches locale at runtime has to write those attributes itself. This is that glue, in one
+  supported place. `target` defaults to `document.documentElement`; pass an application root to
+  scope it to a subtree. It is strictly opt-in — importing the module does nothing, and the library
+  never calls it for you. While no locale is active it leaves the target's authored `lang`/`dir`
+  alone rather than blanking them, and the returned idempotent disposer restores exactly what it
+  found, including an attribute that was absent.
+
+  ```ts
+  import { bridgeLyraLocale } from '@aceshooting/lyra-ui/utilities/localization.js';
+  import { setLyraLocale } from '@aceshooting/lyra-ui/localization.js';
+  import '@aceshooting/lyra-ui/translations/ar.js';
+
+  const stop = bridgeLyraLocale();  // mirrors onto <html>
+  setLyraLocale('ar');              // <html lang="ar" dir="rtl">
+  stop();                           // restores whatever <html> carried before
+  ```
 
 **Known gotchas:**
 - `formResetCallback()` restores the *content attribute* default, so `el.value = 'x'` never redefines

@@ -38,10 +38,13 @@ per-row create/sync/pause/delete requests. Composes `lr-table`, `lr-badge`, `lr-
 - `hideCreate: boolean = false` (attribute `hide-create`, reflected) — hides the "Add source"
   affordance, e.g. for a read-only or permission-gated view
 
-**Events:** `lr-kb-create` (`detail: undefined` — nothing exists yet to reference), `lr-kb-sync`
-(`detail: { sourceId: string }`), `lr-kb-pause` (`detail: { sourceId: string }`), `lr-kb-delete`
-(`detail: { sourceId: string }`, no built-in confirmation, matching `lr-thread-list`'s
-`lr-thread-delete`).
+**Events:** `lr-source-create` (`detail: undefined` — nothing exists yet to reference),
+`lr-source-sync` (`detail: { sourceId: string }`), `lr-source-pause` (`detail: { sourceId: string }`),
+`lr-source-delete` (`detail: { sourceId: string }`, no built-in confirmation, matching
+`lr-thread-list`'s `lr-thread-delete`). These were spelled `lr-kb-create`/`-sync`/`-pause`/`-delete`
+before 9.0.0 — the library's only abbreviated event prefix. `<lr-knowledge-base-admin>` already
+re-emitted them under the `lr-source-*` names, so a host listening on the admin shell needs no
+change; a host listening directly on `<lr-knowledge-base>` renames its four listeners.
 
 **Slots:** none.
 

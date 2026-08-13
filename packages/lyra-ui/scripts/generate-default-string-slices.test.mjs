@@ -5,6 +5,7 @@ import path from 'node:path';
 import {
   catalogEntries,
   generateDefaultStringSlices,
+  generationFailures,
   rewriteClassSource,
 } from './generate-default-string-slices.mjs';
 
@@ -396,6 +397,49 @@ export class LyraRootMapSample extends LyraElement {
   assert.match(slice, /LYRA_DEFAULT_plainLabel\b/, 'the literal key alongside it is still detected');
 } finally {
   await rm(rootMapFixture, { recursive: true, force: true });
+}
+
+// The walk has always COMPUTED the orphaned-key set and the CLI has always ignored it, so a
+// DEFAULT_STRINGS entry no component can reach shipped as a dead translated string in all ten
+// locales (check-translations.mjs enforces key parity in both directions) with no gate anywhere.
+{
+  const clean = {
+    classFileCount: 3,
+    rewrittenFileCount: 0,
+    usedKeyCount: 2,
+    unusedKeys: [],
+    generatedChanged: false,
+  };
+  assert.deepEqual(generationFailures(clean), [], 'a clean, orphan-free run must not fail');
+
+  const orphaned = { ...clean, unusedKeys: ['trendGoodSuffix', 'spanTokens'] };
+  const checkFailures = generationFailures(orphaned);
+  assert.equal(checkFailures.length, 1, 'an orphaned key must fail the check run');
+  assert.match(checkFailures[0], /2 orphaned key\(s\)/);
+  assert.match(checkFailures[0], /- trendGoodSuffix/);
+  assert.match(checkFailures[0], /- spanTokens/);
+  assert.match(
+    checkFailures[0],
+    /localization-types\.ts/,
+    'the message must name every file the key has to be removed from',
+  );
+
+  // `--write` regenerates slices; it cannot delete a catalog entry, so it must still report.
+  assert.equal(
+    generationFailures(orphaned, { write: true }).length,
+    1,
+    'an orphaned key must fail in --write mode too, where it is most likely to be introduced',
+  );
+
+  // Staleness stays a separate, check-only failure, and the two are reported together.
+  const staleAndOrphaned = { ...orphaned, rewrittenFileCount: 2, generatedChanged: true };
+  assert.equal(generationFailures(staleAndOrphaned).length, 2);
+  assert.equal(
+    generationFailures(staleAndOrphaned, { write: true }).length,
+    1,
+    '--write fixes staleness by definition, so only the orphan survives',
+  );
+  assert.equal(generationFailures({ ...clean, generatedChanged: true }).length, 1);
 }
 
 console.log('per-component default-string slice generator tests passed.');

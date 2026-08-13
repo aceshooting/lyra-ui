@@ -24,6 +24,25 @@ export const SharedSeparator: StoryObj = {
   `,
 };
 
+export const AccessibleLabelProperty: StoryObj = {
+  name: 'Accessible label (property binding)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The `accessibleLabel` property maps the host `aria-label` and names the shadow `<nav>` landmark. A plain property binding reaches it, not just a literal `aria-label` attribute; an authored host attribute still wins.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-breadcrumb .accessibleLabel=${'Docs trail'} label="Ignored while accessibleLabel is set">
+      <lr-breadcrumb-item href="/">Home</lr-breadcrumb-item>
+      <lr-breadcrumb-item href="/docs">Docs</lr-breadcrumb-item>
+      <lr-breadcrumb-item current>Breadcrumb</lr-breadcrumb-item>
+    </lr-breadcrumb>
+  `,
+};
+
 export const NarrowRtlLongContent: StoryObj = {
   name: 'Narrow RTL long content (320px)',
   parameters: {

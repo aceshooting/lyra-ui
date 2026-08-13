@@ -22,6 +22,18 @@ it('defaults to empty heading, no status, in/out handles, horizontal orientation
   expect(el.orientation).to.equal('horizontal');
 });
 
+it('reflects a property-assigned nodeId to the node-id attribute the canvas adopts by', async () => {
+  const el = (await fixture(html`<lr-flow-node></lr-flow-node>`)) as LyraFlowNode;
+  // The empty default serializes to nothing -- an adopting canvas skips a blank node-id anyway.
+  expect(el.hasAttribute('node-id')).to.equal(false);
+  el.nodeId = 'fetch';
+  await el.updateComplete;
+  expect(el.getAttribute('node-id')).to.equal('fetch');
+  el.nodeId = '';
+  await el.updateComplete;
+  expect(el.hasAttribute('node-id')).to.equal(false);
+});
+
 it('renders the heading text and reflects selected/status', async () => {
   const el = (await fixture(
     html`<lr-flow-node heading="Fetch data" status="running" selected></lr-flow-node>`

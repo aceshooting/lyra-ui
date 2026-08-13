@@ -64,7 +64,7 @@ class LyraSourceCardBase extends LyraElement<LyraSourceCardEventMap> {}
  * @event lr-open - The title was activated. `detail: { sourceId, href }` —
  * `href` may be `undefined`. This component never navigates on its own
  * (staying a controlled component, the same convention
- * `<lr-tool-call-chip>`'s `lr-tool-chip-select` follows); a listener
+ * `<lr-tool-call-chip>`'s `lr-tool-call-chip-select` follows); a listener
  * decides what "open" means (open `href` in a new tab, open an in-app
  * viewer, etc).
  * @csspart base - The outer container.

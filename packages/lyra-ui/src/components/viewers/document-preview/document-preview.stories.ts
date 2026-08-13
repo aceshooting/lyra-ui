@@ -163,7 +163,7 @@ export const ErrorState: Story = {
     <lr-document-preview
       style="max-width: 24rem;"
       status="error"
-      error-message="Conversion failed: the source file appears to be corrupted."
+      error-text="Conversion failed: the source file appears to be corrupted."
       filename="slides.pptx"
     ></lr-document-preview>
   `,

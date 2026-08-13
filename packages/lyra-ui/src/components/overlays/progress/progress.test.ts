@@ -504,6 +504,67 @@ it('clamps an out-of-range or non-finite value to [0, max] for progress-bar and 
   expect(ring.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-valuenow')).to.equal('50');
 });
 
+// The bar and the ring publish the same value/max/label contract from one shared module
+// (./progress-shared.ts). This walks the adversarial inputs across both at once, so a future
+// divergence between the two components fails here rather than in a consumer's screen reader.
+it('normalizes value/max and resolves the accessible name identically for the bar and the ring', async () => {
+  const cases: { value: string; max: string; valuenow: string; valuemax: string }[] = [
+    { value: '25', max: 'abc', valuenow: '25', valuemax: '100' },
+    { value: '25', max: '0', valuenow: '25', valuemax: '100' },
+    { value: '25', max: '-10', valuenow: '25', valuemax: '100' },
+    { value: '-10', max: '50', valuenow: '0', valuemax: '50' },
+    { value: '9999', max: '50', valuenow: '50', valuemax: '50' },
+  ];
+  for (const { value, max, valuenow, valuemax } of cases) {
+    const wrapper = await fixture(html`<div>
+      <lr-progress-bar value=${value} max=${max}></lr-progress-bar>
+      <lr-progress-ring value=${value} max=${max}></lr-progress-ring>
+    </div>`);
+    const roles = [...wrapper.querySelectorAll('lr-progress-bar, lr-progress-ring')].map(
+      (element) => element.shadowRoot!.querySelector('[part~="base"]') as HTMLElement,
+    );
+    const label = `value=${value} max=${max}`;
+    expect(roles.map((role) => role.getAttribute('aria-valuenow')), label).to.deep.equal([
+      valuenow,
+      valuenow,
+    ]);
+    expect(roles.map((role) => role.getAttribute('aria-valuemax')), label).to.deep.equal([
+      valuemax,
+      valuemax,
+    ]);
+    expect(roles.map((role) => role.getAttribute('aria-valuetext')), label).to.deep.equal([
+      roles[0]!.getAttribute('aria-valuetext'),
+      roles[0]!.getAttribute('aria-valuetext'),
+    ]);
+  }
+
+  // Naming precedence: host aria-label (presence-based) > label > accessible-label > localized.
+  const named = await fixture(html`<div>
+    <lr-progress-bar label="Mapped" accessible-label="Explicit"></lr-progress-bar>
+    <lr-progress-ring label="Mapped" accessible-label="Explicit"></lr-progress-ring>
+  </div>`);
+  const namedRoles = [...named.querySelectorAll('lr-progress-bar, lr-progress-ring')];
+  const names = (): (string | null)[] =>
+    namedRoles.map(
+      (element) =>
+        element.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label'),
+    );
+  expect(names()).to.deep.equal(['Mapped', 'Mapped']);
+
+  for (const element of namedRoles) {
+    element.removeAttribute('label');
+    (element as LyraProgressBar | LyraProgressRing).label = '';
+    await (element as LyraProgressBar | LyraProgressRing).updateComplete;
+  }
+  expect(names()).to.deep.equal(['Explicit', 'Explicit']);
+
+  for (const element of namedRoles) {
+    element.setAttribute('aria-label', '');
+    await (element as LyraProgressBar | LyraProgressRing).updateComplete;
+  }
+  expect(names()).to.deep.equal(['', '']);
+});
+
 it('spins the indeterminate ring indicator and disables the animation under prefers-reduced-motion', async () => {
   const el = await fixture(html`<lr-progress-ring indeterminate></lr-progress-ring>`);
   const indicator = el.shadowRoot!.querySelector('[part="indicator"]') as HTMLElement;

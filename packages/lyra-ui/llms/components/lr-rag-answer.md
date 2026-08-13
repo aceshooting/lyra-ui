@@ -21,9 +21,10 @@ or source fetching.
 
 **Properties:** `answer: string = ''`; `citations: Citation[] = []` (attribute: false);
 `sources: DocumentRef[] = []` (attribute: false); `assessment: GroundingAssessment | null = null`
-(attribute: false); `loading: boolean = false`; `error: string = ''` (neutral visible caller text;
-new non-empty values announce through a shared assertive light-DOM region, while initial and
-reconnect content is not replayed); `showSources: boolean = true`; `showClaims: boolean = true`
+(attribute: false); `loading: boolean = false`; `errorText: string = ''` (attribute `error-text`;
+neutral visible caller text; new non-empty values announce through a shared assertive light-DOM
+region, while initial and reconnect content is not replayed — spelled plain `error` before 9.0.0);
+`showSources: boolean = true`; `showClaims: boolean = true`
 (attribute `show-claims`); `label: string = ''`; `accessibleLabel: string | null = null` (attribute
 `aria-label`).
 

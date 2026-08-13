@@ -19,9 +19,17 @@
 `lr-details` is a native-semantics disclosure panel; it mirrors `wa-details` / `sl-details`.
 `lr-accordion` and `lr-accordion-item` mirror `wa-accordion` / `wa-accordion-item`: the group owns
 mode, presentation, lifecycle events, and roving focus, while each item renders a heading button
-and animated panel. An item also retains the previous Details vocabulary as aliases, and an
-accordion still accepts direct `lr-details` children, so existing markup remains operable while new
-markup can use the full accordion API.
+and animated panel. An item also retains the previous Details vocabulary as aliases (`open`,
+`summary`, the `summary` slot, `show()`/`hide()`), so migrating markup keeps working.
+
+**Breaking in 9.0.0:** an accordion coordinates direct `lr-accordion-item` children only. Direct
+`lr-details` panels used to be accepted as well; they are not any more. A `lr-details` slotted into
+an accordion today is ordinary content owning its own disclosure lifecycle — the group applies
+neither its presentation, nor its single-panel invariant, nor its roving keyboard model, nor its
+`lr-expand`/`lr-collapse` lifecycle to it, and `expandAll()`/`collapseAll()` skip it. Migrate by
+renaming the tag: `<lr-details summary="...">` → `<lr-accordion-item summary="...">`, which accepts
+the same `summary` text and `open` state. `lr-details` on its own, outside an accordion, is
+unchanged.
 
 **Accordion properties:**
 
@@ -90,12 +98,14 @@ the ladder doesn't cover is a two-line override rather than a fork.
   retained by accordion items.
 
 On the accordion, `lr-expand` and `lr-collapse` fire before a direct item changes, are cancelable,
-and carry `detail: { item }`. An accepted transition finishes with the non-cancelable
+and carry `detail: { item }`. **Changed in 9.0.0:** `item` is now always an `LyraAccordionItem` —
+it could previously also be an `LyraDetails`. The exported `LyraAccordionPanel` union that spelled
+that has been removed; use `LyraAccordionItem`. An accepted transition finishes with the
+non-cancelable
 `lr-after-expand` or `lr-after-collapse`, carrying the same item. In `single` mode, activating the
 already-expanded item is a no-op and emits no collapse lifecycle. Nested accordions own their own
-triggers; an outer group does not close siblings or emit its own lifecycle for an inner item. Direct
-legacy `lr-details` children are translated into the same group events. Item methods and group
-methods use this lifecycle too. When opening an item in a single mode, the previously expanded
+triggers; an outer group does not close siblings or emit its own lifecycle for an inner item. Item
+methods and group methods use this lifecycle too. When opening an item in a single mode, the previously expanded
 sibling's cancelable collapse is consulted before the new panel changes state; vetoing it keeps the
 old item open and cancels the new expansion, so the group never silently violates its one-item
 invariant.

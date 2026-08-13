@@ -74,10 +74,10 @@ export const AsyncPending: Story = {
   `,
 };
 
-/** `compact` collapses the bar from a full card to a chrome-less inline row, for a confirmation
- *  that has to live inside an existing container. The narrow-allocation container query is switched
- *  off with it — a compact bar is *expected* to be narrow, so stretching the buttons to fill would
- *  be exactly wrong. */
+/** `compact` collapses the bar into a single dense inline row, for a confirmation that has to live
+ *  inside an existing container. It is density only — the card border, radius and background stay.
+ *  The narrow-allocation container query is switched off with it: a compact bar is *expected* to be
+ *  narrow, so stretching the buttons to fill would be exactly wrong. */
 export const Compact: Story = {
   render: () => html`
     <div style="display:flex;align-items:center;gap:0.75rem;max-inline-size:32rem;">
@@ -86,10 +86,22 @@ export const Compact: Story = {
   `,
 };
 
-/** The motivating case: a confirmation inside a table cell. Without `compact` the bar's own border,
- *  padding and `display: block` surface blow the row apart. */
+/** `frame="plain"` is the separate chrome knob: border, radius, background and padding all go, so a
+ *  bar nested inside a container that already draws a border doesn't double it. */
+export const FramePlain: Story = {
+  name: 'frame="plain"',
+  render: () => html`
+    <div style="border:1px solid var(--lr-color-border);border-radius:var(--lr-radius);padding:0.75rem;max-inline-size:32rem;">
+      <lr-confirm-bar frame="plain" heading="Apply the suggested patch?"></lr-confirm-bar>
+    </div>
+  `,
+};
+
+/** The motivating case: a confirmation inside a table cell, where both knobs are wanted at once.
+ *  Without `compact` the bar's stacked `display: block` surface blows the row apart, and without
+ *  `frame="plain"` its own border and background double the cell's. */
 export const CompactInTableCell: Story = {
-  name: 'compact (inside a table cell)',
+  name: 'compact + frame="plain" (inside a table cell)',
   render: () => html`
     <table style="border-collapse:collapse;font:inherit;">
       <thead>
@@ -102,13 +114,13 @@ export const CompactInTableCell: Story = {
         <tr style="border-block-start:1px solid var(--lr-color-border);">
           <td style="padding:0.4rem 0.75rem;"><code>run_shell</code></td>
           <td style="padding:0.4rem 0.75rem;">
-            <lr-confirm-bar compact heading="Run?"></lr-confirm-bar>
+            <lr-confirm-bar compact frame="plain" heading="Run?"></lr-confirm-bar>
           </td>
         </tr>
         <tr style="border-block-start:1px solid var(--lr-color-border);">
           <td style="padding:0.4rem 0.75rem;"><code>delete_database</code></td>
           <td style="padding:0.4rem 0.75rem;">
-            <lr-confirm-bar compact variant="danger" heading="Delete?"></lr-confirm-bar>
+            <lr-confirm-bar compact frame="plain" variant="danger" heading="Delete?"></lr-confirm-bar>
           </td>
         </tr>
       </tbody>
@@ -116,15 +128,15 @@ export const CompactInTableCell: Story = {
   `,
 };
 
-/** Compact still accepts chrome back through the `--lr-confirm-bar-compact-*` properties, e.g. to
- *  sit as a tinted pill inside a card's action row. */
-export const CompactRechromed: Story = {
-  name: 'compact (re-chromed via cssprops)',
+/** The compact density itself is retunable through `--lr-confirm-bar-compact-padding`/`-gap`, e.g.
+ *  to sit as a tighter pill inside a card's action row. */
+export const CompactRetuned: Story = {
+  name: 'compact (retuned density)',
   render: () => html`
     <lr-confirm-bar
       compact
       heading="Apply the suggested patch?"
-      style="--lr-confirm-bar-compact-padding:0.35rem 0.6rem;--lr-confirm-bar-compact-background:var(--lr-color-brand-quiet);--lr-confirm-bar-compact-radius:var(--lr-radius);"
+      style="--lr-confirm-bar-compact-padding:0.35rem 0.6rem;--lr-confirm-bar-compact-gap:0.4rem;"
     ></lr-confirm-bar>
   `,
 };

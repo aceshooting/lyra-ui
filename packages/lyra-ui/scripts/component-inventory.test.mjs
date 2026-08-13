@@ -3627,11 +3627,31 @@ test('checked-in inventory covers every pinned tag and every Lyra declaration', 
       `${mapping.upstreamTag} must store a current accessibility comparison`,
     );
   }
-  for (const tag of ['sl-breadcrumb-item', 'wa-breadcrumb-item', 'sl-button', 'wa-button', 'sl-include', 'wa-include']) {
+  // `sl-include`/`wa-include` keep their warning permanently: Lyra sanitizes the fetched document,
+  // never grants `allow-scripts`, and defaults `mode` to `same-origin` rather than `cors`. Those are
+  // deliberate refusals to migrate a use that would lose a security guarantee, not unfinished work.
+  for (const tag of ['sl-include', 'wa-include']) {
     assert.equal(
       inventory.mappings.find(({ upstreamTag }) => upstreamTag === tag)?.classification,
       'warning-required',
       `${tag} must keep its explicit security warning`,
+    );
+  }
+  // The button/breadcrumb-item pair used to sit alongside them, because Lyra exposed `rel` as a
+  // read-only `target`-derived getter and so silently dropped an authored `nofollow`/`me`/`license`.
+  // 9.0.0 made `rel` settable while keeping the guarantee non-negotiable -- author tokens are merged,
+  // `opener` is always stripped, and `noopener noreferrer` is force-added whenever `target` is set --
+  // so there is no longer a difference to warn about. The security floor is asserted directly on the
+  // components (button.test.ts, breadcrumb-item.test.ts); what is pinned here is that the mapping
+  // stopped needing a warning, since the whole point was unblocking the codemod for the library's
+  // most-used tag.
+  for (const tag of ['sl-breadcrumb-item', 'wa-breadcrumb-item', 'sl-button', 'wa-button']) {
+    const classification = inventory.mappings.find(
+      ({ upstreamTag }) => upstreamTag === tag,
+    )?.classification;
+    assert.ok(
+      classification === 'exact' || classification === 'rewritten',
+      `${tag} must migrate mechanically now that rel is settable-but-guarded (got ${classification})`,
     );
   }
 });

@@ -98,12 +98,11 @@ const copyOptions = {
   includeHeaders: false,
   format: 'csv',
   delimiter: ';',
-  columns: ['name', 'score'],
 } satisfies DataGridCopyOptions;
-const csvOptions = { columns: ['name'] } satisfies DataGridCsvOptions;
+const csvOptions = { columnIds: ['name'] } satisfies DataGridCsvOptions;
 const exportOptions = {
-  filename: 'people.csv',
-  columns: ['name'],
+  fileName: 'people.csv',
+  columnIds: ['name'],
 } satisfies DataGridExportOptions;
 const scrollOptions = { align: 'center' } satisfies DataGridScrollOptions;
 
@@ -126,8 +125,7 @@ void grid.copySelectedRows({
   includeHeaders: false,
   format: 'csv',
   delimiter: ';',
-  columns: ['name', 'score'],
 });
-void grid.getDataAsCsv({ columns: ['name'] });
-grid.exportDataAsCsv({ filename: 'people.csv', columns: ['name'] });
+void grid.getDataAsCsv({ columnIds: ['name'] });
+grid.exportDataAsCsv({ fileName: 'people.csv', columnIds: ['name'] });
 grid.scrollToIndex(0, { align: 'center' });

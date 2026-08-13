@@ -71,7 +71,7 @@ function safeScore(score: number): number {
  * row's rendered content therefore lives inside `<lr-virtual-list>`'s own shadow root, not this
  * component's, whenever virtualization is active (see that component's own doc for why).
  *
- * **Controlled component.** `chunks`/`selectedIds`/`loading`/`error`/`hasMore` are all host-owned;
+ * **Controlled component.** `chunks`/`selectedIds`/`loading`/`errorText`/`hasMore` are all host-owned;
  * this component never fetches, retries, or mutates its own copy of `chunks`. Selecting a row
  * updates `selectedIds` locally *then* emits `lr-select` (the same "update own copy, then emit;
  * reassign to control" convention `<lr-source-picker>` already uses) so a host can either accept
@@ -102,12 +102,12 @@ function safeScore(score: number): number {
  * event a host routes into `<lr-document-viewer>`.
  * @csspart base - The outer container and programmatic focus fallback when a controlled
  * collection/state transition removes every focused result action.
- * @csspart error - The neutral, visible error message shown while `error` is non-empty. New
+ * @csspart error - The neutral, visible error message shown while `errorText` is non-empty. New
  *   non-empty errors are announced through a shared assertive light-DOM region; initial and
  *   reconnect content is not replayed.
  * @csspart spinner - The initial-load `<lr-spinner>`, shown while `loading` is true and `chunks`
  * is still empty.
- * @csspart empty - The `<lr-empty>` wrapper, shown when `chunks` is empty and neither `error` nor
+ * @csspart empty - The `<lr-empty>` wrapper, shown when `chunks` is empty and neither `errorText` nor
  * `loading` is set.
  * @csspart row - One result row's wrapper. Below the virtualization threshold this is a plain,
  * directly-styleable element in this component's own shadow root; while virtualized it is exported
@@ -227,10 +227,10 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
 
   /** Non-empty replaces the entire result view with a neutral, visible error message -- caller-
    *  supplied text, not routed through `localize()` (the same stance `<lr-document-preview>`'s own
-   *  `error-message` takes for the same reason: this is app/network data, not library copy). New
+   *  `error-text` takes for the same reason: this is app/network data, not library copy). New
    *  non-empty values are announced through a shared assertive light-DOM region; initial and
    *  reconnect content is not replayed. */
-  @property() error = '';
+  @property({ attribute: 'error-text' }) errorText = '';
 
   /** Accessible name for the results region. Defaults to the localized `chunkInspectorLabel`
    *  ("Retrieved chunks") -- reused rather than a new key, since it already says exactly what this
@@ -319,7 +319,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
       !changed.has('selectable') &&
       !changed.has('virtualizeAt') &&
       !changed.has('loading') &&
-      !changed.has('error')
+      !changed.has('errorText')
     ) {
       return;
     }
@@ -330,7 +330,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
       ? this.previousProcessedChunkIds
       : this.renderedChunkIds();
     const focusedIndex = Math.max(0, previousIds.indexOf(focusedId));
-    const nextChunks = this.error ? [] : this.processedChunks.chunks;
+    const nextChunks = this.errorText ? [] : this.processedChunks.chunks;
     if (nextChunks.length === 0) {
       this.pendingFocusTarget = 'base';
       return;
@@ -347,10 +347,10 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     super.updated(changed);
     const wasMounting = this.isMounting;
     this.isMounting = false;
-    if (!wasMounting && changed.has('error') && this.error !== '' && this.isConnected) {
-      this.errorAnnouncementSink?.announce(this.error);
+    if (!wasMounting && changed.has('errorText') && this.errorText !== '' && this.isConnected) {
+      this.errorAnnouncementSink?.announce(this.errorText);
     }
-    this.previousProcessedChunkIds = this.error
+    this.previousProcessedChunkIds = this.errorText
       ? []
       : this.processedChunks.chunks.map((chunk) => chunk.id);
     const generation = ++this.focusRestoreGeneration;
@@ -575,8 +575,8 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   override render(): TemplateResult {
     const label = this.getAttribute('aria-label') || this.label || this.localize('chunkInspectorLabel');
 
-    if (this.error) {
-      return html`<div part="base" tabindex="-1"><div part="error">${this.error}</div></div>`;
+    if (this.errorText) {
+      return html`<div part="base" tabindex="-1"><div part="error">${this.errorText}</div></div>`;
     }
 
     const processed = this.processedChunks;

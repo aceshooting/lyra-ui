@@ -198,8 +198,8 @@ substituted.
 ```
 
 **Known gotchas:**
-- No `horizontal` mode (unlike `lr-chart`) — deliberately cut from scope, not a stub: bars are
-  always vertical.
+- No horizontal-bar mode (unlike `lr-chart`'s `index-axis="y"`) — deliberately cut from scope, not a
+  stub: bars are always vertical.
 - No dual y-axis (`Series.axis: 'y2'`) — every series shares one y-axis/domain.
 - Series colors default to the shared categorical ramp (round-robin by dataset index) when `color`
   is unset or invalid — the same eight `--lr-color-chart-1..8` tokens `lr-chart` uses, so both

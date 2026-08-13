@@ -18,7 +18,25 @@ export const styles = css`
     background: var(--lr-color-surface);
     padding: var(--lr-space-s);
   }
-  /* Chrome-less escape, the shared frame="plain" treatment (and lr-callout's [inline]): a stack
+  /* Density escape -- same convention as lr-agent-run's/lr-thinking-panel's compact. The tuned
+     values sit behind inline var() fallbacks (rather than a :host declaration, which every instance
+     would re-declare and so shadow any ancestor value) so a consumer can retune them from outside
+     without restating the whole rule. Purely density: the border, radius and background stay, and
+     frame="plain" below is what drops them. */
+  :host([compact]) [part='base'] {
+    padding: var(--lr-stack-trace-compact-padding, var(--lr-space-2xs));
+  }
+  :host([compact]) [part='message'],
+  :host([compact]) [part='group'] {
+    margin-block-end: var(--lr-stack-trace-compact-gap, var(--lr-space-2xs));
+  }
+  :host([compact]) [part='group']:last-child {
+    margin-block-end: 0;
+  }
+  /* MUST stay after :host([compact]) [part='base']: both are equal-specificity, so source order
+     alone decides which padding wins when a trace is both compact and frame="plain". plain is the
+     stronger statement ("no chrome at all"), so it goes last.
+     Chrome-less escape, the shared frame="plain" treatment (and lr-callout's [inline]): a stack
      trace is routinely nested inside an lr-result-card or lr-agent-run that already draws a border,
      which would otherwise double the box. Only the box decoration goes -- the max-block-size scroll
      cap and overflow stay, as do the copy button's and stack frames' own hover/focus affordances,

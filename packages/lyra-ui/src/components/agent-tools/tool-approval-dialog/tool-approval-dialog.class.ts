@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraTextWrap } from '../../../internal/shared-unions.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId } from '../../../internal/a11y.js';
 import { resolveLocalizedParts } from '../../../internal/localization-runtime.js';
@@ -16,7 +17,8 @@ import { LYRA_DEFAULT_approve, LYRA_DEFAULT_cancel, LYRA_DEFAULT_deny, LYRA_DEFA
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export type ToolApprovalDialogWrap = 'hard' | 'soft' | 'off';
+/** Retained name for the shared native `<textarea wrap>` vocabulary. */
+export type ToolApprovalDialogWrap = LyraTextWrap;
 
 /**
  * Reason the dialog was dismissed, forwarded as the `lr-close` event detail

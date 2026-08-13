@@ -3544,20 +3544,6 @@
       }
     },
     {
-      "name": "--lr-confirm-bar-compact-background",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-confirm-bar>`** (default: `transparent`) — Background of `[part='base']` while `compact`."
-      }
-    },
-    {
-      "name": "--lr-confirm-bar-compact-border",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-confirm-bar>`** (default: `none`) — Border of `[part='base']` while `compact`. Accepts any `border` shorthand."
-      }
-    },
-    {
       "name": "--lr-confirm-bar-compact-gap",
       "description": {
         "kind": "markdown",
@@ -3568,14 +3554,7 @@
       "name": "--lr-confirm-bar-compact-padding",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-confirm-bar>`** (default: `0`) — Padding of `[part='base']` while `compact`. Accepts any padding shorthand."
-      }
-    },
-    {
-      "name": "--lr-confirm-bar-compact-radius",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-confirm-bar>`** (default: `0`) — Border radius of `[part='base']` while `compact` (only visible once `--lr-confirm-bar-compact-border`/`-background` are set)."
+        "value": "**`<lr-confirm-bar>`** (default: `var(--lr-space-s)`) — Padding of `[part='base']` while `compact`. Accepts any padding shorthand. Overridden entirely by `frame=\"plain\"`."
       }
     },
     {
@@ -4786,7 +4765,7 @@
       "name": "--lr-flow-canvas-node-connect-invalid-outline-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-color-danger)`) — Outline color of a node that is an invalid connect-gesture drop target. Same `::part()` attribute-selector restriction as `--lr-flow-canvas-node-current-outline-color` above."
+        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-color-danger)`) — Outline color of a node that is an invalid connect-gesture drop target. Same `::part()` attribute-selector restriction as `--lr-flow-canvas-node-selected-outline-color` above."
       }
     },
     {
@@ -4794,13 +4773,6 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-flow-canvas>`** (default: `var(--lr-color-brand)`) — Outline color of a node that is a valid connect-gesture drop target."
-      }
-    },
-    {
-      "name": "--lr-flow-canvas-node-current-outline-color",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-color-brand)`) — Deprecated fallback token for the selected-node outline; retained for compatibility."
       }
     },
     {
@@ -4814,7 +4786,7 @@
       "name": "--lr-flow-canvas-node-selected-outline-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-flow-canvas-node-current-outline-color,var(--lr-color-brand))`) — Outline color of a selected node."
+        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-color-brand)`) — Outline color of a selected node."
       }
     },
     {
@@ -9708,6 +9680,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-spreadsheet-viewer>`** (default: `none`) — Maximum block size of `[part=\"body\"]` before it scrolls internally. The `maxHeight` property sets this token inline on `[part=\"base\"]`."
+      }
+    },
+    {
+      "name": "--lr-stack-trace-compact-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stack-trace>`** (default: `var(--lr-space-2xs)`) — Space below `[part=\"message\"]` and between `[part=\"group\"]`s while `compact`."
+      }
+    },
+    {
+      "name": "--lr-stack-trace-compact-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stack-trace>`** (default: `var(--lr-space-2xs)`) — `[part=\"base\"]` padding while `compact`. Overridden entirely by `frame=\"plain\"`."
       }
     },
     {

@@ -564,7 +564,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   @property() description: string | null = null;
   /** Controls which cartesian grid axes are drawn. */
   @property() grid: LyraChartGrid = 'both';
-  /** Chart.js index axis. The additive `horizontal` property remains a positive `y` alias. */
+  /** Chart.js index axis. `'y'` is Chart.js's own mechanism for horizontal bars (it also flips
+   *  line/area types onto a horizontal category axis). */
   @property({ attribute: 'index-axis' }) indexAxis: LyraChartIndexAxis = 'x';
   /** Accessible chart label. A host `aria-label` still has highest precedence. */
   @property() label: string | null = null;
@@ -599,8 +600,6 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   @property({ attribute: 'accessible-description' }) accessibleDescription = '';
   /** Makes the generated data table visible; it remains screen-reader available when false. */
   @property({ type: Boolean, attribute: 'show-data-table' }) showDataTable = false;
-  /** Sets `options.indexAxis = 'y'`, Chart.js's own mechanism for horizontal bars (also applies to line/area types). */
-  @property({ type: Boolean }) horizontal = false;
   /** Stacks the `x`/`y`(/`y2`) scale entries `buildScales()` returns; only meaningful for `bar` and `line` types. */
   @property({ type: Boolean }) stacked = false;
   /** Disables Chart.js animation. */
@@ -1354,7 +1353,6 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       'yLabel',
       'y2Label',
       'beginAtZero',
-      'horizontal',
       'stacked',
       'withoutAnimation',
       'withoutLegend',
@@ -1721,7 +1719,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private effectiveIndexAxis(): LyraChartIndexAxis {
-    return this.horizontal || this.indexAxis === 'y' ? 'y' : 'x';
+    return this.indexAxis === 'y' ? 'y' : 'x';
   }
 
   private scaleBounds(): { min?: number; max?: number } {

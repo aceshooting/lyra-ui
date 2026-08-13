@@ -56,7 +56,28 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
   (attributes `with-label`, `with-hint`, and `with-error`) — SSR slot-presence hints. Use
   `with-error` when the rich `error` slot is populated in initial declarative-shadow-DOM output,
   before hydration can observe the assigned light-DOM content.
-- `size: LyraSize = 'm'` (reflected) and `validators: unknown[] = []` (attribute: false)
+- `size: LyraSize = 'm'` (reflected)
+- `validators: LyraFileInputValidator[] = []` (attribute: false) — additional JavaScript
+  constraints, run after the intrinsic `required` check. **Fixed in 9.0.0:** the property was
+  previously declared (typed `unknown[]`) and read by nothing, so an assigned validator silently
+  never ran. It now implements the same contract as `lr-date-input`/`lr-combobox`:
+  - a function `(files: File[], input: LyraFileInput) => void | boolean | string | ValidityStateFlags`
+    — `undefined`/`true` passes, a string is the validation message (raising `customError`), `false`
+    is a generic failure using the localized `valueInvalid` string, and a `ValidityStateFlags` object
+    names the flags to raise;
+  - an object with `validate(files, input)` returning the same shapes;
+  - the mapped object-validator shape `{ observedAttributes?, checkValidity(input), message? }`,
+    whose `checkValidity()` returns `{ isValid, invalidKeys, message }`. Unrecognized `invalidKeys`
+    are dropped, and an empty mapped set synthesizes `customError`. The message falls back from the
+    result's own `message` to the validator's static or function `message`, then to the localized
+    default. Attributes listed in `observedAttributes` are watched on the host and revalidate live.
+  Validators run in order and the first failure wins. A validator that throws fails closed with the
+  localized generic message rather than escaping into the caller. `checkValidity()` and
+  `reportValidity()` recompute at call time, so a validator that starts failing without any host
+  property changing is still seen. Own or fieldset-cascaded `disabled` bars configured validators
+  exactly as it bars the intrinsic constraint. Exported types:
+  `LyraFileInputValidator`, `LyraFileInputValidatorResult`, `LyraFileInputObjectValidator`,
+  `LyraFileInputObjectValidatorResult`.
 - `validationTarget: HTMLElement | undefined` — the focusable base of the dropzone control after
   first render. Assign another shadow descendant to override where native constraint-validation UI
   is anchored; assign `undefined` to restore the default focusable base

@@ -199,7 +199,16 @@ type LocaleWithTextInfo = Intl.Locale & {
   getTextInfo?: () => { direction?: string };
 };
 
-/** Set the page-level locale used by Lyra components without an explicit locale. */
+/**
+ * Set the page-level locale used by Lyra components without an explicit locale.
+ *
+ * This beats `<html lang>`. It did not until 9.0.0: `inheritedLocale()` consulted the document
+ * element before the active locale (and reached it a second time through the ancestor walk), so on
+ * any well-formed page -- one that declares `<html lang="en">`, i.e. essentially all of them --
+ * `setLyraLocale('fr')` resolved to `'en'` and looked like a no-op. A per-subtree `locale`/`lang`
+ * attribute on the component or any ancestor still wins over both, because that is a deliberate
+ * scoped override rather than a page default.
+ */
 export function setLyraLocale(locale: string): void {
   const next = locale.trim();
   if (activeLocale === next) return;
@@ -218,9 +227,27 @@ export function subscribeLyraLocale(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
+/**
+ * The locale a component host inherits, resolved in this order:
+ *
+ *   1. The host's own `locale`, then its own `lang`.
+ *   2. The nearest composed ancestor declaring `locale`/`lang` -- EXCEPT that `<html lang>` is
+ *      skipped here (see 4). A `locale` attribute on `<html>` is not skipped: `lang` there is
+ *      generic page metadata every well-formed document carries, while `locale` is this library's
+ *      own attribute and can only be a deliberate opt-in.
+ *   3. The active locale from {@link setLyraLocale}, when one has been set.
+ *   4. `<html lang>`, the document default.
+ *   5. `'en'`.
+ *
+ * Steps 3 and 4 were the other way round before 9.0.0, which made `setLyraLocale()` inert on every
+ * page declaring `<html lang>`; skipping the document element in step 2 is the other half of that
+ * fix, since the ancestor walk passes through `<html>` on its way up and would otherwise read the
+ * same attribute one step earlier.
+ */
 function inheritedLocale(host: Element): string {
   const explicit = host.getAttribute('locale') || host.getAttribute('lang');
   if (explicit) return explicit;
+  const documentElement = host.ownerDocument?.documentElement;
   const composedParent = (element: Element): Element | null => {
     if (element.parentElement) return element.parentElement;
     const root = element.getRootNode();
@@ -235,13 +262,14 @@ function inheritedLocale(host: Element): string {
   };
   let parent = composedParent(host);
   while (parent) {
-    const locale = parent.getAttribute('locale') || parent.getAttribute('lang');
+    const locale = parent === documentElement
+      ? parent.getAttribute('locale')
+      : parent.getAttribute('locale') || parent.getAttribute('lang');
     if (locale) return locale;
     parent = composedParent(parent);
   }
-  const documentLocale = host.ownerDocument?.documentElement?.getAttribute('lang');
-  if (documentLocale) return documentLocale;
-  return activeLocale || 'en';
+  if (activeLocale) return activeLocale;
+  return documentElement?.getAttribute('lang') || 'en';
 }
 
 /**

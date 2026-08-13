@@ -102,7 +102,7 @@ export const styles = css`
     block-size: var(--lr-activity-feed-max-height);
   }
   /* Every entry rule below is paired with an lr-virtual-list::part(x) twin because this component
-     renders entries through two paths. Below virtualize-threshold, entryTemplate()'s result is
+     renders entries through two paths. Below virtualize-at, entryTemplate()'s result is
      committed into this component's own shadow root and the plain [part=] selector matches. At or
      above it, the exact same template becomes <lr-virtual-list>'s .renderItem, and Lit commits it
      wherever virtual-list's own render() is updating -- i.e. inside *its* shadow root, a different

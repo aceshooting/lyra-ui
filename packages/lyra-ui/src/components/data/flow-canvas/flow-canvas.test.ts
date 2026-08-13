@@ -463,6 +463,30 @@ describe('static rendering', () => {
     expect(el.querySelectorAll('[node-id="a"]').length).to.equal(1);
   });
 
+  it('adopts a user-authored card whose node id was set as a JS property, never as an attribute', async () => {
+    const originalWarn = console.warn;
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => {
+      warnings.push(args);
+    };
+    try {
+      const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+      const card = document.createElement('lr-flow-node') as HTMLElement & { nodeId: string };
+      card.nodeId = 'a';
+      card.textContent = 'Custom';
+      el.appendChild(card);
+      el.nodes = nodes;
+      await el.updateComplete;
+      expect(card.getAttribute('node-id')).to.equal('a');
+      expect(card.getAttribute('slot')).to.equal('node-a');
+      // No duplicate default card was created for the same node, and nothing was warned about.
+      expect(el.querySelectorAll('[node-id="a"]').length).to.equal(1);
+      expect(warnings.length).to.equal(0);
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+
   it('warns and leaves a stale user-authored child unslotted when its node-id matches no node', async () => {
     const originalWarn = console.warn;
     let warning: unknown[] | undefined;
@@ -2503,7 +2527,7 @@ describe('localized numeric output', () => {
   });
 });
 
-describe('--lr-flow-canvas-node-current-outline-color', () => {
+describe('--lr-flow-canvas-node-selected-outline-color', () => {
   const currentFixture = async (): Promise<LyraFlowCanvas> => {
     const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = nodes;
@@ -2514,7 +2538,7 @@ describe('--lr-flow-canvas-node-current-outline-color', () => {
 
   it('retints the selected node outline via the cssprop', async () => {
     const el = await currentFixture();
-    el.style.setProperty('--lr-flow-canvas-node-current-outline-color', 'rgb(10, 20, 30)');
+    el.style.setProperty('--lr-flow-canvas-node-selected-outline-color', 'rgb(10, 20, 30)');
     const node = el.shadowRoot!.querySelector('[part="node"][data-selected]') as HTMLElement;
     expect((node) != null).to.equal(true);
     expect(getComputedStyle(node).outlineColor).to.equal('rgb(10, 20, 30)');
@@ -2524,7 +2548,7 @@ describe('--lr-flow-canvas-node-current-outline-color', () => {
     const el = await currentFixture();
     const node = el.shadowRoot!.querySelector('[part="node"][data-selected]') as HTMLElement;
     const unset = getComputedStyle(node).outlineColor;
-    el.style.setProperty('--lr-flow-canvas-node-current-outline-color', 'var(--lr-color-brand)');
+    el.style.setProperty('--lr-flow-canvas-node-selected-outline-color', 'var(--lr-color-brand)');
     expect(getComputedStyle(node).outlineColor).to.equal(unset);
   });
 });
