@@ -42,6 +42,34 @@ export const WrappedStarterGrid: Story = {
   `,
 };
 
+export const CenteredUnderEmptyState: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-suggestion-chips-justify: center` centers every chip line, including the short final one after a wrap — which `::part(base)` alone cannot do, because the row fills the available inline size once the chips wrap.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="max-width:26rem;text-align:center;">
+      <h3 style="margin-block-end:0.25rem;">Start a conversation</h3>
+      <p style="margin-block-start:0;color:var(--lr-color-text-quiet);">Pick a prompt, or type your own.</p>
+      <lr-suggestion-chips
+        wrap
+        style="--lr-suggestion-chips-justify: center;"
+        .suggestions=${[
+          { id: '1', label: 'Summarize this document' },
+          { id: '2', label: 'Find action items' },
+          { id: '3', label: 'Translate to French' },
+          { id: '4', label: 'Explain like I am five' },
+          { id: '5', label: 'Draft a reply' },
+        ]}
+      ></lr-suggestion-chips>
+    </div>
+  `,
+};
+
 export const Empty: Story = {
   render: () => html`<p>Nothing renders below when suggestions is empty:</p>
     <lr-suggestion-chips .suggestions=${[]}></lr-suggestion-chips>`,

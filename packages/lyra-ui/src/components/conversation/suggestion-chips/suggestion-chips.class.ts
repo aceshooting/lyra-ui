@@ -36,10 +36,14 @@ export interface LyraSuggestionChipsEventMap {
  * @customElement lr-suggestion-chips
  * @event lr-suggestion-select - `detail: { id, label }`.
  * @csspart base - The labeled group.
+ * @csspart row - The flex container holding the chips, in both the wrapping and the scrolling
+ *   layout. Style this to change how chip lines pack (`justify-content`, `row-gap`).
  * @csspart chip - Each suggestion button.
  * @csspart chip-icon - Optional decorative literal icon.
  * @csspart chip-label - The primary text.
  * @csspart chip-detail - The secondary line (only rendered when `detail` is set).
+ * @cssprop [--lr-suggestion-chips-justify=flex-start] - Main-axis packing of the chip row. `center`
+ *   centers every line, the wrapped final one included — what `::part(base)` alone cannot do.
  * @cssprop [--lr-suggestion-chips-hover-bg=var(--lr-color-brand-quiet)] - Background of a hovered chip.
  * @cssprop [--lr-suggestion-chips-hover-border=var(--lr-color-brand)] - Border color of a hovered chip.
  * @status stable
@@ -153,8 +157,8 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
     return html`
       <div part="base" role="group" aria-label=${ariaLabel} @keydown=${this.onKeyDown}>
         ${this.wrap
-          ? html`<div class="row">${chips}</div>`
-          : html`<lr-scroller orientation="horizontal" hide-scrollbar><div class="row">${chips}</div></lr-scroller>`}
+          ? html`<div part="row" class="row">${chips}</div>`
+          : html`<lr-scroller orientation="horizontal" hide-scrollbar><div part="row" class="row">${chips}</div></lr-scroller>`}
       </div>
     `;
   }

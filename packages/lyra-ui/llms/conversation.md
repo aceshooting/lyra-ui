@@ -2210,14 +2210,19 @@ string = ''` — accessible name for the group, defaults to the localized `sugge
 
 **Events:** `lr-suggestion-select` — `detail: { id, label }`.
 
-**CSS parts:** `base` (the labeled group), `chip` (each suggestion button), `chip-icon` (the optional
-decorative literal icon), `chip-label` (the primary text), `chip-detail` (the secondary line, only
-rendered when `detail` is set).
+**CSS parts:** `base` (the labeled group), `row` (the flex container holding the chips, present in
+both the wrapping and the scrolling layout), `chip` (each suggestion button), `chip-icon` (the
+optional decorative literal icon), `chip-label` (the primary text), `chip-detail` (the secondary
+line, only rendered when `detail` is set).
 
-**Themeable custom properties:** `--lr-suggestion-chips-hover-bg` (default
-`var(--lr-color-brand-quiet)`) — a `chip`'s background on hover. `--lr-suggestion-chips-hover-border`
-(default `var(--lr-color-brand)`) — a `chip`'s border color on hover. Both are declared as `var()`
-fallbacks at the point of use, not on `:host`. Plus shared tokens `--lr-space-xs/-m/-2xs`,
+**Themeable custom properties:** `--lr-suggestion-chips-justify` (default `flex-start`) — main-axis
+packing of the chip row. Use `center` to center the chips under centered empty-state text: it centers
+every line, the wrapped final one included, which styling `::part(base)` as a centered flex container
+cannot do (once the chips wrap, the row fills the available inline size and each line packs to the
+start). `--lr-suggestion-chips-hover-bg` (default `var(--lr-color-brand-quiet)`) — a `chip`'s
+background on hover. `--lr-suggestion-chips-hover-border` (default `var(--lr-color-brand)`) — a
+`chip`'s border color on hover. All three are declared as `var()` fallbacks at the point of use, not
+on `:host`. Plus shared tokens `--lr-space-xs/-m/-2xs`,
 `--lr-color-border/-surface/-text/-text-quiet`, `--lr-radius-pill`, `--lr-font-size-xs`,
 `--lr-focus-ring-width/-color/-offset`.
 

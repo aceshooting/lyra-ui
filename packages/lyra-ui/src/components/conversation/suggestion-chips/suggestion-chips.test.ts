@@ -187,6 +187,65 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+describe('part="row" / --lr-suggestion-chips-justify', () => {
+  const row = (el: LyraSuggestionChips) => el.shadowRoot!.querySelector<HTMLElement>('[part~="row"]');
+
+  it('exposes the chip row as a part in the wrapping branch', async () => {
+    const el = (await fixture(
+      html`<lr-suggestion-chips wrap .suggestions=${suggestions}></lr-suggestion-chips>`,
+    )) as LyraSuggestionChips;
+    expect(row(el)).to.exist;
+  });
+
+  it('exposes the chip row as a part in the scroller branch too', async () => {
+    const el = (await fixture(
+      html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,
+    )) as LyraSuggestionChips;
+    // The row lives inside <lr-scroller> here, but still in this component's own shadow root.
+    expect(row(el)).to.exist;
+  });
+
+  it('packs chips to the start when the property is unset (unset regression, both branches)', async () => {
+    for (const wrap of [false, true]) {
+      const el = (await fixture(
+        html`<lr-suggestion-chips ?wrap=${wrap} .suggestions=${suggestions}></lr-suggestion-chips>`,
+      )) as LyraSuggestionChips;
+      expect(getComputedStyle(row(el)!).justifyContent, `wrap=${wrap}`).to.equal('flex-start');
+    }
+  });
+
+  it('centers the chip lines when --lr-suggestion-chips-justify is set', async () => {
+    const el = (await fixture(
+      html`<lr-suggestion-chips
+        wrap
+        style="--lr-suggestion-chips-justify: center;"
+        .suggestions=${suggestions}
+      ></lr-suggestion-chips>`,
+    )) as LyraSuggestionChips;
+    expect(getComputedStyle(row(el)!).justifyContent).to.equal('center');
+  });
+
+  it('centers the wrapped final line, not just a single unwrapped line', async () => {
+    // The reported defect: ::part(base) centering only worked while the chips fit one line. Force a
+    // wrap with a narrow host and assert the LAST line's chip is inset from the row's start edge.
+    const many = Array.from({ length: 6 }, (_, i) => ({ id: `s${i}`, label: `Suggestion ${i}` }));
+    const el = (await fixture(
+      html`<lr-suggestion-chips
+        wrap
+        style="inline-size: 22rem; --lr-suggestion-chips-justify: center;"
+        .suggestions=${many}
+      ></lr-suggestion-chips>`,
+    )) as LyraSuggestionChips;
+    const chips = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="chip"]')];
+    const rowBox = row(el)!.getBoundingClientRect();
+    const lastTop = chips.at(-1)!.getBoundingClientRect().top;
+    const lastLine = chips.filter((chip) => chip.getBoundingClientRect().top === lastTop);
+    expect(lastLine.length, 'fixture must actually wrap').to.be.lessThan(chips.length);
+    const lastLineStart = Math.min(...lastLine.map((chip) => chip.getBoundingClientRect().left));
+    expect(lastLineStart).to.be.greaterThan(rowBox.left + 1);
+  });
+});
+
 describe('--lr-suggestion-chips-hover-bg / -hover-border', () => {
   it('reads the hover background/border through per-component cssprops, not just the bare shared brand tokens (regression)', () => {
     // Real :hover can't be forced from test JS without an actual pointer move, so this asserts
