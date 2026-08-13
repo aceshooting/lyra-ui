@@ -66,7 +66,11 @@ export interface LyraProvenancePanelEventMap
  * @csspart header - A section's disclosure `<button>`.
  * @csspart count - A section's item-count badge.
  * @csspart body - A section's content wrapper, `hidden` while collapsed.
+ * @csspart entity-row - The wrapping row of entity chips inside the entities section. Style this to
+ *   change how the chip lines pack (`justify-content`, `row-gap`).
  * @csspart empty - The empty state, shown when every section is empty.
+ * @cssprop [--lr-provenance-panel-entity-justify=flex-start] - Main-axis packing of the entity-chip
+ *   row. `center` centers every line, the wrapped final one included.
  * @status stable
  * @since 4.0.0
  */
@@ -146,7 +150,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
           'entities',
           'provenanceEntities',
           entities.length,
-          html`<div class="entity-row">
+          html`<div part="entity-row" class="entity-row">
             ${entities.map((entity) => {
               const typeLabel = this.types.find((t) => t.id === entity.type)?.label ?? entity.type ?? '';
               return html`<lr-entity-chip entity-id=${entity.id} label=${entity.label} type=${entity.type ?? ''} type-label=${typeLabel}></lr-entity-chip>`;

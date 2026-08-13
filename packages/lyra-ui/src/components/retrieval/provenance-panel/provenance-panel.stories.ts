@@ -40,6 +40,25 @@ export const EntitiesOnly: Story = {
   render: () => html`<lr-provenance-panel .provenance=${{ entities: provenance.entities }}></lr-provenance-panel>`,
 };
 
+export const CenteredEntityChips: Story = {
+  render: () => html`
+    <div style="max-width: 24rem;">
+      <lr-provenance-panel
+        style="--lr-provenance-panel-entity-justify: center;"
+        .provenance=${{
+          entities: [
+            { id: 'e1', label: 'Marie Curie', type: 'person' },
+            { id: 'e2', label: 'Pierre Curie', type: 'person' },
+            { id: 'e3', label: 'Henri Becquerel', type: 'person' },
+            { id: 'e4', label: 'Polonium', type: 'element' },
+            { id: 'e5', label: 'Radium', type: 'element' },
+          ],
+        }}
+      ></lr-provenance-panel>
+    </div>
+  `,
+};
+
 export const Narrow: Story = {
   render: () => html`<div style="max-width: 320px;"><lr-provenance-panel .provenance=${provenance}></lr-provenance-panel></div>`,
 };

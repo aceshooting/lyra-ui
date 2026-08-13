@@ -806,9 +806,13 @@ edge).
 **Slots:** none.
 
 **CSS parts:** `base`, `section`, `header` (a section's disclosure `<button>`), `count` (a section's
-item-count badge), `body` (`hidden` while collapsed), `empty` (shown when every section is empty).
+item-count badge), `body` (`hidden` while collapsed), `entity-row` (the wrapping row of entity chips
+inside the entities section), `empty` (shown when every section is empty).
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-provenance-panel-entity-justify` (default `flex-start`) —
+main-axis packing of the entity-chip row; `center` centers every line, the wrapped final one
+included. Justifying `::part(body)` cannot do this, because the row fills the body's inline size.
+Plus shared tokens.
 
 **Optional peer deps:** none.
 

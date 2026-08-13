@@ -50,9 +50,12 @@ export const styles = css`
   [part='body'][hidden] {
     display: none;
   }
+  /* Line packing is consumer-tunable because it is unreachable otherwise: the row fills [part='body']'s
+     inline size, so justifying the body cannot move the wrapped chip lines. */
   .entity-row {
     display: flex;
     flex-wrap: wrap;
+    justify-content: var(--lr-provenance-panel-entity-justify, flex-start);
     gap: var(--lr-space-xs);
   }
 `;

@@ -123,3 +123,27 @@ it('formats section counts with the effective locale', async () => {
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="count"]')!.textContent).to.equal('١٢');
 });
+
+describe('part="entity-row" / --lr-provenance-panel-entity-justify', () => {
+  const entityRow = async (style = '') => {
+    const el = (await fixture(
+      html`<lr-provenance-panel style=${style}></lr-provenance-panel>`,
+    )) as LyraProvenancePanel;
+    el.provenance = { entities: provenance.entities };
+    await el.updateComplete;
+    return el.shadowRoot!.querySelector<HTMLElement>('[part~="entity-row"]');
+  };
+
+  it('exposes the wrapping entity-chip row as a part', async () => {
+    expect(await entityRow()).to.exist;
+  });
+
+  it('packs entity chips to the start when the property is unset (unset regression)', async () => {
+    expect(getComputedStyle((await entityRow())!).justifyContent).to.equal('flex-start');
+  });
+
+  it('centers the entity chips when --lr-provenance-panel-entity-justify is set', async () => {
+    const row = await entityRow('--lr-provenance-panel-entity-justify: center;');
+    expect(getComputedStyle(row!).justifyContent).to.equal('center');
+  });
+});
