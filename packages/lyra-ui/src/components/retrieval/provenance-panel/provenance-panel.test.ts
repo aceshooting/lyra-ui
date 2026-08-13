@@ -135,7 +135,7 @@ describe('part="entity-row" / --lr-provenance-panel-entity-justify', () => {
   };
 
   it('exposes the wrapping entity-chip row as a part', async () => {
-    expect(await entityRow()).to.exist;
+    expect((await entityRow())?.tagName).to.equal('DIV');
   });
 
   it('packs entity chips to the start when the property is unset (unset regression)', async () => {

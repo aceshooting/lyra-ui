@@ -84150,6 +84150,10 @@
             "deprecated": null
           },
           {
+            "name": "entity-row",
+            "deprecated": null
+          },
+          {
             "name": "header",
             "deprecated": null
           },
@@ -84158,7 +84162,14 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-provenance-panel-entity-justify",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "flex-start"
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "form": {
@@ -102814,6 +102825,10 @@
           {
             "name": "chip-label",
             "deprecated": null
+          },
+          {
+            "name": "row",
+            "deprecated": null
           }
         ],
         "cssProperties": [
@@ -102828,6 +102843,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-suggestion-chips-justify",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "flex-start"
           }
         ],
         "cssStates": [],

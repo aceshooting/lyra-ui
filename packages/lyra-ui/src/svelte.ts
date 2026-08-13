@@ -6929,7 +6929,7 @@ export type LyraProvenancePanelSvelteProps = LyraSvelteElementProps<
   | 'lr-entity-open'
   | 'lr-relation-activate'
   | 'lr-toggle',
-never,
+  | '--lr-provenance-panel-entity-justify',
   {}
 >;
 
@@ -8448,7 +8448,8 @@ export type LyraSuggestionChipsSvelteProps = LyraSvelteElementProps<
   LyraSuggestionChipsEventMap,
   | 'lr-suggestion-select',
   | '--lr-suggestion-chips-hover-bg'
-  | '--lr-suggestion-chips-hover-border',
+  | '--lr-suggestion-chips-hover-border'
+  | '--lr-suggestion-chips-justify',
   {}
 >;
 

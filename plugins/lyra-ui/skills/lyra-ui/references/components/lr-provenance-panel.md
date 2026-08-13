@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -42,9 +42,13 @@ edge).
 **Slots:** none.
 
 **CSS parts:** `base`, `section`, `header` (a section's disclosure `<button>`), `count` (a section's
-item-count badge), `body` (`hidden` while collapsed), `empty` (shown when every section is empty).
+item-count badge), `body` (`hidden` while collapsed), `entity-row` (the wrapping row of entity chips
+inside the entities section), `empty` (shown when every section is empty).
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-provenance-panel-entity-justify` (default `flex-start`) —
+main-axis packing of the entity-chip row; `center` centers every line, the wrapped final one
+included. Justifying `::part(body)` cannot do this, because the row fills the body's inline size.
+Plus shared tokens.
 
 **Optional peer deps:** none.
 

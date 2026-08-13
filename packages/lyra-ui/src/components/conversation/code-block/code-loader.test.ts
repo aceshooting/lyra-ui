@@ -3,6 +3,25 @@ import jsonGrammar from "shiki/langs/json.mjs";
 import { loadShikiHighlighter, loadShikiLanguage } from "./code-loader.js";
 import { loadShikiHighlighterCore } from "./shiki-types.js";
 
+/**
+ * Building the shared highlighter — importing shiki, compiling its regex engine, parsing both seed
+ * themes — takes ~2s on an idle machine but far longer once the full 461-file suite saturates the
+ * CPU. Charged to a test, that one-time cost blew the budgets here and cascaded: the first test
+ * (20s) timed out while the module-level promise was still in flight, and every later test then
+ * awaited that same pending promise on the tighter 6s project default and timed out too. Both
+ * always passed when this file ran alone, which is what made it read as flakiness.
+ *
+ * A root-level `before()` runs ahead of every test in this file regardless of source order and
+ * carries its own timeout, so the cold load is paid once here and each test below hits the warm
+ * cache. Mirrors the same-directory precedent in `code-block.test.ts`. It deliberately loads no
+ * grammar, so the zero-languages assertion in the first test still observes a freshly seeded
+ * highlighter.
+ */
+before(async function () {
+  this.timeout(120_000);
+  await loadShikiHighlighter();
+});
+
 it("resolves a highlighter seeded with the light+dark themes and zero language grammars", async function () {
   this.timeout(20_000);
   const hl = await loadShikiHighlighter();

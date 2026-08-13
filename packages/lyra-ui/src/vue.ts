@@ -6922,7 +6922,7 @@ export type LyraProvenancePanelVueProps = LyraVueCustomElement<
   | 'lr-entity-open'
   | 'lr-relation-activate'
   | 'lr-toggle',
-never,
+  | '--lr-provenance-panel-entity-justify',
   {}
 >;
 
@@ -8441,7 +8441,8 @@ export type LyraSuggestionChipsVueProps = LyraVueCustomElement<
   LyraSuggestionChipsEventMap,
   | 'lr-suggestion-select',
   | '--lr-suggestion-chips-hover-bg'
-  | '--lr-suggestion-chips-hover-border',
+  | '--lr-suggestion-chips-hover-border'
+  | '--lr-suggestion-chips-justify',
   {}
 >;
 

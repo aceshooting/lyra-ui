@@ -194,7 +194,7 @@ describe('part="row" / --lr-suggestion-chips-justify', () => {
     const el = (await fixture(
       html`<lr-suggestion-chips wrap .suggestions=${suggestions}></lr-suggestion-chips>`,
     )) as LyraSuggestionChips;
-    expect(row(el)).to.exist;
+    expect(el.shadowRoot!.querySelectorAll('[part~="row"]')).to.have.length(1);
   });
 
   it('exposes the chip row as a part in the scroller branch too', async () => {
@@ -202,7 +202,7 @@ describe('part="row" / --lr-suggestion-chips-justify', () => {
       html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,
     )) as LyraSuggestionChips;
     // The row lives inside <lr-scroller> here, but still in this component's own shadow root.
-    expect(row(el)).to.exist;
+    expect(el.shadowRoot!.querySelectorAll('[part~="row"]')).to.have.length(1);
   });
 
   it('packs chips to the start when the property is unset (unset regression, both branches)', async () => {
