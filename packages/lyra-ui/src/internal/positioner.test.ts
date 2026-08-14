@@ -1,5 +1,12 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import { place, trackRect, virtualAnchorFromRect, type VirtualAnchor } from './positioner.js';
+import {
+  createPlacementSyncOwnershipController,
+  createPlacementStyleTransaction,
+  place,
+  trackRect,
+  virtualAnchorFromRect,
+  type VirtualAnchor,
+} from './positioner.js';
 
 /** Polls `read()` until it satisfies `until`, or throws once `timeoutMs` elapses. */
 async function waitFor<T>(read: () => T, until: (v: T) => boolean, timeoutMs = 2000): Promise<T> {
@@ -268,6 +275,508 @@ it('lets a replacement placement win while the cleaned-up run is still in flight
   expect(currentPlacements).to.be.greaterThan(0);
   expect(parseFloat(popup.style.left)).to.be.closeTo(300, 1);
   stopSecond();
+});
+
+it('does not let an older rollback replace a newer identical committed style write', async () => {
+  const element = await fixture<HTMLElement>(html`<div></div>`);
+  element.style.setProperty('--transaction-probe', 'baseline', 'important');
+  const older = createPlacementStyleTransaction();
+  const newer = createPlacementStyleTransaction();
+
+  older.set(element, '--transaction-probe', 'shared', 'important');
+  newer.set(element, '--transaction-probe', 'shared', 'important');
+  newer.commit();
+  older.rollback();
+
+  expect(element.style.getPropertyValue('--transaction-probe')).to.equal('shared');
+  expect(element.style.getPropertyPriority('--transaction-probe')).to.equal('important');
+});
+
+it('preserves an observable external value and priority written over a placement transaction', async () => {
+  const element = await fixture<HTMLElement>(html`<div></div>`);
+  element.style.setProperty('--transaction-probe', 'baseline', 'important');
+  const transaction = createPlacementStyleTransaction();
+
+  transaction.set(element, '--transaction-probe', 'owned');
+  element.style.setProperty('--transaction-probe', 'external', 'important');
+  transaction.rollback();
+
+  expect(element.style.getPropertyValue('--transaction-probe')).to.equal('external');
+  expect(element.style.getPropertyPriority('--transaction-probe')).to.equal('important');
+});
+
+it('rebases a repeated write after a newer placement transaction commits', async () => {
+  const element = await fixture<HTMLElement>(html`<div></div>`);
+  element.style.setProperty('--transaction-probe', 'baseline', 'important');
+  const older = createPlacementStyleTransaction();
+  const newer = createPlacementStyleTransaction();
+
+  older.set(element, '--transaction-probe', 'older-first');
+  newer.set(element, '--transaction-probe', 'newer-committed', 'important');
+  newer.commit();
+  older.set(element, '--transaction-probe', 'older-second');
+  older.rollback();
+
+  expect(element.style.getPropertyValue('--transaction-probe')).to.equal('newer-committed');
+  expect(element.style.getPropertyPriority('--transaction-probe')).to.equal('important');
+});
+
+it('rebases a repeated write after an observable external style change', async () => {
+  const element = await fixture<HTMLElement>(html`<div></div>`);
+  element.style.setProperty('--transaction-probe', 'baseline', 'important');
+  const transaction = createPlacementStyleTransaction();
+
+  transaction.set(element, '--transaction-probe', 'owned-first');
+  element.style.setProperty('--transaction-probe', 'external', 'important');
+  transaction.set(element, '--transaction-probe', 'owned-second');
+  transaction.rollback();
+
+  expect(element.style.getPropertyValue('--transaction-probe')).to.equal('external');
+  expect(element.style.getPropertyPriority('--transaction-probe')).to.equal('important');
+});
+
+it('fails closed when a public virtual anchor rejects positioning', async () => {
+  const popup = await fixture<HTMLElement>(html`
+    <div style="width:50px; height:20px; left:11px; top:12px;">pop</div>
+  `);
+  popup.style.setProperty('--lr-positioner-available-inline-size', 'sentinel-inline');
+  popup.style.setProperty('--lr-positioner-available-block-size', 'sentinel-block');
+  const failure = new Error('hostile virtual anchor geometry');
+  let geometryReads = 0;
+  let placedCount = 0;
+  const unhandled: unknown[] = [];
+  const onUnhandled = (event: PromiseRejectionEvent) => {
+    unhandled.push(event.reason);
+    event.preventDefault();
+  };
+  window.addEventListener('unhandledrejection', onUnhandled);
+
+  let stop = () => undefined;
+  try {
+    stop = place(
+      {
+        getBoundingClientRect() {
+          geometryReads += 1;
+          throw failure;
+        },
+      },
+      popup,
+      { onPlaced: () => placedCount++ },
+    );
+    await waitFor(() => geometryReads, (reads) => reads > 0);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    expect(unhandled.length).to.equal(0);
+    expect(placedCount).to.equal(0);
+    expect(popup.style.left).to.equal('11px');
+    expect(popup.style.top).to.equal('12px');
+    expect(popup.style.getPropertyValue('--lr-positioner-available-inline-size')).to.equal('sentinel-inline');
+    expect(popup.style.getPropertyValue('--lr-positioner-available-block-size')).to.equal('sentinel-block');
+
+    const readsAfterFailure = geometryReads;
+    window.dispatchEvent(new Event('resize'));
+    window.visualViewport?.dispatchEvent(new Event('resize'));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(geometryReads).to.equal(readsAfterFailure);
+  } finally {
+    stop();
+    window.removeEventListener('unhandledrejection', onUnhandled);
+  }
+});
+
+it('fails closed before committing placement when hover-bridge geometry throws', async () => {
+  const wrap = await fixture(html`
+    <div>
+      <button id="stable-anchor" style="position: fixed; top: 20px; left: 20px;">anchor</button>
+      <div
+        id="popup"
+        style="--sentinel-width: 50px; --sentinel-height: 20px;
+          width: var(--sentinel-width); height: var(--sentinel-height); left: 11px; top: 12px;"
+      >
+        pop
+      </div>
+      <div id="bridge"></div>
+    </div>
+  `);
+  const stableAnchor = wrap.querySelector('#stable-anchor') as HTMLElement;
+  const popup = wrap.querySelector('#popup') as HTMLElement;
+  const bridge = wrap.querySelector('#bridge') as HTMLElement;
+  popup.style.setProperty('--lr-positioner-available-inline-size', 'sentinel-inline');
+  popup.style.setProperty('--lr-positioner-available-block-size', 'sentinel-block');
+  bridge.style.setProperty('--lr-positioner-hover-bridge-top-left-x', 'sentinel-x');
+  bridge.style.setProperty('--lr-positioner-hover-bridge-top-left-y', 'sentinel-y');
+  const failure = new Error('late hostile virtual anchor geometry');
+  const anchorRect = new DOMRect(100, 100, 50, 20);
+  let geometryReads = 0;
+  let placedCount = 0;
+  const unhandled: unknown[] = [];
+  const onUnhandled = (event: PromiseRejectionEvent) => {
+    unhandled.push(event.reason);
+    event.preventDefault();
+  };
+  window.addEventListener('unhandledrejection', onUnhandled);
+
+  let stop = () => undefined;
+  let stopUnsynced = () => undefined;
+  try {
+    stop = place(
+      {
+        getBoundingClientRect() {
+          geometryReads += 1;
+          if (geometryReads === 1) return anchorRect;
+          throw failure;
+        },
+      },
+      popup,
+      {
+        flip: false,
+        hoverBridge: bridge,
+        onPlaced: () => placedCount++,
+        shift: false,
+        sync: 'both',
+      },
+    );
+    await waitFor(() => geometryReads, (reads) => reads > 1);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    expect(unhandled.length).to.equal(0);
+    expect(placedCount).to.equal(0);
+    expect(popup.style.left).to.equal('11px');
+    expect(popup.style.top).to.equal('12px');
+    expect(popup.style.width).to.equal('var(--sentinel-width)');
+    expect(popup.style.height).to.equal('var(--sentinel-height)');
+    expect(popup.style.getPropertyValue('--lr-positioner-available-inline-size')).to.equal('sentinel-inline');
+    expect(popup.style.getPropertyValue('--lr-positioner-available-block-size')).to.equal('sentinel-block');
+    expect(bridge.style.getPropertyValue('--lr-positioner-hover-bridge-top-left-x')).to.equal('sentinel-x');
+    expect(bridge.style.getPropertyValue('--lr-positioner-hover-bridge-top-left-y')).to.equal('sentinel-y');
+
+    stopUnsynced = place(stableAnchor, popup, { flip: false, shift: false });
+    await waitFor(() => popup.style.left, (value) => value !== '11px');
+    expect(popup.style.width).to.equal('var(--sentinel-width)');
+    expect(popup.style.height).to.equal('var(--sentinel-height)');
+    stopUnsynced();
+
+    const readsAfterFailure = geometryReads;
+    window.dispatchEvent(new Event('resize'));
+    window.visualViewport?.dispatchEvent(new Event('resize'));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(geometryReads).to.equal(readsAfterFailure);
+  } finally {
+    stopUnsynced();
+    stop();
+    window.removeEventListener('unhandledrejection', onUnhandled);
+  }
+});
+
+it('does not release newer external dimensions after a synced replacement rolls back', async () => {
+  const wrap = await fixture(html`
+    <div>
+      <button id="stable-anchor" style="position: fixed; width: 80px; height: 30px;">anchor</button>
+      <div id="popup" style="width: 41px !important; height: 42px !important;">pop</div>
+      <div id="bridge"></div>
+    </div>
+  `);
+  const stableAnchor = wrap.querySelector('#stable-anchor') as HTMLElement;
+  const popup = wrap.querySelector('#popup') as HTMLElement;
+  const bridge = wrap.querySelector('#bridge') as HTMLElement;
+  let initialPlacements = 0;
+  const stopInitial = place(stableAnchor, popup, {
+    flip: false,
+    onPlaced: () => initialPlacements++,
+    shift: false,
+    sync: 'both',
+  });
+  await waitFor(() => initialPlacements, (count) => count > 0);
+  stopInitial();
+
+  const anchorRect = new DOMRect(100, 100, 50, 20);
+  let geometryReads = 0;
+  let stopFailed = () => undefined;
+  let stopUnsynced = () => undefined;
+  try {
+    stopFailed = place(
+      {
+        getBoundingClientRect() {
+          geometryReads += 1;
+          if (geometryReads === 1) return anchorRect;
+          popup.style.setProperty('width', '99px', 'important');
+          popup.style.setProperty('height', '44px', 'important');
+          throw new Error('late synced replacement failure');
+        },
+      },
+      popup,
+      { flip: false, hoverBridge: bridge, shift: false, sync: 'both' },
+    );
+    await waitFor(() => geometryReads, (reads) => reads > 1);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    expect(popup.style.width).to.equal('99px');
+    expect(popup.style.getPropertyPriority('width')).to.equal('important');
+    expect(popup.style.height).to.equal('44px');
+    expect(popup.style.getPropertyPriority('height')).to.equal('important');
+
+    stopUnsynced = place(stableAnchor, popup, { flip: false, shift: false });
+    expect(popup.style.width).to.equal('99px');
+    expect(popup.style.getPropertyPriority('width')).to.equal('important');
+    expect(popup.style.height).to.equal('44px');
+    expect(popup.style.getPropertyPriority('height')).to.equal('important');
+  } finally {
+    stopUnsynced();
+    stopFailed();
+  }
+});
+
+it('does not claim external dimensions written before a synced replacement commits', async () => {
+  const wrap = await fixture(html`
+    <div>
+      <button id="stable-anchor" style="position: fixed; width: 80px; height: 30px;">anchor</button>
+      <div id="popup" style="width: 41px !important; height: 42px !important;">pop</div>
+      <div id="bridge"></div>
+    </div>
+  `);
+  const stableAnchor = wrap.querySelector('#stable-anchor') as HTMLElement;
+  const popup = wrap.querySelector('#popup') as HTMLElement;
+  const bridge = wrap.querySelector('#bridge') as HTMLElement;
+  let initialPlacements = 0;
+  const stopInitial = place(stableAnchor, popup, {
+    flip: false,
+    onPlaced: () => initialPlacements++,
+    shift: false,
+    sync: 'both',
+  });
+  await waitFor(() => initialPlacements, (count) => count > 0);
+  stopInitial();
+
+  const anchorRect = new DOMRect(100, 100, 50, 20);
+  let geometryReads = 0;
+  let replacementPlacements = 0;
+  let stopReplacement = () => undefined;
+  let stopUnsynced = () => undefined;
+  try {
+    stopReplacement = place(
+      {
+        getBoundingClientRect() {
+          geometryReads += 1;
+          if (geometryReads > 1) {
+            popup.style.setProperty('width', '99px', 'important');
+            popup.style.setProperty('height', '44px', 'important');
+          }
+          return anchorRect;
+        },
+      },
+      popup,
+      {
+        flip: false,
+        hoverBridge: bridge,
+        onPlaced: () => replacementPlacements++,
+        shift: false,
+        sync: 'both',
+      },
+    );
+    await waitFor(() => replacementPlacements, (count) => count > 0);
+    stopReplacement();
+
+    expect(popup.style.width).to.equal('99px');
+    expect(popup.style.getPropertyPriority('width')).to.equal('important');
+    expect(popup.style.height).to.equal('44px');
+    expect(popup.style.getPropertyPriority('height')).to.equal('important');
+
+    stopUnsynced = place(stableAnchor, popup, { flip: false, shift: false });
+    expect(popup.style.width).to.equal('99px');
+    expect(popup.style.getPropertyPriority('width')).to.equal('important');
+    expect(popup.style.height).to.equal('44px');
+    expect(popup.style.getPropertyPriority('height')).to.equal('important');
+  } finally {
+    stopUnsynced();
+    stopReplacement();
+  }
+});
+
+it('does not let an older sync completion erase a newer sync release marker', async () => {
+  const popup = await fixture<HTMLElement>(html`<div style="width: 60px; height: 25px;"></div>`);
+  const ownership = createPlacementSyncOwnershipController();
+  const older = ownership.beginPlacement(popup);
+  const olderUpdate = ownership.beginUpdate(older);
+  const newer = ownership.beginPlacement(popup);
+  const newerUpdate = ownership.beginUpdate(newer);
+
+  ownership.publish(popup, newerUpdate, {
+    width: { value: '60px', priority: '' },
+    height: { value: '25px', priority: '' },
+  });
+  // The older computation settles last without owning either dimension. Its empty publication
+  // must not erase the newer run's marker, which a later unsynced placement uses for release.
+  ownership.publish(popup, olderUpdate, {});
+  ownership.release(popup, ownership.beginPlacement(popup));
+
+  expect([popup.style.width, popup.style.height]).to.deep.equal(['', '']);
+});
+
+it('lets an older successful sync own dimensions after a newer sync fails', async () => {
+  const popup = await fixture<HTMLElement>(html`<div style="width: 50px; height: 20px;"></div>`);
+  const ownership = createPlacementSyncOwnershipController();
+  const older = ownership.beginPlacement(popup);
+  const olderUpdate = ownership.beginUpdate(older);
+  const newer = ownership.beginPlacement(popup);
+  ownership.beginUpdate(newer); // The newer computation starts, then fails without publishing.
+
+  ownership.publish(popup, olderUpdate, {
+    width: { value: '50px', priority: '' },
+    height: { value: '20px', priority: '' },
+  });
+  ownership.release(popup, ownership.beginPlacement(popup));
+
+  expect([popup.style.width, popup.style.height]).to.deep.equal(['', '']);
+});
+
+it('does not let an obsolete placement recreate sync ownership after an unsynced release', async () => {
+  const popup = await fixture<HTMLElement>(html`<div></div>`);
+  const ownership = createPlacementSyncOwnershipController();
+  const obsolete = ownership.beginPlacement(popup);
+  const obsoleteUpdate = ownership.beginUpdate(obsolete);
+  ownership.release(popup, ownership.beginPlacement(popup));
+
+  popup.style.width = '50px';
+  popup.style.height = '20px';
+  ownership.publish(popup, obsoleteUpdate, {
+    width: { value: '50px', priority: '' },
+    height: { value: '20px', priority: '' },
+  });
+  ownership.release(popup, ownership.beginPlacement(popup));
+
+  expect([popup.style.width, popup.style.height]).to.deep.equal(['50px', '20px']);
+});
+
+it('synchronously restores open middleware writes when placement is disposed', async () => {
+  const wrap = await fixture(html`
+    <div>
+      <div
+        id="popup"
+        style="--sentinel-width: 50px; --sentinel-height: 20px;
+          width: var(--sentinel-width) !important; height: var(--sentinel-height) !important;
+          left: 11px; top: 12px;"
+      >
+        pop
+      </div>
+      <div id="bridge"></div>
+    </div>
+  `);
+  const popup = wrap.querySelector('#popup') as HTMLElement;
+  const bridge = wrap.querySelector('#bridge') as HTMLElement;
+  popup.style.setProperty('--lr-positioner-available-inline-size', 'sentinel-inline', 'important');
+  popup.style.setProperty('--lr-positioner-available-block-size', 'sentinel-block', 'important');
+  const anchorRect = new DOMRect(100, 100, 50, 20);
+  const snapshot = () => ({
+    width: [popup.style.width, popup.style.getPropertyPriority('width')],
+    height: [popup.style.height, popup.style.getPropertyPriority('height')],
+    availableInline: [
+      popup.style.getPropertyValue('--lr-positioner-available-inline-size'),
+      popup.style.getPropertyPriority('--lr-positioner-available-inline-size'),
+    ],
+    availableBlock: [
+      popup.style.getPropertyValue('--lr-positioner-available-block-size'),
+      popup.style.getPropertyPriority('--lr-positioner-available-block-size'),
+    ],
+  });
+  const sentinel = {
+    width: ['var(--sentinel-width)', 'important'],
+    height: ['var(--sentinel-height)', 'important'],
+    availableInline: ['sentinel-inline', 'important'],
+    availableBlock: ['sentinel-block', 'important'],
+  };
+  let geometryReads = 0;
+  let beforeStop: ReturnType<typeof snapshot> | undefined;
+  let afterStop: ReturnType<typeof snapshot> | undefined;
+  let stop = () => undefined;
+
+  stop = place(
+    {
+      getBoundingClientRect() {
+        geometryReads += 1;
+        if (geometryReads > 1) {
+          beforeStop = snapshot();
+          stop();
+          afterStop = snapshot();
+        }
+        return anchorRect;
+      },
+    },
+    popup,
+    { flip: false, hoverBridge: bridge, shift: false, sync: 'both' },
+  );
+  await waitFor(() => geometryReads, (reads) => reads > 1);
+
+  expect(beforeStop?.width).to.deep.equal(['50px', '']);
+  expect(beforeStop?.height).to.deep.equal(['20px', '']);
+  expect(beforeStop?.availableInline).to.deep.equal(sentinel.availableInline);
+  expect(beforeStop?.availableBlock).to.deep.equal(sentinel.availableBlock);
+  expect(afterStop).to.deep.equal(sentinel);
+
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  expect(snapshot()).to.deep.equal(sentinel);
+  expect(popup.style.left).to.equal('11px');
+  expect(popup.style.top).to.equal('12px');
+});
+
+it('handles a rejected placement after cleanup and disconnect without a global rejection', async () => {
+  const popup = await fixture<HTMLElement>(html`<div style="width:50px; height:20px;">pop</div>`);
+  const unhandled: unknown[] = [];
+  const onUnhandled = (event: PromiseRejectionEvent) => {
+    unhandled.push(event.reason);
+    event.preventDefault();
+  };
+  window.addEventListener('unhandledrejection', onUnhandled);
+
+  try {
+    const stop = place(
+      { getBoundingClientRect: () => { throw new Error('late disconnected geometry'); } },
+      popup,
+    );
+    popup.remove();
+    stop();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(unhandled.length).to.equal(0);
+    expect(popup.style.left).to.equal('');
+    expect(popup.style.top).to.equal('');
+  } finally {
+    window.removeEventListener('unhandledrejection', onUnhandled);
+  }
+});
+
+it('does not swallow an exception deliberately thrown by onPlaced', async () => {
+  const popup = await fixture<HTMLElement>(html`<div style="width:50px; height:20px;">pop</div>`);
+  const anchor: VirtualAnchor = {
+    getBoundingClientRect: () => new DOMRect(100, 100, 0, 0),
+  };
+  const failure = new Error('consumer onPlaced failure');
+  let failureThrown = false;
+  let stop = () => undefined;
+  const observed = new Promise<unknown>((resolve) => {
+    window.addEventListener(
+      'unhandledrejection',
+      (event) => {
+        event.preventDefault();
+        stop();
+        resolve(event.reason);
+      },
+      { once: true },
+    );
+  });
+
+  stop = place(anchor, popup, {
+    onPlaced: () => {
+      if (failureThrown) return;
+      failureThrown = true;
+      // Stop the auto-update loop before surfacing the deliberate consumer failure. Otherwise a
+      // callback already queued by the initial observer pass could surface the same failure twice.
+      stop();
+      throw failure;
+    },
+  });
+  expect(await observed).to.equal(failure);
 });
 
 it('honors a custom offset from PlaceOptions', async () => {

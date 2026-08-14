@@ -13,6 +13,7 @@ import { isRtl } from '../../../internal/rtl.js';
 import { attachInternalsSafely } from '../../../internal/form-associated.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { isDateObject } from '../../../internal/dom-guards.js';
 import {
   dispatchNativeEvent,
   dispatchNativeInputEvent,
@@ -314,7 +315,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   }
 
   set valueAsDate(next: Date | null) {
-    if (next == null || !Number.isFinite(next.getTime())) {
+    if (!isDateObject(next) || !Number.isFinite(next.getTime())) {
       this.value = '';
       return;
     }
@@ -327,8 +328,8 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   }
 
   set valueAsRange(next: DateRange) {
-    let from = next?.from instanceof Date && Number.isFinite(next.from.getTime()) ? next.from : null;
-    let to = next?.to instanceof Date && Number.isFinite(next.to.getTime()) ? next.to : null;
+    let from = isDateObject(next?.from) && Number.isFinite(next.from.getTime()) ? next.from : null;
+    let to = isDateObject(next?.to) && Number.isFinite(next.to.getTime()) ? next.to : null;
     if (from && to && to < from) [from, to] = [to, from];
     this.value = from ? (to ? `${formatISO(from)}/${formatISO(to)}` : formatISO(from)) : '';
   }
@@ -406,8 +407,8 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
       : String(this.disabledDates || '').split(/[\s,]+/);
     this.disabledDatesCache = new Set(
       values
-        .map((value) => value instanceof Date ? value : parseISO(String(value)))
-        .filter((value): value is Date => value instanceof Date && Number.isFinite(value.getTime()))
+        .map((value) => isDateObject(value) ? value : parseISO(String(value)))
+        .filter((value): value is Date => isDateObject(value) && Number.isFinite(value.getTime()))
         .map((value) => formatISO(value)),
     );
     return this.disabledDatesCache;

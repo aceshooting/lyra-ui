@@ -7,6 +7,7 @@ import { syncValidityStates } from '../../../internal/custom-states.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { nextId } from '../../../internal/a11y.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { styles } from './graph-query-builder.styles.js';
 import type { LyraSelect } from '../../forms/select/select.class.js';
 import '../../forms/select/select.class.js';
@@ -176,6 +177,9 @@ export interface LyraGraphQueryBuilderEventMap {
  * The normalized initial `value` is captured as the reset default; `form.reset()` restores that
  * model, clears interaction/touched state and the save-name draft, and preserves a caller-set
  * custom validity message like a native control.
+ * The start-entity input carries native `required`, matching the aggregate builder's
+ * `valueMissing` rule. Host `focus()`/`click()` reach the first rendered field, and `blur()`
+ * releases whichever nested field owns deep focus.
  *
  * **Accessible name:** the region (`role="group"`) is named by, in order, a host-level
  * `aria-label` attribute, the `label` property, or the localized `graphQueryBuilderLabel` default
@@ -620,8 +624,12 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     this.requestUpdate();
   }
 
-  private focusFirstControl(): void {
-    if (!this.renderRoot || this.effectiveDisabled) return;
+  private get liveDisabled(): boolean {
+    return this.effectiveDisabled || this.matches(':disabled');
+  }
+
+  private focusFirstControl(options?: FocusOptions): void {
+    if (!this.renderRoot || this.liveDisabled) return;
     const control =
       this.renderRoot.querySelector<HTMLElement>('[part="start-input"]') ||
       this.renderRoot.querySelector<HTMLElement>('[part="end-input"]') ||
@@ -629,7 +637,20 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
       this.renderRoot.querySelector<HTMLElement>('[part="max-hops"]') ||
       this.renderRoot.querySelector<HTMLElement>('[part="direction"]') ||
       this.renderRoot.querySelector<HTMLElement>('[part="save-name-input"]');
-    control?.focus();
+    control?.focus(options);
+  }
+
+  /** Moves focus to the first rendered field while the aggregate control is enabled. */
+  override focus(options?: FocusOptions): void {
+    this.focusFirstControl(options);
+  }
+
+  /** Blurs whichever nested editing owner currently holds focus. */
+  override blur(): void {
+    const active = deepActiveElementIn(this.shadowRoot);
+    if (active && typeof (active as HTMLElement).blur === 'function') {
+      (active as HTMLElement).blur();
+    }
   }
 
   /** Forwards host clicks to the first rendered control so callers can interact with this wrapper
@@ -893,6 +914,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
             part="start-input"
             label=${this.localize('graphQueryStartLabel')}
             .value=${value.startId}
+            .required=${true}
             error-text=${hasStartError ? this._errors['start-input'] : ''}
             ?disabled=${disabled}
             @lr-input=${(e: CustomEvent<{ value: string }>) => {

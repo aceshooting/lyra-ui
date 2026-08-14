@@ -644,11 +644,25 @@ it('forwards host focus()/blur()/click() to the frame and re-dispatches its focu
   const el = wrapper.querySelector('lr-zoomable-frame') as LyraZoomableFrame;
   await el.updateComplete;
   const frame = frameOf(el);
-  // Listening on the PARENT: a native focus/blur is composed but does not bubble, so only the
-  // component's own re-dispatched event reaches this listener.
-  const seen: string[] = [];
-  wrapper.addEventListener('focus', () => seen.push('focus'));
-  wrapper.addEventListener('blur', () => seen.push('blur'));
+  const nativeEvents: FocusEvent[] = [];
+  const aliases: string[] = [];
+  const sequence: string[] = [];
+  wrapper.addEventListener('focus', (event) => {
+    nativeEvents.push(event as FocusEvent);
+    sequence.push('focus');
+  });
+  wrapper.addEventListener('blur', (event) => {
+    nativeEvents.push(event as FocusEvent);
+    sequence.push('blur');
+  });
+  wrapper.addEventListener('lr-focus', () => {
+    aliases.push('lr-focus');
+    sequence.push('lr-focus');
+  });
+  wrapper.addEventListener('lr-blur', () => {
+    aliases.push('lr-blur');
+    sequence.push('lr-blur');
+  });
 
   el.focus();
   expect(el.shadowRoot!.activeElement === frame).to.equal(true);
@@ -662,5 +676,74 @@ it('forwards host focus()/blur()/click() to the frame and re-dispatches its focu
 
   el.blur();
   expect(el.shadowRoot!.activeElement === null).to.equal(true);
-  expect(seen).to.deep.equal(['focus', 'blur']);
+  expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+  expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
+  expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
+  expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
+  expect(sequence).to.deep.equal(['focus', 'lr-focus', 'blur', 'lr-blur']);
+});
+
+it('constructs iframe focus relays in the host owner realm and preserves payload', async () => {
+  const ownerFrame = document.createElement('iframe');
+  const loaded = new Promise<void>((resolve) => ownerFrame.addEventListener('load', () => resolve(), { once: true }));
+  ownerFrame.srcdoc = '<!doctype html><html><body></body></html>';
+  document.body.append(ownerFrame);
+  await loaded;
+
+  try {
+    const frameWindow = ownerFrame.contentWindow!;
+    const frameDocument = ownerFrame.contentDocument!;
+    const el = await fixture<LyraZoomableFrame>(html`
+      <lr-zoomable-frame .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
+    `);
+    el.remove();
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+
+    const related = frameDocument.createElement('button');
+    const nativeEvents: FocusEvent[] = [];
+    const aliases: string[] = [];
+    const sequence: string[] = [];
+    el.addEventListener('focus', (event) => {
+      nativeEvents.push(event);
+      sequence.push('focus');
+    });
+    el.addEventListener('blur', (event) => {
+      nativeEvents.push(event);
+      sequence.push('blur');
+    });
+    el.addEventListener('lr-focus', () => {
+      aliases.push('lr-focus');
+      sequence.push('lr-focus');
+    });
+    el.addEventListener('lr-blur', () => {
+      aliases.push('lr-blur');
+      sequence.push('lr-blur');
+    });
+
+    frameOf(el).dispatchEvent(new frameWindow.FocusEvent('focusin', {
+      bubbles: true,
+      composed: true,
+      relatedTarget: related,
+      view: frameWindow,
+      detail: 3,
+    }));
+    frameOf(el).dispatchEvent(new frameWindow.FocusEvent('focusout', {
+      bubbles: true,
+      composed: true,
+      relatedTarget: related,
+      view: frameWindow,
+      detail: 5,
+    }));
+
+    expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+    expect(nativeEvents.every((event) => event instanceof frameWindow.FocusEvent)).to.be.true;
+    expect(nativeEvents.every((event) => event instanceof FocusEvent), 'not ambient-branded').to.be.false;
+    expect(nativeEvents.every((event) => event.target === el && event.relatedTarget === related)).to.be.true;
+    expect(nativeEvents.map((event) => event.detail)).to.deep.equal([3, 5]);
+    expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
+    expect(sequence).to.deep.equal(['focus', 'lr-focus', 'blur', 'lr-blur']);
+  } finally {
+    ownerFrame.remove();
+  }
 });

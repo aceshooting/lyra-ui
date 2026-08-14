@@ -455,6 +455,35 @@ it('continues an in-flight hide after an immediate reconnect and completes exact
   expect(el.isConnected).to.be.false;
 });
 
+it('continues an accepted show after an immediate reconnect and completes exactly once', async () => {
+  const el = (await fixture(
+    html`<lr-toast-item duration="0" style="--lr-toast-show-duration: 2s linear">show reconnect</lr-toast-item>`,
+  )) as LyraToastItem;
+  const parent = el.parentElement!;
+  await oneEvent(el, 'lr-show');
+  let afterShowCount = 0;
+  el.addEventListener('lr-after-show', () => afterShowCount++);
+
+  el.remove();
+  parent.append(el);
+  await Promise.resolve();
+  await Promise.resolve();
+  el.shadowRoot!
+    .querySelector('[part="toast-item"]')!
+    .dispatchEvent(new Event('transitionend'));
+
+  const completed = await Promise.race([
+    waitUntil(() => afterShowCount === 1).then(() => true),
+    aTimeout(180).then(() => false),
+  ]);
+  expect(completed, 'the accepted show transaction must resume after reconnect').to.equal(true);
+  el.shadowRoot!
+    .querySelector('[part="toast-item"]')!
+    .dispatchEvent(new Event('transitionend'));
+  await aTimeout(0);
+  expect(afterShowCount).to.equal(1);
+});
+
 it('applies distinct visual sizing per the `size` property', async () => {
   const xs = (await fixture(
     html`<lr-toast-item size="xs" duration="0">a</lr-toast-item>`,
@@ -714,6 +743,7 @@ it('rehomes focus to an adjacent toast when a focused action toast is removed', 
   const before = wrapper.querySelector('#before') as HTMLButtonElement;
   const action = first.querySelector('#action') as HTMLButtonElement;
   const secondClose = second.shadowRoot!.querySelector('[part="close-button"]') as HTMLButtonElement;
+  await waitUntil(() => first.hasAttribute('data-visible') && second.hasAttribute('data-visible'));
   before.focus();
   action.focus();
 
@@ -857,12 +887,18 @@ it('matches the server close label on the first hydration render, then adopts de
   container.append(el);
 
   await el.updateComplete;
+  const firstSurface = el.shadowRoot?.querySelector<HTMLElement>('[part="toast-item"]');
+  expect(firstSurface?.hidden, 'the server-equivalent first render must remain hidden').to.be.true;
+  expect(firstSurface?.inert, 'the server-equivalent first render must remain inert').to.be.true;
   const closeLabel = (): string | null =>
     el.shadowRoot?.querySelector<HTMLElement>('[part="close-button"]')?.getAttribute('aria-label') ?? null;
   expect(closeLabel()).to.equal('Close');
 
   await el.updateComplete;
   expect(closeLabel()).to.equal('Close: Upload complete');
+  await waitUntil(() => el.hasAttribute('data-visible'));
+  expect(firstSurface?.hidden, 'an accepted client show releases hidden state').to.be.false;
+  expect(firstSurface?.inert, 'an accepted client show releases inert state').to.be.false;
 
   el.strings = { closeWithContext: 'Dismiss {snippet}' };
   el.remove();
@@ -947,6 +983,178 @@ it('derives and live-updates the close label from rich message markup', async ()
   await new Promise<void>((resolve) => queueMicrotask(resolve));
   await el.updateComplete;
   expect(button.getAttribute('aria-label')).to.equal('Close: Upload failed');
+});
+
+it('tracks an external aria-labelledby target for close context and live announcements', async () => {
+  const before = announcementTexts('polite');
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <span id="external-toast-label">Upload complete</span>
+      <lr-toast-item duration="0">
+        <span aria-labelledby="external-toast-label">Ignored fallback</span>
+      </lr-toast-item>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-toast-item') as LyraToastItem;
+  await oneEvent(el, 'lr-show');
+  const button = el.shadowRoot!.querySelector<HTMLElement>('[part="close-button"]')!;
+  expect(button.getAttribute('aria-label')).to.equal('Close: Upload complete');
+
+  wrapper.querySelector('#external-toast-label')!.textContent = 'Upload failed';
+  await waitUntil(
+    () => button.getAttribute('aria-label') === 'Close: Upload failed',
+    'external referenced text should remain in the observer graph',
+  );
+  expect(announcementTexts('polite').slice(before.length)).to.deep.equal([
+    'Upload complete',
+    'Upload failed',
+  ]);
+});
+
+it('tracks an external label through its open shadow root across reconnect, adoption, and replacement', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const fixtureRoot = await fixture<HTMLDivElement>(html`<div></div>`);
+  const scenario = document.createElement('div');
+  const label = document.createElement('toast-open-shadow-label');
+  label.id = 'external-shadow-toast-label';
+  label.attachShadow({ mode: 'open' }).textContent = 'Alpha';
+  const message = document.createElement('span');
+  message.setAttribute('aria-labelledby', label.id);
+  message.textContent = 'Ignored fallback';
+  const el = document.createElement('lr-toast-item') as LyraToastItem;
+  el.duration = 0;
+  el.append(message);
+  scenario.append(label, el);
+  const before = announcementTexts('polite');
+  const shown = oneEvent(el, 'lr-show');
+  fixtureRoot.append(scenario);
+
+  try {
+    await shown;
+    const close = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="close-button"]')!;
+    expect(close.getAttribute('aria-label')).to.equal('Close: Alpha');
+
+    label.shadowRoot!.textContent = 'Beta';
+    await waitUntil(
+      () => close.getAttribute('aria-label') === 'Close: Beta',
+      'a referenced open shadow root remains in the observer graph',
+    );
+    expect(announcementTexts('polite').slice(before.length)).to.deep.equal(['Alpha', 'Beta']);
+
+    scenario.remove();
+    fixtureRoot.append(scenario);
+    await el.updateComplete;
+    label.shadowRoot!.textContent = 'Gamma';
+    await waitUntil(
+      () => close.getAttribute('aria-label') === 'Close: Gamma',
+      'reconnect restores observation of the traversed root',
+    );
+
+    scenario.remove();
+    frameDocument.body.append(frameDocument.adoptNode(scenario));
+    await el.updateComplete;
+    label.shadowRoot!.textContent = 'Delta';
+    await waitUntil(
+      () => close.getAttribute('aria-label') === 'Close: Delta',
+      'adoption rebinds observation through the new owner realm',
+    );
+
+    const replacement = frameDocument.createElement('toast-open-shadow-label');
+    replacement.id = label.id;
+    replacement.attachShadow({ mode: 'open' }).textContent = 'Epsilon';
+    label.replaceWith(replacement);
+    await waitUntil(
+      () => close.getAttribute('aria-label') === 'Close: Epsilon',
+      'replacing the referenced host discovers its new traversed root',
+    );
+    replacement.shadowRoot!.textContent = 'Zeta';
+    await waitUntil(
+      () => close.getAttribute('aria-label') === 'Close: Zeta',
+      'the replacement shadow root remains observed after discovery',
+    );
+  } finally {
+    scenario.remove();
+    frame.remove();
+  }
+});
+
+it('keeps pruned action shadow content out of message observation and accessible context', async () => {
+  const fixtureRoot = await fixture<HTMLDivElement>(html`<div></div>`);
+  const el = document.createElement('lr-toast-item') as LyraToastItem;
+  el.duration = 0;
+  const action = document.createElement('button');
+  const actionLabel = document.createElement('toast-pruned-shadow-label');
+  actionLabel.attachShadow({ mode: 'open' }).textContent = 'Alpha';
+  action.append(actionLabel);
+  const message = document.createElement('span');
+  message.textContent = 'Visible message';
+  el.append(action, message);
+  fixtureRoot.append(el);
+  await oneEvent(el, 'lr-show');
+  const close = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="close-button"]')!;
+  const before = announcementTexts('polite');
+
+  expect(close.getAttribute('aria-label')).to.equal('Close: Visible message');
+  actionLabel.shadowRoot!.textContent = 'Beta';
+  await aTimeout(30);
+  await el.updateComplete;
+
+  expect(close.getAttribute('aria-label')).to.equal('Close: Visible message');
+  expect(announcementTexts('polite')).to.deep.equal(before);
+});
+
+it('uses a localized truthful fallback when bounded traversal yields no message prefix', async () => {
+  const before = announcementTexts('polite');
+  const fixtureRoot = await fixture<HTMLDivElement>(html`<div></div>`);
+  const el = document.createElement('lr-toast-item') as LyraToastItem;
+  el.duration = 0;
+  let cursor: HTMLElement = el;
+  for (let depth = 0; depth < 260; depth += 1) {
+    const child = document.createElement('span');
+    cursor.append(child);
+    cursor = child;
+  }
+  cursor.textContent = 'Text beyond the traversal boundary';
+  const shown = oneEvent(el, 'lr-show');
+  fixtureRoot.append(el);
+  await shown;
+
+  const close = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="close-button"]')!;
+  expect(close.getAttribute('aria-label')).to.equal('Close: Notification with incomplete content');
+  expect(announcementTexts('polite').slice(before.length)).to.deep.equal([
+    'Notification with incomplete content',
+  ]);
+
+  el.strings = {
+    closeWithContext: 'Dismiss: {snippet}',
+    closeWithTruncatedContext: 'Wrong truncated template: {snippet}',
+    toastContentIncomplete: 'Localized incomplete notification',
+  };
+  await el.updateComplete;
+  expect(close.getAttribute('aria-label')).to.equal('Dismiss: Localized incomplete notification');
+});
+
+it('marks a traversal-limited message as incomplete in both the close name and announcement', async () => {
+  const before = announcementTexts('polite');
+  const message = 'x'.repeat(5_000);
+  const el = (await fixture(html`
+    <lr-toast-item
+      duration="0"
+      .strings=${{
+        closeWithContext: 'Wrong complete template {snippet}',
+        closeWithTruncatedContext: 'Dismiss [{snippet}] (more)',
+      }}
+    >${message}</lr-toast-item>
+  `)) as LyraToastItem;
+  await oneEvent(el, 'lr-show');
+
+  const button = el.shadowRoot!.querySelector<HTMLElement>('[part="close-button"]')!;
+  expect(button.getAttribute('aria-label')).to.equal(`Dismiss [${'x'.repeat(40)}] (more)`);
+  const announcement = announcementTexts('polite').slice(before.length).at(-1)!;
+  expect(announcement.length, 'the bounded prefix carries one explicit truncation marker').to.equal(4_097);
+  expect(announcement.endsWith('…')).to.equal(true);
 });
 
 it('tracks contextual close text through a forwarding slot', async () => {
@@ -1125,6 +1333,7 @@ it('rebinds its observer, animation frame, and timers to the adopted owner realm
     const show = rafCallbacks.get(secondRaf)!;
     rafCallbacks.delete(secondRaf);
     show(frameWindow.performance.now());
+    await el.updateComplete;
     expect(nextTimer, 'show and auto-dismiss schedule adopted-window timers').to.be.greaterThan(170);
     el.remove();
     expect(clearedTimers.length, 'disconnect clears adopted-window timers').to.be.greaterThan(0);
@@ -1450,18 +1659,63 @@ it('defines a focus-visible outline for the close button using the shared focus-
   );
 });
 
-it('honours preventDefault() on lr-show, leaving the item present but never shown', async () => {
+it('keeps the inactive subtree inert and hidden, then releases a vetoed initial show', async () => {
   const el = (await fixture(
-    html`<lr-toast-item duration="0">suppressed</lr-toast-item>`,
+    html`<lr-toast-item duration="0">suppressed <a href="#suppressed-target">action</a></lr-toast-item>`,
   )) as LyraToastItem;
-  el.addEventListener('lr-show', (event) => event.preventDefault());
+  let hiddenDuringRequest = false;
+  let inertDuringRequest = false;
+  el.addEventListener('lr-show', (event) => {
+    const requestedSurface = el.shadowRoot!.querySelector<HTMLElement>('[part="toast-item"]')!;
+    hiddenDuringRequest = requestedSurface.hidden;
+    inertDuringRequest = requestedSurface.inert;
+    event.preventDefault();
+  });
   let afterShows = 0;
   el.addEventListener('lr-after-show', () => { afterShows += 1; });
 
+  const surface = el.shadowRoot!.querySelector<HTMLElement>('[part="toast-item"]')!;
+  const action = el.querySelector<HTMLAnchorElement>('a')!;
+  action.focus();
+  expect(surface.hidden, 'pre-show content is not painted').to.be.true;
+  expect(surface.inert, 'pre-show actions are outside sequential/programmatic focus').to.be.true;
+  expect(document.activeElement === action, 'an inert slotted action must reject focus').to.be.false;
+
   await aTimeout(80);
+  expect(hiddenDuringRequest, 'the surface stays hidden throughout the veto point').to.be.true;
+  expect(inertDuringRequest, 'the surface stays inert throughout the veto point').to.be.true;
   expect(el.hasAttribute('data-visible'), 'a vetoed toast never becomes visible').to.be.false;
   expect(afterShows, 'a transition that never happened has no after-event').to.equal(0);
-  expect(el.isConnected, 'the vetoed item is left for its listener to remove').to.be.true;
+  expect(el.isConnected, 'the rejected item releases its owner instead of lingering invisibly').to.be.false;
+});
+
+it('coalesces a reentrant hide request so the outer veto remains authoritative', async () => {
+  const el = (await fixture(
+    html`<lr-toast-item duration="0">reentrant dismissal</lr-toast-item>`,
+  )) as LyraToastItem;
+  await oneEvent(el, 'lr-after-show');
+  let hideRequests = 0;
+  let nestedHide: Promise<void> = Promise.resolve();
+  const vetoReentrantHide = (event: Event): void => {
+    hideRequests += 1;
+    if (hideRequests !== 1) return;
+    nestedHide = el.hide();
+    event.preventDefault();
+  };
+  el.addEventListener('lr-hide', vetoReentrantHide);
+
+  const outerHide = el.hide();
+  await Promise.all([outerHide, nestedHide]);
+  expect(hideRequests, 'nested calls share the in-flight hide request').to.equal(1);
+  expect(el.isConnected, 'the outer veto keeps the item mounted').to.be.true;
+  expect(el.hasAttribute('data-visible')).to.be.true;
+  expect(el.hasAttribute('data-hiding')).to.be.false;
+  const close = el.shadowRoot!.querySelector<HTMLElement>('[part="close-button"]')!;
+  expect(close.getAttribute('aria-disabled')).to.equal('false');
+
+  el.removeEventListener('lr-hide', vetoReentrantHide);
+  await el.hide();
+  expect(el.isConnected).to.be.false;
 });
 
 it('honours preventDefault() on lr-hide, leaving the toast up', async () => {

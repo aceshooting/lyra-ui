@@ -350,17 +350,22 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     return this.renderRoot?.querySelector('[part~="base"]') ?? null;
   }
 
+  /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */
+  private get liveDisabled(): boolean {
+    return this.effectiveDisabled || this.matches(':disabled');
+  }
+
   /** Activates the internal switch control, toggling it the same as a real click -- mirrors
    *  `<lr-checkbox>`'s identical `override click()`. Without this, `HTMLElement.prototype.click()`
    *  on the host is a no-op: the real click handler is bound only to the internal
    *  `[part~="base"]` control, not the host itself. */
   override click(): void {
-    if (!this.effectiveDisabled) this[VALIDITY_ANCHOR]()?.click();
+    if (!this.liveDisabled) this[VALIDITY_ANCHOR]()?.click();
   }
 
   /** Moves focus to the internal switch control. */
   override focus(options?: FocusOptions): void {
-    if (!this.effectiveDisabled) this[VALIDITY_ANCHOR]()?.focus(options);
+    if (!this.liveDisabled) this[VALIDITY_ANCHOR]()?.focus(options);
   }
 
   /** Removes focus from the internal switch control. */
@@ -516,7 +521,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   }
 
   private setFromUser(next: boolean): void {
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
     if (this.checked === next) return;
     this.hasInteracted = true;
     this.checked = next;
@@ -549,7 +554,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     // interaction: marking `touched` for it could reenter an in-flight Lit update and trip Lit's
     // dev-mode "scheduled an update after an update completed" warning, and would otherwise let a
     // later re-enable flash `user-invalid` styling for an interaction the user never actually had.
-    if (!this.effectiveDisabled) {
+    if (!this.liveDisabled) {
       this.touched = true;
       this.hasInteracted = true;
       this.reflectValidityStates();
@@ -559,12 +564,16 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   };
 
   private onFocus = (event: FocusEvent): void => {
+    if (this.liveDisabled) {
+      event.stopPropagation();
+      return;
+    }
     relayNativeEvent(this, event);
     this.emit('lr-focus');
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
     if (e.key === ' ' || e.key === 'Spacebar') {
       e.preventDefault();
       this.setFromUser(!this.checked);

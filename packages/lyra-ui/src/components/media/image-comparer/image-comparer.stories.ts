@@ -15,7 +15,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Before/after comparison with a native range input. It emits `lr-position-change` while moving and `lr-change` when a gesture commits. The `handle` slot customizes its visible affordance; its flattened subtree is always inert and hidden from assistive technology so the range stays the only interaction target. `--divider-width` and `--handle-size` tune the geometry, and the `dragging` CSS state follows pointer gestures. Host `focus()`, `blur()`, and `click()` forward to the range input.',
+          'Before/after comparison with a native range input. It emits one native `input` (`Event`) plus `lr-position-change` while moving and one native `change` (`Event`) plus `lr-change` when a gesture commits. The `handle` slot customizes its visible affordance; its flattened subtree is always inert and hidden from assistive technology so the range stays the only interaction target. `--divider-width` and `--handle-size` tune the geometry, and the `dragging` CSS state follows pointer gestures. Host `focus()`, `blur()`, and `click()` forward to the range input; focus transitions are native `FocusEvent`s with `lr-focus`/`lr-blur` aliases.',
       },
     },
   },

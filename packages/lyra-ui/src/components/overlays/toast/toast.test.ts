@@ -4,7 +4,18 @@ import { toast } from './toaster.js';
 import './toast.js';
 import type { LyraToast } from './toast.js';
 import type { LyraToastItem } from './toast-item.js';
+import { getToastRegion } from './toast-region.js';
+import {
+  TOAST_REGION_ENQUEUE,
+  TOAST_REGION_EVICT,
+  TOAST_REGION_REJECT,
+  TOAST_REGION_SET_ACTIVE,
+} from './toast-region-protocol.js';
 import { styles } from './toast.styles.js';
+
+afterEach(() => {
+  for (const region of document.querySelectorAll('body > lr-toast')) region.remove();
+});
 
 function announcementTexts(politeness: 'polite' | 'assertive'): string[] {
   const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
@@ -115,6 +126,7 @@ it('styles the appended action button through the design-token system instead of
     action: { label: 'Undo', onClick: () => {} },
   });
   const el = await item;
+  await waitUntil(() => el.hasAttribute('data-visible'));
   const btn = el.querySelector('button')!;
   const computed = getComputedStyle(btn);
   expect(computed.borderStyle, 'the default UA button border must be removed').to.equal('none');
@@ -140,6 +152,7 @@ it('keeps an English message and action in logical order inside an RTL page', as
   `);
   const el = wrapper.querySelector('lr-toast-item') as LyraToastItem;
   await el.updateComplete;
+  await waitUntil(() => el.hasAttribute('data-visible'));
 
   const messageNode = Array.from(el.childNodes).find((node) => node.nodeType === Node.TEXT_NODE)!;
   const messageRange = document.createRange();
@@ -392,6 +405,341 @@ it('create() on the region resolves to the item', async () => {
   expect(item.textContent).to.contain('direct');
 });
 
+it('keeps three toast items active and queues later items inertly until a slot opens', async () => {
+  const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
+  const items: LyraToastItem[] = [];
+  for (let index = 0; index < 7; index += 1) {
+    items.push(await region.create(`queued ${index + 1}`, { duration: 0 }));
+  }
+
+  await waitUntil(
+    () => items.slice(0, 3).every((item) => item.hasAttribute('data-visible')),
+    'the first admission window should show',
+  );
+  expect(items.filter((item) => item.hasAttribute('data-visible')).length).to.equal(3);
+  for (const queued of items.slice(3)) {
+    const surface = queued.shadowRoot!.querySelector<HTMLElement>('[part="toast-item"]')!;
+    expect(queued.hasAttribute('data-toast-queued')).to.be.true;
+    expect(surface.hidden, 'queued toast surface must not consume stack geometry').to.be.true;
+    expect(surface.inert, 'queued toast controls must not be reachable').to.be.true;
+  }
+
+  items[0]!.style.setProperty('--lr-toast-hide-duration', '0ms');
+  await items[0]!.hide();
+  await waitUntil(() => items[3]!.hasAttribute('data-visible'), 'the oldest queued toast should promote');
+  expect(items[3]!.hasAttribute('data-toast-queued')).to.be.false;
+  const promotedSurface = items[3]!.shadowRoot!.querySelector<HTMLElement>('[part="toast-item"]')!;
+  expect(promotedSurface.hidden).to.be.false;
+  expect(promotedSurface.inert).to.be.false;
+});
+
+it('prunes a synchronously removed queued member before deciding that a replacement overflowed', async () => {
+  const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
+  const items = await Promise.all(
+    Array.from({ length: 23 }, (_, index) => region.create(`capacity ${index + 1}`, { duration: 0 })),
+  );
+  await waitUntil(() => items.slice(0, 3).every((item) => item.hasAttribute('data-visible')));
+  let overflowCount = 0;
+  region.addEventListener('lr-toast-overflow', (event) => {
+    overflowCount += (event as CustomEvent<{ count: number }>).detail.count;
+  });
+
+  items[3]!.remove();
+  const replacement = await region.create('real replacement', { duration: 0 });
+  await aTimeout(0);
+
+  expect(overflowCount, 'a stale, already-absent member is free capacity rather than lost work').to.equal(0);
+  expect(items[4]!.isConnected, 'the next live queued item must not be discarded').to.equal(true);
+  expect(replacement.parentElement === region).to.equal(true);
+  expect(region.children.length).to.equal(23);
+});
+
+it('restores focus inside an active toast item when it is reparented to another active region', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div><lr-toast id="active-a"></lr-toast><lr-toast id="active-b"></lr-toast></div>
+  `);
+  const first = wrapper.querySelector<LyraToast>('#active-a')!;
+  const second = wrapper.querySelector<LyraToast>('#active-b')!;
+  const item = await first.create('moving active toast', { duration: 0 });
+  await waitUntil(() => item.hasAttribute('data-visible'));
+  const close = item.shadowRoot!.querySelector<HTMLButtonElement>('[part="close-button"]')!;
+  close.focus();
+  expect(item.shadowRoot!.activeElement === close).to.equal(true);
+
+  second.append(item);
+  await aTimeout(0);
+
+  expect(item.hasAttribute('data-toast-queued')).to.equal(false);
+  expect(
+    item.shadowRoot!.activeElement === close,
+    'a same-document reparent must restore the still-available focused control',
+  ).to.equal(true);
+});
+
+it('does not steal newer external focus while deactivating a reparented toast item', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <lr-toast></lr-toast>
+      <lr-toast-item duration="0">moving queued toast</lr-toast-item>
+      <button id="newer-toast-focus" type="button">Newer focus</button>
+    </div>
+  `);
+  const region = wrapper.querySelector('lr-toast') as LyraToast;
+  const moving = wrapper.querySelector('lr-toast-item') as LyraToastItem;
+  const newer = wrapper.querySelector<HTMLButtonElement>('#newer-toast-focus')!;
+  const active = await Promise.all(
+    Array.from({ length: 3 }, (_, index) => region.create(`occupied ${index + 1}`, { duration: 0 })),
+  );
+  await waitUntil(() => active.every((item) => item.hasAttribute('data-visible')));
+  await waitUntil(() => moving.hasAttribute('data-visible'));
+  const close = moving.shadowRoot!.querySelector<HTMLButtonElement>('[part="close-button"]')!;
+  close.focus();
+  moving.remove();
+  newer.focus();
+  region.append(moving);
+  await aTimeout(0);
+
+  expect(moving.hasAttribute('data-toast-queued')).to.equal(true);
+  expect(
+    document.activeElement === newer,
+    'focus chosen after the old control disappeared is newer intent and must win',
+  ).to.equal(true);
+});
+
+it('reasserts the current owner when an item ping-pongs B to A before either region observer runs', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div><lr-toast id="ping-a"></lr-toast><lr-toast id="ping-b"></lr-toast></div>
+  `);
+  const first = wrapper.querySelector<LyraToast>('#ping-a')!;
+  const second = wrapper.querySelector<LyraToast>('#ping-b')!;
+  const moving = await first.create('ping pong', { duration: 0 });
+  const occupied = await Promise.all(
+    Array.from({ length: 3 }, (_, index) => second.create(`ping occupied ${index + 1}`, { duration: 0 })),
+  );
+  await waitUntil(() => moving.hasAttribute('data-visible') && occupied.every((item) => item.hasAttribute('data-visible')));
+
+  second.append(moving);
+  expect(moving.hasAttribute('data-toast-queued'), 'region B is full').to.equal(true);
+  first.append(moving);
+  await aTimeout(0);
+
+  const surface = moving.shadowRoot!.querySelector<HTMLElement>('[part="toast-item"]')!;
+  expect(moving.parentElement === first).to.equal(true);
+  expect(moving.hasAttribute('data-toast-queued'), 'region A must synchronously reclaim active ownership').to.equal(false);
+  expect(surface.hidden).to.equal(false);
+  expect(surface.inert).to.equal(false);
+});
+
+it('bounds a synchronous burst, settles every create() promise, and evicts only queued work', async () => {
+  const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
+  const creations = Array.from({ length: 26 }, (_, index) =>
+    region.create(`burst ${index + 1}`, { duration: 0 }),
+  );
+  const settled = await Promise.race([
+    Promise.all(creations),
+    aTimeout(500).then(() => null),
+  ]);
+  expect(settled, 'queue eviction must not strand create() promises').to.not.equal(null);
+  const items = settled as LyraToastItem[];
+  await waitUntil(() => items.slice(0, 3).every((item) => item.hasAttribute('data-visible')));
+
+  const focusedClose = items[0]!.shadowRoot!.querySelector<HTMLButtonElement>('[part="close-button"]')!;
+  focusedClose.focus();
+  expect(items[0]!.contains(document.activeElement) || items[0]!.shadowRoot!.activeElement === focusedClose).to.be
+    .true;
+
+  expect(region.querySelectorAll('lr-toast-item').length, 'the active plus queued DOM population is bounded').to
+    .equal(23);
+  expect(items[3]!.isConnected, 'the oldest queued item is evicted first').to.be.false;
+  expect(items[0]!.isConnected, 'an active/focused toast is never selected for overflow eviction').to.be.true;
+  expect(items[0]!.shadowRoot!.activeElement === focusedClose, 'overflow eviction preserves active focus').to.be
+    .true;
+});
+
+it('coalesces overflow loss into one typed event and one localized polite announcement', async () => {
+  const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
+  region.locale = 'ar';
+  region.strings = {
+    toastOverflow: 'Skipped {count} notifications.',
+  };
+  const events: Array<CustomEvent<{ count: number }>> = [];
+  region.addEventListener('lr-toast-overflow', (event) => {
+    events.push(event as CustomEvent<{ count: number }>);
+  });
+
+  const items = await Promise.all(
+    Array.from({ length: 26 }, (_, index) => region.create(`observable burst ${index + 1}`, { duration: 0 })),
+  );
+  await aTimeout(0);
+
+  expect(events.length, 'one synchronous burst emits one coalesced loss event').to.equal(1);
+  expect(events[0]!.detail).to.deep.equal({ count: 3 });
+  expect(events[0]!.cancelable).to.equal(false);
+  expect(events[0]!.bubbles).to.equal(true);
+  expect(events[0]!.composed).to.equal(true);
+  const localizedCount = new Intl.NumberFormat('ar').format(3);
+  expect(
+    announcementTexts('polite').filter(
+      (message) => message === `Skipped ${localizedCount} notifications.`,
+    ).length,
+    'the coalesced loss is announced once with localized digits through the region string',
+  ).to.equal(1);
+  expect(items.slice(3, 6).every((item) => !item.isConnected), 'the count describes actual evictions').to.equal(true);
+});
+
+it('deactivates a visible standalone item reparented into a full region and resumes it on promotion', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <button id="return">Before notifications</button>
+      <lr-toast></lr-toast>
+    </div>
+  `);
+  const region = wrapper.querySelector('lr-toast') as LyraToast;
+  const active = await Promise.all(
+    Array.from({ length: 3 }, (_, index) => region.create(`active ${index + 1}`, { duration: 0 })),
+  );
+  await waitUntil(() => active.every((item) => item.hasAttribute('data-visible')));
+
+  const standalone = document.createElement('lr-toast-item') as LyraToastItem;
+  standalone.duration = 180;
+  standalone.style.setProperty('--lr-toast-show-duration', '0ms');
+  standalone.style.setProperty('--lr-toast-hide-duration', '0ms');
+  standalone.textContent = 'reparented notification';
+  let showCount = 0;
+  standalone.addEventListener('lr-show', () => { showCount += 1; });
+  wrapper.insertBefore(standalone, region);
+  await waitUntil(() => standalone.hasAttribute('data-visible'));
+  const surface = standalone.shadowRoot!.querySelector<HTMLElement>('[part="toast-item"]')!;
+  const close = standalone.shadowRoot!.querySelector<HTMLButtonElement>('[part="close-button"]')!;
+  wrapper.querySelector<HTMLButtonElement>('#return')!.focus();
+  close.focus();
+  expect(standalone.shadowRoot!.activeElement === close).to.equal(true);
+
+  await aTimeout(45);
+  region.append(standalone);
+  await standalone.updateComplete;
+  expect(standalone.hasAttribute('data-toast-queued')).to.equal(true);
+  expect(surface.hidden, 'queued reparenting removes the already-visible surface from layout').to.equal(true);
+  expect(surface.inert, 'queued reparenting removes its controls from interaction').to.equal(true);
+  expect(
+    standalone.shadowRoot!.activeElement === close,
+    'focus must not remain stranded in the now-inert queued surface',
+  ).to.equal(false);
+  const adjacentClose = active[2]!.shadowRoot!.querySelector<HTMLButtonElement>('[part="close-button"]')!;
+  expect(
+    active[2]!.shadowRoot!.activeElement === adjacentClose,
+    'focus moves to the nearest active notification control instead of falling to the document',
+  ).to.equal(true);
+
+  await aTimeout(220);
+  expect(standalone.isConnected, 'the visible timer remains paused for the entire queued interval').to.equal(true);
+  active[0]!.style.setProperty('--lr-toast-hide-duration', '0ms');
+  await active[0]!.hide();
+  await waitUntil(() => !standalone.hasAttribute('data-toast-queued'), 'the queued item should promote');
+  expect(surface.hidden).to.equal(false);
+  expect(surface.inert).to.equal(false);
+  expect(showCount, 'promotion reuses the accepted show instead of emitting a second lifecycle').to.equal(1);
+  await waitUntil(() => !standalone.isConnected, 'the paused countdown resumes after promotion', { timeout: 500 });
+});
+
+it('keeps a queued finite toast progress ring aligned with its remaining 1000ms countdown', async () => {
+  const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
+  const active = await Promise.all(
+    Array.from({ length: 3 }, (_, index) => region.create(`active progress ${index + 1}`, { duration: 0 })),
+  );
+  await waitUntil(() => active.every((item) => item.hasAttribute('data-visible')));
+
+  const standalone = document.createElement('lr-toast-item') as LyraToastItem;
+  standalone.duration = 1000;
+  standalone.style.setProperty('--lr-toast-show-duration', '0ms');
+  standalone.style.setProperty('--lr-toast-hide-duration', '0ms');
+  standalone.textContent = 'finite queued progress';
+  document.body.append(standalone);
+  await waitUntil(() => standalone.hasAttribute('data-visible'));
+  await aTimeout(250);
+
+  region.append(standalone);
+  await standalone.updateComplete;
+  expect(standalone.hasAttribute('data-toast-queued')).to.equal(true);
+  await aTimeout(250);
+  expect(standalone.isConnected, 'queue time does not consume the remaining countdown').to.equal(true);
+
+  active[0]!.style.setProperty('--lr-toast-hide-duration', '0ms');
+  const promotedAt = performance.now();
+  await active[0]!.hide();
+  await waitUntil(() => !standalone.hasAttribute('data-toast-queued'), 'the finite toast should promote');
+  await aTimeout(50);
+
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const indicator = standalone.shadowRoot!.querySelector<SVGCircleElement>(
+      '[part="progress-ring__indicator"]',
+    )!;
+    const progress = Number(indicator.getAnimations()[0]?.effect?.getComputedTiming().progress);
+    expect(progress, 'promotion resumes the ring at the elapsed countdown fraction').to.be.at.least(0.18);
+  }
+
+  await aTimeout(350);
+  expect(standalone.isConnected, 'the preserved remainder is not exhausted early').to.equal(true);
+  await waitUntil(() => !standalone.isConnected, 'the preserved remainder dismisses the toast', {
+    timeout: 600,
+  });
+  expect(
+    performance.now() - promotedAt,
+    'promotion does not restart a fresh 1000ms countdown',
+  ).to.be.lessThan(950);
+});
+
+it('uses realm-stable protocol keys across independently evaluated module instances', async () => {
+  const independentUrl = new URL('./toast-region-protocol.ts?independent-instance', import.meta.url).href;
+  const independent = await import(independentUrl) as typeof import('./toast-region-protocol.js');
+
+  expect(independent.TOAST_REGION_ENQUEUE === TOAST_REGION_ENQUEUE).to.equal(true);
+  expect(independent.TOAST_REGION_SET_ACTIVE === TOAST_REGION_SET_ACTIVE).to.equal(true);
+  expect(independent.TOAST_REGION_REJECT === TOAST_REGION_REJECT).to.equal(true);
+  expect(independent.TOAST_REGION_EVICT === TOAST_REGION_EVICT).to.equal(true);
+});
+
+it('does not return a cached region after that node was adopted into another owner document', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const cached = getToastRegion('bottom-end', document);
+  try {
+    frame.contentDocument!.body.append(frame.contentDocument!.adoptNode(cached));
+    expect(cached.ownerDocument === frame.contentDocument).to.equal(true);
+
+    const replacement = getToastRegion('bottom-end', document);
+    expect(replacement === cached, 'the cache entry belongs to the original document, not merely a connected node').to
+      .equal(false);
+    expect(replacement.ownerDocument === document).to.equal(true);
+    expect(replacement.parentElement === document.body).to.equal(true);
+  } finally {
+    cached.remove();
+    frame.remove();
+  }
+});
+
+it('keeps long visible toasts inside a scrollable safe-area stack and reveals focused controls', async () => {
+  const region = (await fixture(html`<lr-toast placement="top-end"></lr-toast>`)) as LyraToast;
+  const items: LyraToastItem[] = [];
+  for (let index = 0; index < 3; index += 1) {
+    items.push(await region.create(`Long ${index + 1}: ${'localized content '.repeat(80)}`, { duration: 0 }));
+  }
+  await waitUntil(() => items.every((item) => item.hasAttribute('data-visible')));
+
+  const stack = region.shadowRoot!.querySelector<HTMLElement>('[part="stack"]')!;
+  expect(stack.clientHeight).to.be.at.most(region.clientHeight);
+  expect(stack.scrollHeight).to.be.greaterThan(stack.clientHeight);
+  expect(getComputedStyle(stack).overflowY).to.equal('auto');
+
+  const lastClose = items[2]!.shadowRoot!.querySelector<HTMLButtonElement>('[part="close-button"]')!;
+  lastClose.focus();
+  await aTimeout(0);
+  const stackRect = stack.getBoundingClientRect();
+  const closeRect = lastClose.getBoundingClientRect();
+  expect(closeRect.top).to.be.at.least(stackRect.top - 1);
+  expect(closeRect.bottom).to.be.at.most(stackRect.bottom + 1);
+});
+
 it('recreates its child observer in the adopted owner realm', async () => {
   const iframe = document.createElement('iframe');
   document.body.append(iframe);
@@ -445,6 +793,12 @@ it('create() does not depend on the ambient document factory after adoption', as
       readonly updateComplete = Promise.resolve(true);
       async show(): Promise<void> {}
       async hide(): Promise<void> {}
+      [TOAST_REGION_SET_ACTIVE](_owner: HTMLElement, active: boolean): void {
+        this.toggleAttribute('data-toast-queued', !active);
+      }
+      [TOAST_REGION_EVICT](): void {
+        this.remove();
+      }
     }
     foreignWindow.customElements.define('lr-toast-item', ForeignToastItem);
     iframe.contentDocument!.body.append(iframe.contentDocument!.adoptNode(region));

@@ -1277,6 +1277,56 @@ describe('reviewed date-picker parity surface', () => {
     expect(el.valueAsRange.to?.getDate()).to.equal(20);
   });
 
+  it('accepts branded Date values from another realm for values, ranges, and disabled dates', async () => {
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+    const ForeignDate = frame.contentWindow!.Date;
+    const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
+
+    const single = new ForeignDate(2026, 6, 12);
+    expect(single instanceof Date).to.equal(false);
+    el.valueAsDate = single;
+    expect(el.value).to.equal('2026-07-12');
+
+    el.mode = 'range';
+    el.valueAsRange = {
+      from: new ForeignDate(2026, 6, 20),
+      to: new ForeignDate(2026, 6, 10),
+    };
+    expect(el.value).to.equal('2026-07-10/2026-07-20');
+
+    el.mode = 'single';
+    el.value = '2026-07-15';
+    el.disabledDates = [new ForeignDate(2026, 6, 16)];
+    await el.updateComplete;
+    const disabledDay = el.shadowRoot!.querySelector('[data-date="2026-07-16"]') as HTMLButtonElement;
+    expect(disabledDay.disabled).to.equal(true);
+  });
+
+  it('rejects structural Date lookalikes for values, ranges, and disabled dates', async () => {
+    const forged = {
+      getTime: () => new Date(2026, 6, 16).getTime(),
+      getFullYear: () => 2026,
+      getMonth: () => 6,
+      getDate: () => 16,
+      [Symbol.toStringTag]: 'Date',
+    } as unknown as Date;
+    const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
+
+    el.valueAsDate = forged;
+    expect(el.value).to.equal('');
+
+    el.mode = 'range';
+    el.valueAsRange = { from: forged, to: new Date(2026, 6, 20) };
+    expect(el.value).to.equal('');
+
+    el.mode = 'single';
+    el.value = '2026-07-15';
+    el.disabledDates = [forged];
+    await el.updateComplete;
+    const ordinaryDay = el.shadowRoot!.querySelector('[data-date="2026-07-16"]') as HTMLButtonElement;
+    expect(ordinaryDay.disabled).to.equal(false);
+  });
+
   it('combines disabled dates, weekdays, predicates, range limits, and semantic day parts', async () => {
     const el = (await fixture(html`
       <lr-date-picker

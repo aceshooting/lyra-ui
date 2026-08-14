@@ -883,3 +883,62 @@ it("emits a cancelable lr-close before mutating open, and skips the mutation whe
   expect(seen, "open must still be true while lr-close is being dispatched").to.deep.equal([true]);
   expect(el.open, "a defaultPrevented lr-close must not close the palette").to.be.true;
 });
+
+it("routes direct IDL and attribute writes through the same synchronous lifecycle", async () => {
+  const el = (await fixture(html`<lr-command-palette></lr-command-palette>`)) as LyraCommandPalette;
+  const order: string[] = [];
+  el.addEventListener("lr-open", () => order.push(`open:${el.open}`));
+  el.addEventListener("lr-close", () => order.push(`close:${el.open}`));
+
+  el.open = true;
+  expect(order).to.deep.equal(["open:false"]);
+  expect(el.open).to.be.true;
+  await el.updateComplete;
+
+  el.removeAttribute("open");
+  expect(order).to.deep.equal(["open:false", "close:true"]);
+  expect(el.open).to.be.false;
+});
+
+it("restores a vetoed reflected attribute write and avoids opening side effects", async () => {
+  const el = (await fixture(html`
+    <lr-command-palette
+      .commands=${[
+        { id: "save", label: "Save" },
+        { id: "close", label: "Close" },
+      ]}
+    ></lr-command-palette>
+  `)) as LyraCommandPalette;
+  el.addEventListener("lr-open", (event) => event.preventDefault(), { once: true });
+
+  el.setAttribute("open", "");
+  await el.updateComplete;
+
+  expect(el.open).to.be.false;
+  expect(el.hasAttribute("open")).to.be.false;
+});
+
+it("resets search state for every accepted opening entry path", async () => {
+  const el = (await fixture(html`
+    <lr-command-palette
+      .commands=${[
+        { id: "save", label: "Save" },
+        { id: "close", label: "Close" },
+      ]}
+    ></lr-command-palette>
+  `)) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector("input") as HTMLInputElement;
+  input.value = "close";
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  await el.updateComplete;
+  el.close();
+  await el.updateComplete;
+
+  el.open = true;
+  await el.updateComplete;
+
+  expect((el.shadowRoot!.querySelector("input") as HTMLInputElement).value).to.equal("");
+  expect(el.shadowRoot!.querySelectorAll('[part="command"]')).to.have.length(2);
+});

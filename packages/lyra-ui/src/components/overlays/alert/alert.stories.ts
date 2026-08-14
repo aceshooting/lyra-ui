@@ -38,6 +38,14 @@ export const ClosedByDefault: StoryObj = {
 };
 
 export const Variants: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The icon slot is visible presentation content whose flattened subtree is inert and aria-hidden. The localized native close button remains the independent action.',
+      },
+    },
+  },
   render: () => html`
     <div style="display:grid; gap:var(--lr-space-s);">
       ${(['primary', 'success', 'neutral', 'warning', 'danger'] as const).map(

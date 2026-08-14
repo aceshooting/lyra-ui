@@ -33,6 +33,17 @@ function fiveChips() {
   `;
 }
 
+async function settleChipGroup(el: LyraChipGroup): Promise<void> {
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  await el.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  await el.updateComplete;
+}
+
+function focusedChipPart(chip: HTMLElement): string | null {
+  return chip.shadowRoot?.activeElement?.getAttribute('part') ?? null;
+}
+
 it("wraps the internal [aria-expanded='true'] rule in :where() so a consumer ::part(overflow-indicator) override can win (regression)", () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='overflow-indicator'\]:where\(\[aria-expanded='true'\]\)/);
@@ -43,6 +54,7 @@ it("wraps the internal [aria-expanded='true'] rule in :where() so a consumer ::p
 it('lets a consumer retint the expanded overflow-indicator via the scoped --lr-chip-group-overflow-expanded-color cssprop (regression)', async () => {
   const el = (await fixture(fiveChips())) as LyraChipGroup;
   el.maxVisible = 3;
+  el.style.setProperty('--lr-transition-fast', '0ms');
   el.style.setProperty('--lr-chip-group-overflow-expanded-color', 'rgb(1, 2, 3)');
   await el.updateComplete;
   const indicator = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
@@ -302,6 +314,88 @@ describe('overflow behavior', () => {
     expect(chips.map((c) => c.hidden)).to.deep.equal([false, false, false, true, true]);
   });
 
+  it('repairs focus from a chip hidden by collapse to the nearest enabled visible chip control', async () => {
+    const el = (await fixture(html`
+      <lr-chip-group max-visible="2">
+        <lr-chip toggleable>one</lr-chip>
+        <lr-chip toggleable>two</lr-chip>
+        <lr-chip toggleable>three</lr-chip>
+        <lr-chip toggleable>four</lr-chip>
+      </lr-chip-group>
+    `)) as LyraChipGroup;
+    const chips = Array.from(el.querySelectorAll<HTMLElement>('lr-chip'));
+    const indicator = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
+    indicator.click();
+    await el.updateComplete;
+
+    chips[3]!.focus();
+    indicator.click();
+    await el.updateComplete;
+
+    expect(focusedChipPart(chips[1]!)).to.equal('toggle-button');
+  });
+
+  it('skips disabled visible chips and falls back to the overflow disclosure', async () => {
+    const el = (await fixture(html`
+      <lr-chip-group max-visible="2">
+        <lr-chip>passive</lr-chip>
+        <lr-chip toggleable disabled>disabled</lr-chip>
+        <lr-chip toggleable>three</lr-chip>
+      </lr-chip-group>
+    `)) as LyraChipGroup;
+    const chips = Array.from(el.querySelectorAll<HTMLElement>('lr-chip'));
+    const indicator = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
+    indicator.click();
+    await el.updateComplete;
+
+    chips[2]!.focus();
+    indicator.click();
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('overflow-indicator');
+  });
+
+  it('repairs focus when max-visible directly hides the focused chip', async () => {
+    const el = (await fixture(html`
+      <lr-chip-group max-visible="4">
+        <lr-chip toggleable>one</lr-chip>
+        <lr-chip toggleable>two</lr-chip>
+        <lr-chip toggleable>three</lr-chip>
+        <lr-chip toggleable>four</lr-chip>
+      </lr-chip-group>
+    `)) as LyraChipGroup;
+    const chips = Array.from(el.querySelectorAll<HTMLElement>('lr-chip'));
+    chips[3]!.focus();
+
+    el.maxVisible = 2;
+    await el.updateComplete;
+
+    expect(focusedChipPart(chips[1]!)).to.equal('toggle-button');
+  });
+
+  it('does not steal focus back when max-visible changes after focus moved outside', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <lr-chip-group max-visible="4">
+          <lr-chip toggleable>one</lr-chip>
+          <lr-chip toggleable>two</lr-chip>
+          <lr-chip toggleable>three</lr-chip>
+        </lr-chip-group>
+        <button id="newer-chip-focus">Newer focus</button>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-chip-group') as LyraChipGroup;
+    const chips = Array.from(el.querySelectorAll<HTMLElement>('lr-chip'));
+    const newer = wrapper.querySelector('#newer-chip-focus') as HTMLButtonElement;
+    chips[2]!.focus();
+
+    el.maxVisible = 1;
+    newer.focus();
+    await el.updateComplete;
+
+    expect(document.activeElement?.id).to.equal('newer-chip-focus');
+  });
+
   it('never fires lr-overflow-toggle just from max-visible/children changing on their own', async () => {
     const el = (await fixture(fiveChips())) as LyraChipGroup;
     let fired = false;
@@ -362,6 +456,43 @@ describe('dynamic children', () => {
     expect((indicator) != null).to.equal(true);
     expect(indicator.textContent!.trim()).to.equal('+1');
     expect((extra as HTMLElement).hidden).to.be.true;
+  });
+
+  it('repairs controlled removal to the next chip actual control at the removed index', async () => {
+    const el = (await fixture(html`
+      <lr-chip-group>
+        <lr-chip removable>one</lr-chip>
+        <lr-chip removable>two</lr-chip>
+        <lr-chip removable>three</lr-chip>
+      </lr-chip-group>
+    `)) as LyraChipGroup;
+    const chips = Array.from(el.querySelectorAll<HTMLElement>('lr-chip'));
+    el.addEventListener('lr-remove', (event) => {
+      (event.target as HTMLElement).remove();
+    });
+
+    chips[1]!.focus();
+    chips[1]!.click();
+    await settleChipGroup(el);
+
+    expect(focusedChipPart(chips[2]!)).to.equal('remove-button');
+  });
+
+  it('repairs removal of the last actionable chip to the group stable owner', async () => {
+    const el = (await fixture(html`
+      <lr-chip-group><lr-chip removable>only</lr-chip></lr-chip-group>
+    `)) as LyraChipGroup;
+    const chip = el.querySelector<HTMLElement>('lr-chip')!;
+    el.addEventListener('lr-remove', (event) => {
+      (event.target as HTMLElement).remove();
+    });
+
+    chip.focus();
+    chip.click();
+    await settleChipGroup(el);
+
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+    expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).tabIndex).to.equal(-1);
   });
 });
 

@@ -2,6 +2,7 @@ import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import type { DocumentRef } from '../../../ai/types.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -79,21 +80,40 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
   @property() label = '';
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
-  private pendingRemovalFocus?: { targetId?: string; action: string };
+  private pendingRemovalFocus?: {
+    targetId?: string;
+    action?: string;
+    actionIndex: number;
+    origin: Element;
+  };
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (!changed.has('items')) return;
-    const focusedAction = this.shadowRoot?.activeElement as HTMLElement | null;
-    const action = focusedAction?.getAttribute('data-action');
-    const focusedItem = focusedAction?.closest<HTMLElement>('[data-id]');
+    if (!changed.has('items') && !changed.has('editable') && !changed.has('disabled')) return;
+    const focusedControl = activeElementIn(this.shadowRoot) as HTMLElement | null;
+    const action = focusedControl?.getAttribute('data-action') ?? undefined;
+    const editorFocused = focusedControl?.getAttribute('part') === 'editor';
+    if (!action && !editorFocused) return;
+    const focusedItem = focusedControl?.closest<HTMLElement>('[data-id]');
     const focusedId = focusedItem?.dataset['id'];
-    if (!action || !focusedId || this.items.some((item) => item.id === focusedId)) return;
+    if (!focusedId || !focusedControl) return;
 
     const previousItems = (changed.get('items') as PromptQueueItem[] | undefined) ?? [];
+    const rowRemoved = changed.has('items') && !this.items.some((item) => item.id === focusedId);
+    const editorRemoved = editorFocused && changed.has('editable') && !this.editable;
+    const controlDisabled = changed.has('disabled') && this.disabled;
+    if (!rowRemoved && !editorRemoved && !controlDisabled) return;
     const previousIndex = previousItems.findIndex((item) => item.id === focusedId);
-    const target = this.items[Math.min(Math.max(previousIndex, 0), this.items.length - 1)];
-    this.pendingRemovalFocus = { targetId: target?.id, action };
+    const target = rowRemoved
+      ? this.items[Math.min(Math.max(previousIndex, 0), this.items.length - 1)]
+      : this.items.find((item) => item.id === focusedId);
+    const rowActions = focusedItem?.querySelectorAll<HTMLElement>('[data-action]') ?? [];
+    this.pendingRemovalFocus = {
+      targetId: target?.id,
+      action,
+      actionIndex: action ? [...rowActions].findIndex((candidate) => candidate === focusedControl) : -1,
+      origin: focusedControl,
+    };
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -101,15 +121,45 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
     const pending = this.pendingRemovalFocus;
     if (!pending) return;
     this.pendingRemovalFocus = undefined;
+    const internalActive = activeElementIn(this.shadowRoot);
+    const documentActive = activeElementIn(this.ownerDocument);
+    if (
+      (internalActive !== null && internalActive !== pending.origin) ||
+      (documentActive !== null && documentActive !== this && documentActive !== this.ownerDocument.body)
+    ) return;
     if (!pending.targetId) {
       this.shadowRoot?.querySelector<HTMLElement>('[part="base"]')?.focus();
       return;
     }
     const targetItem = [...(this.shadowRoot?.querySelectorAll<HTMLElement>('[data-id]') ?? [])]
       .find((item) => item.dataset['id'] === pending.targetId);
-    const equivalentAction = [...(targetItem?.querySelectorAll<HTMLElement>('[data-action]') ?? [])]
-      .find((candidate) => candidate.dataset['action'] === pending.action);
-    equivalentAction?.focus();
+    const actions = [...(targetItem?.querySelectorAll<HTMLElement>('[data-action]') ?? [])];
+    const isEnabled = (candidate: HTMLElement): boolean =>
+      (candidate as HTMLElement & { disabled?: boolean }).disabled !== true &&
+      candidate.getAttribute('aria-disabled') !== 'true';
+    const equivalentAction = pending.action
+      ? actions.find(
+          (candidate) => candidate.dataset['action'] === pending.action && isEnabled(candidate),
+        )
+      : undefined;
+    if (equivalentAction) {
+      equivalentAction.focus();
+      return;
+    }
+    const preferredIndex = pending.actionIndex >= 0 ? pending.actionIndex : 0;
+    for (let distance = 0; distance < actions.length; distance++) {
+      const before = actions[preferredIndex - distance];
+      if (before && isEnabled(before)) {
+        before.focus();
+        return;
+      }
+      const after = actions[preferredIndex + distance];
+      if (after && isEnabled(after)) {
+        after.focus();
+        return;
+      }
+    }
+    this.shadowRoot?.querySelector<HTMLElement>('[part="base"]')?.focus();
   }
 
   private emitChange(items: PromptQueueItem[], reason: PromptQueueChangeReason, itemId: string): void {

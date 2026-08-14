@@ -10,6 +10,10 @@ import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './phone-input.styles.js';
 import { submitOnEnter } from '../../../internal/submit-on-enter.js';
+import {
+  dispatchNativeInputEvent,
+  relayNativeEvent,
+} from '../../../internal/native-event-relay.js';
 import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -136,10 +140,14 @@ export interface LyraPhoneInputEventDetail {
 
 export interface LyraPhoneInputEventMap {
   'lr-invalid': CustomEvent<undefined>;
-  input: CustomEvent<LyraPhoneInputEventDetail>;
-  change: CustomEvent<LyraPhoneInputEventDetail>;
-  focus: CustomEvent<undefined>;
-  blur: CustomEvent<undefined>;
+  input: InputEvent;
+  change: Event;
+  focus: FocusEvent;
+  blur: FocusEvent;
+  'lr-input': CustomEvent<LyraPhoneInputEventDetail>;
+  'lr-change': CustomEvent<LyraPhoneInputEventDetail>;
+  'lr-focus': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<undefined>;
 }
 
 class LyraPhoneInputBase extends LyraElement<LyraPhoneInputEventMap> {}
@@ -197,9 +205,10 @@ function fallbackParse(input: string): PhoneNumberParseResult {
  * supplied through `adapter`; without one, already-international E.164 input
  * remains useful and national input stays editable with `incomplete` validity.
  *
- * User edits emit native-style `input` and `change` events. Event detail
- * exposes both the canonical `value` and editable `inputValue`; programmatic
- * property changes are silent. Phone-number text is deliberately LTR while
+ * Each text edit emits native `input` then `lr-input`; a text commit emits native `change` then
+ * `lr-change`, and a country pick emits both pairs in that order. The aliases expose both the
+ * canonical `value` and editable `inputValue`; programmatic property changes are silent.
+ * Phone-number text is deliberately LTR while
  * the form chrome and country selector follow the inherited direction. A host
  * `aria-label` names the internal telephone input and wins over every derived
  * or component-specific fallback; `phone-label`, `label` and `placeholder` follow in that order,
@@ -231,10 +240,14 @@ function fallbackParse(input: string): PhoneNumberParseResult {
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
  * @slot country-prefix - Optional visual displayed before the country selector, such as a flag.
- * @event input - Fired for user edits and country changes; detail contains canonical and display values.
- * @event change - Fired when the native input commits or the country changes.
- * @event focus - Fired when the internal telephone input receives focus.
- * @event blur - Fired when the internal telephone input loses focus.
+ * @event input - Native `InputEvent` fired for user edits and country changes.
+ * @event change - Native `Event` fired when the telephone input commits or the country changes.
+ * @event lr-input - Lyra input alias; detail contains the canonical and display values.
+ * @event lr-change - Lyra commit alias; detail contains the canonical and display values.
+ * @event focus - Native `FocusEvent` relayed when the internal telephone input receives focus.
+ * @event blur - Native `FocusEvent` relayed when the internal telephone input loses focus.
+ * @event lr-focus - Lyra alias emitted after the native `focus` relay.
+ * @event lr-blur - Lyra alias emitted after the native `blur` relay.
  * @event lr-invalid - The phone input failed a validity check. Cancelable: `preventDefault()`
  *   forwards to the native `invalid` event, suppressing the browser's own validation bubble and the
  *   focus/scroll `reportValidity()` would otherwise perform.
@@ -648,27 +661,40 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   }
 
   private onInput = (event: Event): void => {
-    event.stopPropagation();
+    if (this.liveDisabled) {
+      event.stopPropagation();
+      return;
+    }
     const input = event.currentTarget as HTMLInputElement;
     const caret = input.selectionStart;
     const digitsBeforeCaret = caret == null ? null : digitsBefore(input.value, caret);
     this.applyParsed(input.value, this.parse(input.value));
     this.syncFormattedValue(input, digitsBeforeCaret);
-    this.emit('input', this.eventDetail);
+    relayNativeEvent(this, event);
+    this.emit('lr-input', this.eventDetail);
   };
 
   private onChange = (event: Event): void => {
-    event.stopPropagation();
+    if (this.liveDisabled) {
+      event.stopPropagation();
+      return;
+    }
     this.touched = true;
-    this.emit('change', this.eventDetail);
+    relayNativeEvent(this, event);
+    this.emit('lr-change', this.eventDetail);
   };
 
   private onCountryChange = (event: Event): void => {
-    event.stopPropagation();
+    if (this.liveDisabled) {
+      event.stopPropagation();
+      return;
+    }
     this.country = normalizeCountry((event.currentTarget as HTMLSelectElement).value);
     this.applyParsed(this.editableValue, this.parse(this.editableValue));
-    this.emit('input', this.eventDetail);
-    this.emit('change', this.eventDetail);
+    dispatchNativeInputEvent(this);
+    this.emit('lr-input', this.eventDetail);
+    relayNativeEvent(this, event);
+    this.emit('lr-change', this.eventDetail);
   };
 
   /**
@@ -679,23 +705,27 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
    * candidate list sits on top of.
    */
   private onKeyDown = (event: KeyboardEvent): void => {
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
     submitOnEnter(this, event);
   };
 
   private onFocus = (event: FocusEvent): void => {
-    event.stopPropagation();
-    this.emit('focus');
+    if (this.liveDisabled) {
+      event.stopPropagation();
+      return;
+    }
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
 
   private onBlur = (event: FocusEvent): void => {
-    event.stopPropagation();
     // Regression guard: disabling a focused native form control
     // forces the browser to blur it -- plain platform behavior, not a real user interaction.
     // Unconditionally marking `touched` for it could reenter an in-flight Lit update and trip
     // Lit's dev-mode "scheduled an update after an update completed" warning.
-    if (!this.effectiveDisabled) this.touched = true;
-    this.emit('blur');
+    if (!this.liveDisabled) this.touched = true;
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
 
   private onLabelSlotChange = (event: Event): void => {
@@ -715,14 +745,19 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
       (event.currentTarget as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
-  /** Activate the internal telephone input unless the form control is effectively disabled. */
-  override click(): void {
-    if (!this.effectiveDisabled) this.inputElement?.click();
+  /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */
+  private get liveDisabled(): boolean {
+    return this.effectiveDisabled || this.matches(':disabled');
   }
 
-  /** Focus the internal telephone input. */
+  /** Activate the internal telephone input unless the form control is effectively disabled. */
+  override click(): void {
+    if (!this.liveDisabled) this.inputElement?.click();
+  }
+
+  /** Focus the internal telephone input unless the form control is effectively disabled. */
   override focus(options?: FocusOptions): void {
-    this.inputElement?.focus(options);
+    if (!this.liveDisabled) this.inputElement?.focus(options);
   }
 
   /** Blur the internal telephone input. */

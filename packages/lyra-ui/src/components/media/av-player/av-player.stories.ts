@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Audio/video player built on a native media element with a cue transcript synced to playback, time-range anchor/highlight support, an optional dependency-free waveform, and playback-rate control. Self-registers into the document-viewer registry for common audio/video MIME types.',
+          'Audio/video player built on a native media element with a cue transcript synced to playback, time-range anchor/highlight support, an optional dependency-free waveform, and playback-rate control. Self-registers into the document-viewer registry for common audio/video MIME types. Media focus transitions relay exactly one native `FocusEvent` plus the `lr-focus`/`lr-blur` alias.',
       },
     },
   },

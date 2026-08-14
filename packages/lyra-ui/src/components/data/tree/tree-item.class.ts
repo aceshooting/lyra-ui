@@ -6,11 +6,10 @@ import { tag } from '../../../internal/prefix.js';
 import {
   composedParentElement,
   hasRealContent,
-  isAccessibilitySubtreeExcluded,
   isAccessibilityVisible,
-  isAccessibilityVisibilityHidden,
   nextId,
 } from '../../../internal/a11y.js';
+import { composedAccessibilityText } from '../../../internal/accessibility-visibility.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { setCustomState } from '../../../internal/custom-states.js';
@@ -489,44 +488,16 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     });
   }
 
-  private accessibleLabelText(node: Node, inheritedTextVisible?: boolean, requireComposedVisibility = false): string {
-    if (node.nodeType === 3) {
-      if (inheritedTextVisible === undefined) {
-        const parent = this.composedParentForLabelNode(node);
-        inheritedTextVisible =
-          parent !== null &&
-          !isAccessibilitySubtreeExcluded(parent) &&
-          !isAccessibilityVisibilityHidden(parent) &&
-          (!requireComposedVisibility || isAccessibilityVisible(parent));
-      }
-      return inheritedTextVisible ? node.textContent ?? '' : '';
-    }
-    if (node.nodeType !== 1) return '';
-    const element = node as Element;
-    if (isAccessibilitySubtreeExcluded(element)) return '';
-    const ownTextVisible = !isAccessibilityVisibilityHidden(element);
-    if (requireComposedVisibility && ownTextVisible && !isAccessibilityVisible(element)) return '';
-    const ariaLabel = ownTextVisible ? element.getAttribute('aria-label')?.trim() : '';
-    if (ariaLabel) return ariaLabel;
-    const forwardingSlot = element.localName === 'slot' ? (element as HTMLSlotElement) : null;
-    const hasAssignment = forwardingSlot !== null && forwardingSlot.assignedNodes().length > 0;
-    const children = hasAssignment ? forwardingSlot.assignedNodes({ flatten: true }) : Array.from(element.childNodes);
-    return Array.from(children)
-      .map((child) => {
-        const externalAssignment = hasAssignment && !this.contains(child);
-        return this.accessibleLabelText(
-          child,
-          externalAssignment ? undefined : ownTextVisible,
-          requireComposedVisibility || externalAssignment
-        );
-      })
-      .join(' ');
-  }
-
   private get slottedLabelText(): string {
-    return this.declarativeLabelRoots()
-      .map((node) => this.accessibleLabelText(node, true, false))
-      .join(' ')
+    return composedAccessibilityText(this.declarativeLabelRoots(), {
+      requireRendered: false,
+      shouldPruneNode: (node) => {
+        if (this.contains(node)) return false;
+        const target = node.nodeType === 1 ? node as Element : node.parentElement;
+        return target === null || !isAccessibilityVisible(target);
+      },
+      skipRootAncestorValidation: true,
+    })
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -587,7 +558,19 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     if (node.nodeType !== 1) return;
     this.childObserver.observe(node, {
       attributes: true,
-      attributeFilter: ['aria-hidden', 'aria-label', 'class', 'hidden', 'inert', 'open', 'slot', 'style'],
+      attributeFilter: [
+        'alt',
+        'aria-hidden',
+        'aria-label',
+        'aria-labelledby',
+        'class',
+        'hidden',
+        'id',
+        'inert',
+        'open',
+        'slot',
+        'style',
+      ],
       childList: true,
       characterData: true,
       subtree: true,

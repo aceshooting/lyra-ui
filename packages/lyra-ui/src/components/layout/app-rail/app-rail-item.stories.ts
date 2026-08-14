@@ -36,7 +36,7 @@ export const IconOnlyTooltip: StoryObj = {
     docs: {
       description: {
         story:
-          'With both `icon-only` and `tooltip`, hover or focus the named item to reveal its label flyout. The visible icon remains decorative while the native link keeps the supplied accessible name.',
+          'With both `icon-only` and `tooltip`, hover or focus the named item to reveal its label flyout. The visible icon subtree remains inert and aria-hidden while the native link keeps the supplied accessible name and action.',
       },
     },
   },

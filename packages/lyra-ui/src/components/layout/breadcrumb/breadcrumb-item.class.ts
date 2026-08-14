@@ -1,5 +1,6 @@
-import { html, nothing, type TemplateResult } from "lit";
+import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
 import { property } from "lit/decorators.js";
+import { activeElementIn } from "../../../internal/active-element.js";
 import { hostAriaLabel } from "../../../internal/a11y.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { safeLinkHref } from "../../../internal/safe-url.js";
@@ -79,9 +80,43 @@ export class LyraBreadcrumbItem extends LyraElement {
   }
   @property({ type: Boolean, reflect: true }) current = false;
   private readonly slots = new SlotPresenceController(this);
+  private semanticFocusOrigin?: Element;
   override connectedCallback(): void {
     super.connectedCallback();
     this.setAttribute("role", "listitem");
+  }
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
+    if (!changed.has('href') && !changed.has('current')) return;
+    const previous = this.renderRoot?.querySelector<HTMLElement>('[part="base"]') ?? null;
+    if (!previous) return;
+    const nextKind = this.current ? 'span' : safeLinkHref(this.href) ? 'a' : 'button';
+    this.semanticFocusOrigin =
+      previous.localName !== nextKind && activeElementIn(this.shadowRoot) === previous
+        ? previous
+        : undefined;
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    const focusOrigin = this.semanticFocusOrigin;
+    this.semanticFocusOrigin = undefined;
+    if (!focusOrigin) return;
+    this.scheduleAfterUpdate(() => {
+      const internalActive = activeElementIn(this.shadowRoot);
+      const documentActive = activeElementIn(this.ownerDocument);
+      if (
+        (internalActive !== null && internalActive !== focusOrigin) ||
+        (documentActive !== null && documentActive !== this && documentActive !== this.ownerDocument.body)
+      ) return;
+      this.renderRoot.querySelector<HTMLElement>('[part="base"]')?.focus();
+    }, 'breadcrumb-item-owner-focus');
+  }
+
+  override disconnectedCallback(): void {
+    this.semanticFocusOrigin = undefined;
+    super.disconnectedCallback();
   }
 
   /** Activates the internal link or button. Current-page labels remain inert. */
@@ -116,7 +151,7 @@ export class LyraBreadcrumbItem extends LyraElement {
             aria-current="false"
           >${label}</a>`
         : this.current
-          ? html`<span part="base" aria-current="page">${label}</span>`
+          ? html`<span part="base" aria-current="page" tabindex="-1">${label}</span>`
           : html`<button part="base" type="button" aria-label=${ariaLabel ?? nothing} aria-current="false">${label}</button>`;
     return html`${separator}${base}`;
   }

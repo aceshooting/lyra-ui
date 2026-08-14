@@ -5,6 +5,114 @@ export function hasRenderedLayoutBox(element: HTMLElement): boolean {
   return element.isConnected && element.getClientRects().length > 0;
 }
 
+interface RenderedStateMutationSubscription {
+  affects(record: MutationRecord): boolean;
+  notify(): void;
+}
+
+const mutationHubs = new WeakMap<Document, RenderedStateMutationHub>();
+
+class RenderedStateMutationHub {
+  private readonly subscriptions = new Map<RenderedStateMutationSubscription, Set<ShadowRoot>>();
+  private readonly observer: MutationObserver;
+
+  constructor(
+    private readonly document: Document,
+    MutationObserverConstructor: typeof MutationObserver,
+  ) {
+    this.observer = new MutationObserverConstructor((records) => {
+      const affected = new Set<RenderedStateMutationSubscription>();
+      for (const record of records) {
+        for (const subscription of this.subscriptions.keys()) {
+          if (subscription.affects(record)) affected.add(subscription);
+        }
+      }
+      for (const subscription of affected) subscription.notify();
+    });
+  }
+
+  set(subscription: RenderedStateMutationSubscription, roots: Set<ShadowRoot>): void {
+    const previous = this.subscriptions.get(subscription);
+    if (
+      previous &&
+      previous.size === roots.size &&
+      [...previous].every((root) => roots.has(root))
+    ) {
+      return;
+    }
+    this.subscriptions.set(subscription, roots);
+    this.rebuild();
+  }
+
+  delete(subscription: RenderedStateMutationSubscription): void {
+    if (!this.subscriptions.delete(subscription)) return;
+    if (this.subscriptions.size === 0) {
+      this.observer.disconnect();
+      mutationHubs.delete(this.document);
+      return;
+    }
+    this.rebuild();
+  }
+
+  private rebuild(): void {
+    this.observer.disconnect();
+    const options: MutationObserverInit = {
+      attributeFilter: ['class', 'hidden', 'style'],
+      attributes: true,
+      characterData: true,
+      childList: true,
+      subtree: true,
+    };
+    if (this.document.documentElement) this.observer.observe(this.document.documentElement, options);
+    const roots = new Set([...this.subscriptions.values()].flatMap((entries) => [...entries]));
+    for (const root of roots) this.observer.observe(root, options);
+  }
+}
+
+function mutationHubFor(document: Document): RenderedStateMutationHub | undefined {
+  const existing = mutationHubs.get(document);
+  if (existing) return existing;
+  const MutationObserverConstructor =
+    document.defaultView?.MutationObserver ??
+    (typeof globalThis.MutationObserver === 'function' ? globalThis.MutationObserver : undefined);
+  if (!MutationObserverConstructor || !document.documentElement) return undefined;
+  const hub = new RenderedStateMutationHub(document, MutationObserverConstructor);
+  mutationHubs.set(document, hub);
+  return hub;
+}
+
+function collectComposedAncestors(
+  element: HTMLElement,
+  elements: Set<Element>,
+  roots: Set<ShadowRoot>,
+): void {
+  let current: Element | null = element;
+  const seen = new Set<Element>();
+  while (current && !seen.has(current)) {
+    seen.add(current);
+    elements.add(current);
+    const assignedSlot: HTMLSlotElement | null = (current as HTMLElement).assignedSlot;
+    if (assignedSlot) {
+      current = assignedSlot;
+      continue;
+    }
+    if (current.parentElement) {
+      current = current.parentElement;
+      continue;
+    }
+    const root: Node = current.getRootNode();
+    const shadowRoot: ShadowRoot | undefined =
+      root.nodeType === 11 && 'host' in root ? (root as ShadowRoot) : undefined;
+    if (!shadowRoot) break;
+    roots.add(shadowRoot);
+    current = shadowRoot.host;
+  }
+}
+
+function mutationNodeContains(node: Node, candidate: Node): boolean {
+  return node === candidate || (typeof (node as ParentNode).contains === 'function' && (node as ParentNode).contains(candidate));
+}
+
 /**
  * Watches a live element (or lazily resolved element) for transitions between generating and not
  * generating a CSS layout box. Resize and DOM observers provide the normal event-driven path; an
@@ -20,9 +128,14 @@ export class RenderedStateController {
   private observedDocument?: Document;
   private observedTarget?: HTMLElement;
   private resizeObserver?: ResizeObserver;
-  private mutationObserver?: MutationObserver;
+  private mutationHub?: RenderedStateMutationHub;
+  private observedVisibilityElements = new Set<Element>();
   private frame?: number;
   private frameView?: Window;
+  private readonly mutationSubscription: RenderedStateMutationSubscription = {
+    affects: (record) => this.mutationAffects(record),
+    notify: () => this.check(),
+  };
 
   constructor(
     host: HTMLElement,
@@ -67,10 +180,11 @@ export class RenderedStateController {
     this.started = false;
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
-    this.mutationObserver?.disconnect();
-    this.mutationObserver = undefined;
+    this.mutationHub?.delete(this.mutationSubscription);
+    this.mutationHub = undefined;
     this.observedDocument = undefined;
     this.observedTarget = undefined;
+    this.observedVisibilityElements.clear();
     this.cancelFrame();
   }
 
@@ -107,9 +221,9 @@ export class RenderedStateController {
     const doc = this.host.ownerDocument;
     if (doc !== this.observedDocument) {
       this.resizeObserver?.disconnect();
-      this.mutationObserver?.disconnect();
+      this.mutationHub?.delete(this.mutationSubscription);
       this.resizeObserver = undefined;
-      this.mutationObserver = undefined;
+      this.mutationHub = undefined;
       this.observedTarget = undefined;
       this.observedDocument = doc;
 
@@ -119,26 +233,41 @@ export class RenderedStateController {
       if (ResizeObserverConstructor) {
         this.resizeObserver = new ResizeObserverConstructor(() => this.check());
       }
-
-      const MutationObserverConstructor =
-        doc.defaultView?.MutationObserver ??
-        (typeof globalThis.MutationObserver === 'function' ? globalThis.MutationObserver : undefined);
-      if (MutationObserverConstructor && doc.documentElement) {
-        this.mutationObserver = new MutationObserverConstructor(() => this.check());
-        this.mutationObserver.observe(doc.documentElement, {
-          attributeFilter: ['class', 'hidden', 'style'],
-          attributes: true,
-          characterData: true,
-          childList: true,
-          subtree: true,
-        });
-      }
+      this.mutationHub = mutationHubFor(doc);
     }
+
+    const visibilityElements = new Set<Element>();
+    const mutationRoots = new Set<ShadowRoot>();
+    collectComposedAncestors(this.host, visibilityElements, mutationRoots);
+    if (target && target !== this.host) {
+      collectComposedAncestors(target, visibilityElements, mutationRoots);
+    }
+    this.observedVisibilityElements = visibilityElements;
+    this.mutationHub?.set(this.mutationSubscription, mutationRoots);
 
     if (target === this.observedTarget) return;
     if (this.observedTarget) this.resizeObserver?.unobserve(this.observedTarget);
     this.observedTarget = target ?? undefined;
     if (target) this.resizeObserver?.observe(target);
+  }
+
+  private mutationAffects(record: MutationRecord): boolean {
+    if (record.type === 'attributes') {
+      return this.observedVisibilityElements.has(record.target as Element);
+    }
+
+    const target = this.observedTarget;
+    if (record.type === 'characterData') {
+      return Boolean(target?.contains(record.target));
+    }
+    if (record.type !== 'childList') return false;
+    if (target && (record.target === target || target.contains(record.target))) return true;
+    for (const node of [...record.addedNodes, ...record.removedNodes]) {
+      if (mutationNodeContains(node, this.host) || (target && mutationNodeContains(node, target))) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private scheduleFrame(): void {

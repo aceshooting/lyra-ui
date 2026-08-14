@@ -1,4 +1,5 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import './image-comparer.js';
 import type { LyraImageComparer } from './image-comparer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -36,37 +37,69 @@ it('clamps a NaN/out-of-range position into [0, 100] for rendering, without muta
   expect(el.position).to.equal(150); // the raw property itself is left untouched, matching native <input type=range>
 });
 
-it('emits position changes from the native range handle', async () => {
+it('relays the range platform\'s native Event after synchronously committing the live position', async () => {
   const el = (await fixture(html`<lr-image-comparer></lr-image-comparer>`)) as LyraImageComparer;
   await el.updateComplete;
   const handle = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
-  handle.value = '70';
-  const eventPromise = oneEvent(el, 'lr-position-change');
-  handle.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-  const event = await eventPromise;
+  const events: Event[] = [];
+  const positionsAtDispatch: number[] = [];
+  const aliases: CustomEvent<{ position: number }>[] = [];
+  const sequence: string[] = [];
+  el.addEventListener('input', (event) => {
+    events.push(event);
+    positionsAtDispatch.push(el.position);
+    sequence.push('input');
+  });
+  el.addEventListener('lr-position-change', (event) => {
+    aliases.push(event);
+    sequence.push('lr-position-change');
+  });
 
-  expect(event.detail).to.deep.equal({ position: 70 });
-  expect(el.position).to.equal(70);
+  handle.focus();
+  await sendKeys({ press: 'ArrowRight' });
+
+  expect(events).to.have.length(1);
+  expect(events[0]!.constructor === el.ownerDocument.defaultView!.Event).to.be.true;
+  expect(events[0] instanceof InputEvent).to.be.false;
+  expect(events[0]!.target === el).to.be.true;
+  expect(events[0]!.bubbles).to.be.true;
+  expect(events[0]!.composed).to.be.true;
+  expect(positionsAtDispatch).to.deep.equal([51]);
+  expect(aliases).to.have.length(1);
+  expect(aliases[0]!.detail).to.deep.equal({ position: 51 });
+  expect(sequence).to.deep.equal(['input', 'lr-position-change']);
+  expect(el.position).to.equal(51);
 });
 
-it('bridges the native range change event as a bubbling composed native Event', async () => {
+it('relays one native change after synchronously committing position plus one prefixed alias', async () => {
   const el = (await fixture(html`<lr-image-comparer></lr-image-comparer>`)) as LyraImageComparer;
   const input = el.shadowRoot!.querySelector('input[type="range"]') as HTMLInputElement;
-  input.value = '64';
-  input.dispatchEvent(new Event('input', { bubbles: true }));
-  const changed = oneEvent(el, 'change');
-  const mappedChanged = oneEvent(el, 'lr-change');
-  input.dispatchEvent(new Event('change', { bubbles: true }));
-  const event = await changed;
-  const mappedEvent = await mappedChanged;
+  const events: Event[] = [];
+  const positionsAtDispatch: number[] = [];
+  const aliases: CustomEvent<undefined>[] = [];
+  const sequence: string[] = [];
+  el.addEventListener('change', (event) => {
+    events.push(event);
+    positionsAtDispatch.push(el.position);
+    sequence.push('change');
+  });
+  el.addEventListener('lr-change', (event) => {
+    aliases.push(event);
+    sequence.push('lr-change');
+  });
 
-  expect(event.constructor.name).to.equal('Event');
-  expect(event.bubbles).to.be.true;
-  expect(event.composed).to.be.true;
-  expect(mappedEvent instanceof CustomEvent).to.be.true;
-  expect(mappedEvent.bubbles).to.be.true;
-  expect(mappedEvent.composed).to.be.true;
-  expect(mappedEvent.cancelable).to.be.false;
+  input.value = '64';
+  input.dispatchEvent(new Event('change', { bubbles: true, composed: false }));
+
+  expect(events).to.have.length(1);
+  expect(events[0]!.constructor === Event).to.be.true;
+  expect(events[0]!.target === el).to.be.true;
+  expect(events[0]!.bubbles).to.be.true;
+  expect(events[0]!.composed).to.be.true;
+  expect(positionsAtDispatch).to.deep.equal([64]);
+  expect(aliases).to.have.length(1);
+  expect(aliases[0] instanceof CustomEvent).to.be.true;
+  expect(sequence).to.deep.equal(['change', 'lr-change']);
   expect(el.position).to.equal(64);
 });
 
@@ -437,19 +470,47 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('bridges native focus and blur from the range handle as bubbling composed host events', async () => {
+it('relays one native focus/blur pair with payload plus one prefixed alias pair', async () => {
   const el = (await fixture(html`<lr-image-comparer></lr-image-comparer>`)) as LyraImageComparer;
   const handle = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  const related = document.createElement('button');
+  const nativeEvents: FocusEvent[] = [];
+  const aliases: string[] = [];
+  const sequence: string[] = [];
+  el.addEventListener('focus', (event) => {
+    nativeEvents.push(event as FocusEvent);
+    sequence.push('focus');
+  });
+  el.addEventListener('blur', (event) => {
+    nativeEvents.push(event as FocusEvent);
+    sequence.push('blur');
+  });
+  el.addEventListener('lr-focus', () => {
+    aliases.push('lr-focus');
+    sequence.push('lr-focus');
+  });
+  el.addEventListener('lr-blur', () => {
+    aliases.push('lr-blur');
+    sequence.push('lr-blur');
+  });
 
-  const focusEvent = oneEvent(el, 'focus');
-  handle.dispatchEvent(new FocusEvent('focus'));
-  const focus = await focusEvent;
-  expect(focus.bubbles).to.be.true;
-  expect(focus.composed).to.be.true;
+  handle.dispatchEvent(new FocusEvent('focus', {
+    bubbles: true,
+    composed: true,
+    relatedTarget: related,
+    view: window,
+  }));
+  handle.dispatchEvent(new FocusEvent('blur', {
+    bubbles: true,
+    composed: true,
+    relatedTarget: related,
+    view: window,
+  }));
 
-  const blurEvent = oneEvent(el, 'blur');
-  handle.dispatchEvent(new FocusEvent('blur'));
-  const blur = await blurEvent;
-  expect(blur.bubbles).to.be.true;
-  expect(blur.composed).to.be.true;
+  expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+  expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
+  expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
+  expect(nativeEvents.every((event) => event.relatedTarget === related)).to.be.true;
+  expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
+  expect(sequence).to.deep.equal(['focus', 'lr-focus', 'blur', 'lr-blur']);
 });

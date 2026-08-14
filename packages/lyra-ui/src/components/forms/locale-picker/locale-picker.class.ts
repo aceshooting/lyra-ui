@@ -27,6 +27,7 @@ import {
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_localePickerLabel, LYRA_DEFAULT_localePickerRequired } from '../../../internal/default-strings.generated.js';
@@ -84,8 +85,10 @@ export interface LyraLocaleChangeDetail {
 export interface LyraLocalePickerEventMap {
   'lr-invalid': CustomEvent<undefined>;
   'lr-change': CustomEvent<LyraLocaleChangeDetail>;
-  blur: CustomEvent<undefined>;
-  focus: CustomEvent<undefined>;
+  blur: FocusEvent;
+  focus: FocusEvent;
+  'lr-blur': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<undefined>;
 }
 
 /**
@@ -130,8 +133,10 @@ export interface LyraLocalePickerEventMap {
  * @event lr-change - The selection changed. `detail: { value, previousValue, direction }`, where
  *   `direction` is the picked locale's `'ltr'`/`'rtl'` writing direction. Cancelable —
  *   `event.preventDefault()` stops the automatic `setLyraLocale()` call without reverting `value`.
- * @event blur - Re-dispatched from the internal trigger button as a bubbling, composed event.
- * @event focus - Re-dispatched from the internal trigger button as a bubbling, composed event.
+ * @event blur - Native `FocusEvent` relayed from the internal trigger button.
+ * @event focus - Native `FocusEvent` relayed from the internal trigger button.
+ * @event lr-blur - Lyra alias emitted after the native `blur` relay.
+ * @event lr-focus - Lyra alias emitted after the native `focus` relay.
  * @event lr-invalid - The locale picker failed a validity check; cancelable. Calling
  *   `preventDefault()` also cancels the native `invalid` event it aliases, suppressing the
  *   browser's own validation bubble and `reportValidity()`'s focus/scroll.
@@ -287,9 +292,14 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.internals.setFormValue('');
   }
 
-  /** Focus the internal trigger. */
+  /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */
+  private get liveDisabled(): boolean {
+    return this.effectiveDisabled || this.matches(':disabled');
+  }
+
+  /** Focus the internal trigger unless the form control is effectively disabled. */
   override focus(options?: FocusOptions): void {
-    this.triggerElement?.focus(options);
+    if (!this.liveDisabled) this.triggerElement?.focus(options);
   }
   /** Blur the internal trigger. */
   override blur(): void {
@@ -299,7 +309,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
    *  no native click semantics is otherwise a silent no-op. Mirrors `<lr-select>`'s identical
    *  `click()`. */
   override click(): void {
-    this.triggerElement?.click();
+    if (!this.liveDisabled) this.triggerElement?.click();
   }
 
   get form(): HTMLFormElement | null {
@@ -590,7 +600,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   }
 
   private show(): void {
-    if (this.open || this.effectiveDisabled) return;
+    if (this.open || this.liveDisabled) return;
     this.open = true;
   }
   private hide(): void {
@@ -673,11 +683,10 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   }
 
   private onTriggerClick = (): void => {
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
     this.open ? this.hide() : this.show();
   };
   private onTriggerBlur = (event: FocusEvent): void => {
-    event.stopPropagation();
     // The trigger's own `disabled` state becoming true force-blurs it when it currently holds
     // focus -- a platform reaction, not a user interaction. That blur can land synchronously
     // nested inside the very property write that disabled this control (before this update's
@@ -686,16 +695,21 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     // for it was, depending on timing, capable of reentering that same in-flight update for a
     // state flip nothing observable needed -- a disabled control is barred from validation
     // regardless.
-    if (!this.effectiveDisabled) this.touched = true;
+    if (!this.liveDisabled) this.touched = true;
     // Synchronously, not from `updated()`: `:state(user-invalid)` has to be true the moment focus
     // leaves, the same instant native `:user-invalid` starts matching.
     this.syncCustomStates();
     this.hide();
-    this.emit('blur');
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
   private onTriggerFocus = (event: FocusEvent): void => {
-    event.stopPropagation();
-    this.emit('focus');
+    if (this.liveDisabled) {
+      event.stopPropagation();
+      return;
+    }
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
 
   private onLabelSlotChange = (e: Event): void => {
@@ -763,6 +777,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
+    if (this.liveDisabled) return;
     const rows = this.normalizedEntries;
     switch (e.key) {
       case 'ArrowDown':
@@ -822,7 +837,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     if ((e.target as HTMLElement).closest('[part="option"]')) e.preventDefault();
   };
   private onListboxClick = (e: MouseEvent): void => {
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
     const optionEl = (e.target as HTMLElement).closest('[part="option"]') as HTMLElement | null;
     const tag = optionEl?.dataset['value'];
     if (tag === undefined) return;

@@ -41,6 +41,32 @@ it('is a no-op if the same release function is called twice', () => {
   releaseB();
 });
 
+it('preserves the latest external overflow write while nested locks retain ownership', async () => {
+  const root = document.documentElement;
+  const releaseA = lockScroll();
+  const releaseB = lockScroll();
+
+  root.style.setProperty('overflow', 'scroll', 'important');
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  expect(root.style.overflow).to.equal('hidden');
+
+  releaseA();
+  expect(root.style.overflow).to.equal('hidden');
+  releaseB();
+  expect(root.style.overflow).to.equal('scroll');
+  expect(root.style.getPropertyPriority('overflow')).to.equal('important');
+});
+
+it('flushes an external overflow write when the final release happens in the same task', () => {
+  const root = document.documentElement;
+  const release = lockScroll();
+  root.style.setProperty('overflow', 'clip', 'important');
+
+  release();
+  expect(root.style.overflow).to.equal('clip');
+  expect(root.style.getPropertyPriority('overflow')).to.equal('important');
+});
+
 describe('scrollbar-width gutter compensation', () => {
   // This test environment (Playwright/Chromium via @web/test-runner-playwright)
   // launches Chromium with `--hide-scrollbars`, one of Playwright's own
@@ -109,6 +135,22 @@ describe('scrollbar-width gutter compensation', () => {
 
     release();
     expect(root.style.paddingInlineEnd).to.equal('7px');
+  });
+
+  it('preserves later external overflow and padding intent while keeping the lock applied', async () => {
+    const release = lockScroll();
+    root.style.setProperty('overflow', 'scroll', 'important');
+    root.style.setProperty('padding-inline-end', '77px', 'important');
+
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    expect(root.style.overflow).to.equal('hidden');
+    expect(parseFloat(root.style.paddingInlineEnd)).to.be.closeTo(77 + FAKE_SCROLLBAR_WIDTH, 0.5);
+
+    release();
+    expect(root.style.overflow).to.equal('scroll');
+    expect(root.style.getPropertyPriority('overflow')).to.equal('important');
+    expect(root.style.paddingInlineEnd).to.equal('77px');
+    expect(root.style.getPropertyPriority('padding-inline-end')).to.equal('important');
   });
 
   it('does not add padding when there is no scrollbar to compensate for', () => {

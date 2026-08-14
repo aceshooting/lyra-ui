@@ -237,6 +237,14 @@ export const AsyncSource: Story = {
 };
 
 export const RichAsyncRows: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Async-row icons are visual metadata: their rendered subtree stays visible but is inert and aria-hidden. Put independent actions outside the icon field.',
+      },
+    },
+  },
   render: () => {
     const source: ComboboxSource = async (query) => {
       const rows = [

@@ -18,6 +18,11 @@ const meta: Meta = {
 };
 export default meta;
 type Story = StoryObj;
+type PlacementStory = StoryObj<{
+  placement: LyraSelect['placement'];
+  hoist: boolean;
+  direction: 'ltr' | 'rtl';
+}>;
 
 export const Default: Story = {
   render: () => html`
@@ -136,7 +141,7 @@ export const PreSelectedValue: Story = {
 };
 
 /**
- * Rows come from `<lr-option>` children plus `group` (section headers),
+ * Rows come from `<lr-option>` children plus `group` (labelled `role="group"` sections),
  * `sub` (a secondary line), and `dot-color` (a leading status dot) — same
  * rich-row support as `<lr-combobox>`.
  */
@@ -204,7 +209,8 @@ export const Disabled: Story = {
   `,
 };
 
-/** Start/end slots remain inside the trigger and shrink around a long selected label. */
+/** Start/end and prefix/suffix remain mirrored decorative slots. Their wrappers are always inert
+ * and `aria-hidden`, so supplied content cannot become an invalid nested control. */
 export const Adornments: Story = {
   render: () => html`
     <div style="inline-size: 320px; max-inline-size: 100%;">
@@ -282,7 +288,7 @@ export const SingleOption: Story = {
   `,
 };
 
-/** The same auto-commit behavior applies when only one *enabled* option remains among disabled ones. */
+/** The same auto-commit behavior applies when only one option remains available among unavailable ones. */
 export const SingleEnabledAmongDisabled: Story = {
   render: () => html`
     <lr-select label="Plan" auto-commit-single-option style="max-width: 20rem">
@@ -315,8 +321,10 @@ export const RequiredWithValidation: Story = {
 
 /**
  * `multiple` turns the value into a `string[]` and renders one removable chip per selection.
- * Remove buttons are legal focusable siblings overlaid on the trigger, never nested inside it;
- * picking a selected row or pressing Backspace on the trigger remain equivalent alternatives.
+ * Remove buttons are legal focusable siblings overlaid on the trigger, never nested inside it.
+ * The trigger exposes one complete joined selected-value string while built-in painted chip labels
+ * are hidden from assistive technology, so capped chips neither truncate nor duplicate the value.
+ * Picking a selected row or pressing Backspace on the trigger remain equivalent alternatives.
  */
 export const Multiple: Story = {
   render: () => html`
@@ -429,11 +437,31 @@ export const IndependentTriggerStateTheme: Story = {
   `,
 };
 
-/** `placement` picks the preferred side; `flip`/`shift` still keep the listbox in view. */
-export const Placement: Story = {
-  render: () => html`
-    <div style="padding-block-start: 12rem">
-      <lr-select label="Fruit" placement="top-start" open style="max-width: 20rem">
+/** Change the controls while open: placement, positioning strategy, and logical direction refresh
+ * the live positioner without closing the listbox or moving its shared overlay-stack entry. */
+export const Placement: PlacementStory = {
+  args: {
+    placement: 'top-start',
+    hoist: false,
+    direction: 'ltr',
+  },
+  argTypes: {
+    placement: {
+      control: 'select',
+      options: ['top-start', 'top-end', 'right-start', 'bottom-start', 'bottom-end', 'left-start'],
+    },
+    hoist: { control: 'boolean' },
+    direction: { control: 'inline-radio', options: ['ltr', 'rtl'] },
+  },
+  render: ({ placement, hoist, direction }) => html`
+    <div dir=${direction} style="padding-block: 12rem">
+      <lr-select
+        label="Fruit"
+        .placement=${placement}
+        ?hoist=${hoist}
+        open
+        style="max-width: 20rem"
+      >
         <lr-option value="a">Apple</lr-option>
         <lr-option value="b">Banana</lr-option>
       </lr-select>

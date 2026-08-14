@@ -1,5 +1,12 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { activeElementIn } from '../../../internal/active-element.js';
+import {
+  applyComposedFocusRepair,
+  captureComposedFocusRepair,
+  isComposedFocusAvailable,
+  type ComposedFocusRepairSnapshot,
+} from '../../../internal/focus-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
@@ -96,6 +103,9 @@ export interface LyraModelSelectEventMap {
  *
  * Ships the standard label/hint/error form-control chrome: properties, matching named slots, and
  * the complete `form-control` frame. Each surface is opt-in; left unset, it renders no chrome.
+ * A focused trigger/input follows a rendering-mode replacement. If that new owner is disabled or
+ * inert, focus returns to the available element that led into the picker, or to the stable
+ * `form-control` owner when there is no return target; a newer external focus move always wins.
  *
  * @customElement lr-model-select
  * @event lr-change - The selected/typed value changed. `detail: { value: string; inCatalog: boolean }`.
@@ -270,6 +280,9 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   // `blur` synchronously while Lit is rendering. That structural blur must not
   // mutate reactive touched/open state from inside the active update cycle.
   private suppressControlBlur = false;
+  private modeFocusRepair?: ComposedFocusRepairSnapshot;
+  private focusedModeRepair?: ComposedFocusRepairSnapshot;
+  private focusReturnTarget?: HTMLElement;
   // What `form.reset()` restores to — captured from the `value` *content
   // attribute* only, mirroring native `<input>`/`FormAssociated`'s
   // `_defaultValue` (see internal/form-associated.ts). There's no child
@@ -426,9 +439,21 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     super.willUpdate(changed);
     let modeChanged = false;
     if (this.hasUpdated) {
-      const renderedClosedMode = this.renderRoot.querySelector('[part="trigger"]') !== null;
+      const renderedControl = this.renderRoot.querySelector<HTMLElement>(
+        '[part="trigger"], [part="combobox-input"]',
+      );
+      const renderedClosedMode = renderedControl?.getAttribute('part') === 'trigger';
       modeChanged = renderedClosedMode !== this.closedMode;
       this.suppressControlBlur = modeChanged;
+      this.modeFocusRepair =
+        modeChanged && renderedControl !== null && activeElementIn(this.shadowRoot) === renderedControl
+          ? captureComposedFocusRepair(
+            this,
+            this.modeFocusFallback() ?? renderedControl,
+          ) ?? undefined
+          : modeChanged
+            ? this.focusedModeRepair
+            : undefined;
     }
     if (
       this.open &&
@@ -446,6 +471,9 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.modeFocusRepair = undefined;
+    this.focusedModeRepair = undefined;
+    this.focusReturnTarget = undefined;
     this.popupPosition.disconnect();
     this.unbindDocumentPointer();
     // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
@@ -457,6 +485,9 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   }
 
   adoptedCallback(): void {
+    this.modeFocusRepair = undefined;
+    this.focusedModeRepair = undefined;
+    this.focusReturnTarget = undefined;
     this.popupPosition.disconnect();
     this.unbindDocumentPointer();
   }
@@ -730,6 +761,56 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     // `required`/`invalid`) for a consumer's :state() rule to match from the moment it mounts.
     this.publishValidityStates();
     this.suppressControlBlur = false;
+    const focusRepair = this.modeFocusRepair;
+    this.modeFocusRepair = undefined;
+    if (focusRepair) {
+      this.scheduleAfterUpdate(() => {
+        const replacement = this[VALIDITY_ANCHOR]();
+        const target = replacement && isComposedFocusAvailable(replacement)
+          ? replacement
+          : this.modeFocusFallback();
+        applyComposedFocusRepair(focusRepair, target);
+        if (this.focusedModeRepair === focusRepair) this.focusedModeRepair = undefined;
+      }, 'model-select-mode-focus');
+    }
+  }
+
+  private rememberFocusReturn(event: FocusEvent): void {
+    const related = event.relatedTarget;
+    if (related && (related as Node).nodeType === 1 && isComposedFocusAvailable(related as Element)) {
+      this.focusReturnTarget = related as HTMLElement;
+    }
+  }
+
+  private captureModeFocus(event: FocusEvent): void {
+    this.rememberFocusReturn(event);
+    const control = event.currentTarget;
+    if (!control || (control as Node).nodeType !== 1) return;
+    this.focusedModeRepair = captureComposedFocusRepair(
+      this,
+      this.modeFocusFallback() ?? control as HTMLElement,
+    ) ?? undefined;
+  }
+
+  private retireModeFocusAfterBlur(event: FocusEvent): void {
+    const destination = event.relatedTarget;
+    if (destination && (destination as Node).nodeType === 1) {
+      this.focusedModeRepair = undefined;
+      return;
+    }
+    queueMicrotask(() => {
+      if (!this.suppressControlBlur && !this.effectiveDisabled && !this.hasAttribute('inert')) {
+        this.focusedModeRepair = undefined;
+      }
+    });
+  }
+
+  private modeFocusFallback(): HTMLElement | null {
+    if (this.focusReturnTarget && isComposedFocusAvailable(this.focusReturnTarget)) {
+      return this.focusReturnTarget;
+    }
+    const owner = this.renderRoot.querySelector<HTMLElement>('[part="form-control"]');
+    return owner && isComposedFocusAvailable(owner) ? owner : null;
   }
 
   private commitValue(next: string): void {
@@ -784,8 +865,10 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     this.hide();
     relayNativeEvent(this, event);
     this.emit('lr-blur');
+    this.retireModeFocusAfterBlur(event);
   };
   private onTriggerFocus = (event: FocusEvent): void => {
+    this.captureModeFocus(event);
     relayNativeEvent(this, event);
     this.emit('lr-focus');
   };
@@ -843,6 +926,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     (this.renderRoot.querySelector('[part="combobox-input"]') as HTMLInputElement | null)?.focus();
   };
   private onInputFocus = (event: FocusEvent): void => {
+    this.captureModeFocus(event);
     // Seed the editable text from the *current* value each time a fresh
     // editing session starts, not on every keystroke (onInput overwrites
     // `query` directly) — otherwise a same-session reopen via ArrowDown
@@ -871,6 +955,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     this.hide();
     relayNativeEvent(this, event);
     this.emit('lr-blur');
+    this.retireModeFocusAfterBlur(event);
   };
   private onInputKeyDown = (e: KeyboardEvent): void => {
     const rows = this.filteredEntries;
@@ -1079,7 +1164,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   }
 
   override render(): TemplateResult {
-    return html`<div part="form-control">
+    return html`<div part="form-control" tabindex="-1">
       ${this.closedMode ? this.renderClosed() : this.renderFreeText()}
     </div>`;
   }

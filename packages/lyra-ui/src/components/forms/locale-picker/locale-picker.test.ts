@@ -112,18 +112,21 @@ it('formResetCallback restores the value-attribute default', async () => {
   expect(el.value).to.equal('fr');
 });
 
-it('re-dispatches trigger blur/focus as bubbling, composed host events', async () => {
+it('relays trigger blur/focus once as native FocusEvents with relatedTarget and aliases', async () => {
   const el = (await fixture(
     html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`,
   )) as LyraLocalePicker;
-  let focusFired = false;
-  let blurFired = false;
-  el.addEventListener('focus', () => (focusFired = true));
-  el.addEventListener('blur', () => (blurFired = true));
-  trigger(el).dispatchEvent(new FocusEvent('focus'));
-  trigger(el).dispatchEvent(new FocusEvent('blur'));
-  expect(focusFired).to.be.true;
-  expect(blurFired).to.be.true;
+  const outside = document.createElement('button');
+  const focusEvents = Promise.all([oneEvent(el, 'focus'), oneEvent(el, 'lr-focus')]);
+  trigger(el).dispatchEvent(new FocusEvent('focus', { relatedTarget: outside }));
+  const [focus] = await focusEvents;
+  expect(focus instanceof FocusEvent).to.be.true;
+  expect(focus.relatedTarget === outside).to.be.true;
+  const blurEvents = Promise.all([oneEvent(el, 'blur'), oneEvent(el, 'lr-blur')]);
+  trigger(el).dispatchEvent(new FocusEvent('blur', { relatedTarget: outside }));
+  const [blur] = await blurEvents;
+  expect(blur instanceof FocusEvent).to.be.true;
+  expect(blur.relatedTarget === outside).to.be.true;
 });
 
 it('click()/focus()/blur() forward to the internal trigger', async () => {
@@ -142,6 +145,18 @@ it('click()/focus()/blur() forward to the internal trigger', async () => {
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('trigger');
   el.blur();
   expect(el.shadowRoot!.activeElement === null).to.be.true;
+});
+
+it('suppresses host focus/click in the same task that fieldset disablement starts', async () => {
+  const fieldset = await fixture<HTMLFieldSetElement>(html`
+    <fieldset><lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker></fieldset>
+  `);
+  const el = fieldset.querySelector('lr-locale-picker') as LyraLocalePicker;
+  fieldset.disabled = true;
+  el.focus();
+  el.click();
+  expect(el.shadowRoot!.activeElement === null).to.be.true;
+  expect(el.open).to.be.false;
 });
 
 // -- Registry export behavior is covered by localization.test.ts;

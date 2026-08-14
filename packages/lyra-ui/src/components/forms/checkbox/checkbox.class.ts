@@ -104,6 +104,8 @@ export interface LyraCheckboxEventMap {
  * accessible naming remains the browser's slot semantics unless a host `aria-label` is present.
  * The public label and supporting/error text wrap at arbitrary boundaries in constrained rows;
  * the fixed checkbox square and shared interactive target never shrink to make that fit.
+ * The internal checkbox role exposes explicit stateful `aria-invalid`: visible error chrome wins
+ * immediately, while intrinsic/custom invalidity is exposed only after user interaction.
  *
  * @customElement lr-checkbox
  * @slot - Label text, rendered next to the box. Clicking it toggles the
@@ -818,6 +820,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     ]
       .filter(Boolean)
       .join(' ');
+    const invalid = hasError || (this.touched && !this.internals.validity.valid);
     return html`
       <div part="form-control">
         <span
@@ -826,7 +829,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
           tabindex=${this.effectiveDisabled ? '-1' : '0'}
           aria-checked=${mixed ? 'mixed' : this.checked ? 'true' : 'false'}
           aria-required=${this.required ? 'true' : 'false'}
-          aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
+          aria-invalid=${invalid ? 'true' : 'false'}
           aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
           aria-label=${this.getAttribute('aria-label') ?? nothing}
           aria-describedby=${describedBy || nothing}

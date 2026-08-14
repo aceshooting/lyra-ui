@@ -2,6 +2,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import {
   composedParentElement,
   hasRealContent,
+  highestReachableWindow,
   isAccessibilityExcluded,
   isAccessibilitySubtreeExcluded,
   isAccessibilityVisible,
@@ -39,6 +40,30 @@ it('generates a distinct id on every call for the same scope', () => {
 it('prefixes the id through the shared tag() helper, not a hard-coded literal', () => {
   const id = nextId('listbox');
   expect(id.startsWith(`${tag('listbox')}-`)).to.be.true;
+});
+
+it('coordinates generated ids across separately evaluated package copies', async () => {
+  const firstCopy = await import('./a11y.js?generated-id-copy=first');
+  const secondCopy = await import('./a11y.js?generated-id-copy=second');
+
+  const first = firstCopy.nextId('cross-copy');
+  const second = secondCopy.nextId('cross-copy');
+
+  expect(first === second, 'separate module instances must not restart the same id sequence').to.be.false;
+});
+
+it('retains the highest successfully reached window when the next parent is inaccessible', () => {
+  const inaccessibleParent = {} as Window;
+  Object.defineProperty(inaccessibleParent, 'document', {
+    get() {
+      throw new DOMException('Blocked cross-origin access', 'SecurityError');
+    },
+  });
+  Object.defineProperty(inaccessibleParent, 'parent', { value: inaccessibleParent });
+  const reachableParent = { document, parent: inaccessibleParent } as unknown as Window;
+  const child = { document, parent: reachableParent } as unknown as Window;
+
+  expect(highestReachableWindow(child) === reachableParent).to.equal(true);
 });
 
 describe('hasRealContent', () => {
@@ -170,6 +195,43 @@ describe('shared accessibility visibility', () => {
     }
   });
 
+  it('fails closed within an explicit total-work bound on a very deep composed branch', () => {
+    const root = document.createElement('div');
+    let parent = root;
+    for (let depth = 0; depth < 2_000; depth += 1) {
+      const child = document.createElement('div');
+      parent.append(child);
+      parent = child;
+    }
+    const target = document.createElement('span');
+    parent.append(target);
+    Object.defineProperty(target, 'isConnected', { configurable: true, value: true });
+    const view = root.ownerDocument.defaultView!;
+    const original = view.getComputedStyle;
+    const originalCheckVisibility = (target as Element & { checkVisibility?: () => boolean }).checkVisibility;
+    let styleReads = 0;
+    view.getComputedStyle = function () {
+      styleReads += 1;
+      return {
+        contentVisibility: 'visible',
+        display: 'block',
+        visibility: 'visible',
+      } as CSSStyleDeclaration;
+    };
+    (target as Element & { checkVisibility?: () => boolean }).checkVisibility = () => true;
+    try {
+      expect(isAccessibilityVisible(target, { maxNodes: 64 })).to.equal(false);
+      expect(styleReads).to.be.at.most(64);
+    } finally {
+      view.getComputedStyle = original;
+      if (originalCheckVisibility) {
+        (target as Element & { checkVisibility?: () => boolean }).checkVisibility = originalCheckVisibility;
+      } else {
+        delete (target as Element & { checkVisibility?: () => boolean }).checkVisibility;
+      }
+    }
+  });
+
   it('honors a target visibility override inside a visibility-hidden ancestor', async () => {
     const ancestor = await fixture<HTMLElement>(html`
       <div style="visibility: hidden">
@@ -230,5 +292,37 @@ describe('shared accessibility visibility', () => {
     );
 
     expect(isAccessibilityVisible(source)).to.be.false;
+  });
+
+  it('fails closed when a rendered-visibility probe throws', async () => {
+    const target = await fixture<HTMLElement>(html`<span>Source</span>`);
+    Object.defineProperty(target, 'checkVisibility', {
+      configurable: true,
+      value: () => {
+        throw new Error('unavailable visibility probe');
+      },
+    });
+
+    expect(() => isAccessibilityVisible(target)).not.to.throw();
+    expect(isAccessibilityVisible(target)).to.equal(false);
+  });
+
+  it('uses the rendered image branch for an image-map area', async () => {
+    const root = await fixture<HTMLElement>(html`
+      <div>
+        <img
+          alt="Mapped image"
+          usemap="#visible-map"
+          src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+        />
+        <map name="visible-map"><area href="#target" alt="Mapped action" /></map>
+      </div>
+    `);
+    const image = root.querySelector<HTMLImageElement>('img')!;
+    const area = root.querySelector<HTMLAreaElement>('area')!;
+
+    expect(isAccessibilityVisible(area)).to.equal(true);
+    image.hidden = true;
+    expect(isAccessibilityVisible(area)).to.equal(false);
   });
 });

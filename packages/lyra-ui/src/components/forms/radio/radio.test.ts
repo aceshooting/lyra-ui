@@ -1796,6 +1796,21 @@ describe('lr-radio-group orientation, focus, and compatibility aliases', () => {
     expect((b.shadowRoot!.activeElement) === (b.shadowRoot!.querySelector('[part~="base"]'))).to.equal(true);
   });
 
+  it('blurs the currently focused owned option even when it is not the selection target', async () => {
+    const group = (await fixture(html`
+      <lr-radio-group label="Choice">
+        <lr-radio value="a" checked>A</lr-radio>
+        <lr-radio value="b">B</lr-radio>
+      </lr-radio-group>
+    `)) as LyraRadioGroup;
+    const [, b] = [...group.querySelectorAll('lr-radio')] as LyraRadio[];
+
+    b.focus();
+    expect(b.shadowRoot!.activeElement?.getAttribute('part')?.split(' ')).to.include('base');
+    group.blur();
+    expect(b.shadowRoot!.activeElement === null).to.be.true;
+  });
+
   it('activates the selected or first enabled option through the group host click', async () => {
     const group = (await fixture(html`
       <lr-radio-group label="Choice">

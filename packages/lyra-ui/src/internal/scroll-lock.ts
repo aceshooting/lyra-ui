@@ -1,6 +1,15 @@
-const counts = new WeakMap<Document, number>();
-const previousOverflow = new WeakMap<Document, string>();
-const previousPadding = new WeakMap<Document, string>();
+import {
+  leaseInlineStyleProperty,
+  type InlineStylePropertyLease,
+} from './style-property-lease.js';
+
+interface ScrollLockState {
+  count: number;
+  overflow: InlineStylePropertyLease;
+  padding?: InlineStylePropertyLease;
+}
+
+const states = new WeakMap<Document, ScrollLockState>();
 
 /**
  * Ref-counted scroll lock, scoped to a given `Document` (defaults to the
@@ -15,28 +24,39 @@ const previousPadding = new WeakMap<Document, string>();
  */
 export function lockScroll(doc: Document = document): () => void {
   const root = doc.documentElement;
-  const count = counts.get(doc) ?? 0;
-  if (count === 0) {
-    previousOverflow.set(doc, root.style.overflow);
-    previousPadding.set(doc, root.style.paddingInlineEnd);
+  let state = states.get(doc);
+  if (!state) {
     const view = doc.defaultView;
     const scrollbarWidth = (view?.innerWidth ?? 0) - root.clientWidth;
-    root.style.overflow = 'hidden';
+    const overflow = leaseInlineStyleProperty(root, 'overflow', 'hidden');
+    let padding: InlineStylePropertyLease | undefined;
     if (scrollbarWidth > 0 && view) {
       const currentPadding = parseFloat(view.getComputedStyle(root).paddingInlineEnd) || 0;
-      root.style.paddingInlineEnd = `${currentPadding + scrollbarWidth}px`;
+      padding = leaseInlineStyleProperty(
+        root,
+        'padding-inline-end',
+        `${currentPadding + scrollbarWidth}px`,
+        '',
+        () => {
+          const externalPadding = parseFloat(view.getComputedStyle(root).paddingInlineEnd) || 0;
+          return { value: `${externalPadding + scrollbarWidth}px` };
+        },
+      );
     }
+    state = { count: 0, overflow, padding };
+    states.set(doc, state);
   }
-  counts.set(doc, count + 1);
+  state.count += 1;
   let released = false;
   return () => {
     if (released) return;
     released = true;
-    const remaining = (counts.get(doc) ?? 1) - 1;
-    counts.set(doc, remaining);
-    if (remaining === 0) {
-      root.style.overflow = previousOverflow.get(doc) ?? '';
-      root.style.paddingInlineEnd = previousPadding.get(doc) ?? '';
-    }
+    const current = states.get(doc);
+    if (!current) return;
+    current.count -= 1;
+    if (current.count > 0) return;
+    states.delete(doc);
+    current.padding?.release();
+    current.overflow.release();
   };
 }

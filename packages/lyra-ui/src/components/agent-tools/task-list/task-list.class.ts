@@ -13,6 +13,7 @@ import type { LyraFrame } from '../../../internal/variants.js';
 import { nextId } from '../../../internal/a11y.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './task-list.styles.js';
@@ -137,6 +138,8 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
  * several steps may be `running` at once. Set `reorderable` to request sibling-scoped keyboard
  * moves; the host applies the reordered `items` array. Reordering requires globally unique ids
  * among every top-level task and direct child; duplicate data stays visible but fails closed.
+ * The visible header is a level-three heading by default; set `heading-level` from `1`–`6` to fit
+ * the surrounding document outline, or `none` for a visual-only header.
  * Status changes and confirmed moves are announced through an internal `<lr-live-region>`.
  *
  * @customElement lr-task-list
@@ -150,8 +153,8 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
  *   top-level task; indices are sibling-scoped). Only fired while `reorderable` with unique ids;
  *   a boundary key never reparents. A move is announced only after the rendered order confirms it.
  * @csspart base - The outer container.
- * @csspart header - The clickable header (a `<button>` when `collapsible`, a plain heading
- *   otherwise).
+ * @csspart header - The visible header content (a `<button>` when `collapsible`, a plain wrapper
+ *   otherwise), inside the configurable semantic heading.
  * @csspart label - The `label` text.
  * @csspart summary - The visible "N of M completed" summary, counting only top-level items.
  * @csspart toggle - The chevron indicator inside the header. Only rendered when `collapsible`.
@@ -219,6 +222,11 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   /** Header text. Localized (`taskListLabel`) while at its default `'Tasks'`; any other value is
    *  shown as-is. */
   @property() label = 'Tasks';
+
+  /** Semantic level of the visible header. Use `none` to keep the visual header without exposing
+   *  it to heading navigation. Invalid untyped values use level 3. */
+  @property({ attribute: 'heading-level', reflect: true })
+  headingLevel: LyraHeadingLevel = '3';
 
   /** Whether the body (item list) is currently shown. Defaults open -- this is a progress surface,
    *  not a details disclosure a reader opts into. */
@@ -497,30 +505,34 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
       completed: number.format(completed),
       total: number.format(total),
     });
+    const headingLevel = resolveHeadingLevel(this.headingLevel);
+    const header = this.collapsible
+      ? html`
+          <button
+            part="header"
+            type="button"
+            id=${this.headerId}
+            aria-expanded=${this.expanded ? 'true' : 'false'}
+            aria-controls=${this.bodyId}
+            @click=${this.toggle}
+          >
+            <span part="toggle" aria-hidden="true">${chevronIcon()}</span>
+            <span part="label">${label}</span>
+            <span part="summary">${summary}</span>
+          </button>
+        `
+      : html`
+          <div part="header" id=${this.headerId}>
+            <span part="label">${label}</span>
+            <span part="summary">${summary}</span>
+          </div>
+        `;
 
     return html`
       <div part="base">
-        ${this.collapsible
-          ? html`
-              <button
-                part="header"
-                type="button"
-                id=${this.headerId}
-                aria-expanded=${this.expanded ? 'true' : 'false'}
-                aria-controls=${this.bodyId}
-                @click=${this.toggle}
-              >
-                <span part="toggle" aria-hidden="true">${chevronIcon()}</span>
-                <span part="label">${label}</span>
-                <span part="summary">${summary}</span>
-              </button>
-            `
-          : html`
-              <div part="header" id=${this.headerId}>
-                <span part="label">${label}</span>
-                <span part="summary">${summary}</span>
-              </div>
-            `}
+        <div role=${headingLevel ? 'heading' : nothing} aria-level=${headingLevel ?? nothing}>
+          ${header}
+        </div>
         <div part="body" id=${this.bodyId} role="list" aria-label=${ariaLabel} ?hidden=${!this.expanded}>
           ${canReorder
             ? repeat(

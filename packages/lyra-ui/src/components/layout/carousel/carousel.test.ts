@@ -97,6 +97,66 @@ describe("Web Awesome carousel surface", () => {
     expect(el.shadowRoot!.querySelector('[part~="pagination"]')).to.exist;
   });
 
+  it("moves focus to the viewport before a method makes the focused slide inert", async () => {
+    const el = await carousel(html`
+      <lr-carousel>
+        <div><button id="first-slide-action">First action</button></div>
+        <div>Second</div>
+      </lr-carousel>
+    `);
+    el.querySelector<HTMLElement>('#first-slide-action')!.focus();
+
+    el.next('instant');
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')?.includes('viewport')).to.equal(true);
+  });
+
+  it("repairs focused-slide exclusion from controlled page-size and current-slide writes", async () => {
+    const el = await carousel(html`
+      <lr-carousel slides-per-page="2">
+        <div>First</div>
+        <div><button id="second-slide-action">Second action</button></div>
+        <div>Third</div>
+      </lr-carousel>
+    `);
+    el.querySelector<HTMLElement>('#second-slide-action')!.focus();
+    el.slidesPerPage = 1;
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')?.includes('viewport')).to.equal(true);
+
+    el.currentSlide = 1;
+    await el.updateComplete;
+    el.querySelector<HTMLElement>('#second-slide-action')!.focus();
+    el.currentSlide = 2;
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')?.includes('viewport')).to.equal(true);
+  });
+
+  it("repairs focus when the focused slide is removed without stealing foreign focus", async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <lr-carousel>
+          <div id="focused-slide"><button id="removed-action">Remove me</button></div>
+          <div>Second</div>
+        </lr-carousel>
+        <button id="outside">Outside</button>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-carousel') as LyraCarousel;
+    await el.updateComplete;
+    wrapper.querySelector<HTMLElement>('#removed-action')!.focus();
+    wrapper.querySelector<HTMLElement>('#focused-slide')!.remove();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')?.includes('viewport')).to.equal(true);
+
+    wrapper.querySelector<HTMLElement>('#outside')!.focus();
+    el.currentSlide = 0;
+    await el.updateComplete;
+    expect(el.ownerDocument.activeElement?.id).to.equal('outside');
+  });
+
   it("exposes mapped navigation, pagination, slots, parts, and event detail", async () => {
     const el = await carousel(html`
       <lr-carousel navigation pagination>
@@ -141,6 +201,38 @@ describe("Web Awesome carousel surface", () => {
     expect(event.detail.index).to.equal(1);
     expect((event.detail.slide) === (el.children[3])).to.equal(true);
     expect(event.cancelable).to.be.false;
+  });
+
+  it("keeps custom navigation glyph controls visible but inert beneath the native actions", async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div>
+      <button id="before-carousel-icons">Before</button>
+      <lr-carousel navigation>
+        <button id="nested-previous-icon" slot="previous-icon" type="button">Back</button>
+        <a id="nested-next-icon" slot="next-icon" href="#nested-next">Forward</a>
+        <div>One</div>
+        <div>Two</div>
+      </lr-carousel>
+    </div>`);
+    const el = wrapper.querySelector('lr-carousel') as LyraCarousel;
+    await el.updateComplete;
+    const before = wrapper.querySelector<HTMLButtonElement>('#before-carousel-icons')!;
+    const nestedPrevious = wrapper.querySelector<HTMLButtonElement>('#nested-previous-icon')!;
+    const nestedNext = wrapper.querySelector<HTMLAnchorElement>('#nested-next-icon')!;
+    const previousGlyph = el.shadowRoot!.querySelector<HTMLElement>('[part~="previous-glyph"]')!;
+    const nextGlyph = el.shadowRoot!.querySelector<HTMLElement>('[part~="next-glyph"]')!;
+
+    for (const glyph of [previousGlyph, nextGlyph]) {
+      expect(glyph.getAttribute('aria-hidden')).to.equal('true');
+      expect(glyph.hasAttribute('inert')).to.equal(true);
+    }
+    expect(nestedPrevious.getBoundingClientRect().width).to.be.greaterThan(0);
+    expect(nestedNext.getBoundingClientRect().width).to.be.greaterThan(0);
+    before.focus();
+    nestedPrevious.focus();
+    expect(el.ownerDocument.activeElement === before).to.equal(true);
+    nestedNext.focus();
+    expect(el.ownerDocument.activeElement === before).to.equal(true);
+    await expect(el).to.be.accessible();
   });
 
   it("returns opt-in navigation and pagination to false when their attributes are removed", async () => {

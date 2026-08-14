@@ -7,7 +7,12 @@ import {
 import { property, state } from 'lit/decorators.js';
 import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId, resolveAccessibleTrigger } from '../../../internal/a11y.js';
+import {
+  acquireAriaOwnership,
+  type AriaOwnershipLease,
+} from '../../../internal/aria-ownership.js';
+import { tag } from '../../../internal/prefix.js';
 import {
   place,
   virtualAnchorFromRect,
@@ -28,6 +33,7 @@ import { applyOverlayArrow, type LyraArrowPlacement } from './overlay-arrow.js';
 import {
   normalizeVirtualRect,
   observeOverlayAnchorIdentity,
+  OverlayTransitionGate,
   resolveOverlayAnchor,
   type OverlayVirtualRect,
 } from './overlay-shared.js';
@@ -40,6 +46,10 @@ import { LYRA_DEFAULT_menuLabel, LYRA_DEFAULT_popover } from '../../../internal/
 
 /** Default anchor-offset distance (px), passed to Floating UI's `offset()` middleware. */
 const DEFAULT_DISTANCE = 8;
+
+/** Monotonic connection order makes initial same-root ownership deterministic even when several
+ * server-rendered popovers release their hydration guards in different tasks. */
+let popoverConnectionSequence = 0;
 
 /** Semantic role vocabulary for the popup surface. Dropdown subclasses set this to `menu`. */
 export type LyraPopupRole = 'dialog' | 'menu';
@@ -60,13 +70,13 @@ export interface LyraPopoverEventMap {
  *
  * Interaction/ARIA ownership is resolved separately from positioning. A slotted trigger wins and
  * receives the click listener plus `aria-haspopup`, `aria-expanded`, and `aria-controls`; without
- * one, a live HTML element resolved by `for` owns the same contract. A direct `.anchor` is
- * positioning-only. `showAt()`'s virtual anchor wins positioning and deliberately has no DOM
- * interaction/ARIA owner while active.
- * `aria-controls` targets this public host (which receives a stable generated `id` when the
- * consumer did not supply one), not the shadow-private popup. That keeps the relationship
- * resolvable for native triggers and lets `<lr-button>`/`<lr-icon-button>` reflect the host onto
- * their focused shadow-internal controls through `ariaControlsElements`.
+ * one, a live HTML element resolved by `for` owns the same contract. A wrapper/custom trigger's
+ * real composed focus target receives the same owned semantics and is the focus-return target. A
+ * direct `.anchor` is positioning-only. `showAt()`'s virtual anchor wins positioning and
+ * deliberately has no DOM interaction/ARIA owner while active.
+ * The component supplies the real shadow popup to the shared relationship controller. Current
+ * browsers expose its nearest public shadow host to a light-DOM trigger, keeping the relationship
+ * resolvable without pretending a private idref crosses the boundary.
  * Live `popupRole`, host-id, target-id, and target-identity changes keep those relationships
  * synchronized. Losing the sole live positioning anchor force-closes the surface; if a slotted or
  * `for` fallback remains, the popover repositions to it and stays open. A deliberate `showAt()`
@@ -143,6 +153,13 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     // Before the first render this is initial markup state, not a transition.
     if (!this.hasUpdated) {
       this.setOpen(normalized);
+      // A consumer can append a closed element and assign `open` in the same task, after
+      // connectedCallback's first reconciliation saw no work. Re-run through the same hydration
+      // guard so that construction order still decides ownership without changing a server first
+      // render.
+      if (this.isConnected && this.connectionSequence > 0) {
+        this.updateBrowserDerivedState(() => this.reconcileInitialPopoverPeers());
+      }
       return;
     }
     if (normalized) void this.show();
@@ -192,17 +209,8 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   private observedDirectAnchor?: Element;
   private observedDirectAnchorWasConnected = false;
   private stopAnchorIdentityObservation?: () => void;
-  private triggerA11y?: {
-    hasPopup: boolean;
-    popup: string | null;
-    hasExpanded: boolean;
-    expanded: string | null;
-    hasControls: boolean;
-    controls: string | null;
-  };
-  private triggerA11yObserver?: MutationObserver;
-  private triggerA11yObserverDocument?: Document;
-  private triggerA11yObserverGeneration = 0;
+  private triggerAria?: AriaOwnershipLease;
+  private accessibleTriggerAria?: AriaOwnershipLease;
   /** The virtual anchor set by `showAt()`, taking priority over `trigger` for positioning while
    *  set. Cleared whenever the popover closes, so a later `open = true` with no fresh `showAt()`
    *  call reverts to plain trigger-based behavior. */
@@ -223,6 +231,8 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   /** Invalidates an in-flight `lr-after-*` wait when the opposite transition interrupts it. */
   private transitionToken = 0;
   private transitionAnimation?: Animation;
+  private readonly transitionGate = new OverlayTransitionGate();
+  private connectionSequence = 0;
   private readonly popoverInternals =
     typeof this.attachInternals === 'function' ? this.attachInternals() : undefined;
 
@@ -349,6 +359,11 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   }
   override connectedCallback(): void {
     super.connectedCallback();
+    this.connectionSequence = ++popoverConnectionSequence;
+    // Initial `open` markup is state, not a lifecycle transition, so reconcile it without events.
+    // A server-rendered shadow root defers this browser-only ownership decision until after its
+    // first hydration render, preserving the server's initial open-state identity.
+    this.updateBrowserDerivedState(() => this.reconcileInitialPopoverPeers());
     this.syncAnchorIdentityObservation();
     if (!this.id) this.id = this.generatedHostId;
     this.observeHostId();
@@ -377,7 +392,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     this.resetHostIdObserver();
     this.overlayHandle?.suspend();
     this.trigger?.removeEventListener('click', this.onTriggerClick);
-    this.restoreTriggerA11y();
+    this.releaseTriggerA11y();
     this.trigger = undefined;
     // A pending after-event must not announce a transition the detached element left behind.
     this.transitionToken++;
@@ -390,7 +405,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     this.stopAnchorIdentityObservation?.();
     this.stopAnchorIdentityObservation = undefined;
     this.resetHostIdObserver();
-    this.resetTriggerA11yObserver();
+    this.releaseTriggerA11y();
   }
   private syncAnchorIdentityObservation(): void {
     this.stopAnchorIdentityObservation?.();
@@ -439,18 +454,18 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
 
   private syncInteractionTrigger(): void {
     const next = this.virtualAnchor ? undefined : (this.slottedTrigger ?? this.resolveForTrigger());
-    if (next === this.trigger) return;
-    const previous = this.trigger;
-    if (previous) {
-      previous.removeEventListener('click', this.onTriggerClick);
-      this.restoreTriggerA11y();
-    }
-    this.trigger = next;
-    if (this.trigger) {
-      this.snapshotTriggerA11y(this.trigger);
-      if (this.trigger !== this.slottedTrigger) this.trigger.addEventListener('click', this.onTriggerClick);
+    if (next === this.trigger) {
+      // Re-resolve a custom trigger's real focus target after late upgrade without interpreting an
+      // unrelated root mutation as the loss of an initially undistributed declarative trigger.
       this.syncTriggerA11y();
+      return;
     }
+    this.trigger?.removeEventListener('click', this.onTriggerClick);
+    this.trigger = next;
+    if (this.trigger && this.trigger !== this.slottedTrigger) {
+      this.trigger.addEventListener('click', this.onTriggerClick);
+    }
+    this.syncTriggerA11y();
     if (this.open) {
       if (!this.resolveAnchor()) {
         void this.forceClose({ focusTrigger: false });
@@ -469,7 +484,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       host: this,
       panel: () => this.renderRoot.querySelector('[part~="popup"]') as HTMLElement | null,
       onEscape: () => void this.hide(),
-      restoreFocusTo: this.virtualAnchor ? (this.returnFocusTo ?? null) : (this.trigger ?? null),
+      restoreFocusTo: this.virtualAnchor ? (this.returnFocusTo ?? null) : this.accessibleTrigger,
       modal: false,
       trapFocus: false,
     });
@@ -479,7 +494,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    *  identity. Re-registering would promote an underlying popover above a newer overlay and, when
    *  this popover is already topmost, briefly move focus into the overlay underneath. */
   private updatePopoverRestoreFocusTarget(): void {
-    const target = this.virtualAnchor ? (this.returnFocusTo ?? null) : (this.trigger ?? null);
+    const target = this.virtualAnchor ? (this.returnFocusTo ?? null) : this.accessibleTrigger;
     if (this.overlayHandle?.isActive()) {
       this.overlayHandle.updateRestoreFocusTo(target);
       return;
@@ -587,104 +602,43 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     });
   }
   private syncTriggerA11y(): void {
-    if (!this.trigger) return;
-    const expanded = this.open ? 'true' : 'false';
-    if (this.trigger.getAttribute('aria-haspopup') !== this.popupRole) {
-      this.trigger.setAttribute('aria-haspopup', this.popupRole);
-    }
-    if (this.trigger.getAttribute('aria-expanded') !== expanded) {
-      this.trigger.setAttribute('aria-expanded', expanded);
-    }
-    if (this.trigger.getAttribute('aria-controls') !== this.generatedControls) {
-      this.trigger.setAttribute('aria-controls', this.generatedControls);
-    }
-  }
-  private get generatedControls(): string {
-    const controls = new Set((this.triggerA11y?.controls ?? '').split(/\s+/).filter(Boolean));
-    // The trigger lives in this component's light DOM, so a string IDREF cannot resolve the
-    // shadow-private popup. Point at the public host, matching lr-menu's trigger contract.
-    controls.add(this.id);
-    return [...controls].join(' ');
-  }
-  private snapshotTriggerA11y(trigger: HTMLElement): void {
-    this.triggerA11y = {
-      hasPopup: trigger.hasAttribute('aria-haspopup'),
-      popup: trigger.getAttribute('aria-haspopup'),
-      hasExpanded: trigger.hasAttribute('aria-expanded'),
-      expanded: trigger.getAttribute('aria-expanded'),
-      hasControls: trigger.hasAttribute('aria-controls'),
-      controls: trigger.getAttribute('aria-controls'),
+    const trigger = this.trigger ?? null;
+    // SSR/hydration shims can connect the host before Lit establishes a render root. The trigger
+    // still receives its state immediately; the first completed render resynchronizes `controls`
+    // to the real popup without reading through an unavailable root during upgrade.
+    const renderRoot = this.renderRoot as ShadowRoot | undefined;
+    const popup = renderRoot?.querySelector<HTMLElement>('[part~="popup"]') ?? null;
+    const contribution = {
+      attributes: {
+        'aria-haspopup': this.popupRole,
+        'aria-expanded': this.open ? 'true' : 'false',
+      },
+      controls: popup ? [popup] : [],
     };
-    this.resetTriggerA11yObserver();
-    const ownerDocument = this.ownerDocument;
-    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
-    if (!MutationObserverCtor) return;
-    const generation = this.triggerA11yObserverGeneration;
-    const observer = new MutationObserverCtor((records) => {
-      if (
-        this.triggerA11yObserver !== observer ||
-        this.triggerA11yObserverDocument !== ownerDocument ||
-        this.triggerA11yObserverGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument ||
-        this.trigger !== trigger
-      ) {
-        return;
-      }
-      if (!this.trigger || !this.triggerA11y) return;
-      let authorChanged = false;
-      for (const { attributeName } of records) {
-        if (!attributeName) continue;
-        const current = this.trigger.getAttribute(attributeName);
-        const generated =
-          attributeName === 'aria-haspopup'
-            ? this.popupRole
-            : attributeName === 'aria-expanded'
-              ? this.open
-                ? 'true'
-                : 'false'
-              : this.generatedControls;
-        if (current === generated) continue;
-        authorChanged = true;
-        const had = this.trigger.hasAttribute(attributeName);
-        if (attributeName === 'aria-haspopup') {
-          this.triggerA11y.hasPopup = had;
-          this.triggerA11y.popup = current;
-        } else if (attributeName === 'aria-expanded') {
-          this.triggerA11y.hasExpanded = had;
-          this.triggerA11y.expanded = current;
-        } else {
-          this.triggerA11y.hasControls = had;
-          this.triggerA11y.controls = current;
-        }
-      }
-      if (authorChanged) this.syncTriggerA11y();
-    });
-    this.triggerA11yObserver = observer;
-    this.triggerA11yObserverDocument = ownerDocument;
-    observer.observe(trigger, {
-      attributes: true,
-      attributeFilter: ['aria-haspopup', 'aria-expanded', 'aria-controls'],
-    });
-  }
-  private restoreTriggerA11y(): void {
-    if (!this.trigger || !this.triggerA11y) return;
-    this.resetTriggerA11yObserver();
-    const restore = (name: string, had: boolean, value: string | null): void => {
-      if (had) this.trigger!.setAttribute(name, value ?? '');
-      else this.trigger!.removeAttribute(name);
-    };
-    restore('aria-haspopup', this.triggerA11y.hasPopup, this.triggerA11y.popup);
-    restore('aria-expanded', this.triggerA11y.hasExpanded, this.triggerA11y.expanded);
-    restore('aria-controls', this.triggerA11y.hasControls, this.triggerA11y.controls);
-    this.triggerA11y = undefined;
+    if (this.triggerAria) this.triggerAria.update(trigger, contribution);
+    else this.triggerAria = acquireAriaOwnership(trigger, contribution);
+
+    const accessibleTrigger = this.accessibleTrigger;
+    const distinctAccessibleTrigger = accessibleTrigger !== trigger ? accessibleTrigger : null;
+    if (this.accessibleTriggerAria) {
+      this.accessibleTriggerAria.update(distinctAccessibleTrigger, contribution);
+    } else {
+      this.accessibleTriggerAria = acquireAriaOwnership(distinctAccessibleTrigger, contribution);
+    }
+    if (this.overlayHandle?.isActive() && !this.virtualAnchor) {
+      this.overlayHandle.updateRestoreFocusTo(accessibleTrigger);
+    }
   }
 
-  private resetTriggerA11yObserver(): void {
-    this.triggerA11yObserverGeneration += 1;
-    this.triggerA11yObserver?.disconnect();
-    this.triggerA11yObserver = undefined;
-    this.triggerA11yObserverDocument = undefined;
+  private get accessibleTrigger(): HTMLElement | null {
+    return this.trigger ? resolveAccessibleTrigger(this.trigger) : null;
+  }
+
+  private releaseTriggerA11y(): void {
+    this.accessibleTriggerAria?.release();
+    this.accessibleTriggerAria = undefined;
+    this.triggerAria?.release();
+    this.triggerAria = undefined;
   }
   private onTriggerSlotChange = (event: Event): void => {
     const next = (event.target as HTMLSlotElement).assignedElements({ flatten: true })[0] as HTMLElement | undefined;
@@ -694,6 +648,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   };
   private onTriggerClick = (): void => {
     if (this.virtualAnchor) return;
+    this.syncTriggerA11y();
     if (this.open) void this.hide();
     else void this.show();
   };
@@ -790,14 +745,20 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    *  `lr-after-show` once the popup's transition has finished. */
   show(): Promise<void> {
     if (this._open || !this.canOpen) return Promise.resolve();
-    if (this.emitCancelableLifecycle('lr-show').defaultPrevented) {
-      this.syncOpenAttribute();
-      return Promise.resolve();
-    }
-    this.cancelTransitionAnimation();
-    this.removeAttribute('data-closing');
-    this.setOpen(true);
-    return this.settleTransition('lr-after-show');
+    return this.transitionGate.request(true, () => {
+      if (this.emitCancelableLifecycle('lr-show').defaultPrevented) {
+        this.syncOpenAttribute();
+        return;
+      }
+      if (!this.closePopoverPeers()) {
+        this.syncOpenAttribute();
+        return;
+      }
+      this.cancelTransitionAnimation();
+      this.removeAttribute('data-closing');
+      this.setOpen(true);
+      return this.settleTransition('lr-after-show');
+    });
   }
 
   /** Programmatically close the popover and return focus to its trigger by default, matching
@@ -806,11 +767,77 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    *  Emits `lr-hide` first — vetoing it leaves the popover open — then `lr-after-hide`. */
   hide(options?: { focusTrigger?: boolean }): Promise<void> {
     if (!this._open) return Promise.resolve();
-    if (this.emitCancelableLifecycle('lr-hide').defaultPrevented) {
-      this.syncOpenAttribute();
-      return Promise.resolve();
+    return this.transitionGate.request(false, () => {
+      if (this.emitCancelableLifecycle('lr-hide').defaultPrevented) {
+        this.syncOpenAttribute();
+        return;
+      }
+      return this.forceClose(options);
+    });
+  }
+
+  /** Generic DOM-anchored popovers are a same-root singleton. Dropdown subclasses and virtual
+   * `showAt()` surfaces are intentionally outside that contract. A peer veto leaves the newcomer
+   * closed; focus never jumps through the retiring peer's trigger during the handoff. */
+  private closePopoverPeers(): boolean {
+    if (this.virtualAnchor || this.localName !== tag('popover')) return true;
+    const root = this.getRootNode() as Document | ShadowRoot;
+    for (const peer of root.querySelectorAll<LyraPopover>(tag('popover'))) {
+      if (peer === this || !peer.open || peer.virtualAnchor) continue;
+      void peer.hide({ focusTrigger: false });
+      if (peer.open) return false;
     }
-    return this.forceClose(options);
+    return true;
+  }
+
+  /** Reconciles initially open public popovers after connection without inventing a show/hide
+   * lifecycle. The most recently connected peer owns the root; mapped dropdowns, virtual
+   * surfaces, and peers in another document/shadow root remain independent. */
+  private reconcileInitialPopoverPeers(): void {
+    if (
+      !this.isConnected ||
+      !this._open ||
+      this.virtualAnchor ||
+      this.localName !== tag('popover')
+    ) {
+      return;
+    }
+    const root = this.getRootNode() as Document | ShadowRoot;
+    const peers = [...root.querySelectorAll<LyraPopover>(tag('popover'))].filter((peer) =>
+      peer.isConnected &&
+      peer._open &&
+      !peer.virtualAnchor &&
+      peer.connectionSequence > 0
+    );
+    const winner = peers.reduce<LyraPopover | undefined>((latest, peer) =>
+      !latest || peer.connectionSequence > latest.connectionSequence ? peer : latest,
+    undefined);
+    if (winner !== this) {
+      this.closeForInitialPeerReconciliation();
+      return;
+    }
+    for (const peer of peers) {
+      if (peer !== this) peer.closeForInitialPeerReconciliation();
+    }
+  }
+
+  /** Structurally retires superseded initial markup. This deliberately skips every lifecycle
+   * event and focus restoration because no user-initiated open transition occurred. */
+  private closeForInitialPeerReconciliation(): void {
+    if (!this._open) return;
+    this.transitionToken++;
+    this.cancelTransitionAnimation();
+    this.removeAttribute('data-closing');
+    this.cleanup?.();
+    this.cleanup = undefined;
+    this.stopLightDismiss();
+    this.overlayHandle?.deactivate({ restoreFocus: false });
+    this.overlayHandle = undefined;
+    this.positionedAnchor = undefined;
+    this.anchorPositioned = false;
+    this.returnFocusTo = undefined;
+    this.setOpen(false);
+    this.syncOpenAttribute();
   }
 
   /** The close half of `hide()` without the veto point, for structural teardown that leaves an

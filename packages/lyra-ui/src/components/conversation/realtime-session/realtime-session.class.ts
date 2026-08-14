@@ -108,7 +108,7 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
    */
   @property({ attribute: 'error-code' }) errorCode = '';
   @property() label = '';
-  private transferActionFocus = false;
+  private transferActionFocus?: { target: 'connection' | 'mute'; origin: Element };
   private statusAnnouncementSink?: AnnouncementSink;
   private errorAnnouncementSink?: AnnouncementSink;
   private suppressNextStateAnnouncement = true;
@@ -156,19 +156,26 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
     super.willUpdate(changed);
     const stateChanged = changed.has('state');
     const captureHidden = changed.has('showCapture') && changed.get('showCapture') === true && !this.showCapture;
-    if (!stateChanged && !captureHidden) return;
+    const captureDisabled =
+      changed.has('muted') && changed.get('muted') === false && this.muted;
+    if (!stateChanged && !captureHidden && !captureDisabled) return;
     const focused = activeElementIn(this.shadowRoot ?? this.ownerDocument);
     const focusedPart = focused?.getAttribute('part') ?? null;
-    this.transferActionFocus =
+    if (!focused) return;
+    if (captureDisabled && !stateChanged && !captureHidden && focusedPart === 'capture') {
+      this.transferActionFocus = { target: 'mute', origin: focused };
+      return;
+    }
+    const shouldTransfer =
       captureHidden && !stateChanged
         ? focusedPart === 'capture'
-        : focused !== null &&
-          (focused.closest('[part="controls"]') !== null ||
-            focusedPart === 'connect' ||
-            focusedPart === 'disconnect' ||
-            focusedPart === 'mute' ||
-            focusedPart === 'interrupt' ||
-            focusedPart === 'capture');
+        : focused.closest('[part="controls"]') !== null ||
+          focusedPart === 'connect' ||
+          focusedPart === 'disconnect' ||
+          focusedPart === 'mute' ||
+          focusedPart === 'interrupt' ||
+          focusedPart === 'capture';
+    if (shouldTransfer) this.transferActionFocus = { target: 'connection', origin: focused };
   }
 
   protected override updated(changed: PropertyValues<this>): void {
@@ -184,9 +191,20 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
         this.statusAnnouncementSink?.announce(this.stateLabel());
       }
     }
-    if ((stateChanged || changed.has('showCapture')) && this.transferActionFocus) {
-      this.transferActionFocus = false;
-      (this.renderRoot.querySelector('[part="connect"], [part="disconnect"]') as HTMLElement | null)?.focus();
+    const pending = this.transferActionFocus;
+    if ((stateChanged || changed.has('showCapture') || changed.has('muted')) && pending) {
+      this.transferActionFocus = undefined;
+      const internalActive = activeElementIn(this.shadowRoot);
+      const documentActive = activeElementIn(this.ownerDocument);
+      const mayRestore =
+        (internalActive === null || internalActive === pending.origin) &&
+        (documentActive === null || documentActive === this || documentActive === this.ownerDocument.body);
+      if (mayRestore) {
+        const selector = pending.target === 'mute'
+          ? '[part="mute"]'
+          : '[part="connect"], [part="disconnect"]';
+        (this.renderRoot.querySelector(selector) as HTMLElement | null)?.focus();
+      }
     }
     this.suppressNextStateAnnouncement = false;
   }

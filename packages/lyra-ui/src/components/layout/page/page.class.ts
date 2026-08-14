@@ -1,7 +1,12 @@
 import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
-import { nextId } from '../../../internal/a11y.js';
+import { nextId, resolveAccessibleTrigger } from '../../../internal/a11y.js';
+import {
+  acquireAriaOwnership,
+  type AriaOwnershipLease,
+} from '../../../internal/aria-ownership.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
+import { isComposedFocusAvailable } from '../../../internal/focus-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
@@ -19,22 +24,6 @@ export type PageView = 'mobile' | 'desktop';
 
 /** The logical edge that owns navigation in either Page presentation. */
 export type PageNavigationPlacement = 'start' | 'end';
-
-interface CustomToggleState {
-  readonly element: HTMLElement;
-  readonly expandedHad: boolean;
-  readonly expandedValue: string | null;
-  expandedGenerated?: string;
-  ownsExpanded: boolean;
-  readonly controlsHad: boolean;
-  readonly controlsValue: string | null;
-  controlsGenerated?: string | null;
-  ownsControls: boolean;
-  readonly labelHad: boolean;
-  readonly labelValue: string | null;
-  labelGenerated?: string;
-  ownsLabel: boolean;
-}
 
 function navigationIcon(): SVGTemplateResult {
   return svg`
@@ -77,11 +66,11 @@ export interface LyraPageEventMap {
  * `menu`, and `aside`. A token only disables that region; unrelated sticky regions keep working.
  * Slotted controls carrying `data-toggle-nav` toggle the mobile drawer, matching the documented
  * light-DOM Page pattern without adding a stale `nav-state` property.
- * A custom `navigation-toggle` receives component-owned `aria-expanded` and, when unnamed, a
- * localized label while assigned. Its `aria-controls` targets the Page host as the resolvable
- * light-DOM bridge to the private drawer. Replacement, removal, and disconnect restore the
- * consumer's prior attributes only while the component-owned values are still present; a later
- * consumer write is never overwritten.
+ * A custom `navigation-toggle` and the composed descendant that actually receives focus receive
+ * component-owned `aria-haspopup="dialog"`, `aria-expanded`, a localized label when unnamed, and
+ * a relationship sourced from the real drawer. Current browsers expose the Page host for that
+ * inward shadow relationship. Replacement, removal, and disconnect restore exact authored
+ * baselines, including writes made while ownership was active.
  *
  * @customElement lr-page
  * @slot - Main content.
@@ -209,8 +198,13 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
   private resizeObserver?: ResizeObserver;
   private resizeView?: Window;
   private overlayHandle?: OverlayHandle;
-  private navigationTrigger?: HTMLElement;
-  private customToggleState?: CustomToggleState;
+  private navigationTriggerOwner?: HTMLElement;
+  private customToggle?: HTMLElement;
+  private customToggleAuthoredLabel: string | null = null;
+  private accessibleCustomToggle?: HTMLElement;
+  private accessibleCustomToggleAuthoredLabel: string | null = null;
+  private customToggleAria?: AriaOwnershipLease;
+  private accessibleCustomToggleAria?: AriaOwnershipLease;
 
   @query('[part~="main"]') private mainElement?: HTMLElement;
   @query('[part~="drawer"]') private drawerElement?: HTMLElement;
@@ -238,7 +232,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     this.resizeView?.removeEventListener('resize', this.onWindowResize);
     this.resizeView = undefined;
     this.overlayHandle?.suspend();
-    this.restoreCustomToggle();
+    this.releaseCustomToggleA11y();
     super.disconnectedCallback();
   }
 
@@ -253,8 +247,19 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     if (changed.has('mobileBreakpoint') && changed.get('mobileBreakpoint') !== undefined) {
       this.measureAllocation();
     }
-    this.syncCustomToggle();
-    this.syncOverlay(changed);
+    const deactivatingOverlay =
+      this.overlayHandle !== undefined &&
+      (!this.isConnected || this.view !== 'mobile' || !this.navOpen);
+    if (deactivatingOverlay) {
+      // The live focus-return resolver runs during deactivation after modal inerting is removed.
+      // Re-resolve the custom control immediately afterwards so its closed-state ARIA ownership
+      // also moves from the temporarily inert wrapper to the real composed focus target.
+      this.syncOverlay(changed);
+      this.syncCustomToggle();
+    } else {
+      this.syncCustomToggle();
+      this.syncOverlay(changed);
+    }
   }
 
   private observeAllocation(): void {
@@ -301,14 +306,20 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     if (shouldBeActive) {
       if (this.overlayHandle?.isActive()) {
         this.overlayHandle.resume();
+        if (this.navigationTriggerOwner) {
+          this.overlayHandle.updateRestoreFocusTo(this.resolveNavigationRestoreTarget);
+        }
         return;
       }
       this.overlayHandle = activateOverlay({
         host: this,
         panel: () => this.drawerElement ?? null,
+        modalRoot: () => this.drawerElement ?? null,
         onEscape: () => this.hideNavigation(),
         onBackdrop: () => this.hideNavigation(),
-        ...(this.navigationTrigger ? { restoreFocusTo: this.navigationTrigger } : {}),
+        ...(this.navigationTriggerOwner
+          ? { restoreFocusTo: this.resolveNavigationRestoreTarget }
+          : {}),
         lockScroll: true,
         suspendWhenUnrendered: true,
       });
@@ -321,8 +332,28 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
       this.overlayHandle.deactivate({ restoreFocus });
       this.overlayHandle = undefined;
     }
-    if (!this.navOpen) this.navigationTrigger = undefined;
+    if (!this.navOpen) {
+      this.navigationTriggerOwner = undefined;
+    }
   }
+
+  /** Resolves only after overlay cleanup has released Page-owned inerting. A disappearing opening
+   * owner falls back deterministically without changing the captured-focus behavior of a drawer
+   * opened programmatically. */
+  private readonly resolveNavigationRestoreTarget = (): HTMLElement | null => {
+    const owner = this.navigationTriggerOwner;
+    if (owner?.isConnected) {
+      const accessible = resolveAccessibleTrigger(owner);
+      if (isComposedFocusAvailable(accessible)) return accessible;
+    }
+    const builtIn = this.disableNavigationToggle
+      ? null
+      : this.renderRoot.querySelector<HTMLElement>('[part~="navigation-toggle"]');
+    if (builtIn && isComposedFocusAvailable(builtIn)) return builtIn;
+    return this.mainElement && isComposedFocusAvailable(this.mainElement)
+      ? this.mainElement
+      : null;
+  };
 
   private syncCustomToggle(): void {
     const slot = this.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="navigation-toggle"]');
@@ -331,109 +362,70 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     // shadow button. That control is rendered declaratively and must not enter the custom-toggle
     // ownership lifecycle below.
     const next = candidate?.getRootNode() === this.shadowRoot ? undefined : candidate;
-    if (next !== this.customToggleState?.element) {
-      this.restoreCustomToggle();
-      if (next) this.customToggleState = this.captureCustomToggle(next);
+    const previous = this.customToggle;
+    if (next !== previous) {
+      this.customToggle = next;
+      this.customToggleAuthoredLabel = next?.hasAttribute('aria-label')
+        ? next.getAttribute('aria-label') ?? ''
+        : null;
     }
-    const state = this.customToggleState;
-    if (!state) return;
-    const { element } = state;
-
-    if (state.ownsExpanded) {
-      const current = element.getAttribute('aria-expanded');
-      if (state.expandedGenerated !== undefined && current !== state.expandedGenerated) {
-        state.ownsExpanded = false;
-      } else {
-        const expanded = this.navOpen ? 'true' : 'false';
-        element.setAttribute('aria-expanded', expanded);
-        state.expandedGenerated = expanded;
-      }
+    const accessible = next ? resolveAccessibleTrigger(next) : undefined;
+    if (accessible !== this.accessibleCustomToggle) {
+      this.accessibleCustomToggle = accessible;
+      this.accessibleCustomToggleAuthoredLabel = accessible?.hasAttribute('aria-label')
+        ? accessible.getAttribute('aria-label') ?? ''
+        : null;
     }
-
-    if (state.ownsControls) this.syncCustomToggleControls(state);
-
-    if (state.ownsLabel) {
-      const currentLabel = element.getAttribute('aria-label');
-      if (state.labelGenerated !== undefined && currentLabel !== state.labelGenerated) {
-        // A label supplied after assignment wins from this point onward.
-        state.ownsLabel = false;
-      } else {
-        const label = this.localize(this.navOpen ? 'closeNavigation' : 'openNavigation');
-        element.setAttribute('aria-label', label);
-        state.labelGenerated = label;
-      }
-    }
-  }
-
-  private captureCustomToggle(element: HTMLElement): CustomToggleState {
-    return {
-      element,
-      expandedHad: element.hasAttribute('aria-expanded'),
-      expandedValue: element.getAttribute('aria-expanded'),
-      ownsExpanded: true,
-      controlsHad: element.hasAttribute('aria-controls'),
-      controlsValue: element.getAttribute('aria-controls'),
-      ownsControls: true,
-      labelHad: element.hasAttribute('aria-label'),
-      labelValue: element.getAttribute('aria-label'),
-      ownsLabel: !element.hasAttribute('aria-label'),
+    const localizedLabel = this.localize(this.navOpen ? 'closeNavigation' : 'openNavigation');
+    const drawer = this.drawerElement;
+    const hostContribution = {
+      attributes: {
+        'aria-haspopup': 'dialog',
+        'aria-expanded': this.navOpen ? 'true' : 'false',
+        'aria-label': this.customToggleAuthoredLabel ?? localizedLabel,
+      },
+      controls: drawer ? [drawer] : [],
     };
+    if (this.customToggleAria) this.customToggleAria.update(next ?? null, hostContribution);
+    else this.customToggleAria = acquireAriaOwnership(next ?? null, hostContribution);
+
+    const distinctAccessible = accessible !== next ? accessible ?? null : null;
+    const accessibleContribution = {
+      attributes: {
+        'aria-haspopup': 'dialog',
+        'aria-expanded': this.navOpen ? 'true' : 'false',
+        'aria-label':
+          this.accessibleCustomToggleAuthoredLabel ?? this.customToggleAuthoredLabel ?? localizedLabel,
+      },
+      controls: drawer ? [drawer] : [],
+    };
+    if (this.accessibleCustomToggleAria) {
+      this.accessibleCustomToggleAria.update(distinctAccessible, accessibleContribution);
+    } else {
+      this.accessibleCustomToggleAria = acquireAriaOwnership(distinctAccessible, accessibleContribution);
+    }
+    if (this.navOpen && previous && this.navigationTriggerOwner === previous) {
+      this.navigationTriggerOwner = next;
+      this.overlayHandle?.updateRestoreFocusTo(this.resolveNavigationRestoreTarget);
+    }
   }
 
-  private syncCustomToggleControls(state: CustomToggleState): void {
-    const { element } = state;
-    if (state.controlsGenerated !== undefined) {
-      const serializedStillOwned = element.getAttribute('aria-controls') === state.controlsGenerated;
-      if (!serializedStillOwned) {
-        state.ownsControls = false;
-        return;
-      }
-    }
-
-    // A light-DOM IDREF cannot resolve the private drawer inside this component's shadow root.
-    // Point custom controls at the page host as the resolvable public bridge; the host contains and
-    // owns the drawer, while the built-in same-shadow button can keep targeting drawerId exactly.
-    element.setAttribute('aria-controls', this.id);
-    state.controlsGenerated = element.getAttribute('aria-controls');
-  }
-
-  private restoreCustomToggle(): void {
-    const state = this.customToggleState;
-    if (!state) return;
-    const { element } = state;
-
-    if (
-      state.ownsExpanded &&
-      state.expandedGenerated !== undefined &&
-      element.getAttribute('aria-expanded') === state.expandedGenerated
-    ) {
-      if (state.expandedHad) element.setAttribute('aria-expanded', state.expandedValue ?? '');
-      else element.removeAttribute('aria-expanded');
-    }
-
-    if (
-      state.ownsControls &&
-      state.controlsGenerated !== undefined &&
-      element.getAttribute('aria-controls') === state.controlsGenerated
-    ) {
-      if (state.controlsHad) element.setAttribute('aria-controls', state.controlsValue ?? '');
-      else element.removeAttribute('aria-controls');
-    }
-
-    if (
-      state.ownsLabel &&
-      state.labelGenerated !== undefined &&
-      element.getAttribute('aria-label') === state.labelGenerated
-    ) {
-      if (state.labelHad) element.setAttribute('aria-label', state.labelValue ?? '');
-      else element.removeAttribute('aria-label');
-    }
-
-    this.customToggleState = undefined;
+  private releaseCustomToggleA11y(): void {
+    this.accessibleCustomToggleAria?.release();
+    this.accessibleCustomToggleAria = undefined;
+    this.customToggleAria?.release();
+    this.customToggleAria = undefined;
+    this.customToggle = undefined;
+    this.customToggleAuthoredLabel = null;
+    this.accessibleCustomToggle = undefined;
+    this.accessibleCustomToggleAuthoredLabel = null;
   }
 
   private rememberTriggerAndToggle(trigger: HTMLElement): void {
-    if (!this.navOpen) this.navigationTrigger = trigger;
+    this.syncCustomToggle();
+    if (!this.navOpen) {
+      this.navigationTriggerOwner = trigger;
+    }
     this.toggleNavigation();
   }
 
@@ -551,6 +543,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
               <button
                 part="navigation-toggle"
                 type="button"
+                aria-haspopup="dialog"
                 aria-expanded=${this.navOpen ? 'true' : 'false'}
                 aria-controls=${this.drawerId}
                 aria-label=${this.localize(this.navOpen ? 'closeNavigation' : 'openNavigation')}

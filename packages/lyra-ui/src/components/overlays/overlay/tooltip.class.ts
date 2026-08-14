@@ -8,17 +8,16 @@ import { property, state } from 'lit/decorators.js';
 import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
-  composedParentElement,
   isAccessibilitySubtreeExcluded,
   isAccessibilityVisibilityHidden,
   nextId,
   resolveAccessibleTrigger,
 } from '../../../internal/a11y.js';
 import {
-  describeElement,
-  undescribeElement,
-  type AppliedDescription,
-} from '../../../internal/aria-controls.js';
+  acquireAriaOwnership,
+  type AriaOwnershipLease,
+} from '../../../internal/aria-ownership.js';
+import { isActionableElement } from '../../../internal/focus-navigation.js';
 import { place, virtualAnchorFromRect, type VirtualAnchor } from '../../../internal/positioner.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { finiteDuration, finiteNumber } from '../../../internal/numbers.js';
@@ -28,11 +27,12 @@ import {
 } from '../../../internal/converters.js';
 import { activateOverlay, composedContains, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { animateRegistered } from '../../../internal/registered-animation.js';
-import { composedAccessibilityTextResult } from '../../../internal/announcement-text.js';
+import { composedAccessibilityTextResult } from '../../../internal/accessibility-visibility.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from './overlay-arrow.js';
 import {
   normalizeVirtualRect,
   observeOverlayAnchorIdentity,
+  OverlayTransitionGate,
   resolveOverlayAnchor,
   type OverlayVirtualRect,
 } from './overlay-shared.js';
@@ -74,10 +74,6 @@ type TooltipContentSnapshot = {
   composedAncestors: Set<Element>;
 };
 
-const ACTIONABLE_SELECTOR =
-  'a[href],button,input,select,textarea,[contenteditable]:not([contenteditable="false"]),' +
-  '[tabindex]:not([tabindex="-1"]),[role="button"],[role="link"],[role="menuitem"]';
-
 export interface LyraTooltipEventMap {
   'lr-show': CustomEvent<undefined>;
   'lr-after-show': CustomEvent<undefined>;
@@ -90,7 +86,8 @@ export interface LyraTooltipEventMap {
  * light-DOM shapes without ambiguity: a Web Awesome-style named `trigger` plus default content,
  * or a Shoelace-style default trigger plus `content`/`slot="content"` content.
  * Plain content uses tooltip semantics. When the active content slot contains an actionable descendant
- * (including inside a nested custom element's open shadow root), the popup promotes to a named
+ * (including native controls, authored sequential focus stops, explicit ARIA widgets, and controls
+ * inside a nested custom element's open shadow root), the popup promotes to a named
  * dialog and remains open while pointer or focus is inside so its controls can be reached. Escape
  * from popup content closes it and restores focus to the trigger. Prefer `<lr-popover>` when
  * click-to-open ownership is desired.
@@ -125,6 +122,8 @@ export interface LyraTooltipEventMap {
  * wrappers, not only the components that forward their own host `aria-describedby`. Descendants
  * inside a shadow root are linked through `ariaDescribedByElements`, where the serialized internal
  * attribute is intentionally empty; descriptions the control already had are kept and restored.
+ * Bubbling `focusin`/`focusout` observes those real composed targets, and moving focus within the
+ * trigger or between interactive popup controls does not spuriously close the tooltip.
  *
  * @customElement lr-tooltip
  * @slot trigger - Web Awesome shape: the highest-priority interaction/ARIA owner.
@@ -254,11 +253,8 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   private observedDirectAnchor?: Element;
   private observedDirectAnchorWasConnected = false;
   private stopAnchorIdentityObservation?: () => void;
-  private triggerDescription?: { had: boolean; value: string | null };
-  private triggerDescriptionObserver?: MutationObserver;
-  /** The focusable node inside the trigger that currently carries the description, plus what it
-   *  looked like beforehand. Undefined whenever the trigger is its own focus target. */
-  private accessibleTriggerDescription?: AppliedDescription;
+  private triggerAria?: AriaOwnershipLease;
+  private accessibleTriggerAria?: AriaOwnershipLease;
   /** The virtual anchor set by `showAt()`, taking priority over `for`/`trigger` for positioning
    *  while set. Cleared whenever the tooltip closes, so a later `open = true` with no fresh
    *  `showAt()` call reverts to plain trigger-based behavior. */
@@ -291,6 +287,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   /** Invalidates an in-flight `lr-after-*` wait when the opposite transition interrupts it. */
   private transitionToken = 0;
   private transitionAnimation?: Animation;
+  private readonly transitionGate = new OverlayTransitionGate();
 
   private get rendersArrow(): boolean {
     return this.arrow && !this.withoutArrow;
@@ -453,8 +450,8 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     this.overlayHandle?.suspend();
     if (this.triggerElement) {
       this.unbindTrigger(this.triggerElement);
-      this.restoreTriggerDescription();
     }
+    this.releaseTriggerA11y();
     this.triggerElement = undefined;
     this.contentObserver?.disconnect();
     this.contentObserver = undefined;
@@ -482,8 +479,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     this.stopLabelReferenceIdentityObservation?.();
     this.stopLabelReferenceIdentityObservation = undefined;
     this.clearContentSlotListeners();
-    this.triggerDescriptionObserver?.disconnect();
-    this.triggerDescriptionObserver = undefined;
+    this.releaseTriggerA11y();
   }
   private syncAnchorIdentityObservation(): void {
     this.stopAnchorIdentityObservation?.();
@@ -539,7 +535,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
    *  `trapFocus`) would be meaningless here -- only Escape ownership is needed. */
   private activateTooltipOverlay(): void {
     if (!this.isConnected) return;
-    const restoreFocusTarget = this.virtualAnchor ? (this.returnFocusTo ?? null) : (this.triggerElement ?? null);
+    const restoreFocusTarget = this.virtualAnchor ? (this.returnFocusTo ?? null) : this.accessibleTrigger;
     if (this.overlayHandle?.isActive()) {
       this.overlayHandle.updateRestoreFocusTo(restoreFocusTarget);
       return;
@@ -619,14 +615,16 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   show(): Promise<void> {
     this.cancelPendingTransition();
     if (this.disabled || this._open) return Promise.resolve();
-    if (this.emit('lr-show', undefined, { cancelable: true }).defaultPrevented) {
-      this.syncOpenAttribute();
-      return Promise.resolve();
-    }
-    this.cancelTransitionAnimation();
-    this.removeAttribute('data-closing');
-    this.applyOpenState(true);
-    return this.settleTransition('lr-after-show');
+    return this.transitionGate.request(true, () => {
+      if (this.emit('lr-show', undefined, { cancelable: true }).defaultPrevented) {
+        this.syncOpenAttribute();
+        return;
+      }
+      this.cancelTransitionAnimation();
+      this.removeAttribute('data-closing');
+      this.applyOpenState(true);
+      return this.settleTransition('lr-after-show');
+    });
   }
 
   /** Close immediately, bypassing `hide-delay`. Emits `lr-hide` first — vetoing it leaves the
@@ -635,15 +633,17 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   hide(options?: { restoreFocus?: boolean }): Promise<void> {
     this.cancelPendingTransition();
     if (!this._open) return Promise.resolve();
-    if (this.emit('lr-hide', undefined, { cancelable: true }).defaultPrevented) {
-      this.syncOpenAttribute();
-      return Promise.resolve();
-    }
-    if (options?.restoreFocus) this.restoreFocusOnClose = true;
-    this.cancelTransitionAnimation();
-    if (this.isConnected) this.setAttribute('data-closing', '');
-    this.applyOpenState(false);
-    return this.settleTransition('lr-after-hide');
+    return this.transitionGate.request(false, () => {
+      if (this.emit('lr-hide', undefined, { cancelable: true }).defaultPrevented) {
+        this.syncOpenAttribute();
+        return;
+      }
+      if (options?.restoreFocus) this.restoreFocusOnClose = true;
+      this.cancelTransitionAnimation();
+      if (this.isConnected) this.setAttribute('data-closing', '');
+      this.applyOpenState(false);
+      return this.settleTransition('lr-after-hide');
+    });
   }
 
   /** Structural teardown cannot be vetoed: no open tooltip may remain after its final live
@@ -762,32 +762,33 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     }
   }
   private syncTriggerA11y(): void {
-    if (!this.triggerElement) return;
-    const descriptions = new Set((this.triggerDescription?.value ?? '').split(/\s+/).filter(Boolean));
-    if (this.open) descriptions.add(this.descriptionId);
-    if (descriptions.size > 0) this.triggerElement.setAttribute('aria-describedby', [...descriptions].join(' '));
-    else this.triggerElement.removeAttribute('aria-describedby');
-    this.syncAccessibleTriggerDescription();
-  }
-  /**
-   * A description is only announced on the node that actually holds focus. When the trigger is a
-   * custom element, that node is a control inside its shadow root (or a focusable it wraps in the
-   * light DOM), and the host attribute set above never reaches it -- only the handful of components
-   * that happen to read their own host `aria-describedby` (`<lr-button>`, `<lr-icon-button>`,
-   * `<lr-checkbox>`) forward it today, so `<lr-select>`, `<lr-switch>`, `<lr-chip>` and every
-   * consumer-authored wrapper would silently drop the tooltip. Describe the resolved focus target
-   * as well, and restore exactly what it had when the tooltip closes or the trigger is swapped.
-   */
-  private syncAccessibleTriggerDescription(): void {
-    const proxy = this.descriptionProxy;
-    const target =
-      this.open && this.triggerElement && proxy ? resolveAccessibleTrigger(this.triggerElement) : undefined;
-    if (this.accessibleTriggerDescription && this.accessibleTriggerDescription.target !== target) {
-      undescribeElement(this.accessibleTriggerDescription);
-      this.accessibleTriggerDescription = undefined;
+    const trigger = this.triggerElement ?? null;
+    const proxy = this.open ? this.descriptionProxy : undefined;
+    const contribution = { descriptions: proxy ? [proxy] : [] };
+    if (this.triggerAria) this.triggerAria.update(trigger, contribution);
+    else this.triggerAria = acquireAriaOwnership(trigger, contribution);
+
+    const accessibleTrigger = this.accessibleTrigger;
+    const distinctAccessibleTrigger = accessibleTrigger !== trigger ? accessibleTrigger : null;
+    if (this.accessibleTriggerAria) {
+      this.accessibleTriggerAria.update(distinctAccessibleTrigger, contribution);
+    } else {
+      this.accessibleTriggerAria = acquireAriaOwnership(distinctAccessibleTrigger, contribution);
     }
-    if (!target || !proxy || target === this.triggerElement || this.accessibleTriggerDescription) return;
-    this.accessibleTriggerDescription = describeElement(target, proxy);
+    if (this.overlayHandle?.isActive() && !this.virtualAnchor) {
+      this.overlayHandle.updateRestoreFocusTo(accessibleTrigger);
+    }
+  }
+
+  private get accessibleTrigger(): HTMLElement | null {
+    return this.triggerElement ? resolveAccessibleTrigger(this.triggerElement) : null;
+  }
+
+  private releaseTriggerA11y(): void {
+    this.accessibleTriggerAria?.release();
+    this.accessibleTriggerAria = undefined;
+    this.triggerAria?.release();
+    this.triggerAria = undefined;
   }
   /** Runs `show()`/`hide()` after the matching delay, replacing whatever was pending. */
   private requestTransition(next: boolean): void {
@@ -838,61 +839,24 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   private bindTrigger(trigger: HTMLElement): void {
     trigger.addEventListener('mouseenter', this.onEnter);
     trigger.addEventListener('mouseleave', this.onLeave);
-    trigger.addEventListener('focus', this.onEnter);
-    trigger.addEventListener('blur', this.onLeave);
+    trigger.addEventListener('focusin', this.onEnter);
+    trigger.addEventListener('focusout', this.onLeave);
     trigger.addEventListener('click', this.onTriggerClick);
     trigger.addEventListener('keydown', this.onTriggerKeyDown);
   }
   private unbindTrigger(trigger: HTMLElement): void {
     trigger.removeEventListener('mouseenter', this.onEnter);
     trigger.removeEventListener('mouseleave', this.onLeave);
-    trigger.removeEventListener('focus', this.onEnter);
-    trigger.removeEventListener('blur', this.onLeave);
+    trigger.removeEventListener('focusin', this.onEnter);
+    trigger.removeEventListener('focusout', this.onLeave);
     trigger.removeEventListener('click', this.onTriggerClick);
     trigger.removeEventListener('keydown', this.onTriggerKeyDown);
   }
-  private snapshotTriggerDescription(trigger: HTMLElement): void {
-    this.triggerDescription = {
-      had: trigger.hasAttribute('aria-describedby'),
-      value: trigger.getAttribute('aria-describedby'),
-    };
-    this.triggerDescriptionObserver?.disconnect();
-    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
-    this.triggerDescriptionObserver = MutationObserverCtor
-      ? new MutationObserverCtor(() => {
-          if (!this.triggerElement || !this.triggerDescription) return;
-          const current = this.triggerElement.getAttribute('aria-describedby');
-          const descriptions = new Set((this.triggerDescription.value ?? '').split(/\s+/).filter(Boolean));
-          if (this.open) descriptions.add(this.descriptionId);
-          const generated = descriptions.size > 0 ? [...descriptions].join(' ') : null;
-          if (current === generated) return;
-          this.triggerDescription.had = this.triggerElement.hasAttribute('aria-describedby');
-          this.triggerDescription.value = current;
-          this.syncTriggerA11y();
-        })
-      : undefined;
-    this.triggerDescriptionObserver?.observe(trigger, {
-      attributes: true,
-      attributeFilter: ['aria-describedby'],
-    });
-  }
-  private restoreTriggerDescription(): void {
-    if (this.accessibleTriggerDescription) {
-      undescribeElement(this.accessibleTriggerDescription);
-      this.accessibleTriggerDescription = undefined;
-    }
-    this.triggerDescriptionObserver?.disconnect();
-    this.triggerDescriptionObserver = undefined;
-    if (!this.triggerElement || !this.triggerDescription) return;
-    if (this.triggerDescription.had) {
-      this.triggerElement.setAttribute('aria-describedby', this.triggerDescription.value ?? '');
-    } else {
-      this.triggerElement.removeAttribute('aria-describedby');
-    }
-    this.triggerDescription = undefined;
-  }
   private adoptTrigger(next: HTMLElement | undefined): void {
-    if (next === this.triggerElement) return;
+    if (next === this.triggerElement) {
+      this.syncTriggerA11y();
+      return;
+    }
     const hadTrigger = this.triggerElement !== undefined;
     // Swapping the slotted trigger (a conditional template, a repeat() re-key)
     // must strip the outgoing element's listeners and stale aria-describedby
@@ -901,14 +865,13 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     this.cancelPendingTransition();
     if (this.triggerElement) {
       this.unbindTrigger(this.triggerElement);
-      this.restoreTriggerDescription();
     }
     this.triggerElement = next;
     if (!this.triggerElement) {
+      this.syncTriggerA11y();
       if (hadTrigger && this.open && !this.resolveAnchor()) void this.forceClose();
       return;
     }
-    this.snapshotTriggerDescription(this.triggerElement);
     this.bindTrigger(this.triggerElement);
     this.syncTriggerA11y();
     // An initially-open tooltip reaches its first updated() before slotchange has supplied the
@@ -925,20 +888,30 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   };
   private onEnter = (event: Event): void => {
     if (this.disabled) return;
-    if (event.type === 'focus') {
+    this.syncTriggerA11y();
+    if (event.type === 'focusin') {
       if (this.suppressTriggerFocusOpen || !this.opensOn('focus')) return;
     } else if (!this.opensOn('hover')) return;
     this.requestTransition(true);
   };
   private onLeave = (event: Event): void => {
-    if (event.type === 'blur' ? !this.opensOn('focus') : !this.opensOn('hover')) return;
+    if (event.type === 'focusout' ? !this.opensOn('focus') : !this.opensOn('hover')) return;
     const next = (event as FocusEvent | MouseEvent).relatedTarget;
+    if (
+      next !== null &&
+      (next as Node).nodeType === 1 &&
+      this.triggerElement &&
+      composedContains(this.triggerElement, next as Element)
+    ) {
+      return;
+    }
     if (this.interactiveContent && this.isPopupTarget(next)) return;
     this.requestTransition(false);
   };
   private onTriggerClick = (): void => {
     if (this.disabled) return;
     if (!this.opensOn('click')) return;
+    this.syncTriggerA11y();
     if (this._open) this.hide();
     else this.show();
   };
@@ -952,8 +925,11 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     const next = (event as FocusEvent | MouseEvent).relatedTarget;
     if (
       next !== null
-      && (next as Node).nodeType !== undefined
-      && (this.triggerElement?.contains(next as Node) || this.isPopupTarget(next))
+      && (next as Node).nodeType === 1
+      && (
+        (this.triggerElement && composedContains(this.triggerElement, next as Element)) ||
+        this.isPopupTarget(next)
+      )
     ) return;
     this.requestTransition(false);
   };
@@ -993,37 +969,6 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     }
   }
 
-  private collectContentAncestors(node: Node, ancestors: Set<Element>): void {
-    const slottable = node as Node & { assignedSlot?: HTMLSlotElement | null };
-    let ancestor =
-      node.nodeType === 1
-        ? composedParentElement(node as Element)
-        : slottable.assignedSlot ?? node.parentElement;
-    while (ancestor) {
-      if (ancestor !== this) ancestors.add(ancestor);
-      ancestor = composedParentElement(ancestor);
-    }
-  }
-
-  /** Consumer-owned composed ancestors can prune a forwarded branch even though they are not DOM
-   * ancestors of the tooltip's slot. Internal popup visibility is deliberately ignored: content
-   * must be classified while the tooltip is closed so focus/hover can open the right role. */
-  private hasExcludedContentAncestor(node: Node): boolean {
-    const slottable = node as Node & { assignedSlot?: HTMLSlotElement | null };
-    let ancestor =
-      node.nodeType === 1
-        ? composedParentElement(node as Element)
-        : slottable.assignedSlot ?? node.parentElement;
-    while (ancestor) {
-      const root = ancestor.getRootNode();
-      if (root !== this.renderRoot && isAccessibilitySubtreeExcluded(ancestor)) {
-        return true;
-      }
-      ancestor = composedParentElement(ancestor);
-    }
-    return false;
-  }
-
   private inspectContent(): TooltipContentSnapshot {
     const snapshot: TooltipContentSnapshot = {
       actionable: false,
@@ -1040,49 +985,6 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     if (!activeSlot) return snapshot;
     snapshot.assigned = activeSlot.assignedNodes().length > 0;
 
-    const inspectNode = (node: Node): void => {
-      if (node.nodeType === 3) return;
-      if (node.nodeType !== 1 && node.nodeType !== 11) return;
-      if (node.nodeType === 11) {
-        for (const child of node.childNodes) inspectNode(child);
-        return;
-      }
-
-      const element = node as Element;
-      if (isAccessibilitySubtreeExcluded(element)) return;
-      const ownTextVisible = !isAccessibilityVisibilityHidden(element);
-      if (ownTextVisible && element.matches(ACTIONABLE_SELECTOR)) snapshot.actionable = true;
-
-      if (
-        element.localName === 'slot'
-        && typeof (element as HTMLSlotElement).assignedNodes === 'function'
-      ) {
-        const slot = element as HTMLSlotElement;
-        snapshot.forwardingSlots.add(slot);
-        const assigned = slot.assignedNodes();
-        const children = assigned.length > 0 ? assigned : Array.from(slot.childNodes);
-        for (const child of children) {
-          if (assigned.length > 0) {
-            snapshot.externalRoots.add(child);
-            this.collectContentAncestors(child, snapshot.composedAncestors);
-            if (this.hasExcludedContentAncestor(child)) continue;
-          }
-          inspectNode(child);
-        }
-        return;
-      }
-
-      if (element.shadowRoot) {
-        snapshot.shadowRoots.add(element.shadowRoot);
-        for (const child of element.shadowRoot.childNodes) {
-          inspectNode(child);
-        }
-        return;
-      }
-      if (element.localName.includes('-')) snapshot.awaitingShadowRoot = true;
-      for (const child of element.childNodes) inspectNode(child);
-    };
-
     // The popup hides itself with `visibility: hidden` while closed. Visibility inherits through
     // slots, so reading consumer content in that state would otherwise classify every closed
     // tooltip as empty/non-actionable. Temporarily replace only that internal visibility with the
@@ -1097,8 +999,37 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       popup.style.setProperty('visibility', hostVisibility);
     }
     try {
-      inspectNode(activeSlot);
-      const accessibilityText = composedAccessibilityTextResult(activeSlot);
+      const visitedContentElements = new Set<Element>();
+      const accessibilityText = composedAccessibilityTextResult(activeSlot, {
+        // Reuse the shared walk's node/depth budgets for actionability and observer enrollment too.
+        // Side effects only record nodes the bounded traversal actually reached; returning false
+        // preserves its normal accessible-text projection.
+        shouldPruneNode: (node) => {
+          if (node.getRootNode() !== this.renderRoot && !this.contains(node)) {
+            snapshot.externalRoots.add(node);
+          }
+          if (node.nodeType !== 1) return false;
+          const element = node as Element;
+          visitedContentElements.add(element);
+          const excluded = isAccessibilitySubtreeExcluded(element);
+          if (!excluded && !isAccessibilityVisibilityHidden(element) && isActionableElement(element)) {
+            snapshot.actionable = true;
+          }
+          if (element.localName === 'slot') snapshot.forwardingSlots.add(element as HTMLSlotElement);
+          if (element.shadowRoot) snapshot.shadowRoots.add(element.shadowRoot);
+          else if (element.localName.includes('-')) snapshot.awaitingShadowRoot = true;
+          return false;
+        },
+        // The shared walk invokes this for composed ancestors as well as visited content. Recording
+        // only elements not already seen as content preserves the focused ancestor observation
+        // without a second, independently recursive ancestry walk.
+        isSubtreeExcluded: (element) => {
+          if (!visitedContentElements.has(element) && element !== this) {
+            snapshot.composedAncestors.add(element);
+          }
+          return isAccessibilitySubtreeExcluded(element);
+        },
+      });
       snapshot.text = accessibilityText.text.replace(/\s+/g, ' ').trim();
       for (const root of accessibilityText.labelReferenceRoots) {
         snapshot.labelReferenceRoots.add(root);

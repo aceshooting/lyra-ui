@@ -1,7 +1,15 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
 import { property, state } from "lit/decorators.js";
+import { activeElementIn } from "../../../internal/active-element.js";
 import { hostAriaLabel } from "../../../internal/a11y.js";
+import {
+  applyComposedFocusRepair,
+  captureComposedFocusRepair,
+  isComposedFocusAvailable,
+  type ComposedFocusRepairSnapshot,
+} from "../../../internal/focus-navigation.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
+import { renderInertPresentation } from "../../../internal/inert-presentation.js";
 import { safeLinkHref } from "../../../internal/safe-url.js";
 import { place } from "../../../internal/positioner.js";
 import { rtlAwarePlacement } from "../../../internal/rtl.js";
@@ -14,11 +22,15 @@ import { styles } from "./app-rail-item.styles.js";
  * it from the visual layout.
  * A host `aria-label` is forwarded by attribute presence to the internal
  * focusable link or button, including an explicitly empty value.
+ * When a focused link/button is replaced, focus follows an available replacement. If the new
+ * owner is disabled or inert, focus returns to the available element that led into the item, or
+ * to the stable owning rail surface when there is no return target; a newer external focus move
+ * always wins.
  *
  * @customElement lr-app-rail-item
  * @slot - The visible navigation label.
- * @slot icon - The leading decorative icon, always hidden from assistive technology; the default
- *   slot or host `aria-label` names the internal control.
+ * @slot icon - The leading decorative icon. Its flattened subtree is inert and hidden from
+ *   assistive technology; the default slot or host `aria-label` names the internal control.
  * @csspart base - The link or button receiving focus and activation.
  * @csspart icon - The icon wrapper.
  * @csspart label - The label wrapper; visually clipped in icon-only mode.
@@ -68,6 +80,8 @@ export class LyraAppRailItem extends LyraElement {
 
   @state() private showTooltip = false;
   private stopPositioning?: () => void;
+  private semanticFocusRepair?: ComposedFocusRepairSnapshot;
+  private focusReturnTarget?: HTMLElement;
 
   // Only the default slot's own content counts toward the tooltip text --
   // text incidentally living inside the (decorative) `icon` slot shouldn't
@@ -88,8 +102,13 @@ export class LyraAppRailItem extends LyraElement {
     return hostAriaLabel(this) ?? (this.labelText || "");
   }
 
-  private onFocusShow = (): void => {
+  private onFocusShow = (event: Event): void => {
     if (this.tooltip && this.hasAttribute("icon-only")) this.showTooltip = true;
+    if (event.type !== 'focus') return;
+    const related = (event as FocusEvent).relatedTarget;
+    if (related && (related as Node).nodeType === 1 && isComposedFocusAvailable(related as Element)) {
+      this.focusReturnTarget = related as HTMLElement;
+    }
   };
 
   private onBlurHide = (): void => {
@@ -110,10 +129,31 @@ export class LyraAppRailItem extends LyraElement {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has("tooltip") && !this.tooltip) this.showTooltip = false;
+    if (changed.has("href") || changed.has("disabled")) {
+      const previous = this.renderRoot?.querySelector<HTMLElement>('[part="base"]') ?? null;
+      const nextIsLink = Boolean(safeLinkHref(this.href)) && !this.disabled;
+      const ownerReplaced = previous !== null && (previous.localName === "a") !== nextIsLink;
+      this.semanticFocusRepair = ownerReplaced && activeElementIn(this.shadowRoot) === previous
+        ? captureComposedFocusRepair(this, this.focusFallback() ?? previous) ?? undefined
+        : undefined;
+    }
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    const focusRepair = this.semanticFocusRepair;
+    this.semanticFocusRepair = undefined;
+    if (focusRepair) {
+      this.scheduleAfterUpdate(() => {
+        const replacement = this.renderRoot.querySelector<HTMLAnchorElement | HTMLButtonElement>(
+          '[part="base"]',
+        );
+        const target = replacement && isComposedFocusAvailable(replacement)
+          ? replacement
+          : this.focusFallback();
+        applyComposedFocusRepair(focusRepair, target);
+      }, 'app-rail-item-owner-focus');
+    }
     const popup = this.renderRoot.querySelector(
       '[part="tooltip"]'
     ) as HTMLElement | null;
@@ -139,9 +179,20 @@ export class LyraAppRailItem extends LyraElement {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.semanticFocusRepair = undefined;
+    this.focusReturnTarget = undefined;
     this.stopPositioning?.();
     this.stopPositioning = undefined;
     this.showTooltip = false;
+  }
+
+  private focusFallback(): HTMLElement | null {
+    if (this.focusReturnTarget && isComposedFocusAvailable(this.focusReturnTarget)) {
+      return this.focusReturnTarget;
+    }
+    const rail = this.closest('lr-app-rail');
+    const owner = rail?.shadowRoot?.querySelector<HTMLElement>('[part~="base"], [part~="panel"]') ?? null;
+    return owner && isComposedFocusAvailable(owner) ? owner : null;
   }
 
   /** Activates the internal link or button. Disabled items remain inert. */
@@ -156,7 +207,7 @@ export class LyraAppRailItem extends LyraElement {
     const label = hostAriaLabel(this);
     const href = safeLinkHref(this.href);
     const content = html`
-      <span part="icon" aria-hidden="true"><slot name="icon"></slot></span>
+      ${renderInertPresentation(html`<slot name="icon"></slot>`, { part: "icon" })}
       <span part="label"><slot></slot></span>
       ${this.showTooltip && this.tooltip && this.hasAttribute("icon-only")
         ? html`<span part="tooltip" role="tooltip">${this.tooltipText}</span>`

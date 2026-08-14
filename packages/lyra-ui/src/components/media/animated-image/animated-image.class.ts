@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { playIcon, pauseIcon } from '../../../internal/icons.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { styles } from './animated-image.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -20,8 +21,10 @@ export interface LyraAnimatedImageEventMap {
   'lr-error': CustomEvent<undefined>;
   'lr-play': CustomEvent<undefined>;
   'lr-pause': CustomEvent<undefined>;
-  blur: CustomEvent<undefined>;
-  focus: CustomEvent<undefined>;
+  blur: FocusEvent;
+  focus: FocusEvent;
+  'lr-blur': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<undefined>;
 }
 
 /**
@@ -74,8 +77,12 @@ export interface LyraAnimatedImageEventMap {
  * @event lr-error - The live `<img>` failed to load, or `src` was non-empty but failed the safe-URL check. Never fires for an empty `src`.
  * @event lr-play - The effective `playing` state transitioned `false` -> `true`.
  * @event lr-pause - The effective `playing` state transitioned `true` -> `false` (including a reduced-motion change forcing a freeze while `play` stays `true`).
- * @event blur - Re-dispatched from the internal play/pause button as a bubbling, composed event.
- * @event focus - Re-dispatched from the internal play/pause button as a bubbling, composed event.
+ * @event {FocusEvent} blur - Relayed once from the internal play/pause button as a bubbling,
+ *   composed native event.
+ * @event {FocusEvent} focus - Relayed once from the internal play/pause button as a bubbling,
+ *   composed native event.
+ * @event lr-blur - Prefixed compatibility alias for `blur`.
+ * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @csspart base - Root wrapper; positioning context for `control-box`.
  * @csspart image - The live `<img>`.
  * @csspart canvas - The frozen-frame `<canvas>`, shown in place of `image` while not playing.
@@ -291,13 +298,13 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
   }
 
   private onControlFocus = (event: FocusEvent): void => {
-    event.stopPropagation();
-    this.emit('focus');
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
 
   private onControlBlur = (event: FocusEvent): void => {
-    event.stopPropagation();
-    this.emit('blur');
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
 
   override render(): TemplateResult {

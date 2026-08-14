@@ -1,4 +1,4 @@
-import { expect } from '@open-wc/testing';
+import { expect, fixture, html } from '@open-wc/testing';
 import {
   dayPeriodLabels,
   hasTimeStepMismatch,
@@ -31,6 +31,23 @@ describe('time-input shared value helpers', () => {
     const parsed = parseTimeValue('23:04:05.006');
     expect(parsed).to.deep.include({ hour: 23, minute: 4, second: 5, millisecond: 6 });
     expect(parsed?.milliseconds).to.equal(83_045_006);
+  });
+
+  it('accepts a branded Date from another realm and rejects a structural lookalike', async () => {
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+    const foreignDate = new frame.contentWindow!.Date(2026, 6, 15, 23, 4, 5, 6);
+    const forgedDate = {
+      getTime: () => foreignDate.getTime(),
+      getHours: () => 23,
+      getMinutes: () => 4,
+      getSeconds: () => 5,
+      getMilliseconds: () => 6,
+      [Symbol.toStringTag]: 'Date',
+    } as unknown as Date;
+
+    expect(foreignDate instanceof Date).to.equal(false);
+    expect(normalizeTimeValue(foreignDate)).to.equal('23:04:05.006');
+    expect(normalizeTimeValue(forgedDate)).to.equal('');
   });
 
   it('treats an invalid Date as empty rather than propagating NaN clock fields', () => {

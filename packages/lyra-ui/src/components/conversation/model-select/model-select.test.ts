@@ -81,6 +81,46 @@ it('renders a free-text input when allow-custom is set, even with a non-empty ca
   expect((el.shadowRoot!.querySelector('[part="trigger"]')) === null).to.be.true;
 });
 
+it('preserves owned focus when a catalog change replaces the closed trigger with free text', async () => {
+  const el = (await fixture(
+    html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`,
+  )) as LyraModelSelect;
+  trigger(el).focus();
+
+  el.catalog = [];
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.activeElement === input(el)).to.equal(true);
+});
+
+it('preserves owned focus when allow-custom replaces free text with the closed trigger', async () => {
+  const el = (await fixture(
+    html`<lr-model-select allow-custom .catalog=${CATALOG}></lr-model-select>`,
+  )) as LyraModelSelect;
+  input(el).focus();
+
+  el.allowCustom = false;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.activeElement === trigger(el)).to.equal(true);
+});
+
+it('does not move external focus when its semantic control mode changes', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <button id="outside">Outside</button>
+      <lr-model-select .catalog=${CATALOG}></lr-model-select>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-model-select') as LyraModelSelect;
+  wrapper.querySelector<HTMLElement>('#outside')!.focus();
+
+  el.catalog = [];
+  await el.updateComplete;
+
+  expect(el.ownerDocument.activeElement?.id).to.equal('outside');
+});
+
 it('forwards selection and range editing in free-text mode while synchronizing form state', async () => {
   const form = (await fixture(html`
     <form>
@@ -784,6 +824,46 @@ it('suppresses the free-text input blur handler during a mode switch back to the
     (el as unknown as { touched: boolean }).touched,
     'the structural blur during the mode switch must not mark the control touched'
   ).to.be.false;
+});
+
+it('returns focus externally when a replacement mode owner is disabled or inert', async () => {
+  for (const unavailable of ['disabled', 'inert'] as const) {
+    const wrapper = await fixture(html`
+      <div>
+        <button id="model-select-return-${unavailable}">Before picker</button>
+        <lr-model-select .catalog=${CATALOG}></lr-model-select>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-model-select') as LyraModelSelect;
+    const outside = wrapper.querySelector<HTMLElement>(`#model-select-return-${unavailable}`)!;
+    outside.focus();
+    trigger(el).focus();
+    expect(
+      (el as unknown as { focusReturnTarget?: HTMLElement }).focusReturnTarget === outside,
+      `${unavailable} return target is captured before replacement`,
+    ).to.equal(true);
+
+    el.allowCustom = true;
+    if (unavailable === 'disabled') el.disabled = true;
+    else el.inert = true;
+    await el.updateComplete;
+
+    expect(el.ownerDocument.activeElement === outside, unavailable).to.equal(true);
+  }
+});
+
+it('focuses the stable form-control owner when a disabled replacement has no external return target', async () => {
+  const el = (await fixture(
+    html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`,
+  )) as LyraModelSelect;
+  trigger(el).focus();
+  (el as unknown as { focusReturnTarget?: HTMLElement }).focusReturnTarget = undefined;
+
+  el.allowCustom = true;
+  el.disabled = true;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('form-control');
 });
 
 describe('touched state (disabled-forced blur)', () => {

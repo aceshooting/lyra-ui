@@ -10,6 +10,19 @@ import type { LyraButton } from "../../forms/button/button.js";
 import type { LyraIconButton } from "../../forms/icon-button/icon-button.js";
 import { setReducedMotion } from "../../../../test/wtr-media.js";
 
+const composedMenuTriggerTag = 'test-composed-menu-trigger';
+if (!customElements.get(composedMenuTriggerTag)) {
+  customElements.define(
+    composedMenuTriggerTag,
+    class extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' }).innerHTML = '<button type="button">Actions</button>';
+      }
+    },
+  );
+}
+
 const basic = () => html`
   <lr-menu label="Row actions">
     <button slot="trigger" aria-label="Row actions">⋮</button>
@@ -193,6 +206,32 @@ it("forwards menu trigger semantics to lr-icon-button's focused native control",
   await triggerButton.updateComplete;
   expect(focusedControl.getAttribute("aria-expanded")).to.equal("true");
   await expect(el).to.be.accessible();
+});
+
+it('owns ARIA and returns focus on the real control inside a consumer trigger wrapper', async () => {
+  const el = (await fixture(html`
+    <lr-menu label="Actions">
+      <test-composed-menu-trigger slot="trigger"></test-composed-menu-trigger>
+      <lr-menu-item value="rename">Rename</lr-menu-item>
+    </lr-menu>
+  `)) as LyraMenu;
+  const wrapper = el.querySelector(composedMenuTriggerTag) as HTMLElement;
+  const focusedControl = wrapper.shadowRoot!.querySelector('button')!;
+  await nextFrame();
+
+  expect(wrapper.getAttribute('aria-haspopup')).to.equal('menu');
+  expect(focusedControl.getAttribute('aria-haspopup')).to.equal('menu');
+  expect(focusedControl.getAttribute('aria-expanded')).to.equal('false');
+  if ('ariaControlsElements' in focusedControl) {
+    expect(focusedControl.ariaControlsElements.length).to.equal(1);
+    expect(focusedControl.ariaControlsElements[0] === el).to.equal(true);
+  }
+
+  focusedControl.click();
+  await el.updateComplete;
+  expect(el.open).to.equal(true);
+  el.hide({ focusTrigger: true });
+  expect(wrapper.shadowRoot!.activeElement === focusedControl).to.equal(true);
 });
 
 it("opens on trigger click and moves focus to the first item", async () => {
@@ -824,6 +863,39 @@ it("fires lr-show/lr-hide when `open` is set directly, bypassing click/keyboard"
   expect(el.open).to.be.false;
 });
 
+it("runs the open preflight synchronously before mutating state or the requested focus target", async () => {
+  const el = (await fixture(basic())) as LyraMenu;
+  await el.updateComplete;
+  const seen: boolean[] = [];
+  el.addEventListener("lr-show", (event) => {
+    seen.push(el.open);
+    event.preventDefault();
+  }, { once: true });
+
+  el.show("last");
+
+  expect(seen).to.deep.equal([false]);
+  expect(el.open).to.be.false;
+  el.open = true;
+  await el.updateComplete;
+  expect(activeItemValue(), "a vetoed request must not leak its pending last-focus target").to.equal(
+    "item:rename"
+  );
+});
+
+it("does not move focus before a close request is accepted", async () => {
+  const el = (await fixture(basic())) as LyraMenu;
+  el.show();
+  await el.updateComplete;
+  const focusedBefore = activeItemValue();
+  el.addEventListener("lr-hide", (event) => event.preventDefault(), { once: true });
+
+  el.hide({ focusTrigger: true });
+
+  expect(el.open).to.be.true;
+  expect(activeItemValue()).to.equal(focusedBefore);
+});
+
 it("does not fire lr-show/lr-hide for markup that renders open from the start", async () => {
   const el = (await fixture(html`
     <lr-menu open>
@@ -1104,6 +1176,58 @@ it("clears the type-ahead buffer across disconnect and reconnect", async () => {
   );
   await el.updateComplete;
   expect((document.activeElement) === (rename)).to.equal(true);
+});
+
+it("clears the type-ahead buffer after an accepted close but retains it after a veto", async () => {
+  const el = (await fixture(basic())) as LyraMenu;
+  el.show();
+  await el.updateComplete;
+  (document.activeElement as HTMLElement).dispatchEvent(
+    new KeyboardEvent("keydown", { key: "d", bubbles: true, cancelable: true })
+  );
+  expect(activeItemValue()).to.equal("item:duplicate");
+
+  el.addEventListener("lr-hide", (event) => event.preventDefault(), { once: true });
+  el.hide();
+  (document.activeElement as HTMLElement).dispatchEvent(
+    new KeyboardEvent("keydown", { key: "e", bubbles: true, cancelable: true })
+  );
+  expect(activeItemValue(), "a veto leaves the active type-ahead session intact").to.equal(
+    "item:delete"
+  );
+
+  el.hide();
+  await el.updateComplete;
+  el.show();
+  await el.updateComplete;
+  (document.activeElement as HTMLElement).dispatchEvent(
+    new KeyboardEvent("keydown", { key: "d", bubbles: true, cancelable: true })
+  );
+  expect(activeItemValue(), "an accepted close starts the next open with an empty buffer").to.equal(
+    "item:duplicate"
+  );
+});
+
+it("matches type-ahead against a resolved aria-labelledby accessible name", async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <span id="billing-action">Billing</span>
+      <lr-menu label="Actions">
+        <button slot="trigger">Actions</button>
+        <lr-menu-item value="account" aria-labelledby="billing-action">Account</lr-menu-item>
+        <lr-menu-item value="archive">Archive</lr-menu-item>
+      </lr-menu>
+    </div>
+  `);
+  const el = wrapper.querySelector("lr-menu") as LyraMenu;
+  el.show();
+  await el.updateComplete;
+
+  (document.activeElement as HTMLElement).dispatchEvent(
+    new KeyboardEvent("keydown", { key: "b", bubbles: true, cancelable: true })
+  );
+
+  expect(activeItemValue()).to.equal("item:account");
 });
 
 it("clips horizontal overflow while retaining vertical list scrolling", async () => {

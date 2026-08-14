@@ -1559,7 +1559,7 @@ it('renders structured async-row adornments and preserves selected opaque data',
       value: 'lux',
       label: 'Luxembourg',
       sub: 'Lëtzebuerg',
-      icon: html`<span>⌖</span>`,
+      icon: html`<button id="nested-async-row-icon" type="button">⌖</button>`,
       badge: 'City',
       accessibleLabel: 'Luxembourg, city in Luxembourg',
       data: payload,
@@ -1572,8 +1572,18 @@ it('renders structured async-row adornments and preserves selected opaque data',
 
   const row = el.shadowRoot!.querySelector('[part="option"]') as HTMLElement;
   expect(row.getAttribute('aria-label')).to.equal('Luxembourg, city in Luxembourg');
-  expect(row.querySelector('[part="option-icon"]')?.getAttribute('aria-hidden')).to.equal('true');
+  const icon = row.querySelector<HTMLElement>('[part="option-icon"]')!;
+  const nestedIconButton = icon.querySelector<HTMLButtonElement>('#nested-async-row-icon')!;
+  expect(icon.getAttribute('aria-hidden')).to.equal('true');
+  expect(icon.hasAttribute('inert')).to.equal(true);
+  expect(nestedIconButton.getBoundingClientRect().width).to.be.greaterThan(0);
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="combobox-input"]')!;
+  input.focus();
+  nestedIconButton.focus();
+  expect(el.shadowRoot!.activeElement === input).to.equal(true);
   expect(row.querySelector('[part="option-badge"]')?.textContent).to.equal('City');
+  finishListboxAnimation(el);
+  await expect(el).to.be.accessible();
   row.click();
   await el.updateComplete;
   expect(el.selectedRows).to.have.length(1);
@@ -2556,6 +2566,23 @@ describe('native input surface', () => {
     expect(el.shadowRoot!.activeElement === null).to.be.true;
   });
 
+  it('rejects host focus synchronously when direct or fieldset disablement starts', async () => {
+    const fieldset = await fixture<HTMLFieldSetElement>(html`
+      <fieldset><lr-combobox><lr-option value="a">Apple</lr-option></lr-combobox></fieldset>
+    `);
+    const el = fieldset.querySelector('lr-combobox') as LyraCombobox;
+
+    el.disabled = true;
+    el.focus();
+    expect(el.shadowRoot!.activeElement === null, 'direct disabled write').to.be.true;
+
+    el.disabled = false;
+    await el.updateComplete;
+    fieldset.disabled = true;
+    el.focus();
+    expect(el.shadowRoot!.activeElement === null, 'same-task fieldset cascade').to.be.true;
+  });
+
   it('bridges native focus and blur as bubbling, composed host events', async () => {
     const el = (await fixture(basic())) as LyraCombobox;
     const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
@@ -3414,6 +3441,9 @@ it('preserves rendered label, hint and error behavior through shared slot change
   expect(label.hidden).to.be.false;
   expect(hint.hidden).to.be.false;
   expect(error.hidden).to.be.false;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  expect(input.getAttribute('aria-invalid')).to.equal('true');
+  expect(el.checkValidity(), 'visible consumer error chrome does not rewrite FACE validity').to.be.true;
 
   for (const slot of ['label', 'hint', 'error']) el.querySelector(`[slot="${slot}"]`)!.remove();
   await new Promise((r) => requestAnimationFrame(() => r(null)));
@@ -3421,6 +3451,7 @@ it('preserves rendered label, hint and error behavior through shared slot change
   expect(label.hidden).to.be.true;
   expect(hint.hidden).to.be.true;
   expect(error.hidden).to.be.true;
+  expect(input.getAttribute('aria-invalid')).to.equal('false');
 });
 
 it('ArrowDown and ArrowUp open a closed list before moving within it', async () => {

@@ -6,6 +6,14 @@ const meta: Meta = {
   title: 'Media/Pan Zoom',
   component: 'lr-pan-zoom',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Scrollable pan-and-zoom surface for slotted content or an image source. Viewport focus transitions relay exactly one native `FocusEvent` plus the `lr-focus`/`lr-blur` alias.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

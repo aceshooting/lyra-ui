@@ -537,6 +537,18 @@ it('forwards focus() and blur() to the internal switch control', async () => {
   expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
 });
 
+it('suppresses host focus/click in the same task that fieldset disablement starts', async () => {
+  const fieldset = await fixture<HTMLFieldSetElement>(html`
+    <fieldset><lr-switch>Label</lr-switch></fieldset>
+  `);
+  const el = fieldset.querySelector('lr-switch') as LyraSwitch;
+  fieldset.disabled = true;
+  el.focus();
+  el.click();
+  expect(el.shadowRoot!.activeElement === null).to.be.true;
+  expect(el.checked).to.be.false;
+});
+
 it('relays exactly one native focus/blur pair plus one prefixed alias pair', async () => {
   const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
   const nativeEvents: FocusEvent[] = [];

@@ -7,6 +7,14 @@ const meta: Meta = {
   title: 'Emoji Picker',
   component: 'lr-emoji-picker',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Emoji picks emit native input/change followed by lr-input/lr-change aliases with detail.value; search focus/blur are native FocusEvent relays followed by lr-focus/lr-blur.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

@@ -1,4 +1,4 @@
-import { html, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import {
@@ -6,6 +6,7 @@ import {
 } from '../../../internal/accessibility-visibility.js';
 import { composedAccessibilityText } from '../../../internal/announcement-text.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { styles } from './empty.styles.js';
 
@@ -20,16 +21,19 @@ import { styles } from './empty.styles.js';
  * fallback content; later assignment and assigned-content mutations are observed without making
  * initial distribution live. Updates while the host or a composed ancestor is not
  * rendered/accessibility-visible stay silent. A host `aria-label` names the host only and does not
- * replace visible heading/description text in the announcement sink.
+ * replace visible heading/description text in the announcement sink. Property and rich-slot
+ * headings default to semantic level 3; set `heading-level` from `1`–`6` to fit the surrounding
+ * outline, or `none` for visual-only heading text.
  *
  * @customElement lr-empty
  * @slot - Custom icon or illustration (defaults to none).
- * @slot heading - Rich heading content (overrides the `heading` attribute).
+ * @slot heading - Rich heading content (overrides the `heading` attribute) inside the configured
+ *   semantic heading wrapper.
  * @slot description - Rich description content (overrides the `description` attribute).
  * @slot actions - Buttons/links shown below the description.
  * @csspart base - The outer container.
  * @csspart icon - The wrapper around the default-slotted icon/illustration.
- * @csspart heading - The heading paragraph.
+ * @csspart heading - The heading paragraph (`role="heading"` at the configured level unless opted out).
  * @csspart description - The description paragraph.
  * @csspart actions - The wrapper around the `actions`-slotted content.
  * @cssprop --lr-empty-compact-align - Cross-axis and text alignment used in compact mode;
@@ -49,6 +53,11 @@ export class LyraEmpty extends LyraElement {
 
   /** Short heading, e.g. "No results". */
   @property() heading = '';
+
+  /** Semantic level of the visible property/slotted heading. Use `none` for visual-only text;
+   *  invalid untyped values use level 3. */
+  @property({ attribute: 'heading-level', reflect: true })
+  headingLevel: LyraHeadingLevel = '3';
 
   /** Supporting copy, e.g. "Try a different search." */
   @property() description = '';
@@ -245,10 +254,16 @@ export class LyraEmpty extends LyraElement {
   override render(): TemplateResult {
     const hasHeading = this.slotPresence.has('heading') || this.heading.length > 0;
     const hasDescription = this.slotPresence.has('description') || this.description.length > 0;
+    const headingLevel = resolveHeadingLevel(this.headingLevel);
     return html`
       <div part="base">
         <div part="icon" ?hidden=${!this.slotPresence.has()}><slot></slot></div>
-        <p part="heading" ?hidden=${!hasHeading}>
+        <p
+          part="heading"
+          role=${headingLevel ? 'heading' : nothing}
+          aria-level=${headingLevel ?? nothing}
+          ?hidden=${!hasHeading}
+        >
           <slot name="heading">${this.heading}</slot>
         </p>
         <p part="description" ?hidden=${!hasDescription}>

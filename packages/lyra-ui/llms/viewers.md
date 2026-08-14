@@ -859,8 +859,10 @@ label when `FN` is absent).
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the contacts.
 
-**Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
-`max-height`); invalid CSS
+**Properties:** `src: string = ''`, `name: string = ''`,
+`headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — `1`–`6` expose every
+rendered contact name at that semantic level, invalid untyped values retain level 3, and `none`
+keeps the names visual-only — and `maxHeight: string = ''` (attribute `max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
 precedence over `name` by attribute presence, including an explicitly empty value. `highlights`,
 `activeHighlightId`, `anchor`, and

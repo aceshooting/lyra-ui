@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import {
   activateOverlay,
   collectFocusableElements,
@@ -104,6 +105,9 @@ export interface LyraDialogEventMap {
  * inside the same shadow root it labels, so `aria-labelledby` there is safe.
  * The `label` *slot* is safe for the same reason: `aria-labelledby` targets the shadow-owned
  * `part="heading"` wrapper, and the accessible-name computation flattens the slot inside it.
+ * That generated visible title is a level-three heading by default; set `heading-level` from
+ * `1`–`6` to fit the surrounding outline, or `none` for visual-only title text. A direct
+ * light-DOM heading retains its own level instead.
  *
  * `closable` defaults to true and renders a close (X) button in the header row (creating one, with
  * no heading text, if neither `heading` nor the `label` slot is set) that closes the dialog via
@@ -157,7 +161,8 @@ export interface LyraDialogEventMap {
  * @csspart header - The header row, rendered when the `label` slot is filled, `label`/`heading`
  *   is set (and no heading is slotted into the default slot), `header-actions` is filled, and/or
  *   `closable` is `true` — and never when `noHeader` or `withoutHeader` is set.
- * @csspart heading - The visible title inside `header`; also carries `title` and `label`.
+ * @csspart heading - The visible title inside `header`; also carries `title` and `label`, and owns
+ *   the configured heading semantics unless opted out.
  * @csspart title - Mapped alias on the visible title.
  * @csspart header-actions - The wrapper around the `header-actions` slot.
  * @csspart close-button - The built-in close button, rendered inside `header`
@@ -232,6 +237,11 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
 
   /** Visible mapped title. The richer `label` slot wins when both are supplied. */
   @property({ reflect: true }) label = '';
+
+  /** Semantic level of the generated visible title. Use `none` for visual-only text. A direct
+   *  light-DOM heading retains its own native/ARIA level; invalid untyped values use level 3. */
+  @property({ attribute: 'heading-level', reflect: true })
+  headingLevel: LyraHeadingLevel = '3';
 
   /** Legacy visible title fallback. The richer `label` slot and mapped `label` property win. Has
    *  no effect when a direct light-DOM heading already supplies custom title chrome. */
@@ -742,6 +752,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     const useHeadingForName = !hasExplicitName && renderHeading;
     const showHeader =
       !suppressHeader && (renderHeading || this.hasHeaderActionsSlot || this.closable);
+    const headingLevel = resolveHeadingLevel(this.headingLevel);
     return html`
       <div part="base">
         <div part="backdrop overlay" @click=${this.onBackdropClick}></div>
@@ -757,7 +768,11 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
             ? html`
                 <div part="header">
                   ${renderHeading
-                    ? html`<span id=${this.headingId} part="heading title label"
+                    ? html`<span
+                        id=${this.headingId}
+                        part="heading title label"
+                        role=${headingLevel ? 'heading' : nothing}
+                        aria-level=${headingLevel ?? nothing}
                         ><slot name="label">${this.label || this.heading}</slot></span
                       >`
                     : nothing}

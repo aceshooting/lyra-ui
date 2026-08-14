@@ -200,7 +200,8 @@ export const Vertical: Story = {
   </lr-carousel>`,
 };
 
-/** Both navigation glyphs can be replaced without rebuilding the buttons or their labels. */
+/** Both navigation glyphs can be replaced without rebuilding the buttons or their labels. Their
+ * flattened content remains visible but inert and aria-hidden beneath the native actions. */
 export const CustomNavigationIcons: Story = {
   render: () => html`<lr-carousel navigation pagination aria-label="Product previews">
     <span slot="previous-icon" aria-hidden="true">←</span>

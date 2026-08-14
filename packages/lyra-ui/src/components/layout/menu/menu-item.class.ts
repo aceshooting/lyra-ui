@@ -4,9 +4,8 @@ import { property, state } from 'lit/decorators.js';
 import {
   composedParentElement,
   isAccessibilitySubtreeExcluded,
-  isAccessibilityVisibilityHidden,
-  isAccessibilityVisible,
 } from '../../../internal/a11y.js';
+import { composedAccessibilityText } from '../../../internal/accessibility-visibility.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { chevronIcon, spinnerIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
@@ -541,57 +540,21 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     return 'host' in root && root.host.nodeType === 1 ? root.host : null;
   }
 
-  /** The visual slot wrappers are intentionally inert, but their author-owned label content still
-   * supplies this host's name and type-ahead text. Skip only the known label presentation fence;
-   * visibility and accessibility state in every author-owned branch still applies. */
-  private isVisibleLabelContent(element: Element): boolean {
-    return isAccessibilityVisible(element, {
-      ignorePresentation: (candidate) =>
-        candidate.getRootNode() === this.renderRoot &&
-        candidate.matches('[part~="label"][aria-hidden="true"][inert]:not([hidden])'),
-    });
-  }
-
-  /** Plain text that can contribute to the row's accessible name. Flattened forwarding slots are
-   * traversed without allowing their fallback to leak through a real (even hidden) assignment. */
-  private accessibleLabelText(node: Node, inheritedTextVisible?: boolean): string {
-    if (node.nodeType === 3) {
-      if (inheritedTextVisible === undefined) {
-        const parent = this.composedParentForNode(node);
-        inheritedTextVisible = parent !== null &&
-          !isAccessibilitySubtreeExcluded(parent) &&
-          !isAccessibilityVisibilityHidden(parent) &&
-          this.isVisibleLabelContent(parent);
-      }
-      return inheritedTextVisible ? node.textContent ?? '' : '';
-    }
-    if (node.nodeType !== 1) return '';
-
-    const element = node as Element;
-    if (isAccessibilitySubtreeExcluded(element)) return '';
-    const ownTextVisible = !isAccessibilityVisibilityHidden(element);
-    // `visibility:hidden` does not prune a subtree: a descendant can restore visibility. For an
-    // otherwise visible node, however, this also catches hidden composed ancestors, closed
-    // `<details>` branches, and skipped `content-visibility:auto` content.
-    if (ownTextVisible && !this.isVisibleLabelContent(element)) return '';
-    const ariaLabel = ownTextVisible ? element.getAttribute('aria-label')?.trim() : '';
-    if (ariaLabel) return ariaLabel;
-    const children =
-      element.localName === 'slot' && (element as HTMLSlotElement).assignedNodes().length > 0
-        ? (element as HTMLSlotElement).assignedNodes({ flatten: true })
-        : Array.from(element.childNodes);
-    return Array.from(children)
-      .map((child) => this.accessibleLabelText(child, ownTextVisible))
-      .join(' ');
+  private isLabelSubtreeExcluded(element: Element): boolean {
+    const presentationFence =
+      element.getRootNode() === this.renderRoot &&
+      element.matches('[part~="label"][aria-hidden="true"][inert]:not([hidden])');
+    return !presentationFence && isAccessibilitySubtreeExcluded(element);
   }
 
   private readSlottedLabel(slot: HTMLSlotElement | null = this.defaultLabelSlot()): string {
     const nodes = slot
       ? slot.assignedNodes({ flatten: true })
       : Array.from(this.childNodes).filter((node) => this.isDefaultLabelBranch(node));
-    return nodes
-      .map((node) => this.accessibleLabelText(node))
-      .join(' ')
+    return composedAccessibilityText(nodes, {
+      ancestorBoundary: this,
+      isSubtreeExcluded: (element) => this.isLabelSubtreeExcluded(element),
+    })
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -618,9 +581,11 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
         'aria-hidden',
         'aria-label',
         'aria-labelledby',
+        'alt',
         'class',
         'hidden',
         'inert',
+        'id',
         'label',
         'open',
         'slot',

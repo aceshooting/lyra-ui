@@ -70,6 +70,9 @@ export const styles = css`
       opacity var(--lr-toast-show-duration),
       transform var(--lr-toast-show-duration);
   }
+  [part='toast-item'][hidden] {
+    display: none;
+  }
   :host([data-hiding]) [part='toast-item'] {
     transition:
       opacity var(--lr-toast-hide-duration),

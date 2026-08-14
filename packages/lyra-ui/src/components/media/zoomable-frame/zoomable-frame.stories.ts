@@ -6,6 +6,14 @@ const meta: Meta = {
   title: 'Media/Zoomable Frame',
   component: 'lr-zoomable-frame',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Sandboxed iframe preview with discrete zoom controls. Frame focus transitions relay exactly one owner-realm native `FocusEvent` plus the `lr-focus`/`lr-blur` alias in Chromium, Firefox, and WebKit.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

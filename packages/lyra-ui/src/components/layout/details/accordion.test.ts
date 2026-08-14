@@ -894,6 +894,28 @@ describe('<lr-accordion-item>', () => {
     await expect(item).to.be.accessible();
   });
 
+  it('keeps interactive icon content visible but inert beneath the sole trigger', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div>
+      <button id="before-accordion-icon">Before</button>
+      <lr-accordion-item label="Preferences">
+        <a id="nested-accordion-icon" slot="icon" href="#nested-icon">+</a>
+        Content
+      </lr-accordion-item>
+    </div>`);
+    const item = wrapper.querySelector('lr-accordion-item') as LyraAccordionItem;
+    const before = wrapper.querySelector<HTMLButtonElement>('#before-accordion-icon')!;
+    const nestedIcon = wrapper.querySelector<HTMLAnchorElement>('#nested-accordion-icon')!;
+    const icon = buttonFor(item).querySelector<HTMLElement>('[part~="icon"]')!;
+
+    expect(icon.getAttribute('aria-hidden')).to.equal('true');
+    expect(icon.hasAttribute('inert')).to.equal(true);
+    expect(nestedIcon.getBoundingClientRect().width).to.be.greaterThan(0);
+    before.focus();
+    nestedIcon.focus();
+    expect(item.ownerDocument.activeElement === before).to.equal(true);
+    await expect(item).to.be.accessible();
+  });
+
   it('keeps a slotted trigger name live and lets a present host label win', async () => {
     const item = (await fixture(html`<lr-accordion-item aria-label="Author label">
       <span id="live-slotted-label" slot="label">Initial label</span>

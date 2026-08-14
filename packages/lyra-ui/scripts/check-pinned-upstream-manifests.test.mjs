@@ -249,6 +249,7 @@ test('feeds the verified manifests into strict inventory and pinned-surface vali
         assert.equal(value, inventory);
         assert.equal(options.webawesomeManifest, manifests.webawesome);
         assert.equal(options.shoelaceManifest, manifests.shoelace);
+        assert.equal(options.upstreamTags, upstreamTags);
         return ['a-finding', 'duplicate'];
       },
     },
@@ -315,7 +316,16 @@ test('pin configuration must match the canonical packages and upstream versions'
   };
   const upstreamTags = {
     webawesome: { version: '3.11.0' },
-    shoelace: { version: '2.20.1' },
+    shoelace: {
+      version: '2.20.1',
+      runtimeEventCancelability: {
+        source: {
+          package: '@shoelace-style/shoelace',
+          version: '2.20.1',
+          tarballIntegrity: fixturePins.packages.shoelace.tarballIntegrity,
+        },
+      },
+    },
   };
   const inventory = {
     pins: {
@@ -334,5 +344,13 @@ test('pin configuration must match the canonical packages and upstream versions'
   assert.throws(
     () => validatePinConfiguration(fixturePins, { inventory, upstreamTags: staleTags }),
     /Shoelace.*2\.20\.0.*2\.20\.1/u,
+  );
+
+  const staleEvidence = structuredClone(upstreamTags);
+  staleEvidence.shoelace.runtimeEventCancelability.source.tarballIntegrity =
+    `sha512-${Buffer.alloc(64, 1).toString('base64')}`;
+  assert.throws(
+    () => validatePinConfiguration(fixturePins, { inventory, upstreamTags: staleEvidence }),
+    /Shoelace: runtime evidence integrity does not match the reviewed artifact/u,
   );
 });

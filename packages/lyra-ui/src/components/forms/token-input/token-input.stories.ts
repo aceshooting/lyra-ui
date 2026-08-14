@@ -58,7 +58,7 @@ export const Editable: Story = {
   ></lr-token-input>`,
 };
 
-/** The inline editor relays focus and blur through the host just like the draft text input. */
+/** The inline editor relays native focus/blur and their prefixed aliases like the draft input. */
 export const EditableLifecycleEvents: Story = {
   render: () => {
     const report = (event: Event): void => {
@@ -74,6 +74,8 @@ export const EditableLifecycleEvents: Story = {
           .value=${['Ada', 'Grace']}
           @focus=${report}
           @blur=${report}
+          @lr-focus=${report}
+          @lr-blur=${report}
         ></lr-token-input>
         <output aria-live="polite">No lifecycle event received yet.</output>
       </div>

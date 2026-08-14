@@ -738,6 +738,46 @@ describe('jump pill', () => {
     expect(el.follow).to.be.true;
   });
 
+  it('moves focus from the disappearing jump pill to the slotted transcript scroll owner', async () => {
+    const el = (await fixture(
+      html`<lr-chat-viewport style="block-size:100px"
+        >${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}</lr-chat-viewport
+      >`,
+    )) as LyraChatViewport;
+    el.follow = false;
+    await el.updateComplete;
+
+    const pill = el.shadowRoot!.querySelector('[part="jump-pill"]') as HTMLButtonElement;
+    pill.focus();
+    pill.click();
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('scroll');
+  });
+
+  it('does not reclaim focus when a pill activation moves it to an external target', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <lr-chat-viewport style="block-size:100px">
+          ${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}
+        </lr-chat-viewport>
+        <button id="newer-chat-focus">Newer focus</button>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-chat-viewport') as LyraChatViewport;
+    const newer = wrapper.querySelector('#newer-chat-focus') as HTMLButtonElement;
+    el.follow = false;
+    await el.updateComplete;
+
+    const pill = el.shadowRoot!.querySelector('[part="jump-pill"]') as HTMLButtonElement;
+    pill.focus();
+    el.addEventListener('click', () => newer.focus(), { once: true });
+    pill.click();
+    await el.updateComplete;
+
+    expect(document.activeElement?.id).to.equal('newer-chat-focus');
+  });
+
   it('gives jump-pill a hover state', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='jump-pill'\]:hover/);
@@ -885,6 +925,20 @@ describe('virtual mode', () => {
     const list = el.querySelector('lr-virtual-list') as LyraVirtualList;
     expect(scroll.hasAttribute('tabindex')).to.be.false;
     expect(list.shadowRoot!.querySelector('[part="base"]')!.getAttribute('tabindex')).to.equal('0');
+  });
+
+  it('moves focus from a controlled-away jump pill to the virtual list actual focus owner', async () => {
+    const el = (await fixture(virtualFixtureMarkup(20))) as LyraChatViewport;
+    el.follow = false;
+    await el.updateComplete;
+    const list = el.querySelector('lr-virtual-list') as LyraVirtualList;
+    const pill = el.shadowRoot!.querySelector('[part="jump-pill"]') as HTMLButtonElement;
+
+    pill.focus();
+    el.follow = true;
+    await el.updateComplete;
+
+    expect(list.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
   });
 
   it('sizes the slotted list to the full bounded viewport with no consumer CSS', async () => {

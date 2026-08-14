@@ -10,6 +10,7 @@ import {
   type NativeTextTrackPreference,
 } from '../../../internal/media-controller.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { tag } from '../../../internal/prefix.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import type { LyraVideo, LyraVideoControls } from '../video/video.js';
@@ -63,8 +64,10 @@ export interface LyraVideoPlaylistChangeDetail {
 
 export interface LyraVideoPlaylistEventMap {
   'lr-video-change': CustomEvent<LyraVideoPlaylistChangeDetail>;
-  blur: CustomEvent<undefined>;
-  focus: CustomEvent<undefined>;
+  blur: FocusEvent;
+  focus: FocusEvent;
+  'lr-blur': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<undefined>;
 }
 
 interface VideoListeners {
@@ -166,8 +169,12 @@ function frozenTrack(
  * @event lr-video-change - Emitted when `goTo()`, `next()`, `previous()`, or automatic advancement
  *   selects a video. Detail is `{ previousIndex, currentIndex, video }`; `video` is a fresh frozen
  *   `{ title, poster, sources, tracks }` data snapshot and contains no live DOM nodes.
- * @event focus - Re-dispatched from a playlist row as a bubbling, composed event.
- * @event blur - Re-dispatched from a playlist row as a bubbling, composed event.
+ * @event {FocusEvent} focus - Relayed once from a playlist row as a bubbling, composed native
+ *   event.
+ * @event {FocusEvent} blur - Relayed once from a playlist row as a bubbling, composed native
+ *   event.
+ * @event lr-focus - Prefixed compatibility alias for `focus`.
+ * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @csspart base - Deprecated alias on the same root node as `video-playlist`.
  * @csspart video-playlist - Root video-and-playlist layout.
  * @csspart playlist - Playlist sidebar container.
@@ -790,13 +797,13 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
   }
 
   private onItemFocus = (event: FocusEvent): void => {
-    event.stopPropagation();
-    this.emit('focus');
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
 
   private onItemBlur = (event: FocusEvent): void => {
-    event.stopPropagation();
-    this.emit('blur');
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
 
   private focusItem(index: number): void {

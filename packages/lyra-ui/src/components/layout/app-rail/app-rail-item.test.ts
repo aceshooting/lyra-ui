@@ -1,7 +1,20 @@
 import { fixture, expect, html } from "@open-wc/testing";
 import "./app-rail-item.js";
+import "./app-rail.js";
 import type { LyraAppRailItem } from "./app-rail-item.js";
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+
+if (!customElements.get('app-rail-icon-forwarder')) {
+  customElements.define(
+    'app-rail-icon-forwarder',
+    class extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' }).append(document.createElement('slot'));
+      }
+    },
+  );
+}
 
 it("renders a labeled link with icon and label parts", async () => {
   const el = (await fixture(html`
@@ -13,6 +26,14 @@ it("renders a labeled link with icon and label parts", async () => {
   expect(el.shadowRoot!.querySelector('[part="base"]')!.tagName).to.equal("A");
   expect(el.shadowRoot!.querySelector('[part="icon"]')).to.exist;
   expect(el.textContent).to.include("Inbox");
+});
+
+it('does not inspect an unavailable render root during the server-side first update', () => {
+  const el = document.createElement('lr-app-rail-item') as LyraAppRailItem;
+  el.href = '/inbox';
+  const access = el as unknown as { willUpdate(changed: Map<PropertyKey, unknown>): void };
+
+  expect(() => access.willUpdate(new Map([['href', '']]))).not.to.throw();
 });
 
 it('inherits independent hover and pressed paint from an ancestor', async () => {
@@ -51,6 +72,74 @@ it("renders a disabled button when no href is available", async () => {
   expect(button.tagName).to.equal("BUTTON");
   expect(button.disabled).to.be.true;
   expect(button.getAttribute("aria-disabled")).to.equal("true");
+});
+
+it("preserves focus when href changes replace the native link and button owners", async () => {
+  const el = (await fixture(
+    html`<lr-app-rail-item href="/inbox">Inbox</lr-app-rail-item>`
+  )) as LyraAppRailItem;
+  (el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).focus();
+
+  el.href = "";
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement?.tagName).to.equal("BUTTON");
+
+  el.href = "/archive";
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement?.tagName).to.equal("A");
+});
+
+it("does not move external focus when href changes its native owner", async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <button id="outside">Outside</button>
+      <lr-app-rail-item href="/inbox">Inbox</lr-app-rail-item>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-app-rail-item') as LyraAppRailItem;
+  wrapper.querySelector<HTMLElement>('#outside')!.focus();
+  el.href = "";
+  await el.updateComplete;
+  expect(el.ownerDocument.activeElement?.id).to.equal('outside');
+});
+
+it('returns focus externally when a replacement owner is disabled or inert', async () => {
+  for (const unavailable of ['disabled', 'inert'] as const) {
+    const wrapper = await fixture(html`
+      <div>
+        <button id="app-rail-return-${unavailable}">Before rail</button>
+        <lr-app-rail-item href="/inbox">Inbox</lr-app-rail-item>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-app-rail-item') as LyraAppRailItem;
+    const outside = wrapper.querySelector<HTMLElement>(`#app-rail-return-${unavailable}`)!;
+    outside.focus();
+    el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.focus();
+
+    el.href = '';
+    if (unavailable === 'disabled') el.disabled = true;
+    else el.inert = true;
+    await el.updateComplete;
+
+    expect(el.ownerDocument.activeElement === outside, unavailable).to.equal(true);
+  }
+});
+
+it('focuses the stable owning rail when a disabled replacement has no external return target', async () => {
+  const rail = await fixture<HTMLElement>(html`
+    <lr-app-rail>
+      <lr-app-rail-item href="/inbox">Inbox</lr-app-rail-item>
+    </lr-app-rail>
+  `);
+  const el = rail.querySelector('lr-app-rail-item') as LyraAppRailItem;
+  el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.focus();
+  (el as unknown as { focusReturnTarget?: HTMLElement }).focusReturnTarget = undefined;
+
+  el.href = '';
+  el.disabled = true;
+  await el.updateComplete;
+
+  expect(rail.shadowRoot!.activeElement?.getAttribute('part')).to.contain('base');
 });
 
 describe("host aria-label precedence", () => {
@@ -185,6 +274,34 @@ it("hides the icon slot wrapper from assistive tech even without a host aria-lab
   `)) as LyraAppRailItem;
   const icon = el.shadowRoot!.querySelector('[part="icon"]')!;
   expect(icon.getAttribute("aria-hidden")).to.equal("true");
+});
+
+it('keeps flattened interactive icon content visible but inert and outside the focus order', async () => {
+  const root = await fixture<HTMLElement>(html`
+    <div>
+      <button id="before-app-rail-icon" type="button">Before</button>
+      <lr-app-rail-item href="/inbox">
+        <app-rail-icon-forwarder slot="icon">
+          <button id="nested-app-rail-icon" type="button">Decorative icon control</button>
+        </app-rail-icon-forwarder>
+        Inbox
+      </lr-app-rail-item>
+      <a id="after-app-rail-icon" href="#after-app-rail-icon">After</a>
+    </div>
+  `);
+  const el = root.querySelector<LyraAppRailItem>('lr-app-rail-item')!;
+  const nested = root.querySelector<HTMLButtonElement>('#nested-app-rail-icon')!;
+  const before = root.querySelector<HTMLButtonElement>('#before-app-rail-icon')!;
+  const slot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="icon"]')!;
+
+  expect(slot.assignedElements({ flatten: true }).length).to.equal(1);
+  expect(slot.closest<HTMLElement>('[inert]')?.getAttribute('aria-hidden')).to.equal('true');
+  expect(nested.getBoundingClientRect().width).to.be.greaterThan(0);
+
+  before.focus();
+  nested.focus();
+  expect(document.activeElement?.id).to.equal(before.id);
+  await expect(el).to.be.accessible();
 });
 
 it('marks the base part aria-current="page" when active', async () => {

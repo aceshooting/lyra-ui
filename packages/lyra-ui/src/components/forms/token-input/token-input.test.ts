@@ -49,8 +49,9 @@ it('contains composed draft events while preserving its single public event sequ
   const inputDetails: unknown[] = [];
   parent.addEventListener('input', (event) => {
     inputs += 1;
-    inputDetails.push((event as CustomEvent<{ value: string[] }>).detail);
+    expect(event instanceof InputEvent).to.be.true;
   });
+  parent.addEventListener('lr-input', (event) => inputDetails.push((event as CustomEvent).detail));
   parent.addEventListener('change', () => changes += 1);
   parent.addEventListener('focus', () => focuses += 1);
   parent.addEventListener('blur', () => blurs += 1);
@@ -87,8 +88,9 @@ it('contains composed inline-editor events while relaying its public focus lifec
   const lifecycleEvents: Event[] = [];
   parent.addEventListener('input', (event) => {
     inputs += 1;
-    inputDetails.push((event as CustomEvent<{ value: string[] }>).detail);
+    expect(event instanceof InputEvent).to.be.true;
   });
+  parent.addEventListener('lr-input', (event) => inputDetails.push((event as CustomEvent).detail));
   parent.addEventListener('change', () => changes += 1);
   parent.addEventListener('focus', (event) => { focuses += 1; lifecycleEvents.push(event); });
   parent.addEventListener('blur', (event) => { blurs += 1; lifecycleEvents.push(event); });
@@ -107,7 +109,7 @@ it('contains composed inline-editor events while relaying its public focus lifec
   expect(changes).to.equal(1);
   expect(focuses).to.equal(1);
   expect(blurs).to.equal(1);
-  expect(lifecycleEvents.every((event) => event instanceof CustomEvent)).to.equal(true);
+  expect(lifecycleEvents.every((event) => event instanceof FocusEvent)).to.equal(true);
   expect(lifecycleEvents.every((event) => event.target === el)).to.equal(true);
   expect(lifecycleEvents.every((event) => event.bubbles && event.composed)).to.equal(true);
 });
@@ -132,7 +134,7 @@ it('relays an inline-editor focus and blur once through the host', async () => {
   await el.updateComplete;
 
   expect(lifecycleEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
-  expect(lifecycleEvents.every((event) => event instanceof CustomEvent)).to.equal(true);
+  expect(lifecycleEvents.every((event) => event instanceof FocusEvent)).to.equal(true);
   expect(lifecycleEvents.every((event) => event.target === el)).to.equal(true);
   expect(lifecycleEvents.every((event) => event.bubbles && event.composed)).to.equal(true);
 });
@@ -337,6 +339,25 @@ it('keeps the token in place when a host calls preventDefault() on lr-remove', a
   (el.shadowRoot!.querySelector('[part="remove"]') as HTMLButtonElement).click();
   await el.updateComplete;
   expect(el.value).to.deep.equal(['alpha', 'beta']);
+});
+
+it('rejects a stale remove-button activation in the same task that disablement starts', async () => {
+  const fieldset = await fixture<HTMLFieldSetElement>(html`
+    <fieldset><lr-token-input .value=${['alpha', 'beta']}></lr-token-input></fieldset>
+  `);
+  const el = fieldset.querySelector('lr-token-input') as LyraTokenInput;
+  const directButton = el.shadowRoot!.querySelector('[part="remove"]') as HTMLButtonElement;
+
+  el.disabled = true;
+  directButton.click();
+  expect(el.value, 'direct disabled write').to.deep.equal(['alpha', 'beta']);
+
+  el.disabled = false;
+  await el.updateComplete;
+  const fieldsetButton = el.shadowRoot!.querySelector('[part="remove"]') as HTMLButtonElement;
+  fieldset.disabled = true;
+  fieldsetButton.click();
+  expect(el.value, 'same-task fieldset cascade').to.deep.equal(['alpha', 'beta']);
 });
 
 it('defaults to size "m" and reflects a size attribute', async () => {
@@ -1013,6 +1034,39 @@ describe('editable tokens', () => {
     expect(el.value).to.deep.equal(['beta']);
     expect(changes, 'one commit is one change').to.equal(1);
     expect(inputs).to.equal(1);
+  });
+
+  it('commits an inline edit before relaying its native blur and typed aliases', async () => {
+    const el = (await fixture(
+      html`<lr-token-input editable .value=${['alpha']}></lr-token-input>`,
+    )) as LyraTokenInput;
+    tokenLabels(el)[0].click();
+    await el.updateComplete;
+    const field = editor(el)!;
+    typeInto(field, 'beta');
+    const order: string[] = [];
+    el.addEventListener('input', (event) => {
+      expect(event instanceof InputEvent).to.be.true;
+      order.push('input');
+    });
+    el.addEventListener('lr-input', (event) => {
+      expect((event as CustomEvent).detail).to.deep.equal({ value: ['beta'] });
+      order.push('lr-input');
+    });
+    el.addEventListener('change', (event) => {
+      expect(event instanceof CustomEvent).to.be.false;
+      order.push('change');
+    });
+    el.addEventListener('lr-change', () => order.push('lr-change'));
+    el.addEventListener('blur', (event) => {
+      expect(event instanceof FocusEvent).to.be.true;
+      order.push('blur');
+    });
+    el.addEventListener('lr-blur', () => order.push('lr-blur'));
+
+    field.dispatchEvent(new FocusEvent('blur'));
+    await el.updateComplete;
+    expect(order).to.deep.equal(['input', 'lr-input', 'change', 'lr-change', 'blur', 'lr-blur']);
   });
 
   it('discards transient edits and drafts without user-change events when disabling the control', async () => {

@@ -183,7 +183,9 @@ idempotent/clamped; `length <= 1` is a no-op degenerate case. `focus(options?)`,
 `click()` forward to the play button.
 
 **Events:** `lr-play`, `lr-pause` (no detail), `lr-step` (`detail: { index }`, fired on every
-tick and manual step); internal `focus`/`blur` are bridged as bubbling, composed host events.
+tick and manual step); internal `focus`/`blur` are relayed exactly once as owner-realm native
+`FocusEvent`s (bubbling and composed, preserving `relatedTarget`), followed by
+`lr-focus`/`lr-blur`.
 
 **Slots:** none.
 
@@ -650,9 +652,10 @@ Before/after comparison surface with two named slots and a keyboard-accessible n
   and its range handle
 - `beforeLabel`/`afterLabel` — fallback text for empty named slots
 
-**Events:** `lr-position-change` (`detail: { position }`) on every native range input update;
-`lr-change` and native bubbling/composed `change` when that range gesture commits; plus composed
-`focus` and `blur` events from the internal range input.
+**Events:** one native bubbling/composed `input` (`Event`) plus `lr-position-change` (`detail:
+{ position }`) after every live range update, and one native bubbling/composed `change` (`Event`)
+plus `lr-change` after a gesture commits. `focus`/`blur` are relayed exactly once as owner-realm
+native `FocusEvent`s preserving `relatedTarget`, followed by the `lr-focus`/`lr-blur` aliases.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal range handle.
 
@@ -725,10 +728,12 @@ flattened subtrees are always inert and hidden from assistive technology, so use
 rather than a second interactive control; the native zoom buttons remain the sole focus and pointer
 actions.
 
-**Events:** internal `focus`/`blur` from the iframe are bridged as bubbling, composed host events;
-native `load` and `error` are relayed exactly once from the current iframe generation as
-non-bubbling, non-composed `Event` instances. Navigation/source-policy changes replace the iframe,
-so a late event from an earlier document is ignored; detached frames do not notify.
+**Events:** internal `focus`/`blur` from the iframe are relayed exactly once as owner-realm native
+`FocusEvent`s (bubbling and composed, preserving `relatedTarget`), followed by
+`lr-focus`/`lr-blur`; native `load` and `error` are relayed exactly once from the current iframe
+generation as non-bubbling, non-composed `Event` instances. Navigation/source-policy changes
+replace the iframe, so a late event from an earlier document is ignored; detached frames do not
+notify.
 
 **CSS parts:** `iframe`, `controls`, `zoom-in-button`, and `zoom-out-button`.
 
@@ -791,7 +796,8 @@ origin. The viewport accepts `+`/`=`, `-`/`_`, and `0`, without consuming keys f
 component's own keyboard target — a bare host `.focus()` would otherwise be a silent no-op.
 
 **Events:** `lr-zoom-change` (`detail: { zoom }`); internal `focus`/`blur` from the viewport are
-bridged as bubbling, composed host events.
+relayed exactly once as owner-realm native `FocusEvent`s (bubbling and composed, preserving
+`relatedTarget`), followed by `lr-focus`/`lr-blur`.
 
 **CSS parts:** `base`, `viewport`, `content`, `controls`, `zoom-out`, `zoom-in`, and `reset`. The
 `reset` button's visible text is the live zoom percentage, locale-formatted and recomputed from
@@ -1149,7 +1155,8 @@ capture UI of its own, the host owns everything from here (there's no single rig
 `getUserMedia` vs. `<input capture>` vs. a native wrapper's own camera API; for `audio` the
 typical host response is opening `<lr-push-to-talk>` in an overlay, then handing the resulting
 blob to `<lr-attachment-chip>`). `focus`/`blur` from the active single- or multi-capability trigger
-are re-emitted as bubbling, composed host events; the hidden file input is not the focus owner.
+are relayed exactly once as owner-realm native `FocusEvent`s (bubbling and composed, preserving
+`relatedTarget`), followed by `lr-focus`/`lr-blur`; the hidden file input is not the focus owner.
 
 **Slots:** none — capabilities are configured entirely via the `capabilities` prop.
 
@@ -1343,8 +1350,9 @@ automatically under `prefers-reduced-motion: reduce`.
 `lr-error` (native decode failure, or a non-empty `src` that failed the safe-URL check — never for
 an empty `src`), `lr-play`/`lr-pause` (real transitions of the effective `playing` value only, so a
 `play = true` that reduced motion blocks emits nothing, while a live reduced-motion change that
-forces a freeze does emit `lr-pause`); internal `focus`/`blur` are re-dispatched as bubbling,
-composed host events.
+forces a freeze does emit `lr-pause`). Internal `focus`/`blur` are relayed exactly once as
+owner-realm native `FocusEvent`s (bubbling and composed, preserving `relatedTarget`), followed by
+the `lr-focus`/`lr-blur` compatibility aliases.
 
 **Slots:** `play-icon`, `pause-icon` — decorative custom glyphs for the frozen/paused and playing
 states. Both stay mounted and are toggled via the native `hidden` attribute. Their assigned content
@@ -1807,8 +1815,9 @@ found }`), `lr-search-change` (`detail: { query, matchCount, activeIndex }`), an
 `play`, `timeupdate`, and `volumechange`
 events are also relayed exactly once from the host as native `Event` instances. Like the original
 media notifications, these relays are non-bubbling, non-composed, and non-cancelable. The richer
-`lr-*` notifications above remain unchanged. The native media element's `focus`/`blur` are
-additionally bridged as bubbling, composed host events. `lr-text-select` is not part of this
+`lr-*` notifications above remain unchanged. The native media element's `focus`/`blur` are relayed
+exactly once as owner-realm native `FocusEvent`s (bubbling and composed, preserving
+`relatedTarget`), followed by `lr-focus`/`lr-blur`. `lr-text-select` is not part of this
 player's event contract: transcript rows live inside the embedded virtual list's nested shadow
 root, so no selection binding is installed.
 
@@ -1913,7 +1922,8 @@ play/pause control (absent, and therefore a no-op, under `controls="none"`).
 `volumechange`, relayed exactly once from the host as native `Event` instances. They remain
 non-bubbling, non-composed, and non-cancelable. Scrubbing the custom timeline also dispatches an
 immediate host `timeupdate`, before a browser's eventual native seek notification. The internal
-play/pause control's `focus`/`blur` are additionally bridged as bubbling, composed host events.
+play/pause control's `focus`/`blur` are relayed exactly once as owner-realm native `FocusEvent`s
+(bubbling and composed, preserving `relatedTarget`), followed by `lr-focus`/`lr-blur`.
 
 **Slots:** the default slot accepts direct `<source>` and `<track>` children;
 `controls-after-play`, `controls-start`, `exit-fullscreen-icon`, `fullscreen-icon`, `mute-icon`,
@@ -1994,11 +2004,12 @@ exists. `focus(options?)`, `blur()`, and `click()` forward to the playlist row t
 the roving tab stop (falling back to the first enabled row), which is otherwise unreachable from
 outside the shadow root.
 
-**Events:** internal `focus`/`blur` from a playlist row are bridged as bubbling, composed host
-events. `lr-video-change` is bubbling and composed but non-cancelable, with exact detail
-`{ previousIndex, currentIndex, video }`. `video` is a fresh frozen plain-data snapshot with exact
-shape `{ title, poster, sources, tracks }`, not the live child element. `sources` contains frozen
-`{ src, type, media }` records for the child's direct `src` and `<source>` declarations; `tracks`
+**Events:** internal `focus`/`blur` from a playlist row are relayed exactly once as owner-realm
+native `FocusEvent`s (bubbling and composed, preserving `relatedTarget`), followed by
+`lr-focus`/`lr-blur`. `lr-video-change` is bubbling and composed but non-cancelable, with exact
+detail `{ previousIndex, currentIndex, video }`. `video` is a fresh frozen plain-data snapshot with
+exact shape `{ title, poster, sources, tracks }`, not the live child element. `sources` contains
+frozen `{ src, type, media }` records for the child's direct `src` and `<source>` declarations; `tracks`
 contains frozen `{ src, kind, srclang, label, default }` records. Consumer mutation cannot alter a
 child or a later event snapshot.
 

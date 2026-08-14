@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   MIGRATION_ATTRIBUTE_EXCLUSIONS,
+  applyRuntimeEventCancelabilityEvidence,
   compareAccessibilityProfiles,
   compareMappedSurfaces,
   emptyNormalizations,
@@ -1535,6 +1536,99 @@ test('surface comparison catches member, default, cancelability, and polarity dr
     !compareMappedSurfaces(upstream, target, { upstreamPrefix: 'wa-' })
       .some((entry) => entry.code === 'cancelability-mismatch'),
     'silence in published upstream docs does not invent a non-cancelable contract',
+  );
+});
+
+test('pin-bound runtime evidence fills only manifest-silent event cancelability', () => {
+  const components = [{
+    tag: 'sl-example',
+    surface: {
+      events: [{
+        name: 'sl-show',
+        type: 'CustomEvent<Record<PropertyKey, never>>',
+        cancelable: 'unspecified-public-documentation',
+      }],
+    },
+  }];
+  const evidence = {
+    source: {
+      package: '@shoelace-style/shoelace',
+      version: '2.20.1',
+      tarballIntegrity: `sha512-${Buffer.alloc(64).toString('base64')}`,
+    },
+    coverage: 'all-public-transition-paths',
+    events: [{
+      tag: 'sl-example',
+      event: 'sl-show',
+      cancelable: 'never',
+      paths: ['open attribute', 'open property', 'show()'],
+    }],
+  };
+
+  const augmented = applyRuntimeEventCancelabilityEvidence(components, evidence, {
+    ecosystem: 'shoelace',
+    version: '2.20.1',
+  });
+  assert.equal(
+    components[0].surface.events[0].cancelable,
+    'unspecified-public-documentation',
+    'the normalized manifest input remains immutable',
+  );
+  assert.deepEqual(augmented[0].surface.events[0], {
+    name: 'sl-show',
+    type: 'CustomEvent<Record<PropertyKey, never>>',
+    cancelable: 'never',
+    cancelabilityEvidence: 'pinned-runtime',
+  });
+
+  const staleVersion = structuredClone(evidence);
+  staleVersion.source.version = '2.20.0';
+  assert.throws(
+    () => applyRuntimeEventCancelabilityEvidence(components, staleVersion, {
+      ecosystem: 'shoelace',
+      version: '2.20.1',
+    }),
+    /runtime evidence version 2\.20\.0 does not match pin 2\.20\.1/u,
+  );
+
+  const explicitManifest = structuredClone(components);
+  explicitManifest[0].surface.events[0].cancelable = 'never';
+  assert.throws(
+    () => applyRuntimeEventCancelabilityEvidence(explicitManifest, evidence, {
+      ecosystem: 'shoelace',
+      version: '2.20.1',
+    }),
+    /sl-example#sl-show: pinned runtime evidence is stale because the manifest now documents cancelability/u,
+  );
+
+  const duplicate = structuredClone(evidence);
+  duplicate.events.push(structuredClone(duplicate.events[0]));
+  assert.throws(
+    () => applyRuntimeEventCancelabilityEvidence(components, duplicate, {
+      ecosystem: 'shoelace',
+      version: '2.20.1',
+    }),
+    /duplicate runtime cancelability evidence sl-example#sl-show/u,
+  );
+
+  const dangling = structuredClone(evidence);
+  dangling.events[0].event = 'sl-missing';
+  assert.throws(
+    () => applyRuntimeEventCancelabilityEvidence(components, dangling, {
+      ecosystem: 'shoelace',
+      version: '2.20.1',
+    }),
+    /sl-example#sl-missing: runtime cancelability evidence targets an unknown event/u,
+  );
+
+  const partial = structuredClone(evidence);
+  partial.events[0].paths = [];
+  assert.throws(
+    () => applyRuntimeEventCancelabilityEvidence(components, partial, {
+      ecosystem: 'shoelace',
+      version: '2.20.1',
+    }),
+    /sl-example#sl-show: runtime cancelability evidence needs reviewed public paths/u,
   );
 });
 
@@ -3404,6 +3498,55 @@ test('accordion and carousel event-detail widenings require explicit migration r
       classification: 'warning-required',
     });
     assert.deepEqual(parity.behaviorReviewFlags, flags);
+  }
+});
+
+test('Shoelace lifecycle cancelability differences require migration warnings', () => {
+  const cases = [
+    ['sl-alert', 'lr-alert', 'always'],
+    ['sl-dialog', 'lr-dialog', 'conditional'],
+    ['sl-drawer', 'lr-drawer', 'always'],
+    ['sl-dropdown', 'lr-dropdown', 'always'],
+    ['sl-tooltip', 'lr-tooltip', 'always'],
+  ];
+
+  for (const [upstreamTag, targetTag, targetHide] of cases) {
+    const expectedDrift = [
+      {
+        code: 'cancelability-mismatch',
+        section: 'events',
+        member: 'sl-hide',
+        expected: 'never',
+        actual: targetHide,
+      },
+      {
+        code: 'cancelability-mismatch',
+        section: 'events',
+        member: 'sl-show',
+        expected: 'never',
+        actual: 'always',
+      },
+    ];
+    const decision = reviewedMigrationDecision(upstreamTag);
+    assert.equal(decision?.classification, 'warning-required');
+    assert.deepEqual(decision?.expectedDrift, expectedDrift);
+    assert.match(decision?.rationale ?? '', /pinned runtime.*non-cancelable.*pre-state veto/iu);
+    assert.deepEqual(
+      reviewedMappingNormalizations(upstreamTag).cancelabilityEquivalences,
+      [],
+      `${upstreamTag} must expose the lifecycle mismatch instead of suppressing it`,
+    );
+
+    const parity = migrationParityMetadata({
+      upstream: {
+        tag: upstreamTag,
+        review: { status: 'complete' },
+        surface: { slots: [] },
+      },
+      target: { tag: targetTag, rootIncluded: true, optionalPeers: [] },
+      classification: 'warning-required',
+    });
+    assert.deepEqual(parity.behaviorReviewFlags, ['lifecycle-event-cancelability-and-phase']);
   }
 });
 

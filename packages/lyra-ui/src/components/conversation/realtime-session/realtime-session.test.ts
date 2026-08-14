@@ -182,6 +182,42 @@ it('moves focus from the capture control when showCapture removes it without a s
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('disconnect');
 });
 
+it('moves focus from capture to the visible Unmute action when muting disables capture', async () => {
+  const el = (await fixture(
+    html`<lr-realtime-session state="connected"></lr-realtime-session>`
+  )) as LyraRealtimeSession;
+  const capture = el.shadowRoot!.querySelector('lr-push-to-talk') as HTMLElement & {
+    updateComplete: Promise<unknown>;
+  };
+  await capture.updateComplete;
+  const trigger = capture.shadowRoot!.querySelector('button') as HTMLButtonElement;
+  trigger.disabled = false;
+  trigger.focus();
+
+  el.muted = true;
+  await el.updateComplete;
+
+  const focused = el.shadowRoot!.activeElement as HTMLButtonElement | null;
+  expect(focused?.getAttribute('part')).to.equal('mute');
+  expect(focused?.textContent?.trim()).to.equal('Unmute microphone');
+});
+
+it('does not move foreign focus when mute state changes', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <button id="outside">Outside</button>
+      <lr-realtime-session state="connected"></lr-realtime-session>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-realtime-session') as LyraRealtimeSession;
+  wrapper.querySelector<HTMLElement>('#outside')!.focus();
+
+  el.muted = true;
+  await el.updateComplete;
+
+  expect(el.ownerDocument.activeElement?.id).to.equal('outside');
+});
+
 it('does not move a surviving session action when showCapture changes', async () => {
   const el = (await fixture(
     html`<lr-realtime-session state="connected"></lr-realtime-session>`

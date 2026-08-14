@@ -6,6 +6,7 @@ import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../in
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { getListFormat } from '../../../internal/intl-cache.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { parseVCards, type VCardAddress, type VCardContact } from './vcard.js';
 import { styles } from './contact-viewer.styles.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
@@ -28,7 +29,9 @@ export interface LyraContactViewerEventMap extends LyraTextViewerTargetEventMap 
 class LyraContactViewerBase extends LyraElement<LyraContactViewerEventMap> {}
 
 /**
- * Fetches a vCard document and renders one accessible card per contact.
+ * Fetches a vCard document and renders one accessible card per contact. Contact names retain
+ * level-three heading semantics by default; set `heading-level` from `1`–`6` to fit the surrounding
+ * outline, or `none` for visual-only names.
  *
  * @customElement lr-contact-viewer
  * @event lr-render-error - Fired when fetching or parsing the document fails.
@@ -44,7 +47,7 @@ class LyraContactViewerBase extends LyraElement<LyraContactViewerEventMap> {}
  * @csspart base - The root container.
  * @csspart body - The wrapper around the fetched-state content.
  * @csspart contact - One rendered contact card.
- * @csspart contact-name - A contact's name heading.
+ * @csspart contact-name - A contact's name heading at the configured semantic level.
  * @csspart contact-org - A contact's organization line, when present.
  * @csspart contact-tel - A contact's phone number list, when present.
  * @csspart contact-email - A contact's email list, when present.
@@ -100,6 +103,10 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
    *  `contactViewerLabel` default. Host `aria-label` wins by attribute presence, including an
    *  empty value. */
   @property() name = '';
+  /** Semantic level of each rendered contact name. Use `none` for visual-only names; invalid
+   *  untyped values use level 3. */
+  @property({ attribute: 'heading-level', reflect: true })
+  headingLevel: LyraHeadingLevel = '3';
   /** CSS length that caps the scrollable body. */
   /** A CSS `max-height`; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
@@ -212,8 +219,13 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
   }
 
   private renderContact(contact: VCardContact): TemplateResult {
+    const headingLevel = resolveHeadingLevel(this.headingLevel);
     return html`<article part="contact">
-      <h3 part="contact-name">${contact.fn || this.localize('contactViewerUnnamedContact')}</h3>
+      <div
+        part="contact-name"
+        role=${headingLevel ? 'heading' : nothing}
+        aria-level=${headingLevel ?? nothing}
+      >${contact.fn || this.localize('contactViewerUnnamedContact')}</div>
       ${contact.org.length ? html`<p part="contact-org">${this.localize('contactViewerOrganization', undefined, { value: this.formatList(contact.org) })}</p>` : nothing}
       ${contact.tel.length ? html`<ul part="contact-tel" aria-label=${this.localize('contactViewerPhoneLabel')}>${contact.tel.map((tel) => html`<li>${this.formatTypedValue(tel.value, tel.types)}</li>`)}</ul>` : nothing}
       ${contact.email.length ? html`<ul part="contact-email" aria-label=${this.localize('contactViewerEmailLabel')}>${contact.email.map((email) => html`<li>${this.formatTypedValue(email.value, email.types)}</li>`)}</ul>` : nothing}

@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import {
   LyraElement,
   type LyraEmitArgs,
@@ -39,7 +40,8 @@ export type LyraAccordionAppearance = Exclude<LyraAppearance, 'accent'>;
  *   accessibility-visible text names the sole trigger button.
  * @slot summary - Compatibility alias for the `label` slot, with the same inert visual-content
  *   contract.
- * @slot icon - Optional decorative expand/collapse icon.
+ * @slot icon - Optional decorative expand/collapse icon. Its flattened subtree remains visible
+ *   but is inert and hidden from assistive technology; the trigger button is the sole action.
  * @csspart base - Compatibility name for the outer wrapper; use `accordion-item`.
  * @csspart accordion-item - The outer wrapper. It is the same node as `base`.
  * @csspart heading - Heading around the trigger; omitted for `heading-level="none"`.
@@ -322,7 +324,10 @@ export class LyraAccordionItem extends LyraDetails {
         </span>
         ${hasSlottedLabel ? '' : fallbackLabel}
       </span>
-      <span part="icon" aria-hidden="true"><slot name="icon"><span class="default-icon"></span></slot></span>
+      ${renderInertPresentation(
+        html`<slot name="icon"><span class="default-icon"></span></slot>`,
+        { part: 'icon' },
+      )}
     </button>`;
 
     return html`<div part="base accordion-item">

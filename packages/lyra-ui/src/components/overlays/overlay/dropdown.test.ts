@@ -41,6 +41,45 @@ it('owns direct dropdown items through one contained lr-menu engine without repl
   expect((engine?.shadowRoot?.querySelector('[role="menu"]')) === (null)).to.equal(true);
 });
 
+it('keeps a real menu owner when popup-role changes the outer surface to a dialog', async () => {
+  const el = (await fixture(html`
+    <lr-dropdown popup-role="dialog" aria-label="Actions dialog">
+      <button slot="trigger">Actions</button>
+      <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
+    </lr-dropdown>
+  `)) as LyraDropdown;
+  const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
+  const engine = el.shadowRoot!.querySelector('lr-menu[part~="menu"]') as LyraMenu;
+
+  expect(popup.getAttribute('role')).to.equal('dialog');
+  expect(engine.shadowRoot!.querySelector('[role="menu"]')).to.exist;
+  await expect(el).to.be.accessible();
+});
+
+it('releases a live consumer menu structurally without standalone lifecycle events', async () => {
+  const el = (await fixture(html`
+    <lr-dropdown>
+      <button slot="trigger">Actions</button>
+      <lr-menu label="Actions">
+        <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
+      </lr-menu>
+    </lr-dropdown>
+  `)) as LyraDropdown;
+  const menu = el.querySelector('lr-menu') as LyraMenu;
+  await el.show();
+  await menu.updateComplete;
+  const events: string[] = [];
+  menu.addEventListener('lr-show', () => events.push('show'));
+  menu.addEventListener('lr-hide', () => events.push('hide'));
+
+  menu.slot = 'retired';
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  await menu.updateComplete;
+
+  expect(menu.open).to.equal(false);
+  expect(events).to.deep.equal([]);
+});
+
 it('uses the mapped distance=0 default without changing an explicit distance', async () => {
   const implicit = await basic();
   expect(implicit.distance).to.equal(0);

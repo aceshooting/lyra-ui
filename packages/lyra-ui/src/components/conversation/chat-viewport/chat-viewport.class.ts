@@ -13,9 +13,14 @@ import {
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
 import {
-  isAccessibilitySubtreeExcluded,
-  isAccessibilityVisibilityHidden,
+  composedAccessibilityText,
 } from '../../../internal/accessibility-visibility.js';
+import {
+  applyComposedFocusRepair,
+  captureComposedFocusRepair,
+  collectComposedFocusTargets,
+  type ComposedFocusRepairSnapshot,
+} from '../../../internal/focus-navigation.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chatViewportLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_newMessageCount, LYRA_DEFAULT_newMessages, LYRA_DEFAULT_newMessagesCount, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
@@ -160,6 +165,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   /** Bumped on every real (non-skipped) `armObservers()` call and on teardown -- invalidates a
    *  still-pending deferred initial-measurement microtask from a now-stale arm. */
   private armGeneration = 0;
+  private followFocusRepair: ComposedFocusRepairSnapshot | null = null;
 
   private get virtualListEl(): LyraVirtualList | null {
     const children = Array.from(this.children);
@@ -199,6 +205,18 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     // Safety net for a still-scheduled proactive user-intent expiry (see markUserIntent()).
     this.clearUserIntent();
     this.scrollbarDragActive = false;
+    this.followFocusRepair = null;
+  }
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
+    if (!this.hasUpdated || !changed.has('follow') || !this.follow || changed.get('follow') !== false) {
+      return;
+    }
+    const pill = this.renderRoot.querySelector<HTMLElement>('[part="jump-pill"]');
+    this.followFocusRepair = pill
+      ? captureComposedFocusRepair(pill, this.transcriptFocusOwner())
+      : null;
   }
 
   override firstUpdated(changed: PropertyValues): void {
@@ -238,6 +256,18 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     if (changed.has('unreadStartIndex') && !wasMounting) {
       this.updateUnreadDividerPosition();
     }
+    const focusRepair = this.followFocusRepair;
+    this.followFocusRepair = null;
+    if (focusRepair) applyComposedFocusRepair(focusRepair);
+  }
+
+  private transcriptFocusOwner(): HTMLElement | null {
+    const list = this.virtualListEl;
+    if (!list) return this.scrollEl ?? null;
+    return collectComposedFocusTargets(list, {
+      includeRoot: false,
+      mode: 'programmatic',
+    }).elements[0] ?? null;
   }
 
   /** Scrolls to the end and re-engages `follow`. Default `smooth`, forced to `auto` under
@@ -513,51 +543,11 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     if (!sink) return;
     for (const record of records) {
       for (const node of record.addedNodes) {
-        const text = this.announcementNodeText(node).replace(/\s+/g, ' ').trim();
+        const text = composedAccessibilityText(node).replace(/\s+/g, ' ').trim();
         if (text) sink.announce(text);
       }
     }
   };
-
-  private announcementNodeText(node: Node, inheritedTextVisible = true): string {
-    if (node.nodeType === 3) return inheritedTextVisible ? node.textContent ?? '' : '';
-    if (node.nodeType !== 1) return '';
-    const element = node as Element;
-    if (
-      isAccessibilitySubtreeExcluded(element) ||
-      ['script', 'style', 'template'].includes(element.localName)
-    ) {
-      return '';
-    }
-    const ownTextVisible = !isAccessibilityVisibilityHidden(element);
-    const label = ownTextVisible ? element.getAttribute('aria-label')?.trim() : '';
-    if (label) return label;
-    if (ownTextVisible && element.localName === 'img') {
-      const alt = element.getAttribute('alt')?.trim();
-      if (alt) return alt;
-    }
-
-    let renderedChildren: Node[];
-    if (element.localName === 'slot') {
-      const assigned = (element as HTMLSlotElement).assignedNodes();
-      renderedChildren = assigned.length > 0
-        ? (element as HTMLSlotElement).assignedNodes({ flatten: true })
-        : Array.from(element.childNodes);
-    } else if (element.localName === 'details' && !element.hasAttribute('open')) {
-      const summary = Array.from(element.children).find((child) => child.localName === 'summary');
-      renderedChildren = summary ? [summary] : [];
-    } else if (element.shadowRoot) {
-      // A shadow host's raw light-DOM children include named-slot content that may not be assigned
-      // anywhere in the current render. Walk the composed branch through the open root instead;
-      // its slot elements flatten only content that is actually rendered.
-      renderedChildren = Array.from(element.shadowRoot.childNodes);
-    } else {
-      renderedChildren = Array.from(element.childNodes);
-    }
-    return Array.from(renderedChildren)
-      .map((child) => this.announcementNodeText(child, ownTextVisible))
-      .join(' ');
-  }
 
   private armObservers(): void {
     const owner = this.ownerDocument.defaultView;

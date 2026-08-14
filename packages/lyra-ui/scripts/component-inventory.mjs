@@ -1015,6 +1015,102 @@ export function normalizeManifest(manifest, { ecosystem, tierByTag = new Map() }
   return components.sort((a, b) => a.tag.localeCompare(b.tag));
 }
 
+const UPSTREAM_RUNTIME_PACKAGES = Object.freeze({
+  webawesome: '@awesome.me/webawesome',
+  shoelace: '@shoelace-style/shoelace',
+});
+
+function runtimeEvidenceInvariant(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+function exactObjectKeys(value, expected) {
+  return value &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    Object.keys(value).sort().join('\0') === [...expected].sort().join('\0');
+}
+
+/**
+ * Applies behavior observed from an exact reviewed upstream package only where its published
+ * manifest is silent. Evidence is deliberately artifact-bound and path-enumerated: a package
+ * update, a newly documented event contract, or a partial observation invalidates the record
+ * instead of letting an old runtime assumption survive regeneration.
+ */
+export function applyRuntimeEventCancelabilityEvidence(
+  components,
+  evidence,
+  { ecosystem, version } = {},
+) {
+  runtimeEvidenceInvariant(Array.isArray(components), 'runtime cancelability evidence needs normalized components');
+  const augmented = structuredClone(components);
+  if (evidence === undefined || evidence === null) return augmented;
+
+  runtimeEvidenceInvariant(
+    exactObjectKeys(evidence, ['source', 'coverage', 'events']),
+    `${String(ecosystem)}: malformed runtime cancelability evidence envelope`,
+  );
+  runtimeEvidenceInvariant(
+    exactObjectKeys(evidence.source, ['package', 'version', 'tarballIntegrity']),
+    `${String(ecosystem)}: malformed runtime cancelability evidence source`,
+  );
+  const expectedPackage = UPSTREAM_RUNTIME_PACKAGES[ecosystem];
+  runtimeEvidenceInvariant(
+    typeof expectedPackage === 'string' && evidence.source.package === expectedPackage,
+    `${String(ecosystem)}: runtime evidence package ${String(evidence.source.package)} does not match ${String(expectedPackage)}`,
+  );
+  runtimeEvidenceInvariant(
+    evidence.source.version === version,
+    `${String(ecosystem)}: runtime evidence version ${String(evidence.source.version)} does not match pin ${String(version)}`,
+  );
+  runtimeEvidenceInvariant(
+    typeof evidence.source.tarballIntegrity === 'string' && evidence.source.tarballIntegrity.startsWith('sha512-'),
+    `${String(ecosystem)}: runtime evidence needs a SHA-512 package integrity`,
+  );
+  runtimeEvidenceInvariant(
+    evidence.coverage === 'all-public-transition-paths',
+    `${String(ecosystem)}: runtime cancelability evidence must cover all public transition paths`,
+  );
+  runtimeEvidenceInvariant(
+    Array.isArray(evidence.events) && evidence.events.length > 0,
+    `${String(ecosystem)}: runtime cancelability evidence needs events`,
+  );
+
+  const byTag = new Map(augmented.map((component) => [component.tag, component]));
+  const seen = new Set();
+  for (const observation of evidence.events) {
+    runtimeEvidenceInvariant(
+      exactObjectKeys(observation, ['tag', 'event', 'cancelable', 'paths']),
+      `${String(observation?.tag)}#${String(observation?.event)}: malformed runtime cancelability evidence`,
+    );
+    const key = `${observation.tag}#${observation.event}`;
+    runtimeEvidenceInvariant(!seen.has(key), `duplicate runtime cancelability evidence ${key}`);
+    seen.add(key);
+    runtimeEvidenceInvariant(
+      ['always', 'never', 'conditional'].includes(observation.cancelable),
+      `${key}: runtime cancelability evidence has an invalid result`,
+    );
+    runtimeEvidenceInvariant(
+      Array.isArray(observation.paths) &&
+        observation.paths.length > 0 &&
+        observation.paths.every((path) => typeof path === 'string' && Boolean(path.trim())) &&
+        new Set(observation.paths).size === observation.paths.length,
+      `${key}: runtime cancelability evidence needs reviewed public paths`,
+    );
+
+    const component = byTag.get(observation.tag);
+    const event = component?.surface?.events?.find((entry) => entry.name === observation.event);
+    runtimeEvidenceInvariant(event, `${key}: runtime cancelability evidence targets an unknown event`);
+    runtimeEvidenceInvariant(
+      event.cancelable === UNSPECIFIED_PUBLIC_DOCUMENTATION && !event.cancelabilityEvidence,
+      `${key}: pinned runtime evidence is stale because the manifest now documents cancelability`,
+    );
+    event.cancelable = observation.cancelable;
+    event.cancelabilityEvidence = 'pinned-runtime';
+  }
+  return augmented;
+}
+
 function mappedEventName(name, upstreamPrefix) {
   return name.startsWith(upstreamPrefix) ? `lr-${name.slice(upstreamPrefix.length)}` : name;
 }
@@ -1978,6 +2074,11 @@ function validateSurface(surface, label, findings) {
     if (!['always', 'never', 'conditional', UNSPECIFIED_PUBLIC_DOCUMENTATION].includes(event.cancelable)) {
       findings.push(`${label}: event ${event.name} has unreviewed cancelability`);
     }
+    if (hasOwn(event, 'cancelabilityEvidence')) {
+      const valid = event.cancelable !== UNSPECIFIED_PUBLIC_DOCUMENTATION &&
+        event.cancelabilityEvidence === 'pinned-runtime';
+      if (!valid) findings.push(`${label}: event ${event.name} has malformed cancelability evidence`);
+    }
   }
 }
 
@@ -2771,6 +2872,27 @@ export function validateInventory(inventory, { upstreamTags, lyraManifest, stric
       }
       if (strict && component.review.status !== 'complete') findings.push(`${component.tag}: public surface review is incomplete`);
     }
+    const expectedRuntimeEvidence = new Set();
+    for (const observation of expectedPin.runtimeEventCancelability?.events ?? []) {
+      const key = `${observation.tag}#${observation.event}`;
+      if (expectedRuntimeEvidence.has(key)) {
+        findings.push(`${ecosystem}: duplicate runtime cancelability evidence ${key}`);
+        continue;
+      }
+      expectedRuntimeEvidence.add(key);
+      const component = (upstream.components ?? []).find((entry) => entry.tag === observation.tag);
+      const event = component?.surface?.events?.find((entry) => entry.name === observation.event);
+      if (event?.cancelable !== observation.cancelable || event?.cancelabilityEvidence !== 'pinned-runtime') {
+        findings.push(`${key}: stored runtime cancelability evidence drifted from upstream-tags.json`);
+      }
+    }
+    for (const component of upstream.components ?? []) {
+      for (const event of component.surface?.events ?? []) {
+        if (event.cancelabilityEvidence && !expectedRuntimeEvidence.has(`${component.tag}#${event.name}`)) {
+          findings.push(`${component.tag}#${event.name}: stored runtime cancelability evidence is stale`);
+        }
+      }
+    }
   }
 
   const mappingByTag = new Map();
@@ -2839,7 +2961,7 @@ export function validateInventory(inventory, { upstreamTags, lyraManifest, stric
   return findings.sort();
 }
 
-export function validatePinnedManifests(inventory, { webawesomeManifest, shoelaceManifest }) {
+export function validatePinnedManifests(inventory, { webawesomeManifest, shoelaceManifest, upstreamTags }) {
   const findings = [];
   const manifests = {
     webawesome: { manifest: webawesomeManifest, prefix: 'wa-' },
@@ -2847,7 +2969,14 @@ export function validatePinnedManifests(inventory, { webawesomeManifest, shoelac
   };
   for (const [ecosystem, { manifest, prefix }] of Object.entries(manifests)) {
     const checked = new Map(
-      normalizeManifest(manifest, { ecosystem })
+      applyRuntimeEventCancelabilityEvidence(
+        normalizeManifest(manifest, { ecosystem }),
+        upstreamTags?.[ecosystem]?.runtimeEventCancelability,
+        {
+          ecosystem,
+          version: upstreamTags?.[ecosystem]?.version ?? inventory.upstreams[ecosystem].version,
+        },
+      )
         .filter((entry) => entry.tag.startsWith(prefix))
         .map((entry) => [entry.tag, entry]),
     );

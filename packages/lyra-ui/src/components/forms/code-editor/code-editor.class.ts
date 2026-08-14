@@ -32,6 +32,8 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * any other key, or focus leaving the editor, re-arms Tab indentation.
  * In narrow allocations label/hint/error chrome wraps at the host boundary, while unbroken source
  * remains reachable through the editor's internal scroll surface instead of widening the page.
+ * The native textarea receives `required` and explicit stateful `aria-invalid`: visible error
+ * chrome wins immediately, while intrinsic/custom invalidity is exposed only after interaction.
  *
  * Tab-width precedence, highest first: an explicitly assigned `tabSize` (property or `tab-size`
  * attribute) wins over everything; otherwise a host-level `--lr-code-editor-tab-size` override
@@ -147,8 +149,10 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
   @query('textarea') private textarea?: HTMLTextAreaElement;
-  override click(): void { if (!this.effectiveDisabled) this.textarea?.click(); }
-  override focus(options?: FocusOptions): void { this.textarea?.focus(options); }
+  /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */
+  private get liveDisabled(): boolean { return this.effectiveDisabled || this.matches(':disabled'); }
+  override click(): void { if (!this.liveDisabled) this.textarea?.click(); }
+  override focus(options?: FocusOptions): void { if (!this.liveDisabled) this.textarea?.focus(options); }
   override blur(): void { this.textarea?.blur(); }
   select(): void { this.textarea?.select(); }
   get selectionStart(): number { return this.textarea?.selectionStart ?? 0; }
@@ -168,16 +172,21 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     textarea.setRangeText(replacement, start ?? textarea.selectionStart, end ?? textarea.selectionEnd, selectionMode);
     this.value = textarea.value;
   }
-  private onInput = (event: Event): void => { this.value = (event.target as HTMLTextAreaElement).value; this.emit('input', { value: this.value }); };
-  private onChange = (): void => { this.emit('change', { value: this.value }); };
-  private onFocus = (): void => { this.emit('focus'); };
+  private onInput = (event: Event): void => {
+    if (this.liveDisabled) return;
+    this.value = (event.target as HTMLTextAreaElement).value;
+    this.emit('input', { value: this.value });
+  };
+  private onChange = (): void => { if (!this.liveDisabled) this.emit('change', { value: this.value }); };
+  private onFocus = (): void => { if (!this.liveDisabled) this.emit('focus'); };
   // Disabling a focused native control forces the browser to blur it --
   // plain native HTML behavior, not a real user interaction -- so that forced blur must not mark
   // the field touched. `tabBypassArmed`/`emit('blur')` still run unconditionally: they're tab-key
   // bookkeeping and the public blur event contract, not validation state.
-  private onBlur = (): void => { if (!this.effectiveDisabled) this.touched = true; this.tabBypassArmed = false; this.emit('blur'); };
+  private onBlur = (): void => { if (!this.liveDisabled) this.touched = true; this.tabBypassArmed = false; this.emit('blur'); };
   private tabBypassArmed = false;
   private onKeyDown = (event: KeyboardEvent): void => {
+    if (this.liveDisabled) return;
     if (event.key === 'Escape') { this.tabBypassArmed = true; return; }
     if (event.key === 'Tab') {
       if (event.shiftKey) return;
@@ -227,6 +236,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const describedBy = [hasError ? 'textarea-error' : '', hasHint ? 'textarea-hint' : ''].filter(Boolean).join(' ');
     const label = this.accessibleLabel || (hasLabel ? nothing : this.localize('codeEditorLabel'));
+    const invalid = hasError || (this.touched && !this.internals.validity.valid);
     return html`<div part="form-control">
       <label part="label form-control-label" for="textarea" ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot></label>
       <div part="editor" data-language=${this.language}>
@@ -235,7 +245,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
               ? Array.from({ length: lineCount }, (_v, i) => html`<div>${i + 1}</div>`)
               : html`<span>${Array.from({ length: lineCount }, (_v, i) => i + 1).join('\n')}</span>`}</div>`
           : nothing}
-        <textarea id="textarea" part="textarea" .value=${this.value} aria-label=${label} aria-describedby=${describedBy || nothing} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'} placeholder=${this.placeholder} ?readonly=${this.readonly} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize} autocorrect=${this.autoCorrect} wrap=${this.wrap} style=${styleMap(textareaStyle)} @input=${this.onInput} @change=${this.onChange} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}></textarea>
+        <textarea id="textarea" part="textarea" .value=${this.value} aria-label=${label} aria-describedby=${describedBy || nothing} aria-invalid=${invalid ? 'true' : 'false'} placeholder=${this.placeholder} ?required=${this.required} ?readonly=${this.readonly} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize} autocorrect=${this.autoCorrect} wrap=${this.wrap} style=${styleMap(textareaStyle)} @input=${this.onInput} @change=${this.onChange} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}></textarea>
       </div>
       <div id="textarea-hint" part="hint" ?hidden=${!hasHint}>${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot></div>
       <div id="textarea-error" part="error" ?hidden=${!hasError}>${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot></div>

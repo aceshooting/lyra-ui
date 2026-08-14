@@ -28,6 +28,36 @@ describe('lr-contact-viewer', () => {
       expect(el.shadowRoot!.querySelector('[part="contact-adr"]')!.textContent).to.contain('Main Street');
     } finally { window.fetch = original; }
   });
+  it('preserves level 3 by default, supports another contact-name heading level, and allows none', async () => {
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve(response(CARD))) as typeof window.fetch;
+    try {
+      const defaultViewer = (await fixture(
+        html`<lr-contact-viewer src="https://example.test/default.vcf"></lr-contact-viewer>`,
+      )) as LyraContactViewer;
+      await waitUntil(() => defaultViewer.shadowRoot!.querySelector('[part="contact-name"]') !== null);
+      const defaultName = defaultViewer.shadowRoot!.querySelector<HTMLElement>('[part="contact-name"]')!;
+      expect(defaultName.getAttribute('role')).to.equal('heading');
+      expect(defaultName.getAttribute('aria-level')).to.equal('3');
+
+      const configured = (await fixture(
+        html`<lr-contact-viewer heading-level="2" src="https://example.test/configured.vcf"></lr-contact-viewer>`,
+      )) as LyraContactViewer;
+      await waitUntil(() => configured.shadowRoot!.querySelector('[part="contact-name"]') !== null);
+      const configuredName = configured.shadowRoot!.querySelector<HTMLElement>('[part="contact-name"]')!;
+      expect(configuredName.getAttribute('role')).to.equal('heading');
+      expect(configuredName.getAttribute('aria-level')).to.equal('2');
+      await expect(configured).to.be.accessible();
+
+      const unheaded = (await fixture(
+        html`<lr-contact-viewer heading-level="none" src="https://example.test/unheaded.vcf"></lr-contact-viewer>`,
+      )) as LyraContactViewer;
+      await waitUntil(() => unheaded.shadowRoot!.querySelector('[part="contact-name"]') !== null);
+      const unheadedName = unheaded.shadowRoot!.querySelector<HTMLElement>('[part="contact-name"]')!;
+      expect(unheadedName.hasAttribute('role')).to.equal(false);
+      expect(unheadedName.hasAttribute('aria-level')).to.equal(false);
+    } finally { window.fetch = original; }
+  });
   it('formats organization, type, and address lists with the effective locale', async () => {
     const original = window.fetch;
     const source = ['BEGIN:VCARD', 'VERSION:4.0', 'FN:Ada', 'ORG:Research;Analysis', 'TEL;TYPE=work,voice:+352', 'ADR:;;Street;Town;Region;123;Country', 'END:VCARD'].join('\r\n');

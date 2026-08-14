@@ -477,6 +477,33 @@ it('distributes an initial slotted heading while announcements are still off', a
   el.remove();
 });
 
+it('gives property and rich-slot headings the configured semantic level with a none opt-out', async () => {
+  const propertyHeading = (await fixture(
+    html`<lr-callout heading="Update available">Message</lr-callout>`,
+  )) as LyraCallout;
+  const propertyWrapper = propertyHeading.shadowRoot!.querySelector<HTMLElement>('[part="heading"]')!;
+  expect(propertyWrapper.getAttribute('role')).to.equal('heading');
+  expect(propertyWrapper.getAttribute('aria-level')).to.equal('3');
+
+  const richHeading = (await fixture(html`
+    <lr-callout heading-level="2">
+      <span slot="heading">Rich <em>warning</em></span>
+      Message
+    </lr-callout>
+  `)) as LyraCallout;
+  const richWrapper = richHeading.shadowRoot!.querySelector<HTMLElement>('[part="heading"]')!;
+  expect(richWrapper.getAttribute('role')).to.equal('heading');
+  expect(richWrapper.getAttribute('aria-level')).to.equal('2');
+  await expect(richHeading).to.be.accessible();
+
+  const unheaded = (await fixture(
+    html`<lr-callout heading="Visual label" heading-level="none">Message</lr-callout>`,
+  )) as LyraCallout;
+  const unheadedWrapper = unheaded.shadowRoot!.querySelector<HTMLElement>('[part="heading"]')!;
+  expect(unheadedWrapper.hasAttribute('role')).to.equal(false);
+  expect(unheadedWrapper.hasAttribute('aria-level')).to.equal(false);
+});
+
 it('renders closed when open="false" is set as a plain HTML attribute', async () => {
   // Regression test: `open` defaults `true`, and Lit's default presence-based `type: Boolean`
   // converter cannot distinguish an absent attribute from the literal string "false" -- only a
@@ -506,6 +533,54 @@ it('allows close to be vetoed and otherwise hides', async () => {
   await el.updateComplete;
   expect(el.getAttribute('open')).to.equal('');
   expect(getComputedStyle(el).display).to.equal('block');
+});
+
+it('repairs focused close actions only after dismissal is accepted', async () => {
+  const host = await fixture<HTMLDivElement>(html`
+    <div>
+      <lr-callout closable>Message</lr-callout>
+      <button id="after-callout">After</button>
+    </div>
+  `);
+  const el = host.querySelector('lr-callout') as LyraCallout;
+  const after = host.querySelector<HTMLButtonElement>('#after-callout')!;
+  const close = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="close-button"]')!;
+  const veto = (event: Event): void => event.preventDefault();
+  el.addEventListener('lr-close', veto);
+  close.focus();
+  close.click();
+  expect(el.shadowRoot!.activeElement === close).to.equal(true);
+
+  el.removeEventListener('lr-close', veto);
+  close.click();
+  expect(el.ownerDocument.activeElement === after).to.equal(true);
+  await el.updateComplete;
+  expect(el.open).to.equal(false);
+});
+
+it('repairs direct close state writes but preserves newer listener focus', async () => {
+  const host = await fixture<HTMLDivElement>(html`
+    <div>
+      <button id="explicit-callout-focus">Explicit</button>
+      <lr-callout closable>Message</lr-callout>
+      <button id="after-direct-callout">After</button>
+    </div>
+  `);
+  const el = host.querySelector('lr-callout') as LyraCallout;
+  const explicit = host.querySelector<HTMLButtonElement>('#explicit-callout-focus')!;
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="close-button"]')!.focus();
+  el.open = false;
+  await el.updateComplete;
+  expect(el.ownerDocument.activeElement?.id).to.equal('after-direct-callout');
+
+  el.open = true;
+  await el.updateComplete;
+  const close = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="close-button"]')!;
+  el.addEventListener('lr-close', () => explicit.focus(), { once: true });
+  close.focus();
+  close.click();
+  await el.updateComplete;
+  expect(el.ownerDocument.activeElement === explicit).to.equal(true);
 });
 
 it('forwards a host-level aria-label to the base region when accessible-label is unset', async () => {

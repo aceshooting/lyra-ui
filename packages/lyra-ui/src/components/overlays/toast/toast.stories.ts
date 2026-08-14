@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { toast, type ToastSize, type ToastPlacement } from '../../../lyra.js';
+import type { LyraToast, ToastOverflowDetail } from './toast.class.js';
 
 const meta: Meta = {
   title: 'Toast',
@@ -151,6 +152,71 @@ export const Placements: Story = {
           html`<button @click=${() => toast({ message: placement, placement })}>${placement}</button>`,
       )}
     </div>
+  `,
+};
+
+export const BoundedBurst: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A region shows three notifications, queues twenty in FIFO order, then coalesces any additional loss into one `lr-toast-overflow` event and one localized polite announcement.',
+      },
+    },
+  },
+  render: () => html`
+    <div data-bounded-toast-story style="display:grid; gap:var(--lr-space-s);">
+      <button
+        @click=${(event: Event) => {
+          const wrapper = (event.currentTarget as HTMLElement).closest<HTMLElement>('[data-bounded-toast-story]')!;
+          const region = wrapper.querySelector('lr-toast') as LyraToast;
+          for (let index = 1; index <= 26; index += 1) {
+            void region.create(`إشعار طويل ${index}: اكتمل تحميل الملف بنجاح`, {
+              duration: 0,
+              variant: index % 5 === 0 ? 'success' : 'neutral',
+            });
+          }
+        }}
+      >
+        Send 26 notifications
+      </button>
+      <output>Overflow event count: 0</output>
+      <lr-toast
+        dir="rtl"
+        locale="ar"
+        placement="top-end"
+        .strings=${{ toastOverflow: 'الإشعارات التي لم تُعرض: {count}.' }}
+        @lr-toast-overflow=${(event: CustomEvent<ToastOverflowDetail>) => {
+          const wrapper = (event.currentTarget as HTMLElement).closest<HTMLElement>('[data-bounded-toast-story]')!;
+          wrapper.querySelector('output')!.textContent = `Overflow event count: ${event.detail.count}`;
+        }}
+      ></lr-toast>
+    </div>
+  `,
+};
+
+function deeplyNestedMessage(): unknown {
+  let content: unknown = 'Visible text beyond the accessibility traversal boundary';
+  for (let depth = 0; depth < 260; depth += 1) content = html`<span>${content}</span>`;
+  return content;
+}
+
+export const IncompleteAccessibleMessageFallback: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'When bounded accessible-text extraction cannot retain even a prefix, the announcement and contextual close name use the localized `toastContentIncomplete` fallback instead of becoming silent or implying that the content is complete.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-toast placement="top-center">
+      <lr-toast-item
+        duration="0"
+        .strings=${{ toastContentIncomplete: 'Notification with incomplete content' }}
+      >${deeplyNestedMessage()}</lr-toast-item>
+    </lr-toast>
   `,
 };
 

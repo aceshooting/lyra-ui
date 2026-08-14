@@ -350,6 +350,93 @@ it('does not move external focus when an unfocused accessible heatmap refreshes'
   expect(el.ownerDocument.activeElement?.id).to.equal('outside-heatmap');
 });
 
+it('moves owned focus from an accessible cell to the canvas when accessible-cells is disabled', async () => {
+  const el = (await fixture(html`
+    <lr-heatmap
+      accessible-cells
+      .rowLabels=${['A']}
+      .colLabels=${['X', 'Y']}
+      .values=${[[1, 2]]}
+    ></lr-heatmap>
+  `)) as LyraHeatmap;
+  await el.updateComplete;
+  const cells = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')];
+  cells[1]!.focus();
+
+  el.accessibleCells = false;
+  await el.updateComplete;
+  await aTimeout(0);
+
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('canvas');
+  expect((el as unknown as { focusedCell: MatrixCellPos }).focusedCell).to.deep.equal({ row: 0, col: 1 });
+});
+
+it('moves owned canvas focus to the matching accessible cell when accessible-cells is enabled', async () => {
+  const el = (await fixture(html`
+    <lr-heatmap .rowLabels=${['A']} .colLabels=${['X', 'Y']} .values=${[[1, 2]]}></lr-heatmap>
+  `)) as LyraHeatmap;
+  await el.updateComplete;
+  const canvas = el.shadowRoot!.querySelector<HTMLCanvasElement>('[part="canvas"]')!;
+  canvas.focus();
+  canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await el.updateComplete;
+  canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await el.updateComplete;
+
+  el.accessibleCells = true;
+  await el.updateComplete;
+  await aTimeout(0);
+
+  expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['cellKey']).to.equal('matrix-0-1');
+});
+
+it('falls back to the heatmap base when canvas focus cannot map to an accessible cell', async () => {
+  const el = (await fixture(html`
+    <lr-heatmap
+      .rowLabels=${['A']}
+      .colLabels=${['X']}
+      .values=${[[1]]}
+      .cellInteractive=${() => false}
+    ></lr-heatmap>
+  `)) as LyraHeatmap;
+  await el.updateComplete;
+  el.shadowRoot!.querySelector<HTMLCanvasElement>('[part="canvas"]')!.focus();
+
+  el.accessibleCells = true;
+  await el.updateComplete;
+  await aTimeout(0);
+
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+});
+
+it('does not move external focus across accessible-cells mode changes', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <button id="outside-mode-change">Outside</button>
+      <lr-heatmap
+        accessible-cells
+        .rowLabels=${['A']}
+        .colLabels=${['X']}
+        .values=${[[1]]}
+      ></lr-heatmap>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-heatmap') as LyraHeatmap;
+  const outside = wrapper.querySelector<HTMLButtonElement>('#outside-mode-change')!;
+  await el.updateComplete;
+  outside.focus();
+
+  el.accessibleCells = false;
+  await el.updateComplete;
+  await aTimeout(0);
+  expect(el.ownerDocument.activeElement?.id).to.equal('outside-mode-change');
+
+  el.accessibleCells = true;
+  await el.updateComplete;
+  await aTimeout(0);
+  expect(el.ownerDocument.activeElement?.id).to.equal('outside-mode-change');
+});
+
 it('gives adjacent accessible matrix and calendar cells non-overlapping shared minimum hit areas', async () => {
   const matrix = (await fixture(html`
     <lr-heatmap

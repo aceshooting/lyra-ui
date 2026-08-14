@@ -97,6 +97,32 @@ it('renders heading, description, and slotted content', async () => {
   expect(actionsSlot.assignedElements().length).to.equal(1);
 });
 
+it('gives property and rich-slot headings the configured semantic level with a none opt-out', async () => {
+  const propertyHeading = (await fixture(
+    html`<lr-empty heading="No results"></lr-empty>`,
+  )) as LyraEmpty;
+  const propertyWrapper = propertyHeading.shadowRoot!.querySelector<HTMLElement>('[part="heading"]')!;
+  expect(propertyWrapper.getAttribute('role')).to.equal('heading');
+  expect(propertyWrapper.getAttribute('aria-level')).to.equal('3');
+
+  const richHeading = (await fixture(html`
+    <lr-empty heading-level="2">
+      <span slot="heading">No <em>matching</em> results</span>
+    </lr-empty>
+  `)) as LyraEmpty;
+  const richWrapper = richHeading.shadowRoot!.querySelector<HTMLElement>('[part="heading"]')!;
+  expect(richWrapper.getAttribute('role')).to.equal('heading');
+  expect(richWrapper.getAttribute('aria-level')).to.equal('2');
+  await expect(richHeading).to.be.accessible();
+
+  const unheaded = (await fixture(
+    html`<lr-empty heading="Visual label" heading-level="none"></lr-empty>`,
+  )) as LyraEmpty;
+  const unheadedWrapper = unheaded.shadowRoot!.querySelector<HTMLElement>('[part="heading"]')!;
+  expect(unheadedWrapper.hasAttribute('role')).to.equal(false);
+  expect(unheadedWrapper.hasAttribute('aria-level')).to.equal(false);
+});
+
 it('announces only later meaningful heading/description changes and deduplicates hidden chrome', async () => {
   const el = (await fixture(html`<lr-empty heading="No results"></lr-empty>`)) as LyraEmpty;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;

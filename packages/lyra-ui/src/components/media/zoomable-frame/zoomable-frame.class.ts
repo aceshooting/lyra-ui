@@ -3,6 +3,7 @@ import { property, query } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { safeDownloadHref } from '../../../internal/safe-url.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { styles } from './zoomable-frame.styles.js';
@@ -130,8 +131,10 @@ function parseZoomLevels(value: unknown): number[] {
 export interface LyraZoomableFrameEventMap {
   load: Event;
   error: Event;
-  blur: CustomEvent<undefined>;
-  focus: CustomEvent<undefined>;
+  blur: FocusEvent;
+  focus: FocusEvent;
+  'lr-blur': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<undefined>;
 }
 
 /**
@@ -156,8 +159,12 @@ export interface LyraZoomableFrameEventMap {
  *   and hidden from assistive technology; the native zoom-out button remains the sole action.
  * @event load - Relayed native iframe load event; non-bubbling and non-composed.
  * @event error - Relayed native iframe error event; non-bubbling and non-composed.
- * @event focus - Re-dispatched from the internal iframe as a bubbling, composed event.
- * @event blur - Re-dispatched from the internal iframe as a bubbling, composed event.
+ * @event {FocusEvent} focus - Relayed once from the internal iframe as a bubbling, composed native
+ *   event.
+ * @event {FocusEvent} blur - Relayed once from the internal iframe as a bubbling, composed native
+ *   event.
+ * @event lr-focus - Prefixed compatibility alias for `focus`.
+ * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @csspart iframe - The internal `<iframe>` element.
  * @csspart controls - The zoom-controls toolbar.
  * @csspart zoom-in-button - The zoom-in button.
@@ -219,19 +226,20 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
    *  there; the zoom toolbar is a two-button group with no single primary action, so it is
    *  deliberately not the forwarding target. */
   override focus(options?: FocusOptions): void {
+    const previous = this.ownerDocument.activeElement;
     this.iframe?.focus(options);
     // Emitted here as well as from the native listener, de-duplicated by `hasEmittedFocus`, because
     // Firefox dispatches NO focus/focusin on an <iframe> element for a programmatic focus() -- it
     // moves focus into the frame's own document instead. Chromium/WebKit fire the native event
     // synchronously inside the call above, so the flag is already set by the time this runs and this
     // call is a no-op there; on Firefox it is the only thing that emits.
-    this.emitHostFocus();
+    this.emitHostFocus(undefined, previous);
   }
 
   /** Blur the internal iframe. */
   override blur(): void {
     this.iframe?.blur();
-    this.emitHostBlur();
+    this.emitHostBlur(undefined, this.ownerDocument.activeElement);
   }
 
   /** Activate the internal iframe, so a host-level `.click()` is not a silent no-op. */
@@ -251,16 +259,32 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
    *  for one focus change (Chromium/WebKit) and when only one of them does (Firefox). */
   private hasEmittedFocus = false;
 
-  private emitHostFocus(): void {
-    if (this.hasEmittedFocus) return;
-    this.hasEmittedFocus = true;
-    this.emit('focus');
+  private dispatchHostFocusEvent(
+    type: 'focus' | 'blur',
+    source?: FocusEvent,
+    relatedTarget: EventTarget | null = null,
+  ): void {
+    const view = this.ownerDocument.defaultView;
+    if (!view) return;
+    const nativeSource = new view.FocusEvent(type, {
+      relatedTarget: source?.relatedTarget ?? relatedTarget,
+      view,
+      detail: source?.detail ?? 0,
+    });
+    relayNativeEvent(this, nativeSource);
+    this.emit(type === 'focus' ? 'lr-focus' : 'lr-blur');
   }
 
-  private emitHostBlur(): void {
+  private emitHostFocus(source?: FocusEvent, relatedTarget: EventTarget | null = null): void {
+    if (this.hasEmittedFocus) return;
+    this.hasEmittedFocus = true;
+    this.dispatchHostFocusEvent('focus', source, relatedTarget);
+  }
+
+  private emitHostBlur(source?: FocusEvent, relatedTarget: EventTarget | null = null): void {
     if (!this.hasEmittedFocus) return;
     this.hasEmittedFocus = false;
-    this.emit('blur');
+    this.dispatchHostFocusEvent('blur', source, relatedTarget);
   }
 
   // Bound to focusin/focusout rather than focus/blur: these bubble, so they also catch focus that
@@ -268,12 +292,12 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   // the internal event from escaping the shadow boundary alongside our own re-dispatched one.
   private onFrameFocus = (event: FocusEvent): void => {
     event.stopPropagation();
-    this.emitHostFocus();
+    this.emitHostFocus(event);
   };
 
   private onFrameBlur = (event: FocusEvent): void => {
     event.stopPropagation();
-    this.emitHostBlur();
+    this.emitHostBlur(event);
   };
 
   private navigationGeneration = 0;

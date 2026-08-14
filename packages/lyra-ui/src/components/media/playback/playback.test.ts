@@ -396,21 +396,49 @@ it('forwards host click() to the play button', async () => {
   expect(el.playing).to.be.false;
 });
 
-it('bridges internal control focus and blur as bubbling, composed host events', async () => {
+it('relays one native focus/blur pair with payload plus one prefixed alias pair', async () => {
   const el = (await fixture(html`<lr-playback length="3"></lr-playback>`)) as LyraPlayback;
   const slider = el.shadowRoot!.querySelector('[part="slider"]') as HTMLInputElement;
+  const related = document.createElement('button');
+  const nativeEvents: FocusEvent[] = [];
+  const aliases: string[] = [];
+  const sequence: string[] = [];
+  el.addEventListener('focus', (event) => {
+    nativeEvents.push(event as FocusEvent);
+    sequence.push('focus');
+  });
+  el.addEventListener('blur', (event) => {
+    nativeEvents.push(event as FocusEvent);
+    sequence.push('blur');
+  });
+  el.addEventListener('lr-focus', () => {
+    aliases.push('lr-focus');
+    sequence.push('lr-focus');
+  });
+  el.addEventListener('lr-blur', () => {
+    aliases.push('lr-blur');
+    sequence.push('lr-blur');
+  });
 
-  const focusPromise = oneEvent(el, 'focus');
-  slider.focus();
-  const focusEvent = await focusPromise;
-  expect(focusEvent.bubbles).to.be.true;
-  expect(focusEvent.composed).to.be.true;
+  slider.dispatchEvent(new FocusEvent('focus', {
+    bubbles: true,
+    composed: true,
+    relatedTarget: related,
+    view: window,
+  }));
+  slider.dispatchEvent(new FocusEvent('blur', {
+    bubbles: true,
+    composed: true,
+    relatedTarget: related,
+    view: window,
+  }));
 
-  const blurPromise = oneEvent(el, 'blur');
-  slider.blur();
-  const blurEvent = await blurPromise;
-  expect(blurEvent.bubbles).to.be.true;
-  expect(blurEvent.composed).to.be.true;
+  expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+  expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
+  expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
+  expect(nativeEvents.every((event) => event.relatedTarget === related)).to.be.true;
+  expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
+  expect(sequence).to.deep.equal(['focus', 'lr-focus', 'blur', 'lr-blur']);
 });
 
 it('toggles playback when the rendered play-button is clicked', async () => {

@@ -1293,11 +1293,25 @@ describe('lr-video control surface', () => {
     const el = wrapper.querySelector('lr-video') as LyraVideo;
     await el.updateComplete;
     const play = button(el, 'play')!;
-    // Listening on the PARENT: a native focus/blur is composed but does not bubble, so only the
-    // component's own re-dispatched event reaches this listener.
-    const seen: string[] = [];
-    wrapper.addEventListener('focus', () => seen.push('focus'));
-    wrapper.addEventListener('blur', () => seen.push('blur'));
+    const nativeEvents: FocusEvent[] = [];
+    const aliases: string[] = [];
+    const sequence: string[] = [];
+    wrapper.addEventListener('focus', (event) => {
+      nativeEvents.push(event as FocusEvent);
+      sequence.push('focus');
+    });
+    wrapper.addEventListener('blur', (event) => {
+      nativeEvents.push(event as FocusEvent);
+      sequence.push('blur');
+    });
+    wrapper.addEventListener('lr-focus', () => {
+      aliases.push('lr-focus');
+      sequence.push('lr-focus');
+    });
+    wrapper.addEventListener('lr-blur', () => {
+      aliases.push('lr-blur');
+      sequence.push('lr-blur');
+    });
 
     el.focus();
     expect(el.shadowRoot!.activeElement === play).to.equal(true);
@@ -1311,7 +1325,11 @@ describe('lr-video control surface', () => {
 
     el.blur();
     expect(el.shadowRoot!.activeElement === null).to.equal(true);
-    expect(seen).to.deep.equal(['focus', 'blur']);
+    expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+    expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
+    expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
+    expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
+    expect(sequence).to.deep.equal(['focus', 'lr-focus', 'blur', 'lr-blur']);
   });
 
   it('applies the volume slider and playback-rate selector to the media element', async () => {

@@ -1,6 +1,11 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
 import { property, state } from "lit/decorators.js";
+import { activeElementIn } from "../../../internal/active-element.js";
 import { hostAriaLabel } from "../../../internal/a11y.js";
+import {
+  bindAccessibleTextObserver,
+  composedAccessibilityText,
+} from "../../../internal/accessibility-visibility.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { safeLinkHref } from "../../../internal/safe-url.js";
 import type { LyraAppearance } from "../../../internal/variants.js";
@@ -164,9 +169,32 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   private contentObserver?: MutationObserver;
   private contentObserverDocument?: Document;
   private contentObserverGeneration = 0;
+  private semanticFocusOrigin?: Element;
+
+  private semanticOwner(): HTMLElement | null {
+    const root = this.renderRoot;
+    if (!root) return null;
+    return root.querySelector<HTMLElement>('a[part="base"]') ??
+      root.querySelector<HTMLElement>('button[part="activation-button"]') ??
+      root.querySelector<HTMLElement>('div[part="base"]');
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (changed.has("href") || changed.has("interactive")) {
+      const previous = this.semanticOwner();
+      const nextKind = safeLinkHref(this.href)
+        ? "a"
+        : this.interactive
+          ? "button"
+          : "div";
+      this.semanticFocusOrigin =
+        previous !== null &&
+        previous.localName !== nextKind &&
+        activeElementIn(this.shadowRoot) === previous
+          ? previous
+          : undefined;
+    }
     if (!this.hasUpdated) {
       this.hasHeaderSlot = Array.from(this.children).some(
         (el) => el.getAttribute("slot") === "header"
@@ -189,9 +217,26 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
       this.hasFooterActionsSlot = Array.from(this.children).some(
         (el) => el.getAttribute("slot") === "footer-actions"
       );
-      this.accessibleContentText = this.textContent?.trim() ?? "";
+      this.recomputeAccessibleContentText();
     }
     void changed;
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const focusOrigin = this.semanticFocusOrigin;
+    this.semanticFocusOrigin = undefined;
+    if (!focusOrigin) return;
+    this.scheduleAfterUpdate(() => {
+      const internalActive = activeElementIn(this.shadowRoot);
+      const documentActive = activeElementIn(this.ownerDocument);
+      if (
+        (internalActive !== null && internalActive !== focusOrigin) ||
+        (documentActive !== null && documentActive !== this && documentActive !== this.ownerDocument.body)
+      ) return;
+      const target = this.semanticOwner();
+      target?.focus();
+    }, 'card-owner-focus');
   }
 
   private onHeaderSlotChange = (e: Event): void => {
@@ -276,8 +321,14 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.accessibleContentText = this.textContent?.trim() ?? "";
+    this.recomputeAccessibleContentText();
     this.armContentObserver();
+  }
+
+  private recomputeAccessibleContentText(): void {
+    this.accessibleContentText = composedAccessibilityText(this.childNodes, { requireRendered: false })
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   private armContentObserver(): void {
@@ -298,19 +349,16 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
       ) {
         return;
       }
-      this.accessibleContentText = this.textContent?.trim() ?? "";
+      this.recomputeAccessibleContentText();
     });
     this.contentObserver = observer;
     this.contentObserverDocument = ownerDocument;
-    observer.observe(this, {
-      childList: true,
-      characterData: true,
-      subtree: true,
-    });
+    bindAccessibleTextObserver(observer, this, ["alt", "aria-labelledby", "slot"]);
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.semanticFocusOrigin = undefined;
     this.resetContentObserver();
   }
 
@@ -399,6 +447,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
         </div>`
       : html`<div
           part="base"
+          tabindex=${!activatable && this.semanticFocusOrigin ? "-1" : nothing}
           @click=${activatable ? this.onBaseClick : nothing}
         >
           ${body}

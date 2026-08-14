@@ -719,3 +719,206 @@ it('includes a slotted action in the toolbar roving-tabindex group and its keybo
   expect(stops(), 'End lands on the slotted action, now the last stop').to.deep.equal([-1, -1, -1, -1, 0]);
   expect(el.ownerDocument.activeElement === extra).to.equal(true);
 });
+
+it('uses each real action inside a slotted wrapper as a separate roving stop', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected">
+      <div slot="actions" id="extra-action-wrapper">
+        <button id="translate" type="button">Translate</button>
+        <button id="define" type="button">Define</button>
+      </div>
+    </lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  await aTimeout(0);
+  const toolbar = el.shadowRoot!.querySelector<HTMLElement>('[part="toolbar"]')!;
+  const translate = el.querySelector<HTMLButtonElement>('#translate')!;
+  const define = el.querySelector<HTMLButtonElement>('#define')!;
+
+  toolbar.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
+  await aTimeout(0);
+  expect(el.ownerDocument.activeElement === define).to.equal(true);
+  expect([translate.tabIndex, define.tabIndex]).to.deep.equal([-1, 0]);
+
+  define.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
+  await aTimeout(0);
+  const firstBuiltIn = el.shadowRoot!.querySelector<HTMLElement>('lr-button[data-action="ask"]')!;
+  expect(firstBuiltIn.shadowRoot!.activeElement?.localName).to.equal('button');
+});
+
+it('does not turn a decorative slotted root into a toolbar action merely because it can be focused', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected">
+      <span slot="actions" id="selection-decoration">Decoration</span>
+      <span slot="actions" aria-hidden=" TRUE ">
+        <button id="hidden-selection-action">Hidden</button>
+      </span>
+      <button slot="actions" id="visible-selection-action">Visible</button>
+    </lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  await aTimeout(0);
+  const access = el as unknown as { actionButtons(): HTMLElement[] };
+
+  expect(access.actionButtons().map((stop) => stop.id).filter(Boolean)).to.deep.equal([
+    'visible-selection-action',
+  ]);
+});
+
+it('live-reconciles slotted action availability and clears stale roving stops', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected" .actions=${[]}>
+      <button slot="actions" id="first-live-selection-action">First</button>
+      <button slot="actions" id="second-live-selection-action">Second</button>
+      <span slot="actions" id="promoted-live-selection-action">Promoted</span>
+    </lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  const first = el.querySelector<HTMLButtonElement>('#first-live-selection-action')!;
+  const second = el.querySelector<HTMLButtonElement>('#second-live-selection-action')!;
+  const promoted = el.querySelector<HTMLElement>('#promoted-live-selection-action')!;
+  const access = el as unknown as { actionButtons(): HTMLElement[] };
+  await waitUntil(() => first.tabIndex === 0);
+
+  first.disabled = true;
+  await waitUntil(() => second.tabIndex === 0);
+  expect(first.tabIndex).to.equal(-1);
+  second.setAttribute('aria-disabled', 'true');
+  await waitUntil(() => second.tabIndex === -1);
+  expect(access.actionButtons()).to.have.lengthOf(0);
+  expect(second.tabIndex).to.equal(-1);
+
+  first.disabled = false;
+  second.removeAttribute('aria-disabled');
+  await waitUntil(() => first.tabIndex === 0);
+  first.hidden = true;
+  await waitUntil(() => second.tabIndex === 0);
+  second.inert = true;
+  await waitUntil(() => second.tabIndex === -1);
+  expect(access.actionButtons()).to.have.lengthOf(0);
+  expect(second.tabIndex).to.equal(-1);
+
+  promoted.setAttribute('tabindex', '-1');
+  await waitUntil(() => promoted.tabIndex === 0);
+  expect(access.actionButtons().includes(promoted)).to.equal(true);
+  promoted.removeAttribute('tabindex');
+  await waitUntil(() => !access.actionButtons().includes(promoted));
+  expect(promoted.tabIndex).to.equal(-1);
+});
+
+it('drops a role-only slotted action when its authored actionability is removed', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected" .actions=${[]}>
+      <span slot="actions" id="role-only-selection-action" role="button">Role action</span>
+      <button slot="actions" id="native-selection-fallback">Native fallback</button>
+    </lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  const roleAction = el.querySelector<HTMLElement>('#role-only-selection-action')!;
+  const fallback = el.querySelector<HTMLButtonElement>('#native-selection-fallback')!;
+  const access = el as unknown as { actionButtons(): HTMLElement[] };
+  await waitUntil(() => roleAction.tabIndex === 0);
+
+  roleAction.removeAttribute('role');
+  await waitUntil(() => fallback.tabIndex === 0);
+
+  expect(roleAction.tabIndex).to.equal(-1);
+  expect(access.actionButtons().map((stop) => stop.id)).to.deep.equal(['native-selection-fallback']);
+});
+
+it('repairs focused slotted action removal to the nearest survivor, then the toolbar', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected" .actions=${[]}>
+      <button slot="actions" id="removed-live-selection-action">Removed</button>
+      <button slot="actions" id="surviving-live-selection-action">Survivor</button>
+    </lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  const removed = el.querySelector<HTMLButtonElement>('#removed-live-selection-action')!;
+  const survivor = el.querySelector<HTMLButtonElement>('#surviving-live-selection-action')!;
+  const toolbar = el.shadowRoot!.querySelector<HTMLElement>('[part="toolbar"]')!;
+  await waitUntil(() => removed.tabIndex === 0);
+
+  removed.focus();
+  removed.remove();
+  await waitUntil(() => el.ownerDocument.activeElement === survivor);
+  expect(survivor.tabIndex).to.equal(0);
+
+  survivor.setAttribute('inert', '');
+  await waitUntil(() => el.shadowRoot!.activeElement === toolbar);
+  expect(survivor.tabIndex).to.equal(-1);
+});
+
+it('does not steal newer external focus during live slotted-action repair', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <lr-selection-toolbar open text="selected" .actions=${[]}>
+        <button slot="actions" id="invalidated-selection-action">Action</button>
+      </lr-selection-toolbar>
+      <button id="outside-selection-toolbar-live">Outside</button>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-selection-toolbar') as LyraSelectionToolbar;
+  const action = wrapper.querySelector<HTMLButtonElement>('#invalidated-selection-action')!;
+  const outside = wrapper.querySelector<HTMLButtonElement>('#outside-selection-toolbar-live')!;
+  await waitUntil(() => action.tabIndex === 0);
+
+  action.focus();
+  action.setAttribute('aria-disabled', 'true');
+  outside.focus();
+  await aTimeout(0);
+  await aTimeout(0);
+
+  expect(el.ownerDocument.activeElement === outside).to.equal(true);
+});
+
+it('manages built-in actions without relying on their private part name', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected"></lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  await aTimeout(0);
+  const hosts = [...el.shadowRoot!.querySelectorAll('lr-button[data-action]')] as Array<
+    HTMLElement & { updateComplete: Promise<unknown> }
+  >;
+  await Promise.all(hosts.map((host) => host.updateComplete));
+  const controls = hosts.map((host) => host.shadowRoot!.querySelector<HTMLButtonElement>('button')!);
+  controls.forEach((control) => control.removeAttribute('part'));
+  const access = el as unknown as {
+    syncRovingStops(index: number): Promise<HTMLElement | undefined>;
+  };
+
+  const target = await access.syncRovingStops(2);
+  expect(target === controls[2]).to.equal(true);
+  expect(controls.map((control) => control.tabIndex)).to.deep.equal([-1, -1, 0, -1]);
+});
+
+it('rebinds live slotted-action observation to the current realm after adoption', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected" .actions=${[]}>
+      <button slot="actions" id="adopted-first-selection-action">First</button>
+      <button slot="actions" id="adopted-second-selection-action">Second</button>
+    </lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  const first = el.querySelector<HTMLButtonElement>('#adopted-first-selection-action')!;
+  const second = el.querySelector<HTMLButtonElement>('#adopted-second-selection-action')!;
+  await waitUntil(() => first.tabIndex === 0);
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameWindow = iframe.contentWindow!;
+  const NativeObserver = frameWindow.MutationObserver;
+  let observerConstructions = 0;
+  frameWindow.MutationObserver = class extends NativeObserver {
+    constructor(callback: MutationCallback) {
+      observerConstructions++;
+      super(callback);
+    }
+  };
+  try {
+    iframe.contentDocument!.body.append(iframe.contentDocument!.adoptNode(el));
+    await aTimeout(0);
+    first.setAttribute('aria-disabled', 'true');
+    await waitUntil(() => second.tabIndex === 0);
+
+    expect(observerConstructions).to.be.greaterThan(0);
+    expect(first.tabIndex).to.equal(-1);
+  } finally {
+    frameWindow.MutationObserver = NativeObserver;
+    el.remove();
+    iframe.remove();
+  }
+});

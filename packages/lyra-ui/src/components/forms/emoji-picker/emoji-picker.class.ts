@@ -4,10 +4,16 @@ import { live } from 'lit/directives/live.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
 import { nextId } from '../../../internal/a11y.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
 import {
   acquireAnnouncementSink,
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
+import {
+  dispatchNativeEvent,
+  dispatchNativeInputEvent,
+  relayNativeEvent,
+} from '../../../internal/native-event-relay.js';
 import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './emoji-picker.styles.js';
 import { loadEmojiDataCached } from './emoji-data-loader.js';
@@ -62,13 +68,16 @@ export type LyraEmojiPickerSize = LyraSizeStep;
 
 export interface LyraEmojiPickerEventMap {
   'lr-invalid': CustomEvent<undefined>;
-  input: CustomEvent<undefined>;
-  change: CustomEvent<undefined>;
-  blur: CustomEvent<undefined>;
-  focus: CustomEvent<undefined>;
-  /** Fired when an emoji is picked (click, or Enter/Space on the active grid cell). `detail: {
-   *  emoji: string }` — the picked glyph, same value `this.value` is set to. */
-  'lr-change': CustomEvent<{ emoji: string }>;
+  input: InputEvent;
+  change: Event;
+  blur: FocusEvent;
+  focus: FocusEvent;
+  /** Fired when an emoji is picked. `detail.value` is the picked glyph. */
+  'lr-input': CustomEvent<{ value: string }>;
+  /** Fired when an emoji pick is committed. `detail.value` is the picked glyph. */
+  'lr-change': CustomEvent<{ value: string }>;
+  'lr-blur': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<undefined>;
 }
 
 class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
@@ -114,13 +123,14 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * wins through normal custom-property inheritance.
  *
  * @customElement lr-emoji-picker
- * @event input - Native-style composed event emitted after a user picks an emoji.
- * @event change - Native-style composed commit event emitted with `input`.
- * @event lr-change - An emoji was picked. `detail: { emoji: string }`.
- * @event blur - Re-dispatched from the internal search `<input>`'s own `blur` — bubbling and
- *   composed (unlike the native event, which is neither).
- * @event focus - Re-dispatched from the internal search `<input>`'s own `focus`, for the same
- *   reason as `blur`.
+ * @event input - Native `InputEvent` emitted after a user picks an emoji.
+ * @event change - Native commit `Event` emitted with `input`.
+ * @event lr-input - An emoji was picked. `detail: { value }`.
+ * @event lr-change - An emoji pick was committed. `detail: { value }`.
+ * @event blur - Native `FocusEvent` relayed from the internal search input.
+ * @event focus - Native `FocusEvent` relayed from the internal search input.
+ * @event lr-blur - Lyra alias emitted after the native `blur` relay.
+ * @event lr-focus - Lyra alias emitted after the native `focus` relay.
  * @event lr-invalid - The emoji picker failed a validity check. Cancelable — preventing this
  *   alias also prevents the native `invalid` event that produced it.
  * @slot label - Custom label content.
@@ -346,6 +356,29 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   private ownerRealmGeneration = 0;
 
   @query('[part="search"]') private searchEl?: HTMLInputElement;
+
+  /** Reads both component state and the UA's synchronous fieldset cascade before host actions. */
+  private get liveDisabled(): boolean {
+    return this.effectiveDisabled || this.matches(':disabled');
+  }
+
+  /** Moves focus to the search combobox while the form control is enabled. */
+  override focus(options?: FocusOptions): void {
+    if (!this.liveDisabled) this.searchEl?.focus(options);
+  }
+
+  /** Blurs the currently focused owned search or emoji target, including a nested shadow owner. */
+  override blur(): void {
+    const active = deepActiveElementIn(this.shadowRoot);
+    if (active && typeof (active as HTMLElement).blur === 'function') {
+      (active as HTMLElement).blur();
+    }
+  }
+
+  /** Activates the live search control while the form control is enabled. */
+  override click(): void {
+    if (!this.liveDisabled) this.searchEl?.click();
+  }
 
   private readonly gridId = nextId('emoji-picker-grid');
 
@@ -630,6 +663,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
 
   private onSearchInput = (event: Event): void => {
     event.stopPropagation();
+    if (this.liveDisabled) return;
     this.pendingGridFocus = undefined;
     this.queryText = (event.target as HTMLInputElement).value;
     this.activeIndex = 0;
@@ -638,11 +672,16 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   // Native focus/blur neither bubble nor cross the shadow boundary, so a host-level @focus/@blur
   // listener on <lr-emoji-picker> would never fire without this bridge -- mirrors
   // <lr-input>'s/<lr-select>'s onFocus/onBlur pair (including the disabled-blur guard below).
-  private onSearchFocus = (): void => {
-    this.emit('focus');
+  private onSearchFocus = (event: FocusEvent): void => {
+    if (this.liveDisabled) {
+      event.stopPropagation();
+      return;
+    }
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
 
-  private onSearchBlur = (): void => {
+  private onSearchBlur = (event: FocusEvent): void => {
     // This element's own `disabled` becoming true force-blurs the search input if it currently
     // holds focus -- plain native HTML behavior (disabling a focused control blurs it), not a user
     // interaction. That blur can land synchronously nested inside the very property write that
@@ -651,8 +690,9 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     // on timing, capable of reentering that same in-flight update and tripping Lit's dev-mode
     // "scheduled an update after an update completed" warning for a state flip nothing observable
     // needed -- a disabled control is barred from validation regardless.
-    if (!this.effectiveDisabled) this.touched = true;
-    this.emit('blur');
+    if (!this.liveDisabled) this.touched = true;
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
 
   private onLabelSlotChange = (event: Event): void => {
@@ -668,18 +708,19 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   };
 
   private pick(item: EmojiPickerItem): void {
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
     this.value = item.emoji;
-    this.emit('input');
-    this.emit('change');
-    this.emit('lr-change', { emoji: item.emoji });
+    dispatchNativeInputEvent(this);
+    this.emit('lr-input', { value: item.emoji });
+    dispatchNativeEvent(this, 'change');
+    this.emit('lr-change', { value: item.emoji });
   }
 
   // Shared between the search input (combobox idiom: focus stays in the input while
   // `aria-activedescendant` tracks the active option) and the grid itself (roving tabindex: focus
   // follows the active option).
   private onNavigationKeyDown = (event: KeyboardEvent): void => {
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
     const items = this.flatItems;
     if (items.length === 0) return;
     const inSearch = event.currentTarget === this.searchEl;

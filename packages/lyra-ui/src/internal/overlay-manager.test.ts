@@ -1,4 +1,5 @@
 import { expect } from '@open-wc/testing';
+import { resolveAccessibleTrigger } from './a11y.js';
 import {
   activateOverlay,
   collectAutofocusElements,
@@ -389,6 +390,103 @@ it('updates a return target without changing stack order or moving focus', () =>
   expect((document.activeElement as HTMLElement | null)?.dataset.returnTarget).to.equal('next');
 });
 
+it('evaluates a live return target after modal inert cleanup reveals its real focus target', () => {
+  const tagName = 'test-overlay-live-restore-trigger';
+  if (!customElements.get(tagName)) {
+    customElements.define(
+      tagName,
+      class extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' }).innerHTML = '<button id="live-inner-trigger">Open</button>';
+        }
+      },
+    );
+  }
+  const page = document.createElement('section');
+  page.dataset.overlay = 'live-restore-page';
+  const header = document.createElement('header');
+  const original = document.createElement('button');
+  original.id = 'original-live-trigger';
+  header.append(original);
+  const drawer = document.createElement('aside');
+  drawer.tabIndex = -1;
+  page.append(header, drawer);
+  document.body.append(page);
+  original.focus();
+  const handle = activateOverlay({
+    host: page,
+    panel: () => drawer,
+    modalRoot: () => drawer,
+    onEscape: () => undefined,
+  });
+  const replacement = document.createElement(tagName);
+  replacement.id = 'replacement-live-trigger';
+  original.replaceWith(replacement);
+
+  expect(header.inert).to.equal(true);
+  expect(resolveAccessibleTrigger(replacement).id).to.equal('replacement-live-trigger');
+  let resolverCalls = 0;
+  let inertWhenResolved: boolean | undefined;
+  handle.updateRestoreFocusTo(() => {
+    resolverCalls++;
+    inertWhenResolved = header.inert;
+    return resolveAccessibleTrigger(replacement);
+  });
+
+  handle.deactivate();
+
+  expect(resolverCalls).to.equal(1);
+  expect(inertWhenResolved).to.equal(false);
+  expect(header.inert).to.equal(false);
+  expect((deepActiveElement(document) as HTMLElement | null)?.id).to.equal('live-inner-trigger');
+});
+
+it('fails closed for detached, throwing, fake, and foreign live return targets', () => {
+  const bottom = createOverlay(document, 'invalid-live-return-bottom');
+  const bottomHandle = activateOverlay({
+    host: bottom.host,
+    panel: () => bottom.panel,
+    onEscape: () => undefined,
+  });
+  const detached = document.createElement('button');
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const foreign = iframe.contentDocument!.createElement('button');
+  foreign.id = 'foreign-live-return';
+  iframe.contentDocument!.body.append(foreign);
+  const resolvers = [
+    () => detached,
+    () => {
+      throw new Error('consumer restore resolver failed');
+    },
+    () => ({ nodeType: 1, localName: 'button' } as unknown as HTMLElement),
+    () => foreign,
+  ];
+
+  try {
+    for (let index = 0; index < resolvers.length; index++) {
+      const top = createOverlay(document, `invalid-live-return-top-${index}`);
+      const topHandle = activateOverlay({
+        host: top.host,
+        panel: () => top.panel,
+        onEscape: () => undefined,
+        restoreFocusTo: resolvers[index],
+      });
+      topHandle.focusInitial();
+
+      expect(() => topHandle.deactivate()).to.not.throw();
+      expect((deepActiveElement(document) as HTMLElement | null)?.textContent).to.equal(
+        'invalid-live-return-bottom first',
+      );
+    }
+    expect((iframe.contentDocument!.activeElement as HTMLElement | null)?.id).to.not.equal('foreign-live-return');
+  } finally {
+    bottomHandle.deactivate({ restoreFocus: false });
+    iframe.remove();
+  }
+});
+
 it('pulls an escaped focus position back inside and wraps both Tab boundaries', () => {
   const outside = document.createElement('button');
   outside.dataset.overlayBackground = '';
@@ -586,6 +684,84 @@ it('rebases an upper overlay return target when a lower overlay disappears', () 
   topHandle.deactivate();
 
   expect(document.activeElement?.getAttribute('data-overlay-background')).to.equal('');
+});
+
+it('rebases a live return resolver through a nested overlay and evaluates it after final cleanup', () => {
+  const tagName = 'test-overlay-rebased-live-trigger';
+  if (!customElements.get(tagName)) {
+    customElements.define(
+      tagName,
+      class extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' }).innerHTML = '<button id="rebased-live-inner">Open</button>';
+        }
+      },
+    );
+  }
+  const trigger = document.createElement(tagName);
+  trigger.dataset.overlayBackground = '';
+  document.body.append(trigger);
+  const inner = trigger.shadowRoot!.querySelector<HTMLButtonElement>('button')!;
+  inner.focus();
+  let resolverCalls = 0;
+  const bottom = createOverlay(document, 'rebased-live-bottom');
+  const bottomHandle = activateOverlay({
+    host: bottom.host,
+    panel: () => bottom.panel,
+    onEscape: () => undefined,
+    restoreFocusTo: () => {
+      resolverCalls++;
+      return resolveAccessibleTrigger(trigger);
+    },
+  });
+  bottomHandle.focusInitial();
+  const top = createOverlay(document, 'rebased-live-top');
+  const topHandle = activateOverlay({ host: top.host, panel: () => top.panel, onEscape: () => undefined });
+  topHandle.focusInitial();
+
+  bottomHandle.deactivate({ restoreFocus: false });
+  bottom.host.remove();
+  expect(trigger.inert).to.equal(true);
+  expect(resolverCalls).to.equal(0);
+
+  topHandle.deactivate();
+
+  expect(resolverCalls).to.equal(1);
+  expect((deepActiveElement(document) as HTMLElement | null)?.id).to.equal('rebased-live-inner');
+});
+
+it('resolves a live return target in the overlay current document after adoption', () => {
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const overlay = createOverlay(document, 'adopted-live-return');
+  let liveTarget: HTMLElement | null = null;
+  const handle = activateOverlay({
+    host: overlay.host,
+    panel: () => overlay.panel,
+    onEscape: () => undefined,
+    restoreFocusTo: () => liveTarget,
+  });
+  handle.focusInitial();
+
+  try {
+    handle.suspend();
+    iframe.contentDocument!.body.append(overlay.host);
+    liveTarget = iframe.contentDocument!.createElement('button');
+    liveTarget.id = 'adopted-live-return-target';
+    iframe.contentDocument!.body.append(liveTarget);
+    handle.resume();
+    handle.focusInitial();
+
+    handle.deactivate();
+
+    expect((deepActiveElement(iframe.contentDocument!) as HTMLElement | null)?.id).to.equal(
+      'adopted-live-return-target',
+    );
+  } finally {
+    handle.deactivate({ restoreFocus: false });
+    iframe.remove();
+  }
 });
 
 it('suspends and resumes across synchronous reparenting without losing its focus-return record', async () => {
@@ -856,6 +1032,65 @@ it('makes modal background paths inert and restores pre-existing inert state', (
   expect(preInert.inert).to.be.true;
 });
 
+it('can keep a modal subtree interactive while inerting same-host application siblings', async () => {
+  const page = document.createElement('section');
+  page.dataset.overlay = 'same-host-page';
+  const header = document.createElement('header');
+  const main = document.createElement('main');
+  const footer = document.createElement('footer');
+  const drawer = document.createElement('aside');
+  drawer.tabIndex = -1;
+  header.inert = true;
+  page.append(header, main, footer, drawer);
+  const outside = document.createElement('div');
+  outside.dataset.overlayBackground = '';
+  document.body.append(page, outside);
+
+  const pageHandle = activateOverlay({
+    host: page,
+    panel: () => drawer,
+    modalRoot: () => drawer,
+    onEscape: () => undefined,
+  });
+
+  expect(page.inert).to.equal(false);
+  expect(drawer.inert).to.equal(false);
+  expect(header.inert).to.equal(true);
+  expect(main.inert).to.equal(true);
+  expect(footer.inert).to.equal(true);
+  expect(outside.inert).to.equal(true);
+
+  const lateNavigation = document.createElement('nav');
+  page.append(lateNavigation);
+  await waitForCondition(() => lateNavigation.inert, 'late same-host background content to become inert');
+
+  const nestedHost = document.createElement('section');
+  const nestedPanel = document.createElement('div');
+  nestedPanel.tabIndex = -1;
+  nestedHost.append(nestedPanel);
+  page.append(nestedHost);
+  const nestedHandle = activateOverlay({
+    host: nestedHost,
+    panel: () => nestedPanel,
+    modalRoot: () => nestedPanel,
+    onEscape: () => undefined,
+  });
+  expect(nestedHost.inert).to.equal(false);
+  expect(nestedPanel.inert).to.equal(false);
+  expect(drawer.inert).to.equal(true);
+
+  nestedHandle.deactivate({ restoreFocus: false });
+  expect(nestedHost.inert).to.equal(true);
+  expect(drawer.inert).to.equal(false);
+  pageHandle.deactivate({ restoreFocus: false });
+  expect(header.inert).to.equal(true);
+  expect(main.inert).to.equal(false);
+  expect(footer.inert).to.equal(false);
+  expect(lateNavigation.inert).to.equal(false);
+  expect(nestedHost.inert).to.equal(false);
+  expect(outside.inert).to.equal(false);
+});
+
 it('tracks live application inert changes while keeping modal background inert', async () => {
   const background = document.createElement('main');
   background.dataset.overlayBackground = '';
@@ -1080,6 +1315,53 @@ it('restores a pre-existing overlay stack style after deactivation', () => {
   handle.deactivate({ restoreFocus: false });
   expect(overlay.host.style.getPropertyValue('--lr-overlay-stack-index')).to.equal('custom');
   expect(overlay.host.style.getPropertyPriority('--lr-overlay-stack-index')).to.equal('important');
+});
+
+it('preserves a newer external overlay stack style while retaining active stack ownership', async () => {
+  const overlay = createOverlay(document, 'externally-restyled-dialog');
+  const handle = activateOverlay({
+    host: overlay.host,
+    panel: () => overlay.panel,
+    onEscape: () => undefined,
+    modal: false,
+  });
+
+  overlay.host.style.setProperty('--lr-overlay-stack-index', 'external-latest', 'important');
+  await waitForCondition(
+    () => overlay.host.style.getPropertyValue('--lr-overlay-stack-index') !== 'external-latest',
+    'the active overlay manager to retain stack-style ownership',
+  );
+
+  handle.deactivate({ restoreFocus: false });
+  expect(overlay.host.style.getPropertyValue('--lr-overlay-stack-index')).to.equal('external-latest');
+  expect(overlay.host.style.getPropertyPriority('--lr-overlay-stack-index')).to.equal('important');
+});
+
+it('takes a fresh stack-style baseline after suspension and document adoption', () => {
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const overlay = createOverlay(document, 'adopted-restyled-dialog');
+  const handle = activateOverlay({
+    host: overlay.host,
+    panel: () => overlay.panel,
+    onEscape: () => undefined,
+    modal: false,
+  });
+
+  try {
+    handle.suspend();
+    overlay.host.style.setProperty('--lr-overlay-stack-index', 'adopted-external', 'important');
+    iframe.contentDocument!.body.append(overlay.host);
+    handle.resume();
+    expect(overlay.host.style.getPropertyValue('--lr-overlay-stack-index')).to.not.equal('adopted-external');
+
+    handle.deactivate({ restoreFocus: false });
+    expect(overlay.host.style.getPropertyValue('--lr-overlay-stack-index')).to.equal('adopted-external');
+    expect(overlay.host.style.getPropertyPriority('--lr-overlay-stack-index')).to.equal('important');
+  } finally {
+    handle.deactivate({ restoreFocus: false });
+    iframe.remove();
+  }
 });
 
 it('skips visibility-hidden focus targets and focuses the next rendered target', () => {

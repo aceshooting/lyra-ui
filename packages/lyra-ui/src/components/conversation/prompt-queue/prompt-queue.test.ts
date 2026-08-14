@@ -73,6 +73,46 @@ it('moves focus to the equivalent action on the nearest survivor after controlle
   expect(focusedAction?.closest('[data-id]')?.getAttribute('data-id')).to.equal('three');
 });
 
+it('uses the nearest enabled action when the equivalent action becomes disabled after removal', async () => {
+  const controlledItems: PromptQueueItem[] = [
+    { id: 'one', value: 'First follow-up' },
+    { id: 'two', value: 'Second follow-up' },
+    { id: 'three', value: 'Third follow-up' },
+  ];
+  const el = (await fixture(
+    html`<lr-prompt-queue .items=${controlledItems}></lr-prompt-queue>`,
+  )) as LyraPromptQueue;
+  el.addEventListener('lr-queue-change', (event) => {
+    el.items = event.detail.items;
+  });
+  const middleDown = el.shadowRoot!.querySelectorAll<HTMLElement>('[data-action="down"]')[1]!;
+  middleDown.focus();
+  el.shadowRoot!.querySelectorAll<HTMLElement>('[data-action="remove"]')[1]!.click();
+  await el.updateComplete;
+
+  const focusedAction = el.shadowRoot!.activeElement as HTMLElement | null;
+  expect(focusedAction?.getAttribute('data-action')).to.equal('up');
+  expect(focusedAction?.closest('[data-id]')?.getAttribute('data-id')).to.equal('three');
+});
+
+it('moves focus from an editor to the nearest enabled row action when editable becomes false', async () => {
+  const el = (await fixture(
+    html`<lr-prompt-queue .items=${items}></lr-prompt-queue>`,
+  )) as LyraPromptQueue;
+  const editor = el.shadowRoot!.querySelector('lr-textarea') as HTMLElement & {
+    updateComplete: Promise<unknown>;
+  };
+  await editor.updateComplete;
+  editor.focus();
+
+  el.editable = false;
+  await el.updateComplete;
+
+  const focusedAction = el.shadowRoot!.activeElement as HTMLElement | null;
+  expect(focusedAction?.getAttribute('data-action')).to.equal('down');
+  expect(focusedAction?.closest('[data-id]')?.getAttribute('data-id')).to.equal('one');
+});
+
 it('moves focus to the queue region when controlled removal empties the queue', async () => {
   const el = (await fixture(
     html`<lr-prompt-queue .items=${[items[0]!]}></lr-prompt-queue>`,

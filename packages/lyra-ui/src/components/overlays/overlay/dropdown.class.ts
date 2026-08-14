@@ -166,6 +166,7 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
     if (!menu) return;
     menu.dropdownOwner = this;
     menu.dropdownContained = true;
+    menu.dropdownRendersMenuRole = this.popupRole !== 'menu';
     menu.dropdownStayOpenOnSelect = this.stayOpenOnSelect;
     menu.dropdownSize = this.size;
     menu.open = this.open;
@@ -183,11 +184,14 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
 
   private releaseConsumerMenu(menu: LyraMenu | undefined): void {
     if (!menu) return;
+    // Close while the engine is still structurally contained. Releasing containment first would
+    // reinterpret this owner teardown as a standalone, cancelable menu dismissal.
+    menu.open = false;
     menu.dropdownOwner = null;
     menu.dropdownContained = false;
+    menu.dropdownRendersMenuRole = false;
     menu.dropdownStayOpenOnSelect = false;
     menu.dropdownSize = undefined;
-    menu.open = false;
   }
 
   private onContentSlotChange = (event: Event): void => {
@@ -232,7 +236,8 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
       changed.has('open') ||
       changed.has('size') ||
       changed.has('stayOpenOnSelect') ||
-      changed.has('consumerMenu')
+      changed.has('consumerMenu') ||
+      changed.has('popupRole')
     ) {
       this.configureMenu(this.menuEngine);
     }
@@ -256,6 +261,7 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
         part="menu"
         .dropdownOwner=${this}
         .dropdownContained=${true}
+        .dropdownRendersMenuRole=${this.popupRole !== 'menu'}
         .dropdownStayOpenOnSelect=${this.stayOpenOnSelect}
         .dropdownSize=${this.size}
         .open=${this.open}

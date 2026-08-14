@@ -5,7 +5,8 @@ import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { place } from '../../../internal/positioner.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
-import { nextId } from '../../../internal/a11y.js';
+import { nextId, srOnly } from '../../../internal/a11y.js';
+import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { chevronIcon, closeIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
@@ -90,9 +91,11 @@ export interface LyraSelectEventMap {
  *
  * `multiple` turns the committed `value` into a `string[]` and renders one removable chip per
  * selection. The chip row is a sibling overlaid on the real trigger button, never nested inside it,
- * so every remove control is valid independently-focusable interactive content. Picking a selected
- * row again still toggles it off, Backspace/Delete on the trigger removes the last selection, and
- * `with-clear` removes all of them. `getTag` replaces a built-in chip entirely;
+ * so every remove control is valid independently-focusable interactive content. The trigger keeps
+ * one complete visually-hidden joined-value node for assistive technology while the painted
+ * built-in chip labels are hidden from it, preventing both truncation and duplicate announcement.
+ * Picking a selected row again still toggles it off, Backspace/Delete on the trigger removes the
+ * last selection, and `with-clear` removes all of them. `getTag` replaces a built-in chip entirely;
  * `max-options-visible` caps how many render before the rest collapse behind a localized "+N" chip.
  *
  * `with-clear`'s button renders inside the trigger's inline-end padding,
@@ -107,8 +110,8 @@ export interface LyraSelectEventMap {
  * "active" row is conveyed via `aria-activedescendant`, never actual focus),
  * matching the WAI-ARIA "select-only combobox" pattern.
  *
- * When `autoCommitSingleOption` is set and exactly one option is enabled
- * (regardless of how many disabled ones exist alongside it), the popup never
+ * When `autoCommitSingleOption` is set and exactly one option is available
+ * (neither disabled nor inert, including through an inert ancestor), the popup never
  * opens at all: a click, Enter, Space, ArrowDown, or ArrowUp on the trigger
  * commits that sole option directly, and the trigger renders as a plain
  * `role="button"` with no chevron/`aria-haspopup`/`aria-expanded` rather than
@@ -131,8 +134,8 @@ export interface LyraSelectEventMap {
  *
  * While the listbox is open, live option collection changes preserve the keyboard-active option
  * by element identity across reorders. If that option is removed or becomes unavailable, the
- * nearest navigable survivor takes over (preferring the following row on a tie); an empty
- * navigable collection clears `aria-activedescendant` instead of retaining an invalid index.
+ * nearest available survivor takes over (preferring the following row on a tie); an empty
+ * available collection clears `aria-activedescendant` instead of retaining an invalid index.
  *
  * @customElement lr-select
  * @slot - `<lr-option>` elements.
@@ -140,16 +143,11 @@ export interface LyraSelectEventMap {
  * @slot hint - Custom hint content.
  * @slot help-text - Shoelace alias for `hint`.
  * @slot error - Custom error content.
- * @slot start - Adornment at the inline-start of the trigger row, before the selected-value label.
- *   Content should be non-focusable/non-interactive only: the trigger itself renders as a native
- *   `<button>` (`[part="trigger"]`), so a slotted `<button>`/`<a>`/other focusable element here
- *   nests inside it in the flattened (assigned-slot) tree -- invalid interactive-content nesting,
- *   and unreachable by keyboard/AT regardless, since the outer button intercepts every
- *   click/Enter/Space before it can reach a nested control. Note: axe-core does not currently
- *   flag this specific shadow-DOM-composed nesting pattern as a violation (verified empirically
- *   against axe-core 4.12.1) -- the hazard is real but not automatically detectable today.
- * @slot end - Adornment after the selected-value label and before the expand icon. Same
- *   non-focusable/non-interactive-content caveat as `start`.
+ * @slot start - Decorative adornment at the inline-start of the trigger row, before the
+ *   selected-value label. Its wrapper is always `aria-hidden` and inert because it lives inside
+ *   the native trigger button; interactive content supplied here remains deliberately unavailable.
+ * @slot end - Decorative adornment after the selected-value label and before the expand icon.
+ *   Its wrapper has the same enforced inert/`aria-hidden` contract as `start`.
  * @slot prefix - Shoelace alias for `start`.
  * @slot suffix - Shoelace alias for `end`.
  * @slot clear-icon - Replaces the built-in clear glyph.
@@ -168,7 +166,9 @@ export interface LyraSelectEventMap {
  *   `preventDefault()` leaves it closed and the reflected attribute untouched.
  * @event lr-hide - The listbox is about to close, however `open` became false. Conditionally
  *   cancelable: connected transitions can be vetoed on the same terms as `lr-show`; an
- *   already-removed element closing on disconnect cannot honour a veto.
+ *   already-removed element closing on disconnect cannot honour a veto. Disabling the control,
+ *   directly or through a fieldset, force-closes it without this vetoable lifecycle because a
+ *   disabled control cannot retain an interactive popup.
  * @event lr-after-show - The listbox finished opening and its transition settled.
  * @event lr-after-hide - The listbox finished closing and its transition settled.
  * @event lr-invalid - The select failed a validity check. Cancelable: calling
@@ -196,9 +196,12 @@ export interface LyraSelectEventMap {
  * @csspart form-control-input - Compatibility name for the control wrapper.
  * @csspart combobox - Compatibility name for the control wrapper.
  * @csspart trigger - The trigger button (positioning anchor).
- * @csspart display-input - The selected-value/placeholder display inside the trigger.
- * @csspart start - Wrapper around the `start` adornment slot; `hidden` while nothing is slotted.
- * @csspart end - Wrapper around the `end` adornment slot; `hidden` while nothing is slotted.
+ * @csspart display-input - The selected-value/placeholder display inside the trigger. In populated
+ *   multiple mode it is visually hidden but exposes every selected label to assistive technology.
+ * @csspart start - Inert, decorative wrapper around the `start` adornment slot; `hidden` while
+ *   nothing is slotted.
+ * @csspart end - Inert, decorative wrapper around the `end` adornment slot; `hidden` while nothing
+ *   is slotted.
  * @csspart prefix - Shoelace compatibility part on the `prefix` slot.
  * @csspart suffix - Shoelace compatibility part on the `suffix` slot.
  * @csspart tags - The `multiple`-mode chip row, rendered as a sibling overlaid on the trigger.
@@ -212,8 +215,9 @@ export interface LyraSelectEventMap {
  * @csspart tag__remove-button__base - Compatibility name on the same remove button.
  * @csspart tag-overflow - The "+N" chip standing in for the selections past `max-options-visible`.
  * @csspart clear-button - The `with-clear` button.
- * @csspart listbox - The options popover.
- * @csspart group-label - An option group's heading row (shown when any option declares a `group`).
+ * @csspart listbox - The managed nonmodal options popover; its stack depth comes from
+ *   `--lr-overlay-stack-index` with `--lr-layer-dropdown` as the standalone fallback.
+ * @csspart group-label - An option group's heading row, referenced by the enclosing `role="group"`.
  * @csspart option - An option row.
  * @csspart option-dot - An option row's leading status dot (when `dot-color` is set).
  * @csspart option-label - An option row's label/sub wrapper.
@@ -294,7 +298,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   // `sizes` is the library's one form-control ladder, pulled in ahead of this component's own
   // sheet so every `--lr-select-*` geometry knob points at the active tier's value -- and so both
   // spellings of every tier (`s` and `small`, ...) work with no per-component rule.
-  static override styles = [LyraElement.styles, sizes, styles];
+  static override styles = [LyraElement.styles, sizes, styles, srOnly];
 
   static override properties = {
     customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
@@ -322,7 +326,24 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   @property({ type: Boolean }) override autofocus = false;
   /** Forwarded to the internal trigger button. */
   @property() override title = '';
-  @property({ type: Boolean, reflect: true }) open = false;
+  private _open = false;
+  /** Whether the listbox is open. Disabled controls synchronously normalize every opening write
+   *  back to `false`, including reflected-attribute writes. */
+  @property({ type: Boolean, reflect: true })
+  get open(): boolean {
+    return this._open;
+  }
+  set open(next: boolean) {
+    const requested = Boolean(next);
+    const normalized = requested && !this.effectiveDisabled;
+    if (normalized === this._open) {
+      // A reflected `open` attribute written while disabled must not remain as a CSS-only open
+      // state after the property correctly rejected it.
+      if (requested !== normalized && this.hasAttribute('open')) this.removeAttribute('open');
+      return;
+    }
+    this.applyOpenState(normalized);
+  }
   /** Visual size on the library's one control ladder — shared with `lr-button`/`lr-input`/
    *  `lr-combobox`/`lr-locale-picker`, so same-tier controls line up in a toolbar row. Accepts both
    *  the canonical `'2xs'`–`'xl'` steps and Web Awesome's/Shoelace's `'small'`/`'medium'`/`'large'`
@@ -334,10 +355,11 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
    *  property still wins. */
   @property({ type: Boolean, reflect: true }) pill = false;
   /** Preferred listbox placement. `flip`/`shift` may still override it to keep the popup in view,
-   *  and the `left`/`right` component is swapped under RTL. */
+   *  and the `left`/`right` component is swapped under RTL. Changes reposition an already-open
+   *  listbox without closing it or changing overlay stack ownership. */
   @property({ reflect: true }) placement: Placement = 'bottom';
   /** Uses fixed positioning when true; the mapped default (`false`) positions against the nearest
-   * containing block with Floating UI's absolute strategy. */
+   * containing block with Floating UI's absolute strategy. Changes apply live while open. */
   @property({ type: Boolean, reflect: true }) hoist = false;
   /** Shoelace boolean alias for the filled appearance. */
   @property({ type: Boolean, reflect: true }) filled = false;
@@ -392,11 +414,21 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   private _fieldsetDisabled = false;
   private listId = nextId('select-list');
   private triggerId = nextId('select-trigger');
+  private valueTextId = nextId('select-value');
   private cleanup?: () => void;
+  private overlayHandle?: OverlayHandle;
+  private restoreFocusOnClose = true;
+  private positionedDirection?: 'ltr' | 'rtl';
   private pointerListenerDocument?: Document;
   private pointerListener?: (event: PointerEvent) => void;
   private _isFirstUpdate = true;
   private openVetoed = false;
+  // A disable-forced close has no vetoable lifecycle, but that suppression belongs only to the
+  // exact `open` write that enforced the policy. A later enable + show in the same Lit batch is a
+  // new transition and must still emit/settle normally.
+  private openStateGeneration = 0;
+  private pendingOpenTransitionStart?: boolean;
+  private suppressedOpenLifecycleGeneration?: number;
   private transitionToken = 0;
   private transitionWaiters = new Map<'lr-after-show' | 'lr-after-hide', Set<() => void>>();
   // The committed selection, always an array -- capped to one entry outside
@@ -527,6 +559,35 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     }
   }
 
+  private applyOpenState(next: boolean): void {
+    const old = this._open;
+    if (this.pendingOpenTransitionStart === undefined) this.pendingOpenTransitionStart = old;
+    this.openStateGeneration++;
+    this._open = next;
+    this.requestUpdate('open', old);
+  }
+
+  /** Enforces a platform policy close without exposing an author veto point. A disabled form
+   * control cannot keep an interactive popup open even when an ordinary `lr-hide` listener would
+   * cancel a user-requested close. */
+  private forceCloseOpenState(): void {
+    // A normal close may already have changed `_open` in this task while its willUpdate veto point
+    // is still pending. Suppress that exact transition as well, but do not leave a sticky flag on a
+    // control that was already settled closed: it could be re-enabled and shown before this batch
+    // renders.
+    const isClosing = this._open || this.pendingOpenTransitionStart === true;
+    this.transitionToken++;
+    this.resolveTransitionWaiters('lr-after-show');
+    this.resolveTransitionWaiters('lr-after-hide');
+    if (!this._open) {
+      if (isClosing) this.suppressedOpenLifecycleGeneration = this.openStateGeneration;
+      if (this.hasAttribute('open')) this.removeAttribute('open');
+      return;
+    }
+    this.applyOpenState(false);
+    this.suppressedOpenLifecycleGeneration = this.openStateGeneration;
+  }
+
   /**
    * Emits the cancelable `lr-show`/`lr-hide` veto point for this update's `open` transition.
    *
@@ -539,7 +600,13 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
    */
   private announceOpenTransition(changed: PropertyValues): void {
     this.openVetoed = false;
-    if (!changed.has('open') || this._isFirstUpdate) return;
+    if (
+      !changed.has('open') ||
+      this._isFirstUpdate ||
+      this.suppressedOpenLifecycleGeneration === this.openStateGeneration
+    ) {
+      return;
+    }
     const name = this.open ? 'lr-show' : 'lr-hide';
     // Removal cannot be vetoed -- the element is already gone -- so the disconnect-driven close
     // is announced without offering a veto nobody could honour.
@@ -617,7 +684,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     const old = this._disabled;
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
-    if (this._disabled) void this.hide();
+    if (this._disabled) this.forceCloseOpenState();
     // Disabling bars constraint validation, so the violation itself is recomputed here -- not just
     // the states republished.
     this.updateValidity();
@@ -859,7 +926,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
    */
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
-    if (disabled) void this.hide();
+    if (disabled) this.forceCloseOpenState();
     this.updateValidity();
     this.requestUpdate();
   }
@@ -906,8 +973,11 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
+    this.positionedDirection = undefined;
     this.clearTypeAheadTimer();
     this.typeAheadBuffer = '';
+    this.overlayHandle?.deactivate({ restoreFocus: false });
+    this.overlayHandle = undefined;
     this.unbindDocumentPointer();
     this.resolveTransitionWaiters('lr-after-show');
     this.resolveTransitionWaiters('lr-after-hide');
@@ -922,8 +992,12 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   adoptedCallback(): void {
     this.cleanup?.();
     this.cleanup = undefined;
+    this.positionedDirection = undefined;
+    this.overlayHandle?.deactivate({ restoreFocus: false });
+    this.overlayHandle = undefined;
     this.unbindDocumentPointer();
     this.clearTypeAheadTimer();
+    queueMicrotask(() => this.reconnectOpenPopup());
   }
 
   private collectOptions = (e: Event): void => {
@@ -1046,7 +1120,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   }
 
   /**
-   * The sole navigable (non-disabled) option, when `autoCommitSingleOption` is set and
+   * The sole available option, when `autoCommitSingleOption` is set and
    * there's exactly one. Opening a one-row popup to pick the only available choice is pure
    * friction with no real decision behind it, so an opted-in single-option select skips the
    * popup entirely -- see `onTriggerClick`/`onKeyDown`, which commit this option directly on
@@ -1074,8 +1148,12 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
    * `aria-activedescendant` -- but the predicate has to agree across all four call sites or the
    * rendered `data-active` row and the committed option can disagree.
    */
+  private isOptionAvailable(option: LyraOption): boolean {
+    return !option.disabled && !option.inert && !option.closest('[inert]');
+  }
+
   private navigableOptions(options: LyraOption[] = this.options): LyraOption[] {
-    return options.filter((o) => !o.disabled && !o.inert && !o.closest('[inert]'));
+    return options.filter((option) => this.isOptionAvailable(option));
   }
 
   /** Updates the numeric active-descendant cursor and its stable option identity together. */
@@ -1162,8 +1240,58 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     return settled;
   }
   private onDocPointer = (e: PointerEvent): void => {
-    if (!e.composedPath().includes(this)) void this.hide();
+    if (e.composedPath().includes(this)) return;
+    if (this.overlayHandle?.isActive()) {
+      this.overlayHandle.dismissBackdrop();
+      return;
+    }
+    this.restoreFocusOnClose = false;
+    void this.hide();
   };
+
+  private positionListbox(): void {
+    this.cleanup?.();
+    this.cleanup = undefined;
+    this.positionedDirection = this.effectiveDirection;
+    const anchor = this.renderRoot.querySelector('[part="trigger"]') as HTMLElement | null;
+    const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
+    if (!anchor || !listbox) return;
+    this.cleanup = place(anchor, listbox, {
+      placement: rtlAwarePlacement(this.placement, this),
+      strategy: this.hoist ? 'fixed' : 'absolute',
+    });
+  }
+
+  private activateListboxOverlay(): void {
+    this.cleanup?.();
+    this.cleanup = undefined;
+    this.overlayHandle?.deactivate({ restoreFocus: false });
+    this.restoreFocusOnClose = true;
+    this.overlayHandle = activateOverlay({
+      host: this,
+      panel: () => this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null,
+      onEscape: () => void this.hide(),
+      onBackdrop: () => {
+        this.restoreFocusOnClose = false;
+        void this.hide();
+      },
+      restoreFocusTo: this.triggerElement ?? null,
+      modal: false,
+      trapFocus: false,
+    });
+    this.bindDocumentPointer();
+    this.positionListbox();
+  }
+
+  private teardownListboxOverlay(restoreFocus = this.restoreFocusOnClose): void {
+    this.cleanup?.();
+    this.cleanup = undefined;
+    this.positionedDirection = undefined;
+    this.overlayHandle?.deactivate({ restoreFocus });
+    this.overlayHandle = undefined;
+    this.unbindDocumentPointer();
+    this.restoreFocusOnClose = true;
+  }
 
   private bindDocumentPointer(): void {
     if (!this.isConnected) return;
@@ -1183,12 +1311,12 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     };
     this.pointerListenerDocument = ownerDocument;
     this.pointerListener = listener;
-    ownerDocument.addEventListener('pointerdown', listener);
+    ownerDocument.addEventListener('pointerdown', listener, true);
   }
 
   private unbindDocumentPointer(): void {
     if (this.pointerListenerDocument && this.pointerListener) {
-      this.pointerListenerDocument.removeEventListener('pointerdown', this.pointerListener);
+      this.pointerListenerDocument.removeEventListener('pointerdown', this.pointerListener, true);
     }
     this.pointerListenerDocument = undefined;
     this.pointerListener = undefined;
@@ -1196,61 +1324,59 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
 
   private reconnectOpenPopup(): void {
     if (!this.isConnected || !this.open) return;
-    this.cleanup?.();
-    this.bindDocumentPointer();
-    const anchor = this.renderRoot.querySelector('[part="trigger"]') as HTMLElement | null;
-    const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
-    if (anchor && listbox) {
-      this.cleanup = place(anchor, listbox, {
-        placement: rtlAwarePlacement(this.placement, this),
-        strategy: this.hoist ? 'fixed' : 'absolute',
-      });
-    }
+    this.activateListboxOverlay();
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // updated() layered under this class must still run.
+    const suppressOpenLifecycle =
+      changed.has('open') && this.suppressedOpenLifecycleGeneration === this.openStateGeneration;
+    const shouldRefreshPosition =
+      this.open &&
+      this.isConnected &&
+      (changed.has('placement') ||
+        changed.has('hoist') ||
+        this.positionedDirection !== this.effectiveDirection);
     // A vetoed transition already put `open` back during willUpdate(), so `changed` still names it
     // while nothing about the state actually moved: tearing down and rebuilding the popup
     // machinery here would undo the veto it was meant to honour.
     if (changed.has('open') && !this.openVetoed) {
-      this.cleanup?.();
-      this.cleanup = undefined;
       // All `open`-driven side effects (positioning and the click-outside listener) live here
       // rather than in show()/hide() so they run however `open` became true -- via
       // show()/hide()'s own user-interaction paths, or a consumer/test
       // setting `el.open` directly, which bypasses both entirely. The lr-show/lr-hide veto point
       // itself runs one step earlier, in willUpdate().
       if (this.open && this.isConnected) {
-        this.bindDocumentPointer();
+        this.activateListboxOverlay();
         // Don't settle a "show" transition for markup that's simply
         // rendering open for the first time (e.g. `<lr-select open>`) --
         // only for an actual closed-to-open transition.
-        if (!this._isFirstUpdate) {
+        if (!this._isFirstUpdate && !suppressOpenLifecycle) {
           void this.settleTransition('lr-after-show');
         }
-        const anchor = this.renderRoot.querySelector('[part="trigger"]') as HTMLElement | null;
-        const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
-        // Floating UI positions purely by physical sides, so a left/right placement has to be
-        // resolved against the effective direction before it is handed over.
-        if (anchor && listbox) {
-          this.cleanup = place(anchor, listbox, {
-            placement: rtlAwarePlacement(this.placement, this),
-            strategy: this.hoist ? 'fixed' : 'absolute',
-          });
-        }
       } else if (!this.open) {
-        this.unbindDocumentPointer();
-        if (!this._isFirstUpdate) {
+        this.teardownListboxOverlay();
+        if (!this._isFirstUpdate && !suppressOpenLifecycle) {
           void this.settleTransition('lr-after-hide');
         }
       } else {
-        this.unbindDocumentPointer();
+        this.teardownListboxOverlay(false);
       }
+    } else if (changed.has('open') && this.openVetoed) {
+      this.restoreFocusOnClose = true;
+      if (shouldRefreshPosition) this.positionListbox();
+    } else if (shouldRefreshPosition) {
+      // Live positioning-option changes update the existing overlay entry in place. Re-registering
+      // it would incorrectly promote the select to the top of the stack and refire lifecycle.
+      this.positionListbox();
     }
     if (changed.has('touched') || changed.has('required') || changed.has('value')) {
       this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
+    }
+    if (changed.has('open')) {
+      this.pendingOpenTransitionStart = undefined;
+      this.suppressedOpenLifecycleGeneration = undefined;
     }
   }
 
@@ -1298,7 +1424,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   }
 
   private selectOption(option: LyraOption): void {
-    if (this.effectiveDisabled || option.disabled) return;
+    if (this.effectiveDisabled || !this.isOptionAvailable(option)) return;
     this.hasInteracted = true;
     this._restoredStateActive = false;
     this._valueDirty = true;
@@ -1381,7 +1507,10 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     // A mouse click outside the element is already handled by
     // onDocPointer/hide(), but that leaves keyboard users with no way to
     // dismiss the listbox short of Escape -- tabbing focus away from the
-    // trigger should close it too, the same as lr-combobox's input blur.
+    // trigger should close it too, the same as lr-combobox's input blur. Native focus traversal is
+    // already moving to the user's chosen next stop, so this close must not ask the overlay manager
+    // to restore focus back into the select and undo that Tab/Shift+Tab movement.
+    if (this.open) this.restoreFocusOnClose = false;
     void this.hide();
     relayNativeEvent(this, event);
     this.emit('lr-blur');
@@ -1393,7 +1522,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   };
 
   /**
-   * Standard listbox type-ahead: moves to the next non-disabled option whose
+   * Standard listbox type-ahead: moves to the next available option whose
    * label starts with the accumulated buffer, cycling from just after the
    * "current" option (the active row while open, the selected value while
    * closed). While open this only moves `activeIndex` (a highlight, matching
@@ -1493,7 +1622,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
         }
         break;
       case 'Escape':
-        if (this.open) {
+        if (this.open && (!this.overlayHandle?.isActive() || this.overlayHandle.isTopmost())) {
           e.preventDefault();
           void this.hide();
         }
@@ -1546,14 +1675,29 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     const out: TemplateResult[] = [];
     const chosen = new Set(this._selectedOptions);
     let currentGroup: string | undefined;
+    let groupRows: TemplateResult[] = [];
+    let groupIndex = 0;
+    const flushGroup = (): void => {
+      if (groupRows.length === 0) return;
+      if (currentGroup) {
+        const labelId = `${this.listId}-group-${groupIndex++}`;
+        out.push(html`<div role="group" aria-labelledby=${labelId}>
+          <div id=${labelId} class="group-label" part="group-label">${currentGroup}</div>
+          ${groupRows}
+        </div>`);
+      } else {
+        out.push(...groupRows);
+      }
+      groupRows = [];
+    };
     options.forEach((o, i) => {
       if (o.group !== currentGroup) {
+        flushGroup();
         currentGroup = o.group;
-        if (currentGroup) out.push(html`<div class="group-label" part="group-label">${currentGroup}</div>`);
       }
       const id = `${this.listId}-opt-${i}`;
       const selected = chosen.has(o);
-      out.push(
+      groupRows.push(
         html`<div
           part="option"
           id=${id}
@@ -1561,7 +1705,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
           data-index=${i}
           data-value=${o.value}
           aria-selected=${selected ? 'true' : 'false'}
-          aria-disabled=${o.disabled ? 'true' : 'false'}
+          aria-disabled=${this.isOptionAvailable(o) ? 'false' : 'true'}
           ?data-active=${id === activeId}
         >
           ${o.dotColor
@@ -1577,6 +1721,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
         </div>`,
       );
     });
+    flushGroup();
     return out;
   }
 
@@ -1590,7 +1735,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     if (this.getTag && option) return this.getTag(option, index);
     const label = this.labelFor(value);
     return html`<span part="tag tag__base">
-      <span part="tag-label"><span part="tag__content">${label}</span></span>
+      <span part="tag-label"><span part="tag__content" aria-hidden="true">${label}</span></span>
       <button
         part="tag__remove-button tag__remove-button__base"
         type="button"
@@ -1607,6 +1752,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     const active = this.activeIndex >= 0 ? navigable[this.activeIndex] : undefined;
     const activeId = active ? `${this.listId}-opt-${options.indexOf(active)}` : '';
     const selectedLabel = this._selected.length > 0 ? this.labelFor(this._selected[0]!) : '';
+    const selectedLabels = this._selected.map((value) => this.labelFor(value)).join(', ');
     const hasValue = this._selected.length > 0;
     // `0` removes the cap entirely, matching the upstream contract this mirrors.
     const shownValues =
@@ -1621,7 +1767,11 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       this.withHint;
     const hasError = this.slotPresence.has('error') || this.errorText.length > 0;
     const hasLabel = this.slotPresence.has('label') || this.label.length > 0 || this.withLabel;
-    const describedBy = [hasError ? 'select-error' : '', hasHint ? 'select-hint' : ''].filter(Boolean).join(' ');
+    const describedBy = [
+      this.multiple && hasValue ? this.valueTextId : '',
+      hasError ? 'select-error' : '',
+      hasHint ? 'select-hint' : '',
+    ].filter(Boolean).join(' ');
     // A single navigable option has no popup to expand into -- when opted in via
     // autoCommitSingleOption, the trigger commits it directly on activation (see
     // onTriggerClick/onKeyDown) instead of opening the listbox, so it's exposed as a plain
@@ -1665,24 +1815,29 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
           >
             <span
               part="start"
+              aria-hidden="true"
+              inert
               ?hidden=${!this.slotPresence.has('start') && !this.slotPresence.has('prefix')}
             >
               <slot name="start"></slot>
               <slot part="prefix" name="prefix"></slot>
             </span>
             <span
-              class="trigger-label"
+              id=${this.valueTextId}
+              class=${this.multiple && hasValue ? 'trigger-label sr-only' : 'trigger-label'}
               part="display-input"
               ?data-placeholder=${!hasValue}
               ?data-multiple-value=${this.multiple && hasValue}
               >${hasValue && !this.multiple
                 ? selectedLabel
                 : this.multiple && hasValue
-                  ? shownValues.map((value) => this.labelFor(value)).join(', ')
+                  ? selectedLabels
                   : this.placeholder}</span
             >
             <span
               part="end"
+              aria-hidden="true"
+              inert
               ?hidden=${!this.slotPresence.has('end') && !this.slotPresence.has('suffix')}
             >
               <slot name="end"></slot>
@@ -1698,7 +1853,9 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
             ? html`<span part="tags"
                 >${shownValues.map((value, index) => this.renderTag(value, index))}${overflow > 0
                   ? html`<span part="tag tag-overflow tag__base"
+                      aria-hidden="true"
                       ><span part="tag__content"
+                        aria-hidden="true"
                         >${this.localize('selectSelectedOverflow', undefined, {
                           n: getNumberFormat(this.effectiveLocale).format(overflow),
                         })}</span

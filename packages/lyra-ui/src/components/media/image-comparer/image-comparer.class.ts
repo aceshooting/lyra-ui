@@ -16,11 +16,14 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_imageComparerLabel } from '../
 export type LyraImageComparerOrientation = 'horizontal' | 'vertical';
 
 export interface LyraImageComparerEventMap {
+  input: Event;
+  change: Event;
   'lr-position-change': CustomEvent<{ position: number }>;
   'lr-change': CustomEvent<undefined>;
-  change: Event;
-  blur: CustomEvent<undefined>;
-  focus: CustomEvent<undefined>;
+  blur: FocusEvent;
+  focus: FocusEvent;
+  'lr-blur': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<undefined>;
 }
 
 /**
@@ -33,12 +36,19 @@ export interface LyraImageComparerEventMap {
  * @slot handle - Custom decorative content inside the draggable handle. The flattened slot
  *   subtree is inert and hidden from assistive technology; the native range remains the only
  *   interaction target.
- * @event lr-position-change - Divider moved. `detail: { position }`, where position is 0–100.
- * @event lr-change - Emitted when the range gesture commits.
+ * @event {Event} input - Bubbling, composed native input event emitted after the divider's
+ *   live position has been committed.
  * @event {Event} change - Bubbling, composed native change event emitted when the range gesture
  *   commits a new position.
- * @event focus - Re-dispatched from the native range handle as a bubbling, composed event.
- * @event blur - Re-dispatched from the native range handle as a bubbling, composed event.
+ * @event lr-position-change - Prefixed live-position alias. `detail: { position }`, where position
+ *   is 0–100.
+ * @event lr-change - Prefixed compatibility alias for `change`.
+ * @event {FocusEvent} focus - Relayed once from the native range handle as a bubbling, composed
+ *   native event.
+ * @event {FocusEvent} blur - Relayed once from the native range handle as a bubbling, composed
+ *   native event.
+ * @event lr-focus - Prefixed compatibility alias for `focus`.
+ * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @csspart base - Compatibility name for the comparison viewport; use `comparison`.
  * @csspart comparison - The comparison viewport. It is the same node as `base`.
  * @csspart before - The clipped before-state layer.
@@ -88,6 +98,7 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
   private onInput = (event: Event): void => {
     const input = event.currentTarget as HTMLInputElement;
     this.position = Number(input.value);
+    relayNativeEvent(this, event);
     this.emit('lr-position-change', { position: this.normalizedPosition });
   };
 
@@ -113,13 +124,15 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
     setCustomState(this.internals, 'dragging', false);
   };
 
-  private onFocus = (): void => {
-    this.emit('focus');
+  private onFocus = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
 
-  private onBlur = (): void => {
+  private onBlur = (event: FocusEvent): void => {
     this.onPointerEnd();
-    this.emit('blur');
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
 
   override disconnectedCallback(): void {

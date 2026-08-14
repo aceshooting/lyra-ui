@@ -5,6 +5,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { playIcon, pauseIcon } from '../../../internal/icons.js';
 import { finiteCount, finiteDuration, MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { styles } from './playback.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -40,8 +41,10 @@ export interface LyraPlaybackEventMap {
   'lr-play': CustomEvent<undefined>;
   'lr-pause': CustomEvent<undefined>;
   'lr-step': CustomEvent<{ index: number }>;
-  blur: CustomEvent<undefined>;
-  focus: CustomEvent<undefined>;
+  blur: FocusEvent;
+  focus: FocusEvent;
+  'lr-blur': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<undefined>;
 }
 /**
  * `<lr-playback>` — steps an index through `[0, length)` on a fixed
@@ -52,8 +55,12 @@ export interface LyraPlaybackEventMap {
  * @event lr-play - Fired when playback starts.
  * @event lr-pause - Fired when playback stops (including auto-pause).
  * @event lr-step - `detail: { index }`, fired on every tick and manual step.
- * @event blur - Re-dispatched from an internal playback control as a bubbling, composed event.
- * @event focus - Re-dispatched from an internal playback control as a bubbling, composed event.
+ * @event {FocusEvent} blur - Relayed once from an internal playback control as a bubbling,
+ *   composed native event.
+ * @event {FocusEvent} focus - Relayed once from an internal playback control as a bubbling,
+ *   composed native event.
+ * @event lr-blur - Prefixed compatibility alias for `blur`.
+ * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @csspart base - The playback controls wrapper.
  * @csspart play-button - The play/pause button.
  * @csspart slider - The playback position slider.
@@ -278,13 +285,13 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
   }
 
   private onControlFocus = (event: FocusEvent): void => {
-    event.stopPropagation();
-    this.emit('focus');
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
 
   private onControlBlur = (event: FocusEvent): void => {
-    event.stopPropagation();
-    this.emit('blur');
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
 
   override render(): TemplateResult {

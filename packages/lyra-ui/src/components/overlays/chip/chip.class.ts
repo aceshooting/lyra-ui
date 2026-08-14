@@ -1,9 +1,18 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import {
   bindAccessibleTextObserver,
-  composedAccessibleVisibleText,
+  composedAccessibilityText,
+  isAccessibilitySubtreeExcluded,
 } from '../../../internal/accessibility-visibility.js';
+import { composedParentElement } from '../../../internal/active-element.js';
+import {
+  applyComposedFocusRepair,
+  captureComposedFocusRepair,
+  collectComposedFocusTargets,
+  type ComposedFocusRepairSnapshot,
+} from '../../../internal/focus-navigation.js';
+import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { closeIcon } from '../../../internal/icons.js';
 import type { LyraSizeStep, LyraVariant } from '../../../internal/variants.js';
@@ -33,6 +42,57 @@ export interface ChipSelectDetail {
 export interface LyraChipEventMap {
   'lr-remove': CustomEvent<ChipRemoveDetail>;
   'lr-chip-select': CustomEvent<ChipSelectDetail>;
+}
+
+function isComposedWithin(owner: Element, candidate: Element): boolean {
+  let current: Element | null = candidate;
+  while (current) {
+    if (current === owner) return true;
+    current = composedParentElement(current);
+  }
+  return false;
+}
+
+function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
+  const targets = collectComposedFocusTargets(owner.ownerDocument.documentElement, {
+    mode: 'programmatic',
+  }).elements;
+  const owned = targets
+    .map((target, index) => isComposedWithin(owner, target) ? index : -1)
+    .filter((index) => index >= 0);
+  if (owned.length === 0) return null;
+  const first = owned[0]!;
+  const last = owned[owned.length - 1]!;
+  return targets.slice(last + 1).find((target) => !isComposedWithin(owner, target))
+    ?? targets.slice(0, first).reverse().find((target) => !isComposedWithin(owner, target))
+    ?? null;
+}
+
+function sourceParent(node: Node): Element | null {
+  if (node.parentElement) return node.parentElement;
+  const root = node.getRootNode() as Document | ShadowRoot;
+  return 'host' in root ? root.host : null;
+}
+
+function isClosedSourceDetailsBranch(details: Element, branch: Element | null): boolean {
+  if (details.localName !== 'details' || details.hasAttribute('open') || branch === null) return false;
+  return Array.from(details.children).find((child) => child.localName === 'summary') !== branch;
+}
+
+function isSourceLabelAvailable(node: Node): boolean {
+  const target = node.nodeType === 1 ? node as Element : sourceParent(node);
+  if (!target?.isConnected) return false;
+  let branch: Element | null = target;
+  let current = sourceParent(target);
+  if (isAccessibilitySubtreeExcluded(target)) return false;
+  while (current) {
+    if (isAccessibilitySubtreeExcluded(current) || isClosedSourceDetailsBranch(current, branch)) {
+      return false;
+    }
+    branch = current;
+    current = sourceParent(current);
+  }
+  return true;
 }
 
 /**
@@ -65,12 +125,16 @@ export interface LyraChipEventMap {
  *
  * @customElement lr-chip
  * @slot - The chip's label content. Visible accessible text and forwarding-slot reassignment stay
- * synchronized with toggle/remove action names.
- * @slot icon - Optional leading icon or status dot. Nothing is reserved for
- * it (no extra gap) when left empty.
+ * synchronized with toggle/remove action names. In toggle mode its flattened subtree is inert and
+ * hidden from assistive technology while the separate native toggle owns the action and name.
+ * @slot icon - Optional decorative leading icon or status dot. Its flattened subtree remains
+ * visible but is inert and hidden from assistive technology. Nothing is reserved for it (no extra
+ * gap) when left empty.
  * @slot end - Optional trailing content, typically an icon, placed after the label and before the
  * toggle/remove button. Nothing is reserved for it (no extra gap) when left empty, mirroring
- * `<lr-badge>`'s identical `end` slot.
+ * `<lr-badge>`'s identical `end` slot. It remains ordinary consumer content in passive/removable
+ * mode; toggle mode makes its flattened subtree inert and hidden from assistive technology beneath
+ * the full-surface native toggle.
  * @event lr-remove - The remove (×) button was activated (click, or
  * Enter/Space while focused — native `<button>` behavior). `detail: { value }`
  * — `value` is `undefined` when the `value` prop was never set. Only
@@ -84,9 +148,11 @@ export interface LyraChipEventMap {
  * @method click - Activates the chip's active remove or toggle button; passive chips retain the
  * ordinary `HTMLElement.click()` behavior.
  * @csspart base - The pill's root container.
- * @csspart icon - Wrapper around the `icon` slot. Hidden entirely while empty.
- * @csspart label - Wrapper around the default slot.
- * @csspart end - Wrapper around the `end` slot. Hidden entirely while empty.
+ * @csspart icon - Inert, aria-hidden wrapper around the decorative `icon` slot. Hidden entirely
+ *   while empty.
+ * @csspart label - Wrapper around the default slot; inert and aria-hidden in toggle mode.
+ * @csspart end - Wrapper around the `end` slot. Hidden entirely while empty, and inert plus
+ *   aria-hidden in toggle mode.
  * @csspart toggle-button - The real toggle control, rendered over the non-interactive label when
  * toggle mode is active.
  * @csspart remove-button - The remove (×) affordance, only rendered while `removable`.
@@ -207,6 +273,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   // then seed from light DOM before a browser-only first paint (or immediately after hydration).
   private cachedLabelText = '';
   private labelObserver?: MutationObserver;
+  private pendingControlFocusRepair?: ComposedFocusRepairSnapshot;
   private readonly onLabelSlotChange = (event: Event): void => {
     const target = event.target as Element | null;
     if (target?.nodeType !== 1 || target.localName !== 'slot') return;
@@ -246,6 +313,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     this.removeEventListener('slotchange', this.onLabelSlotChange);
     this.labelObserver?.disconnect();
     this.labelObserver = undefined;
+    this.pendingControlFocusRepair = undefined;
     super.disconnectedCallback();
   }
 
@@ -298,7 +366,19 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
           (node) => node.nodeType !== 1 || ((node as Element).getAttribute('slot') ?? '') === '',
         );
     return nodes
-      .map(composedAccessibleVisibleText)
+      .map((node) => composedAccessibilityText(node, {
+        ancestorBoundary: this,
+        // Toggle mode makes projected label content inert because the sibling button owns the
+        // interaction. Ignore only that internal fence when deriving the button's own name.
+        isSubtreeExcluded: (element) =>
+          element.getRootNode() === this.renderRoot &&
+          element.getAttribute('part')?.split(/\s+/).includes('label')
+            ? false
+            : isAccessibilitySubtreeExcluded(element),
+        requireRendered: node.nodeType !== 1 || (node as Element).localName !== 'slot',
+        shouldPruneNode: (candidate) =>
+          !this.contains(candidate) && !isSourceLabelAvailable(candidate),
+      }))
       .join(' ')
       .replace(/\s+/g, ' ')
       .trim();
@@ -331,7 +411,9 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
 
   private onRemoveClick = (): void => {
     if (this.disabled) return;
+    const repair = captureComposedFocusRepair(this, nearestExternalFocusTarget(this));
     this.emit('lr-remove', { value: this.value });
+    if (repair && (!this.isConnected || !this.removable)) applyComposedFocusRepair(repair);
   };
 
   private onToggleClick = (): void => {
@@ -365,6 +447,33 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     else super.click();
   }
 
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
+    if (this.pendingControlFocusRepair) return;
+    const oldRemovable = changed.get('removable') ?? this.removable;
+    const oldToggleable = changed.get('toggleable') ?? this.toggleable;
+    const oldDisabled = changed.get('disabled') ?? this.disabled;
+    const oldMode = oldRemovable ? 'remove' : oldToggleable ? 'toggle' : 'passive';
+    const newMode = this.removable ? 'remove' : this.toggleable ? 'toggle' : 'passive';
+    if (oldMode === newMode && !(oldDisabled === false && this.disabled)) return;
+    this.pendingControlFocusRepair = captureComposedFocusRepair(
+      this,
+      nearestExternalFocusTarget(this)
+        ?? this.renderRoot.querySelector<HTMLButtonElement>(
+          '[part="remove-button"], [part="toggle-button"]',
+        ),
+    ) ?? undefined;
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    const repair = this.pendingControlFocusRepair;
+    this.pendingControlFocusRepair = undefined;
+    if (!repair) return;
+    const replacement = this.disabled ? null : this.primaryControl;
+    applyComposedFocusRepair(repair, replacement ?? repair.candidate);
+  }
+
   override render(): TemplateResult {
     // `toggleMode` is sticky (see `toggleable`'s doc comment) and gates the chip's structural
     // interactivity, so it survives `selected` toggling back to false. `pressed` tracks only the
@@ -375,13 +484,25 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
       <span
         part="base"
       >
-        <span part="icon" aria-hidden="true" ?hidden=${!this.renderSlotPresence(this.hasIconSlot)}>
-          <slot name="icon" @slotchange=${this.onIconSlotChange}></slot>
-        </span>
-        <span part="label" ?inert=${toggleMode}><slot @slotchange=${this.onLabelSlotChange}></slot></span>
-        <span part="end" ?hidden=${!this.renderSlotPresence(this.hasEndSlot)}>
-          <slot name="end" @slotchange=${this.onEndSlotChange}></slot>
-        </span>
+        ${renderInertPresentation(
+          html`<slot name="icon" @slotchange=${this.onIconSlotChange}></slot>`,
+          {
+            part: 'icon',
+            hidden: !this.renderSlotPresence(this.hasIconSlot),
+          },
+        )}
+        ${renderInertPresentation(
+          html`<slot @slotchange=${this.onLabelSlotChange}></slot>`,
+          { part: 'label', presentation: toggleMode },
+        )}
+        ${renderInertPresentation(
+          html`<slot name="end" @slotchange=${this.onEndSlotChange}></slot>`,
+          {
+            part: 'end',
+            presentation: toggleMode,
+            hidden: !this.renderSlotPresence(this.hasEndSlot),
+          },
+        )}
         ${toggleMode
           ? html`<button
               part="toggle-button"

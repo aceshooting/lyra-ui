@@ -137,9 +137,14 @@ export const Collapsed: Story = {
 };
 
 export const NonCollapsible: Story = {
-  name: 'Non-collapsible (static heading)',
+  name: 'Non-collapsible level-two heading',
   render: () =>
-    html`<lr-task-list style="max-width: 32rem;" .items=${items} collapsible="false"></lr-task-list>`,
+    html`<lr-task-list
+      style="max-width: 32rem;"
+      heading-level="2"
+      .items=${items}
+      collapsible="false"
+    ></lr-task-list>`,
 };
 
 export const DensityAndChrome: Story = {

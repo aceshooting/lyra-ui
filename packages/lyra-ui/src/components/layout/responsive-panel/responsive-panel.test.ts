@@ -137,6 +137,27 @@ it('forces the overlay presentation regardless of viewport width when mode="over
   expect(el.shadowRoot!.querySelector('[part="backdrop"]')).to.exist;
 });
 
+it("gives an otherwise unnamed overlay panel a localized fallback name", async () => {
+  const el = (await fixture(html`
+    <lr-responsive-panel mode="overlay" open></lr-responsive-panel>
+  `)) as LyraResponsivePanel;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+
+  expect(panel.getAttribute("aria-label")).to.equal("Panel");
+
+  el.strings = { responsivePanel: "Paneel" };
+  await el.updateComplete;
+  expect(panel.getAttribute("aria-label")).to.equal("Paneel");
+});
+
+it("keeps an explicit empty host aria-label ahead of the fallback", async () => {
+  const el = (await fixture(html`
+    <lr-responsive-panel mode="overlay" open aria-label=""></lr-responsive-panel>
+  `)) as LyraResponsivePanel;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  expect(panel.getAttribute("aria-label")).to.equal("");
+});
+
 it("forces the inline presentation even at a breakpoint that would otherwise resolve to overlay", async () => {
   const el = (await fixture(
     html`<lr-responsive-panel mode="inline" mobile-breakpoint="99999px" open

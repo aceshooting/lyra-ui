@@ -1,11 +1,18 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { composedParentElement } from '../../../internal/active-element.js';
 import {
   isAccessibilityVisible,
 } from '../../../internal/accessibility-visibility.js';
 import { composedAccessibilityText } from '../../../internal/announcement-text.js';
+import {
+  applyComposedFocusRepair,
+  captureComposedFocusRepair,
+  collectComposedFocusTargets,
+} from '../../../internal/focus-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import type { LyraAppearance, LyraSize, LyraVariant } from '../../../internal/variants.js';
 import { contextualSizes, contextualVariants } from '../../../internal/contextual-vocabulary.styles.js';
@@ -25,6 +32,32 @@ export type CalloutAppearance = LyraAppearance;
 export type CalloutSize = LyraSize;
 export interface LyraCalloutEventMap { 'lr-close': CustomEvent<undefined>; }
 
+function isComposedWithin(owner: Element, candidate: Element): boolean {
+  let current: Element | null = candidate;
+  while (current) {
+    if (current === owner) return true;
+    current = composedParentElement(current);
+  }
+  return false;
+}
+
+function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
+  const documentElement = owner.ownerDocument?.documentElement;
+  if (!documentElement) return null;
+  const targets = collectComposedFocusTargets(documentElement, {
+    mode: 'programmatic',
+  }).elements;
+  const owned = targets
+    .map((target, index) => isComposedWithin(owner, target) ? index : -1)
+    .filter((index) => index >= 0);
+  if (owned.length === 0) return null;
+  const first = owned[0]!;
+  const last = owned[owned.length - 1]!;
+  return targets.slice(last + 1).find((target) => !isComposedWithin(owner, target))
+    ?? targets.slice(0, first).reverse().find((target) => !isComposedWithin(owner, target))
+    ?? null;
+}
+
 /**
  * `<lr-callout>` — an inline message surface for status, warning, and error content.
  * Set `inline` for lightweight reactive status/error text: it removes the panel chrome while
@@ -39,18 +72,19 @@ export interface LyraCalloutEventMap { 'lr-close': CustomEvent<undefined>; }
  * mutations are observed. A nonempty host/property accessible label prefixes the visible update as
  * context instead of replacing it; the complete order and punctuation come from the localized
  * `calloutAnnouncementWithContext` message. An explicitly empty host label still leaves visible
- * text live.
+ * text live. Property and rich-slot headings default to semantic level 3; set `heading-level`
+ * from `1`–`6` to fit the surrounding outline, or `none` for visual-only heading text.
  *
  * @customElement lr-callout
  * @slot - Message content.
- * @slot heading - Optional heading.
+ * @slot heading - Optional rich heading content; its wrapper owns the configured heading level.
  * @slot icon - Optional icon.
  * @event lr-close - The close action was accepted. Cancelable before the callout hides.
  * @attr inline - Uses the lightweight inline treatment without border, background, or panel padding.
  * @csspart base - The visible grid wrapper inside the host-owned callout surface.
  * @csspart icon - The icon wrapper.
  * @csspart content - The message content.
- * @csspart heading - The heading wrapper.
+ * @csspart heading - The heading wrapper (`role="heading"` at the configured level unless opted out).
  * @csspart message - The message content wrapper.
  * @csspart close-button - The close button's interactive hit target, sized to the shared minimum
  *   tappable size (`--lr-icon-button-size`) in both the default panel and the compact `inline`
@@ -109,6 +143,10 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   size: CalloutSize = 'm';
 
   @property() heading = '';
+  /** Semantic level of the visible property/slotted heading. Use `none` for visual-only text;
+   *  invalid untyped values use level 3. */
+  @property({ attribute: 'heading-level', reflect: true })
+  headingLevel: LyraHeadingLevel = '3';
   @property({ type: Boolean, reflect: true }) closable = false;
   @property({ type: Boolean, reflect: true }) inline = false;
 
@@ -185,6 +223,14 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     if (!this.liveActive || !this.open) return;
     if (changed.has('open') || changed.has('heading') || changed.has('accessibleLabel')) {
       this.announceCurrentContent(changed.has('open'));
+    }
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (changed.has('open') && !this.open) {
+      const repair = captureComposedFocusRepair(this, nearestExternalFocusTarget(this));
+      if (repair) applyComposedFocusRepair(repair);
     }
   }
 
@@ -295,17 +341,27 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     (this.variant === 'danger' ? this.assertiveSink : this.politeSink)?.announce(text);
   }
   private close = (): void => {
+    const repair = captureComposedFocusRepair(this, nearestExternalFocusTarget(this));
     const event = this.emit('lr-close', undefined, { cancelable: true });
-    if (!event.defaultPrevented) this.open = false;
+    if (!event.defaultPrevented) {
+      if (repair) applyComposedFocusRepair(repair);
+      this.open = false;
+    }
   };
   override render(): TemplateResult {
     if (!this.open) return html``;
     const label = this.resolvedAccessibleLabel() || undefined;
+    const headingLevel = resolveHeadingLevel(this.headingLevel);
     return html`<div part="base" role=${label ? 'group' : nothing}
       aria-label=${label || nothing}>
       <span part="icon" ?hidden=${!this.slotPresence.has('icon')}><slot name="icon"></slot></span>
       <div part="content">
-        <div part="heading" ?hidden=${!this.heading && !this.slotPresence.has('heading')}>${this.heading}<slot name="heading"></slot></div>
+        <div
+          part="heading"
+          role=${headingLevel ? 'heading' : nothing}
+          aria-level=${headingLevel ?? nothing}
+          ?hidden=${!this.heading && !this.slotPresence.has('heading')}
+        >${this.heading}<slot name="heading"></slot></div>
         <div part="message"><slot></slot></div>
       </div>
       <button type="button" part="close-button" ?hidden=${!this.closable} aria-label=${this.localize('close')} @click=${this.close}><span part="close-icon" aria-hidden="true">×</span></button>

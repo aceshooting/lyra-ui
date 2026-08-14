@@ -7,6 +7,14 @@ const meta: Meta = {
   title: 'Playback',
   component: 'lr-playback',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Index playback controls with native `FocusEvent` relays from the active internal control and matching `lr-focus`/`lr-blur` aliases.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;
@@ -15,7 +23,8 @@ export const Default: Story = {
   render: () => html`<lr-playback length="10" interval-ms="500" loop></lr-playback>`,
 };
 
-/** `focus()` targets the primary play/pause control and host focus listeners remain observable. */
+/** `focus()` targets the primary play/pause control; native and prefixed focus listeners each
+ * receive exactly one notification. */
 export const ProgrammaticFocus: Story = {
   render: () => html`
     <div style="display: grid; gap: 0.75rem; justify-items: start;">

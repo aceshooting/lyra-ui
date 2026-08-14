@@ -1,4 +1,4 @@
-import { fixture, expect, html, elementUpdated, waitUntil } from '@open-wc/testing';
+import { aTimeout, fixture, expect, html, elementUpdated, waitUntil } from '@open-wc/testing';
 import './slider.js';
 import type { LyraSlider } from './slider.js';
 import { styles } from './slider.styles.js';
@@ -698,6 +698,78 @@ it('drags the thumb with pointer events and emits lr-input then lr-change on rel
   el.addEventListener('lr-change', (e) => (changeDetail = (e as CustomEvent).detail));
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
   expect(changeDetail!.value).to.equal(50);
+});
+
+it('moves owned focus between the scalar thumb and range handles when range mode changes', async () => {
+  const el = (await fixture(
+    html`<lr-slider min="0" max="100" value="30" min-value="20" max-value="80"></lr-slider>`,
+  )) as LyraSlider;
+  const scalar = el.shadowRoot!.querySelector<HTMLElement>('[part~="thumb"]')!;
+  scalar.focus();
+
+  el.range = true;
+  await el.updateComplete;
+  await aTimeout(0);
+  const minThumb = el.shadowRoot!.querySelector<HTMLElement>('[part~="thumb-min"]')!;
+  const maxThumb = el.shadowRoot!.querySelector<HTMLElement>('[part~="thumb-max"]')!;
+  expect(el.shadowRoot!.activeElement === minThumb).to.equal(true);
+
+  maxThumb.focus();
+  el.range = false;
+  await el.updateComplete;
+  await aTimeout(0);
+  const restoredScalar = el.shadowRoot!.querySelector<HTMLElement>('[part~="thumb"]')!;
+  expect(el.shadowRoot!.activeElement === restoredScalar).to.equal(true);
+});
+
+it('does not move external focus when range mode changes', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <button id="outside-slider-mode">Outside</button>
+      <lr-slider></lr-slider>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-slider') as LyraSlider;
+  const outside = wrapper.querySelector<HTMLButtonElement>('#outside-slider-mode')!;
+  outside.focus();
+
+  el.range = true;
+  await el.updateComplete;
+  await aTimeout(0);
+  expect(el.ownerDocument.activeElement?.id).to.equal('outside-slider-mode');
+
+  el.range = false;
+  await el.updateComplete;
+  await aTimeout(0);
+  expect(el.ownerDocument.activeElement?.id).to.equal('outside-slider-mode');
+});
+
+it('aborts pointer capture and window drag listeners when range mode replaces the active handle', async () => {
+  const el = (await fixture(
+    html`<lr-slider min="0" max="100" value="20" step="1"></lr-slider>`,
+  )) as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector<HTMLElement>('[part~="thumb"]')!;
+  let releases = 0;
+  thumb.setPointerCapture = () => {};
+  thumb.hasPointerCapture = () => true;
+  thumb.releasePointerCapture = () => { releases++; };
+  mockTrackWidth(el, 200);
+  let inputs = 0;
+  let changes = 0;
+  el.addEventListener('lr-input', () => inputs++);
+  el.addEventListener('lr-change', () => changes++);
+
+  thumb.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 144, clientX: 40 }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 144, clientX: 100 }));
+  expect(inputs).to.equal(1);
+  el.range = true;
+  await el.updateComplete;
+
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 144, clientX: 180 }));
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 144 }));
+  expect(releases).to.equal(1);
+  expect(inputs, 'the retired scalar drag cannot mutate either range handle').to.equal(1);
+  expect(changes, 'a structural mode change does not commit the aborted gesture').to.equal(0);
 });
 
 it('keeps an adopted iframe drag on its owner window and releases that window on readoption', async () => {

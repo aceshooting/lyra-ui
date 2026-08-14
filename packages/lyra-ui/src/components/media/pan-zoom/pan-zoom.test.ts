@@ -140,11 +140,25 @@ it('forwards host focus()/blur()/click() to the keyboard-zoomable viewport', asy
   const wrapper = await fixture<HTMLElement>(html`<div><lr-pan-zoom></lr-pan-zoom></div>`);
   const el = wrapper.querySelector('lr-pan-zoom') as LyraPanZoom;
   const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
-  // Listening on the PARENT, not the host: a native focus/blur is composed but does not bubble, so
-  // only a re-dispatched bubbling event reaches this listener.
-  const seen: string[] = [];
-  wrapper.addEventListener('focus', () => seen.push('focus'));
-  wrapper.addEventListener('blur', () => seen.push('blur'));
+  const nativeEvents: FocusEvent[] = [];
+  const aliases: string[] = [];
+  const sequence: string[] = [];
+  wrapper.addEventListener('focus', (event) => {
+    nativeEvents.push(event as FocusEvent);
+    sequence.push('focus');
+  });
+  wrapper.addEventListener('blur', (event) => {
+    nativeEvents.push(event as FocusEvent);
+    sequence.push('blur');
+  });
+  wrapper.addEventListener('lr-focus', () => {
+    aliases.push('lr-focus');
+    sequence.push('lr-focus');
+  });
+  wrapper.addEventListener('lr-blur', () => {
+    aliases.push('lr-blur');
+    sequence.push('lr-blur');
+  });
 
   el.focus();
   expect(el.shadowRoot!.activeElement === viewport).to.equal(true);
@@ -158,7 +172,11 @@ it('forwards host focus()/blur()/click() to the keyboard-zoomable viewport', asy
 
   el.blur();
   expect(el.shadowRoot!.activeElement === null).to.equal(true);
-  expect(seen).to.deep.equal(['focus', 'blur']);
+  expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+  expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
+  expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
+  expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
+  expect(sequence).to.deep.equal(['focus', 'lr-focus', 'blur', 'lr-blur']);
 });
 
 it('preserves present host aria-labels on the region and viewport, then restores the fallback on removal', async () => {

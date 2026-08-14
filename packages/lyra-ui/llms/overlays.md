@@ -108,7 +108,18 @@ One per page recommended — the region.
 `2xs`/`xs`/`s`/`m`/`l`/`xl` values plus `small`/`medium`/`large`; either spelling is preserved by
 the created item's getter and reflected attribute.
 
-**Events:** none.
+The region keeps exactly three items active. Later items enter a hidden, inert FIFO queue capped at
+twenty; their show lifecycle and auto-dismiss timer do not start until promotion. Removing an active
+item promotes the oldest queued item. A visible standalone item moved into a full region is
+deactivated and timer-paused without replaying `lr-show`, then resumes from its remaining duration
+when promoted; its progress ring resumes at the same elapsed fraction as that JavaScript countdown.
+The visible stack is safe-area bounded and vertically scrollable, so all three active items and their
+controls remain keyboard-reachable even with long localized content.
+
+**Events:** `lr-toast-overflow` (noncancelable, `detail: { count: number }`) reports how many oldest
+queued items were discarded when admission exceeded the twenty-item queue. Losses in one synchronous
+burst coalesce into one event and one localized polite announcement; `create()` retains its existing
+promise/result contract.
 
 **Slots:** default (`<lr-toast-item>` children)
 
@@ -140,10 +151,15 @@ A single notification.
 **Methods:** `async hide(): Promise<void>` — plays the hide animation, then removes itself from the
 DOM.
 
-**Events:** `lr-show`, `lr-after-show`, `lr-hide`, `lr-after-hide`. `lr-hide` is the cancelable
-pre-hide veto point. Vetoing an auto-dismiss expiry leaves the item visible and restarts the full
-current normalized `duration`; repeated vetoes retry at that same interval. Vetoing a manual
-`hide()` leaves any active countdown at its current elapsed position.
+**Events:** `lr-show`, `lr-after-show`, `lr-hide`, `lr-after-hide`. `lr-show` and `lr-hide` are the
+cancelable before-transition veto points. The item stays hidden and inert throughout `lr-show`;
+vetoing its initial request releases it from the region without an after-event or timer. Re-entering
+the same show/hide request from its own before-event coalesces onto that request, so the outer veto
+remains authoritative and the lifecycle event fires once. Vetoing an auto-dismiss expiry leaves the
+item visible and restarts the full current normalized `duration`; repeated vetoes retry at that same
+interval. Vetoing a manual `hide()` leaves any active countdown at its current elapsed position. An
+accepted show or hide interrupted by disconnection resumes after reconnection and emits its matching
+`lr-after-*` event exactly once; no terminal event fires while the item is detached.
 
 **Slots:** default (message), `icon`
 
@@ -191,6 +207,12 @@ A `duration` change while the timer is actively counting down reschedules it imm
 the new value instead of waiting for the next pause/resume cycle. A vetoed timer expiry restarts
 that full normalized value; if hover/focus or a disconnect begins during the veto event, the retry
 stays paused and starts from the full value only after the item resumes/reconnects.
+Accessible message extraction follows same-root `aria-labelledby` references and observes their
+targets, lookup roots, and every open shadow root actually traversed for text, including targets
+outside the toast subtree. Traversal is bounded; when a ceiling is reached, the announcement carries
+an explicit ellipsis and the close action uses the localized truncated-context template instead of
+silently treating the bounded prefix as whole. If no prefix fits before a ceiling, both surfaces use
+the localized `toastContentIncomplete` fallback so the missing content remains explicit.
 
 ### `toast()`
 
@@ -227,16 +249,19 @@ at another, since `placement` is a per-call option rather than a single global r
   message, and appending an action does not re-announce it.
 - the close button's accessible name is derived from the toast's own message text (the first 40
   grapheme clusters when it must be shortened, falling back to bare `"Close"` only when the toast
-  has no text content) rather than a bare `"Close"` on every instance — useful when several toasts
+  has no text content and extraction completed) rather than a bare `"Close"` on every instance — useful when several toasts
   are stacked and a screen-reader or switch-access user needs to tell their close buttons apart
   without activating one first. On a legacy engine without `Intl.Segmenter`, it retains the whole
   label rather than splitting a grapheme. The localized `closeWithTruncatedContext` template owns
   truncation punctuation and word order. Rich non-interactive message markup contributes its text,
   named-slot/icon and actionable content do not, and live message text mutations or reassignment
   update the name through nested forwarding slots. Hidden, inert, CSS-hidden and `aria-hidden`
-  message branches are excluded. Observation, animation frames, elapsed-time clocks and
-  completion/auto-dismiss timers follow the item's owner window after iframe adoption and cancel
-  through the same window that scheduled them.
+  message branches are excluded. Same-root external `aria-labelledby` targets and the open shadow
+  roots traversed for their text remain synchronized across reconnect, replacement, and adoption.
+  A bounded traversal prefix is explicitly marked as incomplete; if no prefix is available, the
+  localized `toastContentIncomplete` fallback keeps both the announcement and close name truthful.
+  Observation, animation frames, elapsed-time clocks and completion/auto-dismiss timers follow the
+  item's owner window after iframe adoption and cancel through the same window that scheduled them.
 - pause/resume-on-hover/focus (the component's main accessibility differentiator), including the
   independent-hover-vs-focus pause reasons above, now has regression test coverage.
 - `hide()` is idempotent (a second call while already hiding is a no-op) and `[part="close-button"]`
@@ -247,7 +272,9 @@ at another, since `placement` is a per-call option rather than a single global r
   close control, or back to the connected element that held focus before the toast when no adjacent
   item remains.
 - Prefer the `toast()` helper over manually creating `<lr-toast>`/`<lr-toast-item>` — it already
-  handles the singleton-region and remount-if-removed logic.
+  handles the singleton-region and remount-if-removed logic. The helper and `lr-alert.toast()` never
+  fall back to an unbounded unknown region in an owner document where the controller is unregistered;
+  unavailable alert requests are removed and their existing `Promise<void>` settles.
 
 ---
 
@@ -257,6 +284,9 @@ First-party "no data" state (no Web Awesome equivalent).
 
 **Properties:**
 - `heading: string = ''`
+- `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — `1`–`6` expose
+  either the string heading or rich `heading` slot at that semantic level; invalid untyped values
+  retain level 3, while `none` keeps the visible text without heading semantics
 - `description: string = ''`
 - `compact: boolean = false` (reflected) — tighter, left-aligned rendering (less padding, a lighter
   heading weight) for use inside a constrained space like a widget body or table cell, instead of
@@ -283,7 +313,7 @@ consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
 **Optional peer deps:** none.
 
 ```html
-<lr-empty heading="No results" description="Try a different search.">
+<lr-empty heading="No results" heading-level="2" description="Try a different search.">
   <svg slot="" ...></svg> <!-- default slot: any icon/illustration -->
   <div slot="actions"><button>Clear filters</button></div>
 </lr-empty>
@@ -459,6 +489,10 @@ read, and neither is deprecated.
   therefore emits the full close lifecycle and can be vetoed, where it used to be a silent state
   flip. Markup that renders open from the start (`<lr-dialog open>`) emits nothing.
 - `label: string = ''` — mapped visible title. The richer `label` slot wins over it.
+- `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — `1`–`6` expose
+  the generated visible title (string property or rich `label` slot) at that semantic level;
+  invalid untyped values retain level 3, while `none` keeps visual title text without heading
+  semantics. A direct light-DOM heading retains its own native/ARIA level.
 - `accessibleLabel: string = ''` (attribute `accessible-label`) — explicit accessible-only name;
   unlike `label`, it never renders visible text
 - `heading?: string` — legacy visible-title fallback, after the `label` slot and `label` property;
@@ -605,7 +639,7 @@ Otherwise shared tokens include `--lr-space-l/-m/-s`, `--lr-color-surface/-borde
 **Optional peer deps:** none.
 
 ```html
-<lr-dialog id="dlg" closable>
+<lr-dialog id="dlg" heading-level="2" closable>
   <span slot="label">Delete item?</span>
   <button slot="header-actions" type="button">Help</button>
   <p>This cannot be undone.</p>
@@ -773,8 +807,9 @@ level. `<lr-badge>`/`<lr-tag>` made the identical shape change, with the identic
 - `selected: boolean = false` (reflected) — current value for opt-in toggle/pressed mode. Once
   toggle mode is active, a separate native `[part='toggle-button']` owns focus, Enter/Space/click
   activation, and explicit `"true"`/`"false"` `aria-pressed`; `[part='base']` remains a container
-  and the default-slot label is inert. Activation proposes the opposite value through the
-  cancelable `lr-chip-select` event and mutates `selected` only when that event is not prevented.
+  and the visible default-slot label is inert and aria-hidden. Activation proposes the opposite
+  value through the cancelable `lr-chip-select` event and mutates `selected` only when that event is
+  not prevented.
   Has no toggle effect when combined with `removable`, where the remove button is the sole control.
   `false` (with `toggleable` also left at its default) reproduces the passive label-pill output.
 - `toggleable: boolean = false` (reflected) — explicit opt-in into `selected`'s toggle/pressed
@@ -797,20 +832,29 @@ Calling `preventDefault()` keeps the current `selected` state unchanged)
 (toggle or remove button); a disabled control refuses focus/click, and a passive chip's `click()`
 retains ordinary host behavior.
 
-**Slots:** default (the chip's label content; inert in toggle mode, so move links/buttons outside a
-toggleable chip), `icon` (optional leading icon or status dot; nothing reserved for it — no extra
-gap — when left empty), `end` (optional trailing content, typically an icon, placed after the label
-and before the toggle/remove button; nothing reserved for it — no extra gap — when left empty,
-mirroring `<lr-badge>`'s identical `end` slot)
+When `removable`, `toggleable`, or `disabled` replaces a focused control, focus follows to the
+equivalent new chip control when one exists, otherwise to the nearest available composed action.
+Synchronous controlled removal receives the same repair, and a newer external focus destination is
+never overridden.
+
+**Slots:** default (the chip's label content; its flattened subtree is inert and aria-hidden in
+toggle mode, so move links/buttons outside a toggleable chip), `icon` (optional decorative leading
+icon or status dot; its flattened subtree stays visible but is always inert and aria-hidden, and
+nothing is reserved for it — no extra gap — when left empty), `end` (optional trailing content,
+typically an icon, placed after the label and before the toggle/remove button; nothing is reserved
+for it — no extra gap — when left empty, mirroring `<lr-badge>`'s identical `end` slot). `end`
+remains ordinary consumer content in passive/removable mode, but its flattened subtree becomes
+inert and aria-hidden beneath the full-surface toggle.
 
 Toggle/remove action names follow the default slot's live visible accessible text through nested
 forwarding slots and assigned-node replacement; decorative `icon` content never leaks into them.
 Hidden, inert, CSS-hidden and `aria-hidden` label branches are excluded. A host `aria-label` wins by
 presence, so an explicitly empty value remains empty.
 
-**CSS parts:** `base` (the pill's root container), `icon` (wrapper around the `icon` slot; hidden
-entirely while empty), `label` (non-interactive wrapper around the default slot), `end` (wrapper
-around the `end` slot; hidden entirely while empty, the same `end` csspart name `<lr-badge>` uses),
+**CSS parts:** `base` (the pill's root container), `icon` (inert, aria-hidden wrapper around the
+decorative `icon` slot; hidden entirely while empty), `label` (wrapper around the default slot,
+inert and aria-hidden in toggle mode), `end` (wrapper around the `end` slot; hidden entirely while
+empty and inert plus aria-hidden in toggle mode, the same `end` csspart name `<lr-badge>` uses),
 `toggle-button` (the real native toggle control, rendered over the label in toggle mode),
 `remove-button` (the remove (×) affordance, only rendered while `removable`)
 
@@ -888,6 +932,10 @@ no `.items` array prop).
 revealing or re-collapsing the excess children; fires only from that click, i.e. only when
 `max-visible` is actually causing an overflow state — never as a side effect of `max-visible`/
 children changing on their own)
+
+When collapse, `max-visible`, or controlled child removal hides the focused chip action, focus moves
+to the nearest enabled visible chip control, then the overflow disclosure, then the stable group
+base. Focus already moved outside the group is preserved.
 
 **Slots:** default (`<lr-chip>` elements, or any content, though the chip pairing is the intended
 usage)
@@ -1167,14 +1215,14 @@ To preserve the previous Lyra-shaped defaults explicitly, use
 `placement="bottom-start" distance="4" without-arrow`; origin-aware migration emits those tokens.
 
 The slotted trigger receives `aria-haspopup`, `aria-expanded`, and `aria-controls`. With no slotted
-trigger, a live HTML `for` target receives the identical ownership contract. Target insertion,
-removal, replacement and `id` changes are tracked live; author ARIA is restored when ownership moves.
-`aria-controls` targets the public `lr-popover` host (which receives a stable generated `id` when
-the consumer did not supply one), rather than the shadow-private popup, so the relationship
-resolves from a native light-DOM trigger. `lr-button` and `lr-icon-button` additionally reflect
-that host onto their focused shadow-internal controls through `ariaControlsElements`; supporting
-browsers intentionally serialize the internal control's `aria-controls` content attribute as an
-empty string after that assignment.
+trigger, a live HTML `for` target receives the identical ownership contract. A wrapper/custom
+trigger's composed descendant that actually receives focus receives the same semantics and becomes
+the focus-return target. The component supplies the real popup to the shared relationship owner;
+because current browsers reject a light-DOM reference into a private shadow tree, that inward edge
+is exposed as the public `lr-popover` host. Target insertion, removal, replacement, `id` changes,
+and late custom-element upgrade are tracked live. Authored relationship tokens compose, generated
+whole-value attributes stay authoritative while owned, and exact late-authored baselines return
+when ownership moves or disconnects.
 **Methods:** `show(): Promise<void>` opens the popover programmatically — identical to
 `el.open = true`, including the veto point — and resolves after `lr-after-show`. A no-op or vetoed
 transition returns an already-resolved promise.
@@ -1194,9 +1242,9 @@ element owns click or generated ARIA.
 `hide(options?: { focusTrigger?: boolean }): Promise<void>` programmatically closes the popover and
 resolves after `lr-after-hide`; pass
 `{ focusTrigger: false }` to opt out of focus restoration. By default, `hide()`, Escape, light
-dismiss, and a bare `el.open = false` all return focus to the slotted/`for` interaction owner, or to
-a virtual anchor's explicit `returnFocusTo`; a virtual anchor with no return target closes without
-moving focus. No-op when already closed.
+dismiss, and a bare `el.open = false` all return focus to the slotted/`for` owner's real composed
+focus target, or to a virtual anchor's explicit `returnFocusTo`; a virtual anchor with no return
+target closes without moving focus. No-op when already closed.
 **Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide` — none
 carries a detail, and the two `lr-after-*` events are never cancelable. Neither pair fires for
 markup that renders open from the start, nor when only `placement`/`distance` change on an
@@ -1205,6 +1253,14 @@ already-open popover.
 Removing the sole connected direct anchor or sole interaction anchor from an open popover is
 structural teardown: it force-closes even if an `lr-hide` listener would veto an ordinary close. If
 a live slotted/`for` positioning fallback remains, the popover rebinds to it and stays open instead.
+
+Public DOM-anchored `lr-popover` instances form a same-root singleton. A later ordinary `show()`
+first requests the existing peer's cancelable close and remains closed if that peer vetoes. Initial
+open markup stays lifecycle-silent: after the hydration-safe first-render boundary, the
+later-connected instance wins and the earlier peer closes structurally without a veto or lifecycle
+event. `lr-dropdown`, `showAt()` virtual surfaces, and popovers in separate document/shadow roots
+remain independent. Re-entering the same `show()` or `hide()` request from its own before-event
+coalesces onto one transition promise and emits the lifecycle once.
 
 **Breaking in 8.0.0:** `lr-show`/`lr-hide` now fire *before* the state changes and are cancelable —
 `preventDefault()` on `lr-show` leaves the popover closed for the trigger click, `show()` and
@@ -1361,7 +1417,8 @@ receives the serialized ID; one inside a shadow root is linked through `ariaDesc
 whose explicit element-reference assignment intentionally leaves that control's serialized
 `aria-describedby` value empty in supporting browsers. Existing author-provided descriptions —
 including a control's own internal hint/error text — are merged while open and restored when the
-tooltip closes, the trigger is replaced, or the tooltip disconnects.
+tooltip closes, the trigger is replaced, or the tooltip disconnects. Late author writes remain the
+release baseline while Lyra's active description stays composed into the owned value.
 
 With no slotted trigger, a live HTML `for` target receives those same interactions and description;
 target insertion, removal, replacement and `id` changes are tracked without requiring reinsertion.
@@ -1369,9 +1426,12 @@ Removing the sole connected direct or interaction anchor force-closes despite an
 while a live slotted/`for` positioning fallback is rebound and keeps the tooltip open.
 
 Plain content keeps `role="tooltip"`. If actionable content appears anywhere in the assigned
-default-slot subtree — including inside a nested custom element's open shadow root — the popup
+default-slot subtree — including native links/form/media controls, authored sequential focus stops,
+explicit ARIA widget roles, or content inside a nested custom element's open shadow root — the popup
 promotes to a named `role="dialog"` and remains open while pointer or focus is within it. Escape
-from either the trigger or popup closes it; Escape from popup content returns focus to the trigger.
+from either the trigger or popup closes it; Escape from popup content returns focus to the trigger's
+real composed focus target. Bubbling `focusin`/`focusout` keeps the tooltip open when focus moves
+within a wrapper trigger or between interactive popup controls.
 The content scan follows the live composed assignment through forwarding slots. Reassignment,
 external descendant text/actionability changes, and relevant composed-ancestor visibility changes
 update both the hidden description proxy and popup role; when a forwarding slot becomes genuinely
@@ -1379,7 +1439,8 @@ unassigned, its own fallback content is restored. This classification also runs 
 closed, without treating the popup's internal closed-state visibility as consumer-hidden content.
 Image alternatives and `aria-labelledby` references contribute their accessible text; referenced
 targets outside the tooltip subtree are observed too, so a sibling label's live text mutation
-updates the proxy. Reference traversal is bounded and cycle-safe.
+updates the proxy. Text, actionability, and observer enrollment share bounded, cycle-safe composed
+traversal; content beyond the traversal ceiling fails closed instead of recursing without bound.
 While open, rootless custom-element content receives a bounded initialization grace period for an
 upgrade or newly attached open shadow root; later observable content mutations start a fresh
 grace period. This catches normal lazy initialization without scheduling perpetual animation-frame
@@ -1424,6 +1485,9 @@ consumer-supplied `<lr-menu>` uses that controller directly. This preserves both
 direct-item composition and Shoelace's consumer-menu composition. The canonical item properties,
 methods, events, slots, parts, and theme variables are documented in the layout-family
 `lr-menu` / `lr-menu-item` section.
+When `popupRole` is changed away from its default `menu`, the outer popup owns that requested role
+and the contained controller renders a real inner `role="menu"`; menuitem descendants are never
+left directly under an incompatible dialog or generic role.
 
 **Properties:**
 - `open: boolean = false` (reflected), `placement: Placement = 'bottom-start'`,
@@ -1653,6 +1717,15 @@ Like `<lr-chip>`, a removable `lr-tag` is controlled: activation only announces 
 tag remains connected even if a listener calls `preventDefault()` (the event is not cancelable),
 and the consumer removes it by updating the collection that rendered it.
 
+If that controlled listener synchronously removes the focused tag, or a direct property write
+removes its action, focus moves to the nearest available composed action. Focus explicitly moved by
+the listener is preserved.
+
+For a removable tag, `focus(options?)`, `blur()`, and `click()` delegate to its native remove
+button. Setting `withRemove` / `removable` false revokes `focus()` and `click()` synchronously,
+before the outgoing button is rerendered. `blur()` remains available during that same-task window
+so it can release the stale focused button; after render there is no owner to blur.
+
 **Slots:** default (the label), `start` (content before the label, typically an icon) and `end`
 (content after it) — both new in 8.0.0. Each wrapper collapses entirely (`display: none`, so no
 stray gap) while its slot is empty, and is seeded from the light-DOM children before the first
@@ -1774,12 +1847,32 @@ document uses that document's toast region, timers, motion preference, and focus
 DOM reconciliation removes a toast without hiding it, the pending promise settles after that
 disconnect proves lasting (a synchronous move into the toast region does not count), stale
 listeners are released, and a later `toast()` starts a fresh lifecycle.
+The region admits three active alerts and twenty hidden/inert queued alerts in FIFO order. An
+already-open alert also becomes explicitly hidden and inert while queued; promotion preserves that
+accepted state without replaying `lr-show`. If focus was inside that surface, queue admission repairs
+it to an available adjacent control without overriding a newer external focus destination. An initial
+`lr-show` veto removes and settles that toast attempt; a later `toast()` uses a fresh promise and can
+retry. Re-entering `show()` or the same `open` request during the before-event coalesces, so an outer
+veto cannot be bypassed by a nested request.
+In an adopted document without an upgraded bounded toast controller, `toast()` fails closed by
+removing the unavailable request and settling its unchanged `Promise<void>` rather than appending to
+an unbounded fallback element. Region ownership is reasserted when an alert moves between stacks;
+stale observations from its previous stack cannot change its active/queued state. A lasting region
+disconnect discards managed work, so reconnecting that old region cannot resurrect an already-settled
+alert toast.
 
 **Events:** `lr-show`, `lr-after-show`, `lr-hide`, and `lr-after-hide` all bubble, compose, carry no
 detail. `lr-show` and `lr-hide` are cancelable veto points; their `lr-after-*` counterparts are
 noncancelable. A transition interrupted by the opposite state does not emit the stale after-event.
+When an accepted hide removes the focused close action, focus moves to the nearest available
+composed action. A veto keeps focus in place, and a listener-selected external destination wins.
+An accepted show/hide interrupted by a same-task move resumes and emits exactly one matching
+after-event before its method resolves. A lasting disconnect settles the method without emitting on
+the detached node; reconnecting the same inline alert later resumes the pending terminal lifecycle
+once. Toast-owned work instead settles and is discarded when its region disconnect proves lasting.
 
-**Slots:** default message content; `icon` for the optional leading icon.
+**Slots:** default message content; `icon` for an optional decorative leading icon whose flattened
+subtree remains visible but is inert and aria-hidden.
 
 **CSS parts:** `base`, `icon`, `message`, and `close-button` / `close-button__base` on the same
 native close button. The pinned surface exposes no component CSS custom properties, custom states,
@@ -1787,10 +1880,10 @@ form association, native-event relays, or delegated native methods.
 
 The light-DOM `<lr-alert>` host owns `role="alert"`, so initially-open/static alerts and alerts shown
 later expose one assertive, content-derived semantic surface without duplicating it in a shadow or
-shared live region. The optional icon wrapper is decorative (`aria-hidden="true"`); the close action
-remains independently accessible through Lyra's localized `close` string. Layout uses logical
-properties, wraps unbroken content at 320px, and the toast path reuses the existing Lyra toast layer
-instead of creating a second placement system.
+shared live region. The optional icon wrapper remains visible, but its flattened subtree is inert
+and `aria-hidden`; the close action remains independently accessible through Lyra's localized
+`close` string. Layout uses logical properties, wraps unbroken content at 320px, and the toast path
+reuses the existing Lyra toast layer instead of creating a second placement system.
 
 ```html
 <lr-alert id="session-alert" closable duration="10000" countdown="rtl" variant="warning">
@@ -1825,6 +1918,9 @@ accepting both spellings of the aliased tiers (`s`/`small`, `m`/`medium`, `l`/`l
 from `wa-callout` needs no attribute rewrite. An unset nested callout inherits its ancestor's size
 context; standalone fallback is `m`. Explicitly writing even the same-default `m` pins the local
 medium mapping, and removing the attribute restores contextual inheritance), `heading: string = ''`,
+`headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected; `1`–`6` expose the
+property and rich-slot heading wrapper at that semantic level, invalid untyped values retain level
+3, and `none` is the visual-only opt-out),
 `closable: boolean = false` (reflected), `inline: boolean = false` (reflected), `open: boolean = true`
 (reflected as a presence attribute — `open="false"` is accepted in plain markup; `false` removes the
 semantic content and hides the host surface), and `accessibleLabel: string = ''`
@@ -1833,8 +1929,11 @@ has highest precedence by presence, including an explicitly empty value.
 
 **Events:** cancelable `lr-close` (no detail); the callout sets `open = false` after the event
 unless a listener calls `preventDefault()`.
+When accepted close or a direct `open = false` write removes the focused close action, focus moves
+to the nearest available composed action. Vetoed close and newer external focus are preserved.
 
-**Slots:** default message, `heading` (rendered alongside the `heading` property), `icon`.
+**Slots:** default message, `heading` (rendered alongside the `heading` property inside the
+configured semantic heading wrapper), `icon`.
 
 **CSS parts:** `base` (the transparent grid wrapper inside the host-owned surface), `icon`
 (hidden while the `icon` slot is empty), `content`, `heading`,

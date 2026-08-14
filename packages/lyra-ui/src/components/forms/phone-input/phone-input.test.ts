@@ -64,15 +64,16 @@ it('normalizes live user input to an E.164 form value through an injected adapte
   const el = form.querySelector('lr-phone-input') as LyraPhoneInput;
   await el.updateComplete;
   const input = el.input!;
-  const eventPromise = oneEvent(el, 'input');
+  const eventPromise = Promise.all([oneEvent(el, 'input'), oneEvent(el, 'lr-input')]);
 
   input.value = '621123456';
   input.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
-  const event = (await eventPromise) as CustomEvent;
+  const [nativeEvent, event] = await eventPromise;
 
   expect(el.value).to.equal('+352621123456');
   expect(new FormData(form).get('phone')).to.equal('+352621123456');
   expect(input.value).to.equal('621 123 456');
+  expect(nativeEvent instanceof InputEvent).to.be.true;
   expect(event.detail).to.deep.include({
     value: '+352621123456',
     inputValue: '621 123 456',
@@ -110,7 +111,7 @@ it('reconciles country, visible selection, canonical value, and FormData when co
   expect(el.country).to.equal('');
 });
 
-it('forwards host click to the telephone input and suppresses it while effectively disabled', async () => {
+it('suppresses host click/focus in the same task that fieldset disablement starts', async () => {
   const form = (await fixture(html`
     <form><fieldset><lr-phone-input></lr-phone-input></fieldset></form>
   `)) as HTMLFormElement;
@@ -124,7 +125,9 @@ it('forwards host click to the telephone input and suppresses it while effective
   expect(clicks).to.equal(1);
   fieldset.disabled = true;
   el.click();
+  el.focus();
   expect(clicks).to.equal(1);
+  expect(el.shadowRoot!.activeElement === null).to.be.true;
 });
 
 it('keeps an incomplete number editable while excluding it from the canonical form value', async () => {
@@ -358,19 +361,24 @@ it('leaves a same-string reformat (the no-adapter fallback path) untouched, incl
   expect(input.selectionStart).to.equal(6);
 });
 
-it('bridges focus and blur from the shadow input to host-observable events', async () => {
+it('relays focus and blur once as native FocusEvents with relatedTarget and aliases', async () => {
   const el = (await fixture(html`
     <lr-phone-input label="Phone number" .adapter=${adapter}></lr-phone-input>
   `)) as LyraPhoneInput;
   await el.updateComplete;
 
-  const focusPromise = oneEvent(el, 'focus');
-  el.input!.dispatchEvent(new FocusEvent('focus'));
-  await focusPromise;
+  const outside = document.createElement('button');
+  const focusPromise = Promise.all([oneEvent(el, 'focus'), oneEvent(el, 'lr-focus')]);
+  el.input!.dispatchEvent(new FocusEvent('focus', { relatedTarget: outside }));
+  const [focus] = await focusPromise;
+  expect(focus instanceof FocusEvent).to.be.true;
+  expect(focus.relatedTarget === outside).to.be.true;
 
-  const blurPromise = oneEvent(el, 'blur');
-  el.input!.dispatchEvent(new FocusEvent('blur'));
-  await blurPromise;
+  const blurPromise = Promise.all([oneEvent(el, 'blur'), oneEvent(el, 'lr-blur')]);
+  el.input!.dispatchEvent(new FocusEvent('blur', { relatedTarget: outside }));
+  const [blur] = await blurPromise;
+  expect(blur instanceof FocusEvent).to.be.true;
+  expect(blur.relatedTarget === outside).to.be.true;
 });
 
 it('does not mark touched from a blur caused by the control itself becoming disabled', async () => {

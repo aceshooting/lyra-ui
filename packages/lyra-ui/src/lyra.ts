@@ -117,7 +117,12 @@ export type {
   LyraLocalePickerEventMap,
 } from './components/forms/locale-picker/locale-picker.class.js';
 export { LyraToast } from './components/overlays/toast/toast.class.js';
-export type { ToastPlacement, ToastCreateOptions } from './components/overlays/toast/toast.class.js';
+export type {
+  ToastPlacement,
+  ToastCreateOptions,
+  ToastOverflowDetail,
+  LyraToastEventMap,
+} from './components/overlays/toast/toast.class.js';
 export { LyraToastItem } from './components/overlays/toast/toast-item.class.js';
 export type { ToastVariant, ToastSize } from './components/overlays/toast/toast-item.class.js';
 export { toast } from './components/overlays/toast/toaster.js';
@@ -1281,6 +1286,7 @@ export type {
 } from './internal/text-viewer-target.js';
 export type { OverlayDeactivateOptions } from './internal/overlay-manager.js';
 export type { RegisteredAnimationSpec } from './internal/registered-animation.js';
+export type { LyraHeadingLevel } from './internal/heading-level.js';
 export type {
   CalendarMode,
   WeekdayFormat,

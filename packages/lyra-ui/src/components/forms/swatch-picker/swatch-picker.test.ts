@@ -181,6 +181,62 @@ describe('lr-swatch-picker', () => {
     expect(swatches(el)[2]!.getAttribute('aria-checked')).to.equal('true');
   });
 
+  it('starts arrow navigation from the focused duplicate occurrence when no value is selected', async () => {
+    const duplicateOptions = [
+      { value: 'same', color: '#0969da', label: 'First occurrence' },
+      { value: 'same', color: '#1a7f37', label: 'Second occurrence' },
+      { value: 'other', color: '#cf222e', label: 'Other' },
+    ];
+    const el = (await fixture(
+      html`<lr-swatch-picker .options=${duplicateOptions}></lr-swatch-picker>`,
+    )) as LyraSwatchPicker;
+    const second = swatches(el)[1]!;
+    second.focus();
+    second.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }),
+    );
+    await el.updateComplete;
+
+    expect(el.value).to.equal('other');
+    expect(el.shadowRoot!.activeElement === swatches(el)[2]).to.equal(true);
+  });
+
+  it('uses the focused swatch rather than a newer controlled value as the arrow origin', async () => {
+    const el = (await fixture(
+      html`<lr-swatch-picker .options=${options()} value="blue"></lr-swatch-picker>`,
+    )) as LyraSwatchPicker;
+    swatches(el)[2]!.focus();
+    el.value = 'green';
+    await el.updateComplete;
+
+    const focused = swatches(el)[2]!;
+    focused.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }),
+    );
+    await el.updateComplete;
+
+    expect(el.value).to.equal('blue');
+    expect(el.shadowRoot!.activeElement === swatches(el)[0]).to.equal(true);
+  });
+
+  it('uses the focused swatch as the controlled origin under RTL', async () => {
+    const el = (await fixture(
+      html`<lr-swatch-picker dir="rtl" .options=${options()} value="blue"></lr-swatch-picker>`,
+    )) as LyraSwatchPicker;
+    swatches(el)[2]!.focus();
+    el.value = 'green';
+    await el.updateComplete;
+
+    const focused = swatches(el)[2]!;
+    focused.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }),
+    );
+    await el.updateComplete;
+
+    expect(el.value).to.equal('blue');
+    expect(el.shadowRoot!.activeElement === swatches(el)[0]).to.equal(true);
+  });
+
   it('selects on ArrowRight (automatic activation) and wraps cyclically at the end', async () => {
     const el = (await fixture(
       html`<lr-swatch-picker .options=${options()} value="red"></lr-swatch-picker>`,
@@ -270,6 +326,31 @@ describe('lr-swatch-picker', () => {
     expect(iconSpan!.querySelector('[data-testid="gem-icon"]')).to.not.equal(null);
     // Still wired for currentColor: the option's color stays on the custom property the icon inherits.
     expect(buttons[1]!.style.getPropertyValue('--lr-swatch-color')).to.equal('#1a7f37');
+  });
+
+  it('keeps arbitrary interactive option icons visible but inert beneath the radio owner', async () => {
+    const el = await fixture<LyraSwatchPicker>(html`<lr-swatch-picker></lr-swatch-picker>`);
+    el.options = [
+      {
+        value: 'hostile',
+        color: '#0969da',
+        label: 'Hostile icon probe',
+        icon: html`<a id="nested-swatch-icon" href="#nested-swatch-icon"><button type="button">Nested</button></a>`,
+      },
+    ];
+    await el.updateComplete;
+    const swatch = swatches(el)[0]!;
+    const icon = swatch.querySelector<HTMLElement>('[part="swatch-icon"]')!;
+    const nested = icon.querySelector<HTMLAnchorElement>('#nested-swatch-icon')!;
+
+    expect(icon.getAttribute('aria-hidden')).to.equal('true');
+    expect(icon.hasAttribute('inert')).to.be.true;
+    expect(nested.getBoundingClientRect().width).to.be.greaterThan(0);
+
+    swatch.focus();
+    nested.focus();
+    expect(el.shadowRoot!.activeElement === swatch).to.equal(true);
+    await expect(el).to.be.accessible();
   });
 
   it('renders the shared gemstone glyph automatically in gemstone mode', async () => {

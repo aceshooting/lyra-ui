@@ -45,10 +45,10 @@
     "@codecov/vite-plugin": "^2.0.1",
     "@secretlint/secretlint-rule-preset-recommend": "^13.0.4",
     "@sgratzl/chartjs-chart-boxplot": "^4.4.5",
-    "@storybook/addon-a11y": "^10.5.7",
-    "@storybook/addon-docs": "^10.5.7",
-    "@storybook/web-components": "^10.5.7",
-    "@storybook/web-components-vite": "^10.5.7",
+    "@storybook/addon-a11y": "^10.5.8",
+    "@storybook/addon-docs": "^10.5.8",
+    "@storybook/web-components": "^10.5.8",
+    "@storybook/web-components-vite": "^10.5.8",
     "@tailwindcss/vite": "^4.3.3",
     "axe-core": "^4.13.0",
     "chart.js": "^4.5.1",
@@ -64,10 +64,10 @@
     "publint": "^0.3.23",
     "react": "^19.2.8",
     "secretlint": "^13.0.4",
-    "storybook": "^10.5.7",
+    "storybook": "^10.5.8",
     "tailwindcss": "^4.3.3",
     "vite": "^8.2.1"
   },
   "packageManager": "pnpm@11.21.0",
-  "customElements": "packages/lyra-ui/custom-elements.json"
+  "customElements": "custom-elements.json"
 }

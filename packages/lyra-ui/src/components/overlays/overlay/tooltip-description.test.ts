@@ -1,4 +1,4 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import type { LyraTooltip } from './tooltip.class.js';
 import './tooltip.js';
 import '../../forms/select/select.js';
@@ -107,11 +107,8 @@ it('describes a light-DOM focusable inside a custom-element trigger', async () =
     </lr-tooltip>
   `);
   const inner = el.querySelector('button')!;
-  // A light-DOM focusable is never retargeted onto the wrapper, so the non-bubbling `focus` event
-  // does not reach the trigger listener -- open it the way `manual`/`click` triggers do instead.
   inner.focus();
-  await el.show();
-  await el.updateComplete;
+  await waitUntil(() => el.open);
   expect(deepActive() === inner, 'the light-DOM button holds focus').to.be.true;
 
   const description = el.querySelector('[data-lyra-tooltip-description]')!;

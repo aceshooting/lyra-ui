@@ -72,6 +72,26 @@ async function connectEmojiPicker(
   return el;
 }
 
+it('forwards host focus, blur, and click to the live search control with disabled guards', async () => {
+  const el = await connectEmojiPicker();
+  const search = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
+  let clicks = 0;
+  search.addEventListener('click', () => clicks++);
+
+  el.focus({ preventScroll: true });
+  expect(el.shadowRoot!.activeElement === search).to.be.true;
+  el.blur();
+  expect(el.shadowRoot!.activeElement === null).to.be.true;
+  el.click();
+  expect(clicks).to.equal(1);
+
+  el.disabled = true;
+  el.focus();
+  el.click();
+  expect(el.shadowRoot!.activeElement === null).to.be.true;
+  expect(clicks).to.equal(1);
+});
+
 it('scales every emoji tier while keeping the shared 40px hit-area floor', async () => {
   const expected: Record<string, string> = {
     '2xs': '40px',
@@ -280,7 +300,7 @@ it('sets value and fires lr-change when an emoji is picked', async () => {
   button.click();
   const event = await eventPromise;
   expect(el.value).to.equal('😀');
-  expect(event.detail).to.deep.equal({ emoji: '😀' });
+  expect(event.detail).to.deep.equal({ value: '😀' });
 });
 
 it('gives each emoji button the shared minimum hit area without enlarging the glyph', async () => {
@@ -364,7 +384,7 @@ describe('keyboard navigation', () => {
     const eventPromise = oneEvent(el, 'lr-change');
     grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     const event = await eventPromise;
-    expect(event.detail).to.deep.equal({ emoji: '😂' }); // second emoji, after one ArrowRight from index 0
+    expect(event.detail).to.deep.equal({ value: '😂' }); // second emoji, after one ArrowRight from index 0
   });
 
   it('swaps ArrowLeft/ArrowRight under RTL so "forward" follows reading direction', async () => {
@@ -393,10 +413,10 @@ describe('keyboard navigation', () => {
     const eventPromise = oneEvent(el, 'lr-change');
     third.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     const event = await eventPromise;
-    expect(event.detail).to.deep.equal({ emoji: '🐶' });
+    expect(event.detail).to.deep.equal({ value: '🐶' });
   });
 
-  it('emits native-style input and change events when a user picks an emoji', async () => {
+  it('emits native input/change once with typed prefixed value aliases when a user picks an emoji', async () => {
     const el = await connectEmojiPicker();
     el.groups = groups;
     await el.updateComplete;
@@ -404,15 +424,20 @@ describe('keyboard navigation', () => {
     const events = Promise.all([
       oneEvent(el, 'input'),
       oneEvent(el, 'change'),
+      oneEvent(el, 'lr-input'),
       oneEvent(el, 'lr-change'),
     ]);
 
     first.click();
 
-    const [inputEvent, changeEvent, lyraEvent] = await events;
+    const [inputEvent, changeEvent, lyraInputEvent, lyraEvent] = await events;
+    expect(inputEvent instanceof InputEvent).to.be.true;
+    expect(changeEvent instanceof Event && !(changeEvent instanceof CustomEvent)).to.be.true;
+    expect(inputEvent.target === el && changeEvent.target === el).to.be.true;
     expect(inputEvent.composed).to.be.true;
     expect(changeEvent.composed).to.be.true;
-    expect(lyraEvent.detail).to.deep.equal({ emoji: '😀' });
+    expect(lyraInputEvent.detail).to.deep.equal({ value: '😀' });
+    expect(lyraEvent.detail).to.deep.equal({ value: '😀' });
   });
 
   it('contains composed search input while emitting one value-event pair for a pick', async () => {
@@ -462,7 +487,7 @@ describe('keyboard navigation', () => {
     const eventPromise = oneEvent(el, 'lr-change');
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     const event = await eventPromise;
-    expect(event.detail).to.deep.equal({ emoji: '😂' });
+    expect(event.detail).to.deep.equal({ value: '😂' });
   });
 
   it('keeps exactly one emoji tabbable (roving tabindex) and supports ArrowDown/ArrowUp/Home/End', async () => {
@@ -584,21 +609,28 @@ describe('disabled', () => {
 });
 
 describe('native focus/blur bridging', () => {
-  it('re-dispatches the search input\'s native focus/blur as bubbling, composed host events', async () => {
+  it('relays the search focus/blur exactly once as FocusEvents with relatedTarget and aliases', async () => {
     const el = await connectEmojiPicker();
     el.groups = groups;
     await el.updateComplete;
     const input = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
 
-    const focusPromise = oneEvent(el, 'focus');
-    input.dispatchEvent(new FocusEvent('focus'));
-    const focusEvent = await focusPromise;
+    const outside = document.createElement('button');
+    document.body.append(outside);
+    created.push(outside);
+    const focusEvents = Promise.all([oneEvent(el, 'focus'), oneEvent(el, 'lr-focus')]);
+    input.dispatchEvent(new FocusEvent('focus', { relatedTarget: outside }));
+    const [focusEvent] = await focusEvents;
+    expect(focusEvent instanceof FocusEvent).to.be.true;
+    expect(focusEvent.relatedTarget === outside).to.be.true;
     expect(focusEvent.bubbles).to.be.true;
     expect(focusEvent.composed).to.be.true;
 
-    const blurPromise = oneEvent(el, 'blur');
-    input.dispatchEvent(new FocusEvent('blur'));
-    const blurEvent = await blurPromise;
+    const blurEvents = Promise.all([oneEvent(el, 'blur'), oneEvent(el, 'lr-blur')]);
+    input.dispatchEvent(new FocusEvent('blur', { relatedTarget: outside }));
+    const [blurEvent] = await blurEvents;
+    expect(blurEvent instanceof FocusEvent).to.be.true;
+    expect(blurEvent.relatedTarget === outside).to.be.true;
     expect(blurEvent.bubbles).to.be.true;
     expect(blurEvent.composed).to.be.true;
   });

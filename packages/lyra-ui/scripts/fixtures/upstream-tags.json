@@ -27,7 +27,12 @@
     "                    quietest parity break there is: the markup still parses, the codemod",
     "                    still reports success, and the consumer's listener just never fires.",
     "                    An entry whose event has since been aliased is reported as stale, so",
-    "                    this list can never quietly outlive its reason. Empty is the goal."
+    "                    this list can never quietly outlive its reason. Empty is the goal.",
+    "",
+    "runtimeEventCancelability -- black-box observations used only when an exact pinned package's",
+    "                    published manifest omits cancelability. Every record covers the named",
+    "                    public transition paths and becomes stale on an artifact or manifest",
+    "                    change; it is comparison evidence, never an executable rewrite."
   ],
   "webawesome": {
     "version": "3.11.0",
@@ -127,6 +132,136 @@
   "shoelace": {
     "version": "2.20.1",
     "commit": "25bd8ec776609670a932f21390be59a495df497d",
+    "runtimeEventCancelability": {
+      "source": {
+        "package": "@shoelace-style/shoelace",
+        "version": "2.20.1",
+        "tarballIntegrity": "sha512-FSghU95jZPGbwr/mybVvk66qRZYpx5FkXL+vLNpy1Vp8UsdwSxXjIHE3fsvMbKWTKi9UFfewHTkc5e7jAqRYoQ=="
+      },
+      "coverage": "all-public-transition-paths",
+      "events": [
+        {
+          "tag": "sl-alert",
+          "event": "sl-after-hide",
+          "cancelable": "never",
+          "paths": ["auto-hide timeout", "hide()", "open attribute removal", "open property = false"]
+        },
+        {
+          "tag": "sl-alert",
+          "event": "sl-after-show",
+          "cancelable": "never",
+          "paths": ["open attribute addition", "open property = true", "show()"]
+        },
+        {
+          "tag": "sl-alert",
+          "event": "sl-hide",
+          "cancelable": "never",
+          "paths": ["auto-hide timeout", "hide()", "open attribute removal", "open property = false"]
+        },
+        {
+          "tag": "sl-alert",
+          "event": "sl-show",
+          "cancelable": "never",
+          "paths": ["open attribute addition", "open property = true", "show()"]
+        },
+        {
+          "tag": "sl-dialog",
+          "event": "sl-after-hide",
+          "cancelable": "never",
+          "paths": ["hide()", "open attribute removal", "open property = false", "request-close acceptance"]
+        },
+        {
+          "tag": "sl-dialog",
+          "event": "sl-after-show",
+          "cancelable": "never",
+          "paths": ["open attribute addition", "open property = true", "show()"]
+        },
+        {
+          "tag": "sl-dialog",
+          "event": "sl-hide",
+          "cancelable": "never",
+          "paths": ["hide()", "open attribute removal", "open property = false", "request-close acceptance"]
+        },
+        {
+          "tag": "sl-dialog",
+          "event": "sl-show",
+          "cancelable": "never",
+          "paths": ["open attribute addition", "open property = true", "show()"]
+        },
+        {
+          "tag": "sl-drawer",
+          "event": "sl-after-hide",
+          "cancelable": "never",
+          "paths": ["hide()", "open attribute removal", "open property = false", "request-close acceptance"]
+        },
+        {
+          "tag": "sl-drawer",
+          "event": "sl-after-show",
+          "cancelable": "never",
+          "paths": ["open attribute addition", "open property = true", "show()"]
+        },
+        {
+          "tag": "sl-drawer",
+          "event": "sl-hide",
+          "cancelable": "never",
+          "paths": ["hide()", "open attribute removal", "open property = false", "request-close acceptance"]
+        },
+        {
+          "tag": "sl-drawer",
+          "event": "sl-show",
+          "cancelable": "never",
+          "paths": ["open attribute addition", "open property = true", "show()"]
+        },
+        {
+          "tag": "sl-dropdown",
+          "event": "sl-after-hide",
+          "cancelable": "never",
+          "paths": ["dismissal", "hide()", "open attribute removal", "open property = false", "selection"]
+        },
+        {
+          "tag": "sl-dropdown",
+          "event": "sl-after-show",
+          "cancelable": "never",
+          "paths": ["open attribute addition", "open property = true", "show()", "trigger activation"]
+        },
+        {
+          "tag": "sl-dropdown",
+          "event": "sl-hide",
+          "cancelable": "never",
+          "paths": ["dismissal", "hide()", "open attribute removal", "open property = false", "selection"]
+        },
+        {
+          "tag": "sl-dropdown",
+          "event": "sl-show",
+          "cancelable": "never",
+          "paths": ["open attribute addition", "open property = true", "show()", "trigger activation"]
+        },
+        {
+          "tag": "sl-tooltip",
+          "event": "sl-after-hide",
+          "cancelable": "never",
+          "paths": ["focus/hover dismissal", "hide()", "open attribute removal", "open property = false"]
+        },
+        {
+          "tag": "sl-tooltip",
+          "event": "sl-after-show",
+          "cancelable": "never",
+          "paths": ["focus/hover trigger", "open attribute addition", "open property = true", "show()"]
+        },
+        {
+          "tag": "sl-tooltip",
+          "event": "sl-hide",
+          "cancelable": "never",
+          "paths": ["focus/hover dismissal", "hide()", "open attribute removal", "open property = false"]
+        },
+        {
+          "tag": "sl-tooltip",
+          "event": "sl-show",
+          "cancelable": "never",
+          "paths": ["focus/hover trigger", "open attribute addition", "open property = true", "show()"]
+        }
+      ]
+    },
     "tags": [
       "sl-alert",
       "sl-animated-image",

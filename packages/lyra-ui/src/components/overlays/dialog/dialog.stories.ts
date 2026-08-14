@@ -194,6 +194,7 @@ export const HeaderSlots: Story = {
     <lr-dialog
       .open=${context.viewMode !== 'docs'}
       closable
+      heading-level="2"
       style="--lr-dialog-spacing: 1.25rem; --lr-dialog-backdrop-filter: blur(3px);"
     >
       <span slot="label">Project <strong>settings</strong></span>

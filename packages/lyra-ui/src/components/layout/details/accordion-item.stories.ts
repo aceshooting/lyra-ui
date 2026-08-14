@@ -26,14 +26,14 @@ export const CustomLabelAndIcon: StoryObj = {
     docs: {
       description: {
         story:
-          'Rich label markup remains visible and names the sole trigger. Label and compatibility summary slots are decorative layers, so interactive descendants are inert.',
+          'Rich label markup remains visible and names the sole trigger. The label, compatibility summary, and icon slots are decorative layers: their flattened content is inert, and the trigger remains the only action.',
       },
     },
   },
   render: () => html`<lr-accordion-item heading-level="2" icon-placement="start">
     <span slot="label"><strong>Rich label</strong> with supporting text</span>
     <span slot="icon" aria-hidden="true">+</span>
-    The rich label names the trigger; the decorative icon accepts slotted markup.
+    The rich label names the trigger; the decorative icon accepts visible, non-actionable markup.
   </lr-accordion-item>`,
 };
 

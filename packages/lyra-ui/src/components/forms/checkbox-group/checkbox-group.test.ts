@@ -4,6 +4,7 @@ import '../checkbox/checkbox.js';
 import type { LyraCheckboxGroup } from './checkbox-group.js';
 import type { LyraCheckbox } from '../checkbox/checkbox.js';
 import { styles } from './checkbox-group.styles.js';
+import { resolveValidityAnchor } from '../../../internal/anchored-validity.js';
 
 it('lets a consumer retint the invalid options border independently', async () => {
   const el = (await fixture(html`
@@ -57,7 +58,7 @@ it('collects checked children and emits a group change', async () => {
   expect(result.detail.value).to.deep.equal(['a']);
 });
 
-it('forwards host click to the first enabled checkbox and leaves focus alone when none are enabled', async () => {
+it('gives host focus and click their native meanings on the first enabled checkbox', async () => {
   const wrapper = await fixture<HTMLDivElement>(html`
     <div>
       <button type="button">Elsewhere</button>
@@ -72,19 +73,94 @@ it('forwards host click to the first enabled checkbox and leaves focus alone whe
   const [disabled, enabled] = [...group.querySelectorAll('lr-checkbox')] as LyraCheckbox[];
   await Promise.all([disabled.updateComplete, enabled.updateComplete]);
 
-  group.click();
+  button.focus();
+  group.focus({ preventScroll: true });
   expect(document.activeElement === enabled, 'the disabled option is skipped').to.equal(true);
   expect(enabled.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base checkbox');
+  group.blur();
+  expect(enabled.shadowRoot!.activeElement === null).to.equal(true);
+
+  button.focus();
+  group.click();
+  expect(enabled.checked, 'click activates rather than merely focusing the option').to.equal(true);
+  expect(document.activeElement === button, 'programmatic click does not become a focus shorthand').to.equal(true);
 
   enabled.disabled = true;
   button.focus();
   group.click();
-  expect(document.activeElement === button, 'an all-disabled group has no focus destination').to.equal(true);
+  group.focus();
+  expect(document.activeElement === button, 'an all-disabled group has no action or focus destination').to.equal(true);
+});
+
+it('anchors aggregate validity to the first enabled checkbox semantic owner', async () => {
+  const group = (await fixture(html`
+    <lr-checkbox-group required>
+      <lr-checkbox disabled value="a">A</lr-checkbox>
+      <lr-checkbox value="b">B</lr-checkbox>
+    </lr-checkbox-group>
+  `)) as LyraCheckboxGroup;
+  const [, enabled] = [...group.querySelectorAll('lr-checkbox')] as LyraCheckbox[];
+  await enabled.updateComplete;
+
+  const anchor = resolveValidityAnchor(group);
+  expect(anchor === resolveValidityAnchor(enabled)).to.equal(true);
+  expect(anchor?.getAttribute('part')?.split(' ')).to.include('checkbox');
 });
 
 it('reports required validity when no box is checked', async () => {
   const el = (await fixture(html`<lr-checkbox-group required><lr-checkbox>A</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
   expect(el.checkValidity()).to.be.false;
+});
+
+it('adds a localized aggregate required description without replacing hint or error relationships', async () => {
+  const el = await fixture<LyraCheckboxGroup>(html`
+    <lr-checkbox-group
+      required
+      hint="Choose any topic"
+      error-text="Selection missing"
+      .strings=${{ checkboxGroupRequired: 'Choisissez au moins une option.' }}
+    >
+      <lr-checkbox value="a">A</lr-checkbox>
+    </lr-checkbox-group>
+  `);
+  const fieldset = el.shadowRoot!.querySelector('fieldset')!;
+  const description = el.shadowRoot!.querySelector<HTMLElement>('[data-required-description]')!;
+  const ids = fieldset.getAttribute('aria-describedby')?.match(/\S+/g) ?? [];
+
+  expect(description.textContent?.trim()).to.equal('Choisissez au moins une option.');
+  expect(ids).to.include(description.id);
+  expect(ids).to.include(el.shadowRoot!.querySelector('[part="hint"]')!.id);
+  expect(ids).to.include(el.shadowRoot!.querySelector('[part="error"]')!.id);
+
+  el.required = false;
+  await el.updateComplete;
+  const optionalIds = fieldset.getAttribute('aria-describedby')?.match(/\S+/g) ?? [];
+  expect(optionalIds).not.to.include(description.id);
+  expect(optionalIds).to.include(el.shadowRoot!.querySelector('[part="hint"]')!.id);
+  expect(optionalIds).to.include(el.shadowRoot!.querySelector('[part="error"]')!.id);
+});
+
+it('projects visible property and slotted errors onto the fieldset without rewriting validity', async () => {
+  const el = (await fixture(html`
+    <lr-checkbox-group error-text="Server rejected this combination">
+      <lr-checkbox value="a">A</lr-checkbox>
+    </lr-checkbox-group>
+  `)) as LyraCheckboxGroup;
+  const fieldset = el.shadowRoot!.querySelector('fieldset')!;
+  expect(fieldset.getAttribute('aria-invalid')).to.equal('true');
+  expect(el.checkValidity()).to.be.true;
+
+  el.errorText = '';
+  await el.updateComplete;
+  expect(fieldset.getAttribute('aria-invalid')).to.equal('false');
+
+  const slotted = document.createElement('span');
+  slotted.slot = 'error';
+  slotted.textContent = 'Slotted rejection';
+  el.append(slotted);
+  await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+  await el.updateComplete;
+  expect(fieldset.getAttribute('aria-invalid')).to.equal('true');
 });
 
 it('is accessible', async () => {

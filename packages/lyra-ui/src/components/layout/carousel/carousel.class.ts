@@ -9,10 +9,12 @@ import {
   isAccessibilityVisible,
   isAccessibilityVisibilityHidden,
 } from "../../../internal/accessibility-visibility.js";
-import { activeElementIn } from "../../../internal/active-element.js";
+import { activeElementIn, deepActiveElementIn } from "../../../internal/active-element.js";
 import { composedAccessibilityText } from "../../../internal/announcement-text.js";
+import { renderInertPresentation } from "../../../internal/inert-presentation.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { finiteDuration, finiteInteger } from "../../../internal/numbers.js";
+import { composedContains } from "../../../internal/overlay-manager.js";
 import { getNumberFormat } from "../../../internal/intl-cache.js";
 import { tag } from "../../../internal/prefix.js";
 import { styles } from "./carousel.styles.js";
@@ -114,8 +116,10 @@ export interface LyraCarouselEventMap {
  *
  * @customElement lr-carousel
  * @slot - Slide elements. Each assigned element becomes one slide.
- * @slot next-icon - Optional next-navigation icon.
- * @slot previous-icon - Optional previous-navigation icon.
+ * @slot next-icon - Optional decorative next-navigation icon. Its flattened subtree remains
+ *   visible but is inert and hidden from assistive technology; the native button is the action.
+ * @slot previous-icon - Optional decorative previous-navigation icon, with the same inert visual
+ *   content contract as `next-icon`.
  * @event lr-slide-change - Active slide changed. `detail: { index, slide }`.
  * @attr {number} currentSlide - Web Awesome compatibility alias for `current-slide`; HTML
  *   normalizes it to `currentslide` at runtime. When both are present initially,
@@ -305,6 +309,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   private observer?: MutationObserver;
   private observerDocument?: Document;
   private observerGeneration = 0;
+  private lastFocusedSlide?: HTMLElement;
 
   constructor() {
     super();
@@ -400,6 +405,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.visibilityDocument = undefined;
     this.resetSlideContentObserver();
     this.restoreSlides();
+    this.lastFocusedSlide = undefined;
     super.disconnectedCallback();
   }
 
@@ -711,6 +717,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     const current = this.normalizedIndex(slides.length);
     if (this.currentSlide !== current) this.currentSlide = current;
     const visible = this.visibleIndices(slides.length, current);
+    this.repairFocusBeforeSlideExclusion(slides, visible);
     const format = getNumberFormat(this.effectiveLocale);
 
     slides.forEach((slide, slideIndex) => {
@@ -754,6 +761,27 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       }
       this.appliedSnapshots.set(slide, this.snapshotSlide(slide));
     });
+  }
+
+  /** Moves focus while the outgoing slide is still operable. Setting `inert` first lets the
+   * platform strand focus on the document body, outside this carousel's keyboard handler. The
+   * remembered-slide branch covers direct light-DOM removal, where slotchange necessarily runs
+   * only after the focused node has already disconnected. */
+  private repairFocusBeforeSlideExclusion(
+    slides: HTMLElement[],
+    visible: ReadonlySet<number>,
+  ): void {
+    const active = deepActiveElementIn(this.ownerDocument);
+    const focusedIndex = slides.findIndex((slide) => composedContains(slide, active));
+    const focusedSlideWillBeExcluded = focusedIndex >= 0 && !visible.has(focusedIndex);
+    const focusedSlideWasRemoved =
+      focusedIndex < 0 &&
+      this.lastFocusedSlide !== undefined &&
+      !this.lastFocusedSlide.isConnected &&
+      (active === null || active === this.ownerDocument.body);
+    if (!focusedSlideWillBeExcluded && !focusedSlideWasRemoved) return;
+    this.viewport?.focus();
+    this.lastFocusedSlide = undefined;
   }
 
   private handleSlidesChanged(): void {
@@ -1182,14 +1210,29 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.restartAutoplay();
   };
 
-  private onViewportFocusIn = (): void => {
+  private onViewportFocusIn = (event: FocusEvent): void => {
     this.focusInteracting = true;
+    const slides = new Set(this.slideElements());
+    const focusedSlide = event.composedPath().find(
+      (candidate): candidate is HTMLElement =>
+        (candidate as Partial<Node>).nodeType === 1 && slides.has(candidate as HTMLElement),
+    );
+    if (focusedSlide) this.lastFocusedSlide = focusedSlide;
     this.restartAutoplay();
   };
 
   private onViewportFocusOut = (): void => {
     this.queueOwnerMicrotask(() => {
       if (!this.isConnected) return;
+      const active = deepActiveElementIn(this.ownerDocument);
+      if (
+        this.lastFocusedSlide &&
+        !composedContains(this.lastFocusedSlide, active) &&
+        (this.lastFocusedSlide.isConnected ||
+          (active !== null && active !== this.ownerDocument.body))
+      ) {
+        this.lastFocusedSlide = undefined;
+      }
       this.focusInteracting = this.matches(":focus-within");
       this.restartAutoplay();
     });
@@ -1421,9 +1464,10 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
                     ?disabled=${!this.loop && current === 0}
                     @click=${() => this.previous()}
                   >
-                    <span part="previous-glyph" aria-hidden="true"
-                      ><slot name="previous-icon">‹</slot></span
-                    >
+                    ${renderInertPresentation(
+                      html`<slot name="previous-icon">‹</slot>`,
+                      { part: "previous-glyph" },
+                    )}
                   </button>
                   <button
                     part="next-button navigation-button navigation-button-next navigation-button--next"
@@ -1433,9 +1477,10 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
                     current === this.maxStartIndex(count)}
                     @click=${() => this.next()}
                   >
-                    <span part="next-glyph" aria-hidden="true"
-                      ><slot name="next-icon">›</slot></span
-                    >
+                    ${renderInertPresentation(
+                      html`<slot name="next-icon">›</slot>`,
+                      { part: "next-glyph" },
+                    )}
                   </button>
                 </div>`
               : nothing}

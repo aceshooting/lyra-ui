@@ -9,6 +9,7 @@ import {
   isAccessibilitySubtreeExcluded,
   isAccessibilityVisibilityHidden,
 } from '../../../internal/a11y.js';
+import { composedAccessibilityText } from '../../../internal/accessibility-visibility.js';
 import {
   markOptionSelectedDirty,
   RESET_OPTION_SELECTED_FROM_OWNER,
@@ -205,13 +206,15 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
   /** Accessible text generated from flattened default-slot content, excluding named adornments. */
   get defaultLabel(): string {
     if (!('childNodes' in this)) return '';
-    return Array.from(this.childNodes)
-      .filter((node) => this.isDefaultLabelNode(node))
-      // Pickers deliberately project option hosts through a hidden data-source slot. Direct roots
-      // remain readable there; composed exposure begins only when a forwarding slot crosses into
-      // consumer-owned content.
-      .map((node) => this.accessibleLabelText(node, true, false))
-      .join(' ')
+    const roots = Array.from(this.childNodes).filter((node) => this.isDefaultLabelNode(node));
+    // Pickers deliberately project option hosts through a hidden data-source slot. Direct roots
+    // remain readable there; composed exposure begins only when a forwarding slot crosses into
+    // consumer-owned content.
+    return composedAccessibilityText(roots, {
+      requireRendered: false,
+      shouldPruneNode: (node) => !this.contains(node) && !this.isSourceLabelVisible(node),
+      skipRootAncestorValidation: true,
+    })
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -273,9 +276,12 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
       attributeFilter: [
         'aria-hidden',
         'aria-label',
+        'aria-labelledby',
+        'alt',
         'class',
         'hidden',
         'inert',
+        'id',
         'open',
         'slot',
         'style',
@@ -370,48 +376,6 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
         this.observeLabelAncestors(assigned);
       }
     }
-  }
-
-  private accessibleLabelText(
-    node: Node,
-    inheritedTextVisible?: boolean,
-    requireComposedVisibility = false,
-  ): string {
-    if (node.nodeType === 3) {
-      if (inheritedTextVisible === undefined) {
-        const parent = this.sourceParentForLabelNode(node);
-        inheritedTextVisible =
-          parent !== null &&
-          !isAccessibilitySubtreeExcluded(parent) &&
-          !isAccessibilityVisibilityHidden(parent) &&
-          (!requireComposedVisibility || this.isSourceLabelVisible(node));
-      }
-      return inheritedTextVisible ? node.textContent ?? '' : '';
-    }
-    if (node.nodeType !== 1) return '';
-    const element = node as Element;
-    if (isAccessibilitySubtreeExcluded(element)) return '';
-    const ownTextVisible = !isAccessibilityVisibilityHidden(element);
-    // `visibility:hidden` descendants may restore visibility. Hard-hidden composed ancestors and
-    // closed-details branches do prune an externally forwarded root.
-    if (requireComposedVisibility && ownTextVisible && !this.isSourceLabelVisible(element)) return '';
-    const ariaLabel = ownTextVisible ? element.getAttribute('aria-label')?.trim() : '';
-    if (ariaLabel) return ariaLabel;
-    const forwardingSlot = element.localName === 'slot' ? (element as HTMLSlotElement) : null;
-    const hasAssignment = forwardingSlot !== null && forwardingSlot.assignedNodes().length > 0;
-    const children = hasAssignment
-      ? forwardingSlot.assignedNodes({ flatten: true })
-      : Array.from(element.childNodes);
-    return Array.from(children)
-      .map((child) => {
-        const externalAssignment = hasAssignment && !this.contains(child);
-        return this.accessibleLabelText(
-          child,
-          externalAssignment ? undefined : ownTextVisible,
-          requireComposedVisibility || externalAssignment,
-        );
-      })
-      .join(' ');
   }
 
   private handleLabelSlotChange = (event: Event): void => {

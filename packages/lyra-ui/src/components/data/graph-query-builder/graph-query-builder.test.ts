@@ -42,6 +42,21 @@ describe('lr-graph-query-builder', () => {
     expect(el.shadowRoot!.querySelector('[part="saved-empty"]')!.textContent).to.equal('No data');
   });
 
+  it('projects its unconditional start-anchor requirement to the nested input owner', async () => {
+    const el = (await fixture(html`
+      <lr-graph-query-builder disabled></lr-graph-query-builder>
+    `)) as LyraGraphQueryBuilder;
+    const start = el.shadowRoot!.querySelector('[part="start-input"]') as HTMLElement & {
+      required: boolean;
+      input?: HTMLInputElement;
+    };
+    await (start as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+
+    expect(start.required).to.be.true;
+    expect(start.input?.required).to.be.true;
+    expect(start.input?.getAttribute('aria-required')).to.equal('true');
+  });
+
   it('forwards a host click to the first rendered field', async () => {
     const el = (await fixture(html`
       <lr-graph-query-builder></lr-graph-query-builder>
@@ -51,6 +66,24 @@ describe('lr-graph-query-builder', () => {
     el.click();
 
     expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('start-input');
+  });
+
+  it('forwards host focus and blur to the live owned field and rejects synchronous disablement', async () => {
+    const fieldset = await fixture<HTMLFieldSetElement>(html`
+      <fieldset><lr-graph-query-builder></lr-graph-query-builder></fieldset>
+    `);
+    const el = fieldset.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
+    const start = el.shadowRoot!.querySelector('[part="start-input"]') as HTMLElement;
+
+    el.focus({ preventScroll: true });
+    expect(el.shadowRoot!.activeElement === start).to.be.true;
+    el.blur();
+    expect(el.shadowRoot!.activeElement === null).to.be.true;
+
+    fieldset.disabled = true;
+    el.focus();
+    el.click();
+    expect(el.shadowRoot!.activeElement === null).to.be.true;
   });
 
   it('emits lr-input with the full value when the start-entity input changes', async () => {

@@ -340,12 +340,17 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     if (this.textareaEl) this.textareaEl.selectionDirection = value ?? 'none';
   }
 
+  /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */
+  private get liveDisabled(): boolean {
+    return this.effectiveDisabled || this.matches(':disabled');
+  }
+
   override click(): void {
-    if (!this.effectiveDisabled) this.textareaEl?.click();
+    if (!this.liveDisabled) this.textareaEl?.click();
   }
 
   override focus(options?: FocusOptions): void {
-    if (!this.effectiveDisabled) this.textareaEl?.focus(options);
+    if (!this.liveDisabled) this.textareaEl?.focus(options);
   }
 
   override blur(): void {
@@ -633,6 +638,10 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   }
 
   private onInput = (event: InputEvent): void => {
+    if (this.liveDisabled) {
+      event.stopPropagation();
+      return;
+    }
     if (!this.textareaEl) return;
     this.value = this.textareaEl.value;
     if (this.resize === 'auto') this.fitToContent();
@@ -642,6 +651,10 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   };
 
   private onChange = (event: Event): void => {
+    if (this.liveDisabled) {
+      event.stopPropagation();
+      return;
+    }
     if (!this.textareaEl) return;
     this.value = this.textareaEl.value;
     relayNativeEvent(this, event);
@@ -649,6 +662,10 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   };
 
   private onFocus = (event: FocusEvent): void => {
+    if (this.liveDisabled) {
+      event.stopPropagation();
+      return;
+    }
     relayNativeEvent(this, event);
     this.emit('lr-focus');
   };
@@ -663,7 +680,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     // in-flight update and tripping Lit's dev-mode "scheduled an update after an update completed"
     // warning for a state flip nothing observable needed -- a disabled control is barred from
     // validation regardless.
-    if (!this.effectiveDisabled) this.touched = true;
+    if (!this.liveDisabled) this.touched = true;
     relayNativeEvent(this, event);
     this.emit('lr-blur');
   };

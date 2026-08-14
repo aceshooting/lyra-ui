@@ -1,32 +1,34 @@
 import { deepActiveElementIn } from './active-element.js';
+import {
+  collectComposedAutofocusElements,
+  collectComposedFocusTargets,
+  isComposedFocusAvailable,
+} from './focus-navigation.js';
+import { isHtmlElement } from './dom-guards.js';
 import { RenderedStateController } from './rendered-state.js';
 import { lockScroll } from './scroll-lock.js';
-/** Elements the platform makes focusable on their own, with no `tabindex` from the author. */
-const NATIVELY_FOCUSABLE_SELECTOR = [
-  'a[href]',
-  'area[href]',
-  'audio[controls]',
-  'button:not([disabled])',
-  'iframe',
-  'input:not([disabled]):not([type="hidden"])',
-  'select:not([disabled])',
-  'summary',
-  'textarea:not([disabled])',
-  'video[controls]',
-  '[contenteditable]:not([contenteditable="false"])',
-].join(', ');
-
-const FOCUSABLE_SELECTOR = [NATIVELY_FOCUSABLE_SELECTOR, '[tabindex]'].join(', ');
+import {
+  leaseInlineStyleProperty,
+  type InlineStylePropertyLease,
+} from './style-property-lease.js';
 
 const STACK_PROPERTY = '--lr-overlay-stack-index';
 const STACK_BASE = 1000;
 const STACK_STEP = 2;
+
+/** A fixed return target or a live target resolved after modal resources have been released. */
+export type OverlayRestoreFocusTarget = HTMLElement | null | (() => HTMLElement | null);
 
 export interface OverlayActivationOptions {
   /** The custom-element host that owns this overlay. */
   host: HTMLElement;
   /** Resolves the current dialog/panel element after each render. */
   panel: () => HTMLElement | null;
+  /**
+   * Resolves the subtree that remains interactive while this entry is modal. Defaults to `host`.
+   * Use this when the stack-owning host also contains application siblings outside the panel.
+   */
+  modalRoot?: () => HTMLElement | null;
   /** Dismisses the overlay with its component-specific Escape reason/event. */
   onEscape: () => void;
   /** Dismisses the overlay with its component-specific backdrop reason/event. */
@@ -35,8 +37,8 @@ export interface OverlayActivationOptions {
   preferredInitialFocus?: () => HTMLElement | null;
   /** One-shot veto immediately before the manager's first automatic focus movement. */
   beforeInitialFocus?: () => boolean;
-  /** Override the focus-return target captured when the overlay activates. */
-  restoreFocusTo?: HTMLElement | null;
+  /** Override the captured focus-return target with a fixed element or post-cleanup resolver. */
+  restoreFocusTo?: OverlayRestoreFocusTarget;
   /** Defaults to true. Nonmodal popups share ordering without inerting the page. */
   modal?: boolean;
   /** Defaults to true. Set false for popups that allow native Tab to leave. */
@@ -62,7 +64,7 @@ export interface OverlayHandle {
    *  `autofocus` in its content without stealing focus in every other case. */
   focusAutofocus(): boolean;
   /** Replaces the eventual focus-return target without unregistering or reordering the overlay. */
-  updateRestoreFocusTo(target: HTMLElement | null): void;
+  updateRestoreFocusTo(target: OverlayRestoreFocusTarget): void;
   /** Removes the overlay permanently. Safe to call repeatedly. */
   deactivate(options?: OverlayDeactivateOptions): void;
   /** Temporarily unregisters during disconnect, preserving the original return target. */
@@ -79,7 +81,7 @@ export interface OverlayHandle {
 
 interface OverlayEntry {
   options: OverlayActivationOptions;
-  restoreFocusTo: HTMLElement | null;
+  restoreFocusTo: OverlayRestoreFocusTarget;
   active: boolean;
   registered: boolean;
   manuallySuspended: boolean;
@@ -89,8 +91,7 @@ interface OverlayEntry {
   suspendGeneration: number;
   stackOrder: number;
   state: OverlayDocumentState;
-  previousStackValue: string;
-  previousStackPriority: string;
+  stackStyleLease?: InlineStylePropertyLease;
   releaseScrollLock?: () => void;
   renderedState?: RenderedStateController;
   handle: OverlayHandle;
@@ -141,10 +142,6 @@ export function deepActiveElement(
   return deepActiveElementIn(doc);
 }
 
-function isSlot(element: Element): element is HTMLSlotElement {
-  return element.localName === 'slot' && typeof (element as HTMLSlotElement).assignedElements === 'function';
-}
-
 function composedParent(element: Element): Element | null {
   if (element.assignedSlot) return element.assignedSlot;
   if (element.parentElement) return element.parentElement;
@@ -161,129 +158,9 @@ export function composedContains(container: Element, candidate: Element | null):
   return false;
 }
 
-function hasInertAncestor(element: Element): boolean {
-  let current: Element | null = element;
-  while (current) {
-    if ((current as HTMLElement).inert) return true;
-    current = composedParent(current);
-  }
-  return false;
-}
-
-function isRendered(element: HTMLElement): boolean {
-  if (element.hidden || element.getAttribute('aria-hidden') === 'true' || hasInertAncestor(element)) return false;
-  if (element.ownerDocument.defaultView?.getComputedStyle(element).visibility !== 'visible') return false;
-  return element.checkVisibility ? element.checkVisibility() : element.getClientRects().length > 0;
-}
-
-/**
- * A scroll container is a keyboard destination in its own right: without a stop on it, a panel
- * whose only content is long prose, a table, or a rendered document is mouse-scrollable but has
- * no way in from the keyboard at all. `scroll` always counts (the author asked for a scrollbar);
- * `auto` counts only while the content really overflows, so a short region never becomes a
- * gratuitous stop. Both reads force layout, which is why this is the last thing `isTabbable()`
- * asks -- every cheaper answer has already been given by then.
- */
-function isOverflowingAndTabbable(element: HTMLElement): boolean {
-  const view = element.ownerDocument.defaultView;
-  if (!view) return false;
-  const { overflowX, overflowY } = view.getComputedStyle(element);
-  if (overflowX === 'scroll' || overflowY === 'scroll') return true;
-  if (overflowY === 'auto' && element.scrollHeight > element.clientHeight) return true;
-  if (overflowX === 'auto' && element.scrollWidth > element.clientWidth) return true;
-  return false;
-}
-
-function isTabbable(element: HTMLElement): boolean {
-  if (element.matches(':disabled')) return false;
-  if (!isRendered(element)) return false;
-  if (element.tabIndex >= 0) return true;
-  // tabIndex < 0 on a control the platform already made focusable is the author deliberately
-  // taking it out of the order -- honour that. On anything else, tabindex="-1" is the only way
-  // to make a scroll container focusable at all, so a negative value there says "reachable, but
-  // not in the page's own order", and the trap still has to offer a way in or the content is
-  // keyboard-dead.
-  if (element.matches(NATIVELY_FOCUSABLE_SELECTOR)) return false;
-  return isOverflowingAndTabbable(element);
-}
-
-function collectFocusable(element: Element, result: HTMLElement[]): void {
-  if (element.matches(FOCUSABLE_SELECTOR) && isTabbable(element as HTMLElement)) result.push(element as HTMLElement);
-  if (isSlot(element)) {
-    const hasAssignedNodes = element.assignedNodes().length > 0;
-    const assigned = element
-      .assignedNodes({ flatten: true })
-      .filter((node): node is Element => node.nodeType === 1);
-    const children = hasAssignedNodes ? assigned : Array.from(element.children);
-    for (const child of children) collectFocusable(child, result);
-    return;
-  }
-  const container: Element | ShadowRoot = element.shadowRoot ?? element;
-  for (const child of Array.from(container.children)) collectFocusable(child, result);
-}
-
 /** Collects rendered focus targets through slots and nested open shadow roots in browser tab order. */
 export function collectFocusableElements(root: Element | ShadowRoot): HTMLElement[] {
-  const result: HTMLElement[] = [];
-  if ('matches' in root) {
-    collectFocusable(root as Element, result);
-  } else {
-    for (const child of Array.from(root.children)) collectFocusable(child, result);
-  }
-  const radioGroups: Array<{
-    name: string;
-    form: HTMLFormElement | null;
-    root: Node;
-    members: HTMLInputElement[];
-  }> = [];
-  for (const element of result) {
-    if (element.localName !== 'input') continue;
-    const input = element as HTMLInputElement;
-    if (input.type !== 'radio' || input.name === '') continue;
-    let group = radioGroups.find(
-      (candidate) =>
-        candidate.name === input.name && candidate.form === input.form && candidate.root === input.getRootNode(),
-    );
-    if (!group) {
-      group = { name: input.name, form: input.form, root: input.getRootNode(), members: [] };
-      radioGroups.push(group);
-    }
-    group.members.push(input);
-  }
-  const excludedRadios = new Set<HTMLInputElement>();
-  for (const group of radioGroups) {
-    const tabStop = group.members.find((radio) => radio.checked) ?? group.members[0];
-    for (const radio of group.members) {
-      if (radio !== tabStop) excludedRadios.add(radio);
-    }
-  }
-
-  return result
-    .filter((element) => !excludedRadios.has(element as HTMLInputElement))
-    .map((element, index) => ({ element, index }))
-    .sort((a, b) => {
-      const aPositive = a.element.tabIndex > 0;
-      const bPositive = b.element.tabIndex > 0;
-      if (aPositive !== bPositive) return aPositive ? -1 : 1;
-      if (aPositive && a.element.tabIndex !== b.element.tabIndex) return a.element.tabIndex - b.element.tabIndex;
-      return a.index - b.index;
-    })
-    .map(({ element }) => element);
-}
-
-function collectAutofocus(element: Element, result: HTMLElement[]): void {
-  if (element.hasAttribute('autofocus')) result.push(element as HTMLElement);
-  if (isSlot(element)) {
-    const hasAssignedNodes = element.assignedNodes().length > 0;
-    const assigned = element
-      .assignedNodes({ flatten: true })
-      .filter((node): node is Element => node.nodeType === 1);
-    const children = hasAssignedNodes ? assigned : Array.from(element.children);
-    for (const child of children) collectAutofocus(child, result);
-    return;
-  }
-  const container: Element | ShadowRoot = element.shadowRoot ?? element;
-  for (const child of Array.from(container.children)) collectAutofocus(child, result);
+  return collectComposedFocusTargets(root).elements;
 }
 
 /**
@@ -292,17 +169,11 @@ function collectAutofocus(element: Element, result: HTMLElement[]): void {
  * a custom element host as readily as on a native control.
  */
 export function collectAutofocusElements(root: Element | ShadowRoot): HTMLElement[] {
-  const result: HTMLElement[] = [];
-  if ('matches' in root) {
-    collectAutofocus(root as Element, result);
-  } else {
-    for (const child of Array.from(root.children)) collectAutofocus(child, result);
-  }
-  return result;
+  return collectComposedAutofocusElements(root).elements;
 }
 
 function tryFocus(target: HTMLElement | null): boolean {
-  if (!target?.isConnected || !isRendered(target) || target.matches(':disabled')) return false;
+  if (!target || !isComposedFocusAvailable(target)) return false;
   target.focus();
   const active = deepActiveElement(target.ownerDocument);
   return active === target || composedContains(target, active);
@@ -554,6 +425,13 @@ function addAllowedPath(allowed: Map<ParentNode, Set<Element>>, host: HTMLElemen
   }
 }
 
+function modalAllowedRoot(entry: OverlayEntry): HTMLElement {
+  const explicit = entry.options.modalRoot?.() ?? null;
+  return explicit?.isConnected && explicit.ownerDocument === entry.state.document
+    ? explicit
+    : entry.options.host;
+}
+
 function pruneExternalModalSuspensions(state: OverlayDocumentState): boolean {
   let changed = false;
   for (const entry of state.externalModalSuspensions) {
@@ -589,7 +467,7 @@ function applyTopmostInert(state: OverlayDocumentState): void {
   } else if (modalIndex !== -1) {
     const allowed = new Map<ParentNode, Set<Element>>();
     for (const entry of state.stack.slice(modalIndex)) {
-      if (entry.options.host.isConnected) addAllowedPath(allowed, entry.options.host, state.document);
+      if (entry.options.host.isConnected) addAllowedPath(allowed, modalAllowedRoot(entry), state.document);
     }
     for (const [parent, children] of allowed) {
       if (isShadowRoot(parent)) observeMutationRoot(state, parent);
@@ -606,20 +484,15 @@ function applyTopmostInert(state: OverlayDocumentState): void {
 }
 
 function restoreStackStyle(entry: OverlayEntry): void {
-  if (entry.previousStackValue) {
-    entry.options.host.style.setProperty(STACK_PROPERTY, entry.previousStackValue, entry.previousStackPriority);
-  } else {
-    entry.options.host.style.removeProperty(STACK_PROPERTY);
-  }
+  entry.stackStyleLease?.release();
+  entry.stackStyleLease = undefined;
 }
 
 function updateStackStyles(state: OverlayDocumentState): void {
   state.stack.forEach((entry, index) => {
-    // WebKit can retain an existing custom property's `!important` priority when setProperty()
-    // replaces only its value. Remove the declaration first so the manager's temporary stack
-    // value wins consistently; restoreStackStyle() still reinstates the captured value/priority.
-    entry.options.host.style.removeProperty(STACK_PROPERTY);
-    entry.options.host.style.setProperty(STACK_PROPERTY, String(STACK_BASE + index * STACK_STEP));
+    const value = String(STACK_BASE + index * STACK_STEP);
+    if (entry.stackStyleLease) entry.stackStyleLease.set(value);
+    else entry.stackStyleLease = leaseInlineStyleProperty(entry.options.host, STACK_PROPERTY, value);
   });
 }
 
@@ -668,17 +541,38 @@ function syncEntryRegistration(entry: OverlayEntry): void {
   registerEntry(entry, state, entry.state === state);
 }
 
+function validRestoreFocusElement(value: unknown, doc: Document): HTMLElement | null {
+  return isHtmlElement(value) && value.ownerDocument === doc ? value : null;
+}
+
+function resolveRestoreFocusTarget(entry: OverlayEntry): HTMLElement | null {
+  const source = entry.restoreFocusTo;
+  if (typeof source !== 'function') return validRestoreFocusElement(source, entry.state.document);
+  try {
+    return validRestoreFocusElement(source(), entry.state.document);
+  } catch {
+    // A consumer resolver must not interrupt overlay cleanup or strand the surviving stack.
+    return null;
+  }
+}
+
 function rebaseReturnTargets(entry: OverlayEntry): void {
   for (const candidate of entry.state.stack) {
     if (candidate === entry || candidate.stackOrder <= entry.stackOrder) continue;
-    if (candidate.restoreFocusTo && composedContains(entry.options.host, candidate.restoreFocusTo)) {
+    // Do not invoke a live resolver while modal inerting is still active. Explicit live resolvers
+    // already own their structural fallback; ordinary captured/fixed targets retain legacy rebase
+    // behavior and can inherit this entry's resolver for evaluation after final cleanup.
+    const candidateTarget = typeof candidate.restoreFocusTo === 'function'
+      ? null
+      : validRestoreFocusElement(candidate.restoreFocusTo, entry.state.document);
+    if (candidateTarget && composedContains(entry.options.host, candidateTarget)) {
       candidate.restoreFocusTo = entry.restoreFocusTo;
     }
   }
 }
 
 function restoreEntryFocus(entry: OverlayEntry): void {
-  if (tryFocus(entry.restoreFocusTo)) return;
+  if (tryFocus(resolveRestoreFocusTarget(entry))) return;
   const next = entry.state.stack[entry.state.stack.length - 1];
   if (next) focusEntry(next, false);
 }
@@ -731,8 +625,6 @@ export function activateOverlay(options: OverlayActivationOptions): OverlayHandl
   // cannot join the live stack yet. Otherwise multiple lifecycle-controlled entries all carry the
   // same sentinel order and a restored lower entry can incorrectly jump above a newer overlay.
   entry.stackOrder = entry.state.nextStackOrder++;
-  entry.previousStackValue = options.host.style.getPropertyValue(STACK_PROPERTY);
-  entry.previousStackPriority = options.host.style.getPropertyPriority(STACK_PROPERTY);
   entry.handle = {
     focusInitial: () => {
       entry.renderedState?.check();

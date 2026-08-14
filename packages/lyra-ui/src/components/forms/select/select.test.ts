@@ -1,4 +1,5 @@
 import { fixture, expect, oneEvent, html, waitUntil, aTimeout } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import type { PropertyValues } from 'lit';
 import './select.js';
 import '../combobox/option.js';
@@ -918,6 +919,61 @@ describe('adoptedCallback', () => {
     const el = document.createElement('lr-select') as LyraSelect;
     expect(() => (el as unknown as { adoptedCallback(): void }).adoptedCallback()).to.not.throw();
   });
+
+  it('moves a live overlay between real documents without retaining old stack or listeners', async () => {
+    const root = (await fixture(html`
+      <div>
+        <lr-select open><lr-option value="a">Apple</lr-option></lr-select>
+        <iframe title="Adoption target"></iframe>
+      </div>
+    `)) as HTMLElement;
+    const el = root.querySelector('lr-select') as LyraSelect;
+    const frame = root.querySelector('iframe') as HTMLIFrameElement;
+    await waitUntil(() => Boolean(frame.contentDocument?.body), 'the iframe document never became ready');
+    await el.updateComplete;
+    const oldHandle = (el as unknown as {
+      overlayHandle?: { isActive(): boolean; isTopmost(): boolean };
+    }).overlayHandle;
+    expect(oldHandle?.isActive()).to.be.true;
+    expect(oldHandle?.isTopmost()).to.be.true;
+    expect(el.style.getPropertyValue('--lr-overlay-stack-index')).to.not.equal('');
+
+    const frameDocument = frame.contentDocument!;
+    frameDocument.adoptNode(el);
+    await el.updateComplete;
+    expect(el.ownerDocument === frameDocument).to.be.true;
+    expect(el.open, 'real adoption runs the disconnect close invariant').to.be.false;
+    expect(oldHandle?.isActive(), 'the old document no longer owns a stack entry').to.be.false;
+    expect(el.style.getPropertyValue('--lr-overlay-stack-index'), 'the old stack lease is released').to.equal('');
+    expect(
+      (el as unknown as { pointerListenerDocument?: Document }).pointerListenerDocument === undefined,
+    ).to.be.true;
+
+    frameDocument.body.append(el);
+    await el.updateComplete;
+    el.open = true;
+    await el.updateComplete;
+    const newHandle = (el as unknown as {
+      overlayHandle?: { isActive(): boolean; isTopmost(): boolean };
+    }).overlayHandle;
+    expect(newHandle?.isActive()).to.be.true;
+    expect(newHandle?.isTopmost()).to.be.true;
+    expect(newHandle === oldHandle, 'reconnect gets a new owner-document stack entry').to.be.false;
+    expect(
+      (el as unknown as { pointerListenerDocument?: Document }).pointerListenerDocument === frameDocument,
+      'the capture listener belongs only to the adopted document',
+    ).to.be.true;
+    expect(el.style.getPropertyValue('--lr-overlay-stack-index')).to.not.equal('');
+
+    document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.open, 'the former owner document has no listener left behind').to.be.true;
+    frameDocument.dispatchEvent(
+      new frame.contentWindow!.PointerEvent('pointerdown', { bubbles: true, composed: true }),
+    );
+    await el.updateComplete;
+    expect(el.open, 'the new owner document dismisses the reconnected overlay').to.be.false;
+  });
 });
 
 it('resets to empty via form.reset() when no option was declared selected', async () => {
@@ -949,6 +1005,96 @@ it('does not open or select when disabled', async () => {
   await el.updateComplete;
   expect(el.open).to.be.false;
   expect(trigger(el).disabled).to.be.true;
+});
+
+it('force-closes when disabled and rejects every later open write without a vetoable lifecycle', async () => {
+  const el = (await fixture(basic())) as LyraSelect;
+  el.open = true;
+  await el.updateComplete;
+  const lifecycle: string[] = [];
+  for (const type of ['lr-hide', 'lr-after-hide']) {
+    el.addEventListener(type, (event) => {
+      lifecycle.push(type);
+      event.preventDefault();
+    });
+  }
+
+  el.disabled = true;
+  expect(el.open, 'the disabled invariant is synchronous').to.be.false;
+  await el.updateComplete;
+  expect(el.hasAttribute('open')).to.be.false;
+  expect(trigger(el).getAttribute('aria-expanded')).to.equal('false');
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part="listbox"]')!).visibility).to.equal('hidden');
+  expect(lifecycle, 'policy closure is not an author-vetoable transition').to.deep.equal([]);
+
+  el.open = true;
+  expect(el.open, 'a property write cannot violate the invariant').to.be.false;
+  el.setAttribute('open', '');
+  expect(el.open, 'an attribute write cannot violate the invariant').to.be.false;
+  expect(el.hasAttribute('open')).to.be.false;
+
+  el.disabled = false;
+  await el.updateComplete;
+  el.open = true;
+  await el.updateComplete;
+  const pendingHide = el.hide();
+  el.disabled = true;
+  await pendingHide;
+  await el.updateComplete;
+  expect(el.open, 'disablement also supersedes an ordinary close pending its veto point').to.be.false;
+  expect(lifecycle).to.deep.equal([]);
+});
+
+it('does not let a closed disable-enable batch suppress or strand a same-task show transition', async () => {
+  const el = (await fixture(html`
+    <lr-select style="--lr-transition-fast: 1ms linear">
+      <lr-option value="a">Apple</lr-option>
+    </lr-select>
+  `)) as LyraSelect;
+  const lifecycle: string[] = [];
+  el.addEventListener('lr-show', () => lifecycle.push('lr-show'));
+  el.addEventListener('lr-after-show', () => lifecycle.push('lr-after-show'));
+
+  el.disabled = true;
+  el.disabled = false;
+  const shown = el.show();
+  const settled = await Promise.race([
+    shown.then(() => true),
+    aTimeout(250).then(() => false),
+  ]);
+  await el.updateComplete;
+
+  expect(settled, 'show() must not leave its after-show waiter stranded').to.be.true;
+  expect(el.open).to.be.true;
+  expect(lifecycle).to.deep.equal(['lr-show', 'lr-after-show']);
+});
+
+it('normalizes initially-open disabled markup to a closed listbox', async () => {
+  const el = (await fixture(html`
+    <lr-select disabled open><lr-option value="a">Apple</lr-option></lr-select>
+  `)) as LyraSelect;
+  await el.updateComplete;
+
+  expect(el.open).to.be.false;
+  expect(el.hasAttribute('open')).to.be.false;
+  expect(trigger(el).getAttribute('aria-expanded')).to.equal('false');
+});
+
+it('normalizes parser-created open markup inside a genuinely disabled fieldset', async () => {
+  const fieldset = (await fixture(html`
+    <fieldset disabled>
+      <lr-select open><lr-option value="a">Apple</lr-option></lr-select>
+    </fieldset>
+  `)) as HTMLFieldSetElement;
+  const el = fieldset.querySelector('lr-select') as LyraSelect;
+  await el.updateComplete;
+
+  expect((el as unknown as { effectiveDisabled: boolean }).effectiveDisabled).to.be.true;
+  expect(el.open).to.be.false;
+  expect(el.hasAttribute('open')).to.be.false;
+  expect(trigger(el).disabled).to.be.true;
+  expect(trigger(el).getAttribute('aria-expanded')).to.equal('false');
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part="listbox"]')!).visibility).to.equal('hidden');
 });
 
 it('disables the select when its containing fieldset is disabled', async () => {
@@ -983,6 +1129,24 @@ it('disables the select when its containing fieldset is disabled', async () => {
   el.click();
   el.focus();
   expect(delegatedCalls, 'fieldset disablement gates host click/focus delegation').to.equal(0);
+});
+
+it('force-closes when fieldset-disabled even when lr-hide is vetoed', async () => {
+  const el = (await fixture(basic())) as LyraSelect;
+  el.open = true;
+  await el.updateComplete;
+  let hides = 0;
+  el.addEventListener('lr-hide', (event) => {
+    hides += 1;
+    event.preventDefault();
+  });
+
+  (el as unknown as { formDisabledCallback(disabled: boolean): void }).formDisabledCallback(true);
+  expect(el.open).to.be.false;
+  await el.updateComplete;
+  expect(hides).to.equal(0);
+  expect(trigger(el).disabled).to.be.true;
+  expect(trigger(el).getAttribute('aria-expanded')).to.equal('false');
 });
 
 it('restores its own explicit `disabled` after an ancestor fieldset re-enables', async () => {
@@ -1129,6 +1293,61 @@ it('closes the listbox on a pointerdown outside the element', async () => {
   expect(el.open).to.be.false;
 });
 
+it('shares activation-ordered visual stacking and topmost dismissal with sibling selects', async () => {
+  const root = (await fixture(html`
+    <div>
+      <lr-select id="later-in-dom"><lr-option value="b">Banana</lr-option></lr-select>
+      <lr-select id="earlier-in-dom"><lr-option value="a">Apple</lr-option></lr-select>
+      <button id="outside" type="button">Outside</button>
+    </div>
+  `)) as HTMLElement;
+  const first = root.querySelector('#earlier-in-dom') as LyraSelect;
+  const second = root.querySelector('#later-in-dom') as LyraSelect;
+  const outside = root.querySelector('#outside') as HTMLButtonElement;
+  outside.addEventListener('pointerdown', (event) => event.stopPropagation());
+
+  first.open = true;
+  await first.updateComplete;
+  second.open = true;
+  await second.updateComplete;
+  await aTimeout(0);
+
+  const firstHandle = (first as unknown as {
+    overlayHandle?: { isActive(): boolean; isTopmost(): boolean };
+  }).overlayHandle;
+  const secondHandle = (second as unknown as {
+    overlayHandle?: { isActive(): boolean; isTopmost(): boolean };
+  }).overlayHandle;
+  expect(firstHandle?.isActive()).to.be.true;
+  expect(firstHandle?.isTopmost()).to.be.false;
+  expect(secondHandle?.isTopmost()).to.be.true;
+  const firstStack = Number.parseInt(first.style.getPropertyValue('--lr-overlay-stack-index'), 10);
+  const secondStack = Number.parseInt(second.style.getPropertyValue('--lr-overlay-stack-index'), 10);
+  expect(Number.isFinite(firstStack)).to.be.true;
+  expect(secondStack, 'activation order wins over the reverse DOM order').to.be.greaterThan(firstStack);
+  const secondListbox = second.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+  expect(Number.parseInt(getComputedStyle(secondListbox).zIndex, 10)).to.equal(secondStack);
+
+  trigger(first).dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true }),
+  );
+  await first.updateComplete;
+  await second.updateComplete;
+  expect(second.open, 'one Escape closes only the topmost select').to.be.false;
+  expect(first.open, 'the older select remains open').to.be.true;
+
+  second.open = true;
+  await second.updateComplete;
+  outside.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  await first.updateComplete;
+  await second.updateComplete;
+  expect(second.open, 'capture-phase ownership survives stopped target bubbling').to.be.false;
+  expect(first.open, 'one outside pointer still closes only the topmost select').to.be.true;
+
+  first.open = false;
+  await first.updateComplete;
+});
+
 describe('bindDocumentPointer (internal, defensive guards)', () => {
   it('no-ops when called while disconnected', async () => {
     const el = (await fixture(basic())) as LyraSelect;
@@ -1176,6 +1395,29 @@ it('closes the listbox when the trigger blurs (e.g. tabbing away)', async () => 
   trigger(el).dispatchEvent(new FocusEvent('blur'));
   await el.updateComplete;
   expect(el.open).to.be.false;
+});
+
+it('lets a real Tab leave the trigger and blur-close without restoring focus into the select', async () => {
+  const root = (await fixture(html`
+    <div>
+      <lr-select><lr-option value="a">Apple</lr-option></lr-select>
+      <button id="after" type="button">After</button>
+    </div>
+  `)) as HTMLElement;
+  const el = root.querySelector('lr-select') as LyraSelect;
+  const after = root.querySelector('#after') as HTMLButtonElement;
+  el.open = true;
+  await el.updateComplete;
+  el.focus();
+  await waitUntil(() => el.shadowRoot!.activeElement === trigger(el), 'the trigger never received focus');
+
+  await sendKeys({ press: 'Tab' });
+  await el.updateComplete;
+  await aTimeout(0);
+
+  expect(el.open, 'native focus traversal blur-closes the listbox').to.be.false;
+  expect(document.activeElement?.id, 'overlay teardown must not pull focus back to its trigger').to.equal(after.id);
+  expect(el.shadowRoot!.activeElement === null).to.be.true;
 });
 
 it('forwards public focus and blur to the trigger', async () => {
@@ -1316,6 +1558,17 @@ it('renders a group-label header when option rows are grouped', async () => {
 
   const groups = Array.from(el.shadowRoot!.querySelectorAll('.group-label')).map((n) => n.textContent);
   expect(groups).to.deep.equal(['Fruits', 'Vegetables']);
+
+  const semanticGroups = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[role="group"]')];
+  expect(semanticGroups).to.have.lengthOf(2);
+  expect(semanticGroups.map((group) => group.querySelectorAll('[role="option"]').length)).to.deep.equal([2, 1]);
+  for (const group of semanticGroups) {
+    const labelId = group.getAttribute('aria-labelledby');
+    const label = labelId ? el.shadowRoot!.getElementById(labelId) : null;
+    expect(Boolean(labelId), 'each group owns a stable label reference').to.be.true;
+    expect(label?.classList.contains('group-label')).to.be.true;
+    expect(group.contains(label), 'the label and options share the semantic group').to.be.true;
+  }
 });
 
 it('skips a disabled option during click selection and keyboard navigation', async () => {
@@ -2085,38 +2338,28 @@ describe('start/end adornment slots', () => {
     expect(part(el, 'start').hasAttribute('hidden')).to.be.false;
   });
 
-  // Adversarial: the JSDoc above warns start/end should carry non-focusable content only, because
-  // [part="trigger"] renders as a real <button> -- a slotted focusable element lands inside it in
-  // the flattened tree (invalid interactive-content nesting) and is unreachable by keyboard/AT
-  // regardless, since the outer button intercepts every click/Enter/Space first. axe-core does not
-  // currently flag this shadow-DOM-composed pattern (verified empirically against axe-core 4.12.1
-  // -- it reports zero violations here), so these lock in the real, provable hazard structurally:
-  // the slotted focusable element is genuinely assigned into a slot that lives inside the outer
-  // interactive button in the flattened tree, not a hypothetical.
-  it('nests a slotted <button> inside the trigger button in the flattened tree when placed in start', async () => {
+  it('makes every mirrored adornment wrapper decorative and inert', async () => {
     const el = (await fixture(html`
       <lr-select aria-label="Choice">
         <button slot="start" aria-label="Icon action">i</button>
-        <lr-option value="a">A</lr-option>
-      </lr-select>
-    `)) as LyraSelect;
-    await el.updateComplete;
-    const slottedButton = el.querySelector('button')!;
-    const startSlot = trigger(el).querySelector('slot[name="start"]') as HTMLSlotElement;
-    expect(startSlot.assignedElements()).to.include(slottedButton);
-  });
-
-  it('nests a slotted <a href> inside the trigger button in the flattened tree when placed in end', async () => {
-    const el = (await fixture(html`
-      <lr-select aria-label="Choice">
         <a slot="end" href="/details">Details</a>
+        <button slot="prefix" aria-label="Prefix action">p</button>
+        <a slot="suffix" href="/suffix">Suffix</a>
         <lr-option value="a">A</lr-option>
       </lr-select>
     `)) as LyraSelect;
     await el.updateComplete;
-    const slottedAnchor = el.querySelector('a')!;
-    const endSlot = trigger(el).querySelector('slot[name="end"]') as HTMLSlotElement;
-    expect(endSlot.assignedElements()).to.include(slottedAnchor);
+    const wrappers = [part(el, 'start'), part(el, 'end')];
+    for (const wrapper of wrappers) {
+      expect(wrapper.inert).to.be.true;
+      expect(wrapper.getAttribute('aria-hidden')).to.equal('true');
+      expect(getComputedStyle(wrapper).pointerEvents).to.equal('none');
+    }
+    for (const candidate of el.querySelectorAll<HTMLElement>('button, a')) {
+      candidate.focus();
+      expect(document.activeElement === candidate, `${candidate.slot} content is not a nested focus stop`).to.be.false;
+    }
+    await expect(el).to.be.accessible();
   });
 });
 
@@ -2639,6 +2882,26 @@ describe('multiple', () => {
     expect(tags(el).map((tag) => tag.textContent!.trim())).to.deep.equal(['Apple', 'Banana']);
   });
 
+  it('exposes every selected label once through a genuinely visually-hidden current-value node', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.maxOptionsVisible = 1;
+    el.value = ['a', 'b', 'c'];
+    await el.updateComplete;
+
+    const currentValue = trigger(el).querySelector<HTMLElement>('[part="display-input"]')!;
+    expect(currentValue.textContent?.trim()).to.equal('Apple, Banana, Cherry');
+    expect(currentValue.classList.contains('sr-only')).to.be.true;
+    expect(getComputedStyle(currentValue).visibility).to.equal('visible');
+    expect(trigger(el).getAttribute('aria-describedby')?.split(/\s+/)).to.include(currentValue.id);
+    expect(
+      [...el.shadowRoot!.querySelectorAll('[part="tag__content"]')].every(
+        (content) => content.getAttribute('aria-hidden') === 'true',
+      ),
+      'painted chips do not duplicate the trigger value in the accessibility tree',
+    ).to.be.true;
+    expect(overflowTag(el)!.getAttribute('aria-hidden')).to.equal('true');
+  });
+
   it('marks the listbox as multi-selectable, rendering both ARIA states', async () => {
     const single = (await fixture(basic())) as LyraSelect;
     expect(single.shadowRoot!.querySelector('[part="listbox"]')!.getAttribute('aria-multiselectable')).to.equal('false');
@@ -3072,6 +3335,94 @@ describe('placement', () => {
     const listbox = el.shadowRoot!.querySelector('[part="listbox"]')!.getBoundingClientRect();
     const anchor = trigger(el).getBoundingClientRect();
     expect(listbox.bottom).to.be.at.most(anchor.top + 1);
+  });
+
+  it('refreshes placement and hoist strategy in place while already open', async () => {
+    const wrapper = await fixture(html`
+      <div style="padding-block: 280px;">
+        <lr-select placement="bottom-start">
+          <lr-option value="a">Apple</lr-option>
+          <lr-option value="b">Banana</lr-option>
+        </lr-select>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-select') as LyraSelect;
+    el.open = true;
+    await el.updateComplete;
+    await aTimeout(40);
+    const initialCleanup = (el as unknown as { cleanup?: () => void }).cleanup;
+    const overlay = (el as unknown as { overlayHandle?: unknown }).overlayHandle;
+
+    el.placement = 'top-start';
+    await el.updateComplete;
+    await aTimeout(40);
+    const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+    expect(listbox.getBoundingClientRect().bottom).to.be.at.most(trigger(el).getBoundingClientRect().top + 1);
+    expect((el as unknown as { cleanup?: () => void }).cleanup !== initialCleanup).to.be.true;
+    expect(
+      (el as unknown as { overlayHandle?: unknown }).overlayHandle === overlay,
+      'refresh does not reorder the stack',
+    ).to.be.true;
+
+    const placementCleanup = (el as unknown as { cleanup?: () => void }).cleanup;
+    el.hoist = true;
+    await el.updateComplete;
+    await aTimeout(20);
+    expect(getComputedStyle(listbox).position).to.equal('fixed');
+    expect((el as unknown as { cleanup?: () => void }).cleanup !== placementCleanup).to.be.true;
+    expect((el as unknown as { overlayHandle?: unknown }).overlayHandle === overlay).to.be.true;
+  });
+
+  it('refreshes live position options when a same-batch close is vetoed', async () => {
+    const wrapper = await fixture(html`
+      <div style="padding-block: 280px;">
+        <lr-select placement="bottom-start">
+          <lr-option value="a">Apple</lr-option>
+          <lr-option value="b">Banana</lr-option>
+        </lr-select>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-select') as LyraSelect;
+    el.open = true;
+    await el.updateComplete;
+    await aTimeout(40);
+    const initialCleanup = (el as unknown as { cleanup?: () => void }).cleanup;
+    const overlay = (el as unknown as { overlayHandle?: unknown }).overlayHandle;
+    el.addEventListener('lr-hide', (event) => event.preventDefault(), { once: true });
+
+    // Keep all three writes in one Lit batch. The close is vetoed in willUpdate(), but the two
+    // live position options still have to reach the already-open popup during that same update.
+    el.open = false;
+    el.placement = 'top-start';
+    el.hoist = true;
+    await el.updateComplete;
+    await aTimeout(40);
+
+    const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+    expect(el.open, 'the close veto keeps the popup open').to.be.true;
+    expect(getComputedStyle(listbox).position).to.equal('fixed');
+    expect(listbox.getBoundingClientRect().bottom).to.be.at.most(trigger(el).getBoundingClientRect().top + 1);
+    expect((el as unknown as { cleanup?: () => void }).cleanup !== initialCleanup).to.be.true;
+    expect(
+      (el as unknown as { overlayHandle?: unknown }).overlayHandle === overlay,
+      'position refresh preserves the existing stack lease',
+    ).to.be.true;
+  });
+
+  it('refreshes logical left/right placement when effective direction changes while open', async () => {
+    const el = (await fixture(html`
+      <lr-select placement="left-start"><lr-option value="a">Apple</lr-option></lr-select>
+    `)) as LyraSelect;
+    el.open = true;
+    await el.updateComplete;
+    const before = (el as unknown as { cleanup?: () => void }).cleanup;
+    const overlay = (el as unknown as { overlayHandle?: unknown }).overlayHandle;
+
+    el.dir = 'rtl';
+    await el.updateComplete;
+    await aTimeout(20);
+    expect((el as unknown as { cleanup?: () => void }).cleanup !== before).to.be.true;
+    expect((el as unknown as { overlayHandle?: unknown }).overlayHandle === overlay).to.be.true;
   });
 });
 
@@ -3697,6 +4048,15 @@ it('skips inert options when moving the active descendant', async () => {
   `)) as LyraSelect;
   el.open = true;
   await el.updateComplete;
+  const inertRow = rows(el)[1];
+  expect(inertRow.getAttribute('aria-disabled')).to.equal('true');
+  let changes = 0;
+  el.addEventListener('change', () => { changes += 1; });
+  inertRow.click();
+  await el.updateComplete;
+  expect(el.value, 'pointer activation cannot commit an unavailable option').to.equal('');
+  expect(el.open, 'a refused pointer activation does not dismiss the listbox').to.be.true;
+  expect(changes).to.equal(0);
   const trigger = el.shadowRoot!.querySelector('[part~="trigger"]') as HTMLElement;
   const press = (key: string): void => {
     trigger.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));

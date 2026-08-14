@@ -579,14 +579,20 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
 
   /** Moves focus to the selected enabled option, or the first enabled option when empty. */
   override focus(options?: FocusOptions): void {
+    if (this.effectiveDisabled || this.matches(':disabled')) return;
     const enabled = this.radios().filter((radio) => !radio.effectiveDisabled);
     (enabled.find((radio) => radio.checked) ?? enabled[0])?.focus(options);
+  }
+
+  /** Removes focus from whichever owned option currently contains the deep active element. */
+  override blur(): void {
+    this.radios().find((radio) => radio.matches(':focus-within'))?.blur();
   }
 
   /** Activates the selected/first enabled option, matching host click semantics on the internal
    *  radio collection rather than leaving `<lr-radio-group>` a no-op. */
   override click(): void {
-    if (this.effectiveDisabled) return;
+    if (this.effectiveDisabled || this.matches(':disabled')) return;
     const enabled = this.radios().filter((radio) => !radio.effectiveDisabled);
     (enabled.find((radio) => radio.checked) ?? enabled[0])?.click();
   }

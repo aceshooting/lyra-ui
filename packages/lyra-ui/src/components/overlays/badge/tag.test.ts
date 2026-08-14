@@ -144,6 +144,46 @@ describe('withRemove', () => {
     expect(el.isConnected).to.be.true;
   });
 
+  it('forwards host focus() and blur() to the live remove button', async () => {
+    const el = (await fixture(html`<lr-tag with-remove>Removable</lr-tag>`)) as LyraTag;
+    const button = removeButton(el)!;
+
+    el.focus({ preventScroll: true });
+    expect(el.shadowRoot!.activeElement === button).to.be.true;
+    el.blur();
+    expect(el.shadowRoot!.activeElement === null).to.be.true;
+  });
+
+  it('gates same-task stale remove actions while blur can still release the old focus owner', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div><button id="outside">Outside</button><lr-tag with-remove>Removable</lr-tag></div>
+    `);
+    const outside = wrapper.querySelector<HTMLButtonElement>('#outside')!;
+    const el = wrapper.querySelector('lr-tag') as LyraTag;
+    const staleButton = removeButton(el)!;
+    let removes = 0;
+    el.addEventListener('lr-remove', () => removes++);
+
+    el.focus();
+    expect(el.shadowRoot!.activeElement === staleButton).to.be.true;
+
+    el.withRemove = false;
+    // Deliberately no updateComplete/microtask between the property write and these actions: the
+    // old button still exists, but the live public state already revoked its authority.
+    el.blur();
+    expect(el.shadowRoot!.activeElement === null).to.be.true;
+    expect(staleButton.isConnected).to.be.true;
+
+    outside.focus();
+    el.focus();
+    el.click();
+    staleButton.click();
+
+    expect(wrapper.ownerDocument.activeElement === outside).to.be.true;
+    expect(el.shadowRoot!.activeElement === null).to.be.true;
+    expect(removes).to.equal(0);
+  });
+
   it('leaves a host click() a no-op when there is no remove button to forward to', async () => {
     const el = (await fixture(html`<lr-tag>Plain</lr-tag>`)) as LyraTag;
     expect(() => el.click()).to.not.throw();
@@ -428,6 +468,48 @@ describe("lr-remove", () => {
     expect(fired).to.equal(1);
   });
 
+  it('moves focus to the next composed action when a controlled listener removes the focused tag', async () => {
+    const host = (await fixture(html`
+      <div>
+        <button id="before-removed-tag">Before</button>
+        <lr-tag with-remove>beta</lr-tag>
+        <button id="after-removed-tag">After</button>
+      </div>
+    `)) as HTMLElement;
+    const tag = host.querySelector('lr-tag') as LyraTag;
+    const after = host.querySelector<HTMLButtonElement>('#after-removed-tag')!;
+    tag.addEventListener('lr-remove', () => tag.remove());
+    removeButton(tag)!.focus();
+
+    removeButton(tag)!.click();
+    await Promise.resolve();
+
+    expect(tag.isConnected).to.equal(false);
+    expect(tag.ownerDocument.activeElement === after).to.equal(true);
+  });
+
+  it('does not override focus explicitly moved by a controlled removal listener', async () => {
+    const host = (await fixture(html`
+      <div>
+        <button id="tag-list-return">Return</button>
+        <lr-tag with-remove>beta</lr-tag>
+        <button id="tag-list-next">Next</button>
+      </div>
+    `)) as HTMLElement;
+    const tag = host.querySelector('lr-tag') as LyraTag;
+    const explicit = host.querySelector<HTMLButtonElement>('#tag-list-return')!;
+    tag.addEventListener('lr-remove', () => {
+      tag.remove();
+      explicit.focus();
+    });
+    removeButton(tag)!.focus();
+
+    removeButton(tag)!.click();
+    await Promise.resolve();
+
+    expect(tag.ownerDocument.activeElement === explicit).to.equal(true);
+  });
+
   it('emits nothing while with-remove is unset', async () => {
     const host = (await fixture(html`<div><lr-tag>beta</lr-tag></div>`)) as HTMLElement;
     const tag = host.querySelector('lr-tag') as LyraTag;
@@ -437,6 +519,25 @@ describe("lr-remove", () => {
     expect(fired).to.equal(0);
     expect(tag.isConnected).to.be.true;
   });
+});
+
+it('repairs focus when a direct controlled write removes the tag action', async () => {
+  const host = (await fixture(html`
+    <div>
+      <lr-tag with-remove>beta</lr-tag>
+      <button id="after-tag-mode">After</button>
+    </div>
+  `)) as HTMLElement;
+  const tag = host.querySelector('lr-tag') as LyraTag;
+  const after = host.querySelector<HTMLButtonElement>('#after-tag-mode')!;
+  removeButton(tag)!.focus();
+
+  tag.withRemove = false;
+  await tag.updateComplete;
+  await Promise.resolve();
+
+  expect(tag.shadowRoot!.querySelector('[part~="remove-button"]') === null).to.equal(true);
+  expect(tag.ownerDocument.activeElement === after).to.equal(true);
 });
 
 it("round-trips tag-only and shared upstream tokens through attributes, properties, selectors, and cloning", async () => {

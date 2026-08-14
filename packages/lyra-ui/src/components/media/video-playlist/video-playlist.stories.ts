@@ -24,7 +24,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Experimental direct-child video playlist with full/standard/none control forwarding, safe current-video switching, automatic advancement, repeat modes, immutable change metadata, and an accessible roving item list.',
+          'Experimental direct-child video playlist with full/standard/none control forwarding, safe current-video switching, automatic advancement, repeat modes, immutable change metadata, and an accessible roving item list. Row focus transitions relay exactly one native `FocusEvent` plus the `lr-focus`/`lr-blur` alias.',
       },
     },
   },

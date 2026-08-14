@@ -43,6 +43,7 @@ try {
       ...validatePinnedManifests(inventory, {
         webawesomeManifest: readJson(options.webawesomeManifest),
         shoelaceManifest: readJson(options.shoelaceManifest),
+        upstreamTags,
       }),
     );
   }

@@ -26,6 +26,48 @@ it('renders a native button when a non-current item has no href', async () => {
   await expect(breadcrumb).to.be.accessible();
 });
 
+it('does not inspect an unavailable render root during the server-side first update', () => {
+  const el = document.createElement('lr-breadcrumb-item') as LyraBreadcrumbItem;
+  el.href = '/reports';
+  const access = el as unknown as { willUpdate(changed: Map<PropertyKey, unknown>): void };
+
+  expect(() => access.willUpdate(new Map([['href', '']]))).not.to.throw();
+});
+
+it('preserves focus across link, button, and current-label owner replacements', async () => {
+  const el = (await fixture(
+    html`<lr-breadcrumb-item href="/reports">Reports</lr-breadcrumb-item>`,
+  )) as LyraBreadcrumbItem;
+  (el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).focus();
+
+  el.href = '';
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement?.tagName).to.equal('BUTTON');
+
+  el.href = '/reports';
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement?.tagName).to.equal('A');
+
+  el.current = true;
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement?.tagName).to.equal('SPAN');
+  expect((el.shadowRoot!.activeElement as HTMLElement | null)?.tabIndex).to.equal(-1);
+});
+
+it('does not move external focus when its native owner changes', async () => {
+  const wrapper = await fixture(html`
+    <div role="list">
+      <button id="outside">Outside</button>
+      <lr-breadcrumb-item href="/reports">Reports</lr-breadcrumb-item>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-breadcrumb-item') as LyraBreadcrumbItem;
+  wrapper.querySelector<HTMLElement>('#outside')!.focus();
+  el.href = '';
+  await el.updateComplete;
+  expect(el.ownerDocument.activeElement?.id).to.equal('outside');
+});
+
 describe('owner names and direct a11y coverage', () => {
   for (const [name, markup] of [
     ['link', html`<lr-breadcrumb-item href="/reports" aria-label="">Reports</lr-breadcrumb-item>`],

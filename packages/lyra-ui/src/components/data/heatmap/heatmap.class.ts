@@ -7,6 +7,7 @@ import { finiteInteger, finiteRange } from '../../../internal/numbers.js';
 import { getScratchCtx } from '../../../internal/canvas.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 import { linearAlpha, linearBucket, minMax, sqrtStep } from './heatmap-scale.js';
 import { styles } from './heatmap.styles.js';
 import { buildCalendarGrid, parseIsoDate, quartileBucket, type CalendarCell, type CalendarDay } from './calendar-grid.js';
@@ -799,7 +800,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   /** Text mirrored in `[part="live-region"]`, refreshed on every focus move. */
   @state() private liveText = '';
   @state() private accessibleTargetSizePx = DEFAULT_ACCESSIBLE_TARGET_SIZE_PX;
-  private pendingAccessibleFocus: CellPos | 'base' | undefined;
+  private pendingAccessibleFocus: CellPos | 'base' | 'canvas' | undefined;
+  private pendingAccessibleFocusOrigin: Element | undefined;
   private restoringAccessibleFocus = false;
   private accessibleFocusGeneration = 0;
   private announcementSink?: AnnouncementSink;
@@ -866,6 +868,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     super.disconnectedCallback();
     this.accessibleFocusGeneration++;
     this.pendingAccessibleFocus = undefined;
+    this.pendingAccessibleFocusOrigin = undefined;
     this.restoringAccessibleFocus = false;
     this.releaseAnnouncementSink();
     this.hoverCell = null;
@@ -939,6 +942,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    const accessibleModeChanged = changed.has('accessibleCells') && this.hasUpdated;
     const collectionChanged =
       changed.has('mode') ||
       changed.has('rowLabels') ||
@@ -947,8 +951,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       changed.has('firstDayOfWeek') ||
       changed.has('cellInteractive') ||
       changed.has('values');
-    const activeAccessibleCell = collectionChanged && this.accessibleCells
-      ? this.shadowRoot?.activeElement as HTMLElement | null
+    const activeRenderedControl = collectionChanged || accessibleModeChanged
+      ? activeElementIn(this.shadowRoot) as HTMLElement | null
+      : null;
+    const activeAccessibleCell = activeRenderedControl?.matches('[part="cell"]')
+      ? activeRenderedControl
       : null;
     const renderedAccessibleCells = activeAccessibleCell?.matches('[part="cell"]')
       ? [...(this.shadowRoot?.querySelectorAll<HTMLElement>('[part="cell"]') ?? [])]
@@ -1033,8 +1040,39 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       this.focusedCell = target;
       this.liveText = target ? this.resolveCellText(target) : '';
       this.pendingAccessibleFocus = target ?? 'base';
+      this.pendingAccessibleFocusOrigin = activeAccessibleCell ?? undefined;
       this.restoringAccessibleFocus = true;
       this.accessibleFocusGeneration++;
+    }
+    if (accessibleModeChanged) {
+      const previouslyAccessible = changed.get('accessibleCells') === true;
+      if (previouslyAccessible && !this.accessibleCells && activeAccessibleCell) {
+        const key = activeAccessibleCell.dataset['cellKey'];
+        const target = key ? this.accessibleCellAtKey(key) : null;
+        if (target) {
+          this.focusedCell = target;
+          this.liveText = this.resolveCellText(target);
+        }
+        this.pendingAccessibleFocus = 'canvas';
+        this.pendingAccessibleFocusOrigin = activeAccessibleCell;
+        this.restoringAccessibleFocus = true;
+        this.accessibleFocusGeneration++;
+      } else if (
+        !previouslyAccessible
+        && this.accessibleCells
+        && activeRenderedControl?.matches('[part="canvas"]')
+      ) {
+        const positions = this.accessibleCellPositions();
+        const target = this.focusedCell
+          ? positions.find((pos) => this.samePos(pos, this.focusedCell)) ?? positions[0] ?? null
+          : positions[0] ?? null;
+        this.focusedCell = target;
+        this.liveText = target ? this.resolveCellText(target) : '';
+        this.pendingAccessibleFocus = target ?? 'base';
+        this.pendingAccessibleFocusOrigin = activeRenderedControl;
+        this.restoringAccessibleFocus = true;
+        this.accessibleFocusGeneration++;
+      }
     }
     const bounds = this.cachedValueRange;
     const range = bounds
@@ -1158,12 +1196,27 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const pending = this.pendingAccessibleFocus;
     if (pending === undefined) return;
     this.pendingAccessibleFocus = undefined;
+    const origin = this.pendingAccessibleFocusOrigin;
+    this.pendingAccessibleFocusOrigin = undefined;
     const generation = this.accessibleFocusGeneration;
     this.scheduleAfterUpdate(() => {
       try {
         if (generation !== this.accessibleFocusGeneration || !this.isConnected) return;
+        if (origin) {
+          const internalActive = activeElementIn(this.shadowRoot);
+          const documentActive = activeElementIn(this.ownerDocument);
+          const focusStayedAtOrigin = internalActive === origin;
+          const originWasRemovedWithoutReplacement =
+            internalActive === null
+            && (documentActive === null || documentActive === this || documentActive === this.ownerDocument.body);
+          if (!focusStayedAtOrigin && !originWasRemovedWithoutReplacement) return;
+        }
         if (pending === 'base') {
           this.shadowRoot?.querySelector<HTMLElement>('[part="base"]')?.focus();
+          return;
+        }
+        if (pending === 'canvas') {
+          this.shadowRoot?.querySelector<HTMLCanvasElement>('[part="canvas"]')?.focus();
           return;
         }
         const identity = this.accessibleCellIdentity(pending);

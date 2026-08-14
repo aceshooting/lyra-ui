@@ -918,15 +918,20 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     this.emit('lr-files', { files, rejected });
   }
 
+  /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */
+  private get liveDisabled(): boolean {
+    return this.effectiveDisabled || this.matches(':disabled');
+  }
+
   /** Programmatically open the native file picker. */
   openPicker(): void {
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
     this.inputEl?.click();
   }
 
-  /** Focuses the semantic dropzone. */
+  /** Focuses the semantic dropzone unless the form control is effectively disabled. */
   override focus(options?: FocusOptions): void {
-    this.baseEl?.focus(options);
+    if (!this.liveDisabled) this.baseEl?.focus(options);
   }
 
   /** Removes focus from the semantic dropzone. */
@@ -952,7 +957,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
 
   private onDragEnter = (e: DragEvent): void => {
     e.preventDefault();
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
     this.dragCounter++;
     const items = e.dataTransfer ? [...e.dataTransfer.items].filter((i) => i.kind === 'file') : [];
     this.dragState = items.length ? this.previewState(items as unknown as File[]) : 'default';
@@ -964,11 +969,11 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     // whole page to the dropped file), even while disabled — only the
     // subsequent classification/emit logic is gated on `disabled`.
     e.preventDefault();
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
   };
 
   private onDragLeave = (e: DragEvent): void => {
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
     e.preventDefault();
     this.dragCounter = Math.max(0, this.dragCounter - 1);
     if (this.dragCounter === 0) {
@@ -1053,7 +1058,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     // Same rationale as `onDragOver`: prevent the browser's default drop
     // action unconditionally, before the `disabled` gate.
     e.preventDefault();
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
     this.resetDragSession();
     const token = ++this.dropToken;
     const files = [...(e.dataTransfer?.files ?? [])];
@@ -1061,7 +1066,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
       .map((item) => (item as DataTransferItem & { webkitGetAsEntry?: () => FileSystemEntry | null }).webkitGetAsEntry?.())
       .filter((entry): entry is FileSystemEntry => !!entry && entry.isDirectory);
     if (folders.length && this.multiple) {
-      const isCurrent = () => token === this.dropToken && this.isConnected && !this.effectiveDisabled;
+      const isCurrent = () => token === this.dropToken && this.isConnected && !this.liveDisabled;
       void this.readDroppedFolders(folders, isCurrent).then((result) => {
         if (!isCurrent() || result.status !== 'complete') return;
         const allFiles = [...files, ...result.files];
@@ -1078,7 +1083,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   };
 
   private onPaste = (e: ClipboardEvent): void => {
-    if (!this.paste || this.effectiveDisabled) return;
+    if (!this.paste || this.liveDisabled) return;
     const files = [...(e.clipboardData?.files ?? [])];
     if (files.length) { e.preventDefault(); this.emitFiles(files); }
   };
@@ -1087,7 +1092,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     const input = e.target as HTMLInputElement;
     const files = [...(input.files ?? [])];
     input.value = '';
-    if (!this.effectiveDisabled && files.length) this.emitFiles(files);
+    if (!this.liveDisabled && files.length) this.emitFiles(files);
   };
   // Bridged off [part~="base"] (the actual keyboard-focusable dropzone), not the visually-hidden,
   // tabindex="-1", aria-hidden native `<input type="file">` — that input is never focused by a
@@ -1095,6 +1100,10 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   // `addEventListener('focus' | 'blur', ...)` observe real focus/blur at all; native focus/blur
   // neither bubble nor cross the shadow boundary on their own.
   private onFocus = (event: FocusEvent): void => {
+    if (this.liveDisabled) {
+      event.stopPropagation();
+      return;
+    }
     relayNativeEvent(this, event);
   };
   private onBlur = (event: FocusEvent): void => {
@@ -1106,13 +1115,13 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     // of reentering that same in-flight update and tripping Lit's dev-mode "scheduled an update
     // after an update completed" warning for a state flip nothing observable needed -- a disabled
     // control is barred from validation regardless.
-    if (!this.effectiveDisabled) this.touched = true;
+    if (!this.liveDisabled) this.touched = true;
     this.publishCustomStates();
     relayNativeEvent(this, event);
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
       // Prevent Space from scrolling the page, matching the `table.ts`
       // sortable-header/row convention for role-based clickable elements.
@@ -1148,7 +1157,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   }
 
   private removeFile(index: number): void {
-    if (this.effectiveDisabled || index < 0 || index >= this._files.length) return;
+    if (this.liveDisabled || index < 0 || index >= this._files.length) return;
     this.touched = true;
     this.files = this._files.filter((_, candidate) => candidate !== index);
     dispatchNativeEvent(this, 'input');

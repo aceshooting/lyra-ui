@@ -12,6 +12,46 @@
 
 import type { VirtualAnchor } from '../../../internal/positioner.js';
 
+/**
+ * Coalesces a lifecycle request made again from inside its own synchronous preflight event.
+ *
+ * The state owner still decides whether an opposite request is meaningful. This gate only keeps
+ * a same-target `show()`/`hide()` call from recursively dispatching the same event before the
+ * outer call has had a chance to commit, and gives both callers the exact same completion promise.
+ */
+export class OverlayTransitionGate {
+  private target?: boolean;
+  private completion?: Promise<void>;
+
+  request(target: boolean, transition: () => void | Promise<void>): Promise<void> {
+    if (this.target === target && this.completion) return this.completion;
+
+    let resolve!: () => void;
+    let reject!: (reason?: unknown) => void;
+    const completion = new Promise<void>((resolvePromise, rejectPromise) => {
+      resolve = resolvePromise;
+      reject = rejectPromise;
+    });
+    this.target = target;
+    this.completion = completion;
+
+    let result: void | Promise<void>;
+    try {
+      result = transition();
+    } catch (error) {
+      this.target = undefined;
+      this.completion = undefined;
+      reject(error);
+      return completion;
+    }
+
+    this.target = undefined;
+    this.completion = undefined;
+    void Promise.resolve(result).then(resolve, reject);
+    return completion;
+  }
+}
+
 /** The rectangle `showAt()` accepts on both components: a point, optional dimensions, and an
  *  optional `contextElement` so Floating UI can resolve the right containing block. */
 export type OverlayVirtualRect = {

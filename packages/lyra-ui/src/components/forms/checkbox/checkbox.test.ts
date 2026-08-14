@@ -155,6 +155,8 @@ it('renders static error text in the standard form-control frame and describes t
   expect(frame?.getAttribute('part')).to.equal('form-control');
   expect(error.hidden).to.be.false;
   expect(error.textContent?.trim()).to.equal('Accept the terms before continuing');
+  expect(control.getAttribute('aria-invalid')).to.equal('true');
+  expect(el.checkValidity(), 'visible consumer error chrome does not rewrite FACE validity').to.be.true;
   if ('ariaDescribedByElements' in control) {
     const ids = (control.ariaDescribedByElements ?? []).map((element) => element.id);
     expect(ids).to.include.members(['checkbox-error', 'checkbox-hint']);
@@ -182,6 +184,7 @@ it('tracks slotted error content added and removed after mount', async () => {
   await el.updateComplete;
 
   expect(error.hidden).to.be.false;
+  expect(control.getAttribute('aria-invalid')).to.equal('true');
   if ('ariaDescribedByElements' in control) {
     expect((control.ariaDescribedByElements ?? []).map((element) => element.id)).to.include('checkbox-error');
   } else {
@@ -194,6 +197,7 @@ it('tracks slotted error content added and removed after mount', async () => {
   await el.updateComplete;
 
   expect(error.hidden).to.be.true;
+  expect(control.getAttribute('aria-invalid')).to.equal('false');
   if ('ariaDescribedByElements' in control) {
     expect((control.ariaDescribedByElements ?? []).map((element) => element.id)).to.not.include('checkbox-error');
   } else {

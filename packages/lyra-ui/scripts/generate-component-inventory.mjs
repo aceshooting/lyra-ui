@@ -10,6 +10,7 @@ import {
   LOCAL_MIGRATION_PROFILES,
   REWRITE_RULE_SECTIONS,
   SURFACE_SECTIONS,
+  applyRuntimeEventCancelabilityEvidence,
   compareMappedSurfaces,
   compareAccessibilityProfiles,
   emptyNormalizations,
@@ -1147,7 +1148,11 @@ function upstreamComponents(manifest, ecosystem, fixture, existing) {
           ...fixture.webawesome.pro.map((tag) => [tag, 'pro']),
         ])
       : new Map(fixture.shoelace.tags.map((tag) => [tag, 'free']));
-  const normalized = normalizeManifest(manifest, { ecosystem, tierByTag });
+  const normalized = applyRuntimeEventCancelabilityEvidence(
+    normalizeManifest(manifest, { ecosystem, tierByTag }),
+    fixture[ecosystem].runtimeEventCancelability,
+    { ecosystem, version: fixture[ecosystem].version },
+  );
   const byTag = new Map(normalized.filter((entry) => entry.tag.startsWith(prefix)).map((entry) => [entry.tag, entry]));
   const previous = new Map((existing?.upstreams?.[ecosystem]?.components ?? []).map((entry) => [entry.tag, entry]));
   const catalog =
@@ -1222,7 +1227,41 @@ const ACCORDION_EVENT_DETAIL_DRIFT = [
   actual: 'CustomEvent<LyraAccordionEventDetail>',
 }));
 
+const shoelaceLifecycleCancelabilityDrift = (hideCancelable) => [
+  {
+    code: 'cancelability-mismatch',
+    section: 'events',
+    member: 'sl-hide',
+    expected: 'never',
+    actual: hideCancelable,
+  },
+  {
+    code: 'cancelability-mismatch',
+    section: 'events',
+    member: 'sl-show',
+    expected: 'never',
+    actual: 'always',
+  },
+];
+
+const SHOELACE_LIFECYCLE_CANCELABILITY_RATIONALE =
+  'Pinned runtime evidence shows Shoelace emits non-cancelable state-change lifecycle notifications while Lyra provides synchronous pre-state veto events; automatic migration therefore requires review of listener timing and preventDefault() behavior.';
+
 const DECISION_OVERRIDES = new Map([
+  ...[
+    ['sl-alert', 'always'],
+    ['sl-dialog', 'conditional'],
+    ['sl-drawer', 'always'],
+    ['sl-dropdown', 'always'],
+    ['sl-tooltip', 'always'],
+  ].map(([tag, hideCancelable]) => [
+    tag,
+    {
+      classification: 'warning-required',
+      rationale: SHOELACE_LIFECYCLE_CANCELABILITY_RATIONALE,
+      expectedDrift: shoelaceLifecycleCancelabilityDrift(hideCancelable),
+    },
+  ]),
   [
     'sl-checkbox',
     {
@@ -1315,6 +1354,12 @@ export function reviewedMigrationDecision(upstreamTag) {
 }
 
 const BEHAVIOR_PARITY_OVERRIDES = new Map([
+  ...['sl-alert', 'sl-dialog', 'sl-drawer', 'sl-dropdown', 'sl-tooltip'].map((tag) => [
+    tag,
+    {
+      behaviorReviewFlags: ['lifecycle-event-cancelability-and-phase'],
+    },
+  ]),
   [
     'sl-carousel',
     {
@@ -4361,7 +4406,7 @@ export function generateInventory({
 
   return {
     $comment:
-      'Authoritative component, public-surface, and upstream mapping inventory. Refresh with generate-component-inventory.mjs using the pinned published manifests; do not infer upstream behavior from implementation source.',
+      'Authoritative component, public-surface, and upstream mapping inventory. Refresh with generate-component-inventory.mjs using the pinned published manifests and artifact-bound black-box evidence; do not infer upstream behavior from implementation source.',
     schemaVersion: INVENTORY_SCHEMA_VERSION,
     pins: {
       lyraVersion: packageJson.version,

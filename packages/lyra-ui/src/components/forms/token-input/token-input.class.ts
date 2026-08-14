@@ -7,6 +7,11 @@ import { nextId } from '../../../internal/a11y.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { spellcheckConverter } from '../../../internal/converters.js';
 import { submitOnEnter } from '../../../internal/submit-on-enter.js';
+import {
+  dispatchNativeEvent,
+  dispatchNativeInputEvent,
+  relayNativeEvent,
+} from '../../../internal/native-event-relay.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './token-input.styles.js';
@@ -33,10 +38,14 @@ export type LyraTokenInputSize = LyraSizeStep;
 
 export interface LyraTokenInputEventMap {
   'lr-invalid': CustomEvent<undefined>;
-  input: CustomEvent<{ value: string[] }>;
-  change: CustomEvent<{ value: string[] }>;
-  focus: CustomEvent<undefined>;
-  blur: CustomEvent<undefined>;
+  input: InputEvent;
+  change: Event;
+  focus: FocusEvent;
+  blur: FocusEvent;
+  'lr-input': CustomEvent<{ value: string[] }>;
+  'lr-change': CustomEvent<{ value: string[] }>;
+  'lr-focus': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<undefined>;
   'lr-add': CustomEvent<{ value: string }>;
   'lr-remove': CustomEvent<{ value: string; index: number }>;
   'lr-token-edit': CustomEvent<{ value: string; previousValue: string; index: number }>;
@@ -87,12 +96,14 @@ const stringArrayConverter = {
  * @slot error - Validation message.
  * @slot start - Adornment at the inline-start of the token/input row, before the tokens.
  * @slot end - Adornment at the inline-end of the token/input row, after the draft input.
- * @event input - Native-style composed event emitted after a user changes the token list.
- * @event change - Native-style composed commit event emitted with `input`.
- * @event focus - Re-dispatched from the draft input and inline token editor as a bubbling,
- *   composed event.
- * @event blur - Re-dispatched from the draft input and inline token editor as a bubbling,
- *   composed event.
+ * @event input - Native `InputEvent` emitted after a user changes the token list.
+ * @event change - Native commit `Event` emitted with `input`.
+ * @event lr-input - Lyra input alias; detail is `{ value }` with the current token list.
+ * @event lr-change - Lyra commit alias; detail is `{ value }` with the current token list.
+ * @event focus - Native `FocusEvent` relayed from the draft input or inline token editor.
+ * @event blur - Native `FocusEvent` relayed from the draft input or inline token editor.
+ * @event lr-focus - Lyra alias emitted after each native `focus` relay.
+ * @event lr-blur - Lyra alias emitted after each native `blur` relay.
  * @event lr-add - A token was added; detail is `{ value }`.
  * @event lr-remove - A token is about to be removed; detail is `{ value, index }`. Cancelable --
  *   call `preventDefault()` to veto the removal (e.g. pending an async confirmation or a
@@ -425,16 +436,26 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     // never touches the custom layer the line above just set.
     this.syncValidity();
   }
+  /** Reads both component state and the UA's synchronous fieldset cascade before actions mutate
+   * or enter one of this compound control's still-rendered native focus surfaces. */
+  private get liveDisabled(): boolean {
+    return this.effectiveDisabled || this.matches(':disabled');
+  }
   override focus(options?: FocusOptions): void {
-    if (this.effectiveDisabled || this.matches(':disabled')) return;
+    if (this.liveDisabled) return;
     this.inputEl?.focus(options);
   }
-  override blur(): void { this.inputEl?.blur(); }
+  override blur(): void {
+    const active = this.shadowRoot?.activeElement;
+    if (active && typeof (active as HTMLElement).blur === 'function') {
+      (active as HTMLElement).blur();
+    }
+  }
   /** Focuses the draft text input, mirroring what a real click on the token row would land on --
    *  `HTMLElement.prototype.click()` is otherwise a no-op on a custom element with no native click
    *  semantics of its own (matches `<lr-combobox>`'s identical override). */
   override click(): void {
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
     this.inputEl?.focus();
   }
   /** Selects the complete pending draft in the internal native text input. */
@@ -525,8 +546,10 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   private updateValue(next: string[], event?: 'add' | 'remove'): void {
     this.value = next;
     this.syncValidity();
-    this.emit('input', { value: this.value });
-    this.emit('change', { value: this.value });
+    dispatchNativeInputEvent(this);
+    this.emit('lr-input', { value: [...this.value] });
+    dispatchNativeEvent(this, 'change');
+    this.emit('lr-change', { value: [...this.value] });
     if (event === 'add') {
       // `lr-add` promises a `string`; an 'add' that produced no token has nothing to announce.
       const added = next[next.length - 1];
@@ -534,7 +557,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     }
   }
   private addDraft(): void {
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
     // A null/empty delimiter means the whole draft is one token -- `''.split('')` would otherwise
     // explode the draft into one token per character.
     const parts = this.delimiter ? this.draft.split(this.delimiter) : [this.draft];
@@ -568,6 +591,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   }
 
   private removeToken(index: number): void {
+    if (this.liveDisabled) return;
     const removed = this.value[index];
     // The roving/edit index can outlive the token it pointed at, and `lr-remove` promises a
     // `string` value -- a stale index has nothing to remove rather than a token named `undefined`.
@@ -590,7 +614,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
 
   /** Open the inline editor for a token, seeded with that token's full current text. */
   private startEdit(index: number): void {
-    if (this.effectiveDisabled || !this.editable) return;
+    if (this.liveDisabled || !this.editable) return;
     if (index < 0 || index >= this.value.length) return;
     this.editingIndex = index;
     this.editDraft = this.value[index]!; // safe: index bounds-checked above
@@ -616,6 +640,10 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
    * duplicate candidate instead of rejecting the whole entry.
    */
   private commitEdit(restoreFocus: boolean): void {
+    if (this.liveDisabled) {
+      this.discardTransientState(false);
+      return;
+    }
     const index = this.editingIndex;
     if (index < 0) return;
     const previousValue = this.value[index];
@@ -643,7 +671,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   }
 
   private onTokenKeyDown(event: KeyboardEvent, index: number): void {
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
     // ArrowLeft/ArrowRight mean previous/next *visually*, so they swap under RTL.
     const rtl = this.effectiveDirection === 'rtl';
     const forward = rtl ? 'ArrowLeft' : 'ArrowRight';
@@ -659,12 +687,17 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
 
   private onEditInput = (event: Event): void => {
     event.stopPropagation();
+    if (this.liveDisabled) return;
     this.editDraft = (event.target as HTMLInputElement).value;
   };
   private onEditFocus = (event: FocusEvent): void => {
-    event.stopPropagation();
+    if (this.liveDisabled) {
+      event.stopPropagation();
+      return;
+    }
     this.editorBlurRelayed = false;
-    this.emit('focus');
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
   private onEditKeyDown = (event: KeyboardEvent): void => {
     if (event.key === 'Enter') { event.preventDefault(); this.commitEdit(true); }
@@ -673,34 +706,33 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     else if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); this.cancelEdit(); }
   };
   private onEditBlur = (event: FocusEvent): void => {
-    event.stopPropagation();
-    if (!this.editorBlurRelayed) {
-      this.editorBlurRelayed = true;
-      this.emit('blur');
+    if (this.editorBlurRelayed) {
+      event.stopPropagation();
+      return;
     }
-    // Native fieldset disablement can move focus just before the FACE callback reaches the host.
-    // Deferring one microtask lets every lifecycle signal settle before deciding whether this was
-    // a real user blur or teardown.
+    this.editorBlurRelayed = true;
+    event.stopPropagation();
+    // A disconnect can synchronously trigger blur just before `disconnectedCallback()` clears the
+    // editor. Publish the host blur one microtask later so lifecycle state settles first, while
+    // still committing before that public blur for a genuine user focus move.
     queueMicrotask(() => {
-      if (
-        !this.isConnected ||
-        !this.editable ||
-        this.effectiveDisabled ||
-        this.matches(':disabled')
-      ) {
+      if (!this.isConnected || !this.editable || this.liveDisabled) {
         this.discardTransientState(false);
-        return;
+      } else {
+        this.commitEdit(false);
       }
-      this.commitEdit(false);
+      relayNativeEvent(this, event);
+      this.emit('lr-blur');
     });
   };
 
   private onInput = (event: Event): void => {
     event.stopPropagation();
+    if (this.liveDisabled) return;
     this.draft = (event.target as HTMLInputElement).value;
   };
   private onKeyDown = (event: KeyboardEvent): void => {
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
     if (event.key === 'Enter' || (this.delimiter !== null && event.key === this.delimiter)) {
       if (this.draft.trim()) { event.preventDefault(); this.addDraft(); }
       // No draft to commit, so Enter means what it means in any other text field: implicit
@@ -718,14 +750,18 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   // must not commit a pending draft or flip `touched`, which could otherwise reenter an in-flight
   // Lit update and trip its dev-mode "scheduled an update after an update completed" warning.
   private onBlur = (event: FocusEvent): void => {
-    event.stopPropagation();
-    if (!this.effectiveDisabled) { if (this.draft.trim()) this.addDraft(); this.touched = true; }
+    if (!this.liveDisabled) { if (this.draft.trim()) this.addDraft(); this.touched = true; }
     this.syncValidity();
-    this.emit('blur');
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
   private onFocus = (event: FocusEvent): void => {
-    event.stopPropagation();
-    this.emit('focus');
+    if (this.liveDisabled) {
+      event.stopPropagation();
+      return;
+    }
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
   private stopInternalChange(event: Event): void { event.stopPropagation(); }
   private onLabelSlotChange = (e: Event): void => { this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };

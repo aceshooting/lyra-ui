@@ -3,7 +3,8 @@ import { property, query, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
-import { composedParentElement, isAccessibilityVisibilityHidden, nextId } from '../../../internal/a11y.js';
+import { nextId } from '../../../internal/a11y.js';
+import { composedAccessibilityText } from '../../../internal/accessibility-visibility.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { tag } from '../../../internal/prefix.js';
@@ -59,17 +60,6 @@ function isHtmlElement(child: Element): child is HTMLElement {
 
 function isInertChild(child: Element): boolean {
   return isHtmlElement(child) && child.inert;
-}
-
-/** Whether a closed native `<details>` hides `branch` rather than its visible `<summary>`. */
-function isClosedDetailsContentBranch(details: Element, branch: Node | null): boolean {
-  if (details.localName !== 'details' || details.hasAttribute('open') || branch === null) return false;
-  let directBranch = branch;
-  while (directBranch.parentNode && directBranch.parentNode !== details) {
-    directBranch = directBranch.parentNode;
-  }
-  if (directBranch.parentNode !== details) return false;
-  return Array.from(details.children).find((child) => child.localName === 'summary') !== directBranch;
 }
 
 /** The subtree-pruning portion of accessible visibility, excluding `inert` so a group-owned
@@ -392,13 +382,16 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       attributes: true,
       characterData: true,
       attributeFilter: [
+        'alt',
         'aria-hidden',
         'aria-label',
+        'aria-labelledby',
         'class',
         'closable',
         'disabled',
         'hidden',
         'inert',
+        'id',
         'label',
         'name',
         'open',
@@ -518,23 +511,16 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    * label text. Read that text through the same flattened slot shape while preserving every
    * author-owned accessibility exclusion. */
   private readElementLabel(tab: LyraTab): string {
-    return Array.from(tab.childNodes)
-      .filter((node) =>
+    const labelNodes = Array.from(tab.childNodes).filter((node) =>
         node.nodeType !== Node.ELEMENT_NODE || (node as Element).getAttribute('slot') === null ||
         (node as Element).getAttribute('slot') === '',
-      )
-      .map((node) => this.accessibleTabLabelText(node))
-      .join(' ')
+      );
+    return composedAccessibilityText(labelNodes, {
+      ancestorBoundary: tab,
+      isSubtreeExcluded: (element) => this.isTabLabelSubtreeExcluded(element),
+    })
       .replace(/\s+/g, ' ')
       .trim();
-  }
-
-  private tabLabelComposedParent(node: Node): Element | null {
-    const assignedSlot = (node as Node & { assignedSlot?: HTMLSlotElement | null }).assignedSlot;
-    if (assignedSlot) return assignedSlot;
-    if (node.parentElement) return node.parentElement;
-    const root = node.getRootNode() as Document | ShadowRoot;
-    return 'host' in root && root.host.nodeType === Node.ELEMENT_NODE ? root.host : null;
   }
 
   private libraryOwnsSourceInert(element: Element): boolean {
@@ -548,57 +534,6 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     );
   }
 
-  /** Mirrors the accessibility visibility walk, except that it treats only this group's own
-   * source-level inert fence as presentation. Author-provided inertness remains an exclusion. */
-  private isTabLabelVisible(element: Element, initialComposedChild: Node | null = null): boolean {
-    if (!element.isConnected) return false;
-    let current: Element | null = element;
-    let composedChild: Node | null = initialComposedChild;
-    while (current) {
-      if (this.isTabLabelSubtreeExcluded(current)) return false;
-      if (isClosedDetailsContentBranch(current, composedChild)) return false;
-      if (current === element && isAccessibilityVisibilityHidden(current)) return false;
-      if (current.localName === tag('tab') && current.parentNode === this) break;
-      composedChild = current;
-      current = composedParentElement(current);
-    }
-
-    const targetDisplay = element.ownerDocument.defaultView?.getComputedStyle(element).display;
-    // `display: contents` has no own box, so `checkVisibility()` answers false even while its
-    // semantic children are exposed. Every other target must opt into the skipped
-    // `content-visibility:auto` check the shared accessibility helper uses.
-    if (targetDisplay === 'contents') return true;
-    const visibilityTarget = element as Element & {
-      checkVisibility?: (options?: { contentVisibilityAuto?: boolean }) => boolean;
-    };
-    return typeof visibilityTarget.checkVisibility === 'function'
-      ? visibilityTarget.checkVisibility({ contentVisibilityAuto: true })
-      : true;
-  }
-
-  private accessibleTabLabelText(node: Node, inheritedTextVisible?: boolean): string {
-    if (node.nodeType === Node.TEXT_NODE) {
-      const parent = this.tabLabelComposedParent(node);
-      const textVisible =
-        inheritedTextVisible !== false && parent !== null && this.isTabLabelVisible(parent, node);
-      return textVisible ? node.textContent ?? '' : '';
-    }
-    if (node.nodeType !== Node.ELEMENT_NODE) return '';
-
-    const element = node as Element;
-    if (this.isTabLabelSubtreeExcluded(element)) return '';
-    const ownTextVisible = !isAccessibilityVisibilityHidden(element);
-    if (ownTextVisible && !this.isTabLabelVisible(element)) return '';
-    const accessibleLabel = ownTextVisible ? element.getAttribute('aria-label')?.trim() : '';
-    if (accessibleLabel) return accessibleLabel;
-    const children =
-      element.localName === 'slot' && (element as HTMLSlotElement).assignedNodes().length > 0
-        ? (element as HTMLSlotElement).assignedNodes({ flatten: true })
-        : Array.from(element.childNodes);
-    return Array.from(children)
-      .map((child) => this.accessibleTabLabelText(child, ownTextVisible))
-      .join(' ');
-  }
 
   private snapshotProjectedSource(source: Element): ProjectedSourceSnapshot {
     const inert = source.getAttribute('inert');
@@ -786,8 +721,27 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    *  under `manual` focus may sit elsewhere, and it must fall back to the selection whenever the
    *  remembered tab has gone away or become disabled. */
   private get rovingTab(): string {
+    if (this.activation !== 'manual') return this.active;
     const candidate = this.tabs.find((t) => t.slotName === this.focusedTab && this.isNavigable(t));
     return candidate ? candidate.slotName : this.active;
+  }
+
+  /** The event-target tab is authoritative even when a controlled `active` write or manual-mode
+   * memory points elsewhere. Fall back to real shadow focus, then to the current roving state only
+   * when keyboard input did not originate from an owned tab button. */
+  private keyboardOriginTab(event: KeyboardEvent, navigable: TabDef[]): TabDef | undefined {
+    const eventButton = event.composedPath().find(
+      (candidate): candidate is HTMLElement =>
+        (candidate as Partial<Node>).nodeType === 1 &&
+        (candidate as Partial<Element>).getAttribute?.('part') === 'tab' &&
+        (candidate as Element).getRootNode() === this.renderRoot,
+    );
+    const focused = activeElementIn(this.renderRoot as ShadowRoot);
+    const button = eventButton ??
+      (focused?.getAttribute('part') === 'tab' ? focused as HTMLElement : undefined);
+    const owned = button?.dataset['slot'];
+    return navigable.find((tab) => tab.slotName === owned) ??
+      navigable.find((tab) => tab.slotName === this.rovingTab);
   }
 
   /** Moves real DOM focus to tab `slotName`'s button. Safe to call immediately (no `updateComplete` wait): every tab button already exists in the DOM regardless of its current `tabindex`, and `tabindex="-1"` elements are still focusable via script. */
@@ -810,13 +764,13 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   private onTabListKeyDown = (e: KeyboardEvent): void => {
     const navigable = this.tabs.filter((t) => this.isNavigable(t));
     if (navigable.length === 0) return;
-    const currentIndex = navigable.findIndex((t) => t.slotName === this.rovingTab);
+    const origin = this.keyboardOriginTab(e, navigable);
+    const currentIndex = origin ? navigable.indexOf(origin) : -1;
 
     if (e.key === 'Delete') {
-      const focused = navigable.find((tab) => tab.slotName === this.rovingTab);
-      if (!focused?.element?.closable) return;
+      if (!origin?.element?.closable) return;
       e.preventDefault();
-      focused.element.requestCloseFromOwner();
+      origin.element.requestCloseFromOwner();
       return;
     }
 
@@ -830,10 +784,9 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     // Manual activation commits the focused tab; the APG requires this precisely because automatic
     // activation would reveal every panel arrowed past.
     if (this.activation === 'manual' && (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar')) {
-      const focused = navigable.find((t) => t.slotName === this.rovingTab);
-      if (!focused) return;
+      if (!origin) return;
       e.preventDefault();
-      this.selectTab(focused);
+      this.selectTab(origin);
       return;
     }
 

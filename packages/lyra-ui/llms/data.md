@@ -1282,6 +1282,11 @@ coordinate or calendar date remains the sole roving stop. If it disappears, focu
 nearest surviving interactive cell, or to the stable heatmap base when none remain; an unfocused
 refresh never steals external focus.
 
+Changing `accessibleCells` also preserves owned focus across the rendering-mode replacement:
+turning the overlay off moves a focused cell button to the canvas application control; turning it on
+moves a focused canvas to the matching remembered cell, the first interactive cell, or the stable
+base when no cell exists. A newer external focus destination is never reclaimed.
+
 **Properties:**
 
 - `rowLabels: string[] = []` (attribute: false — matrix mode only)
@@ -2728,9 +2733,10 @@ restores the control's own computed validity rather than forcing it valid — a 
 field edit) and `form.reset()`, exactly like a native control, where only another
 `setCustomValidity('')` clears it. The message is caller-supplied and is used verbatim, never
 localized, and it is whole-control state: it does not land in `errors`, which is keyed by the
-csspart of the field a message belongs to. `click()` forwards focus to the first rendered field
-(start/end/hop-limit/direction/save-name, in that order), so the host behaves like a single
-control rather than a no-op under a `<label>`-driven or programmatic click.
+csspart of the field a message belongs to. The start-ID `lr-input` is natively required, matching
+the aggregate `valueMissing` constraint. `focus(options?)` and `click()` target the first rendered
+field (start/end/hop-limit/direction/save-name, in that order), `blur()` releases whichever nested
+owner contains deep focus, and all entry actions are inert while directly or fieldset disabled.
 
 **Events:** `lr-input`, `lr-validity-change`, `lr-invalid` (no detail; one bubbling/composed alias
 when the complete builder fails a native validity check),

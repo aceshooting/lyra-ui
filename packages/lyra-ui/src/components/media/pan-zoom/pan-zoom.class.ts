@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { styles } from './pan-zoom.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -31,8 +32,10 @@ function ownsKeyboardInput(event: KeyboardEvent): boolean {
 
 export interface LyraPanZoomEventMap {
   'lr-zoom-change': CustomEvent<{ zoom: number }>;
-  blur: CustomEvent<undefined>;
-  focus: CustomEvent<undefined>;
+  blur: FocusEvent;
+  focus: FocusEvent;
+  'lr-blur': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<undefined>;
 }
 
 /**
@@ -46,8 +49,12 @@ export interface LyraPanZoomEventMap {
  * @customElement lr-pan-zoom
  * @slot - Content to inspect; when `src` is set, an image is rendered instead.
  * @event lr-zoom-change - Zoom changed. `detail: { zoom }`.
- * @event focus - Re-dispatched from the scrollable viewport as a bubbling, composed event.
- * @event blur - Re-dispatched from the scrollable viewport as a bubbling, composed event.
+ * @event {FocusEvent} focus - Relayed once from the scrollable viewport as a bubbling, composed
+ *   native event.
+ * @event {FocusEvent} blur - Relayed once from the scrollable viewport as a bubbling, composed
+ *   native event.
+ * @event lr-focus - Prefixed compatibility alias for `focus`.
+ * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @csspart base - The frame wrapper.
  * @csspart viewport - The scrollable viewport.
  * @csspart content - The transformed content wrapper.
@@ -149,13 +156,13 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
   }
 
   private onViewportFocus = (event: FocusEvent): void => {
-    event.stopPropagation();
-    this.emit('focus');
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
 
   private onViewportBlur = (event: FocusEvent): void => {
-    event.stopPropagation();
-    this.emit('blur');
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
 
   private onViewportKeyDown = (event: KeyboardEvent): void => {

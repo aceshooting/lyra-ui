@@ -1045,6 +1045,12 @@ element. First-party invention (no Web Awesome equivalent).
 Session-history/autofill restoration synchronously restores the model id and form entry without
 emitting `lr-change`.
 
+When `catalog`/`allowCustom` replaces a focused trigger with the free-text input or vice versa,
+focus follows the available replacement. If the new owner is disabled or inert, focus returns to
+the available element that led into the picker, or to the stable `form-control` owner when no
+return target exists. This repair emits no action/value events and never overrides a newer external
+focus move.
+
 **Exported types:**
 
 - `LyraModelCatalogEntry { id: string; label: string; icon?: string }` — one catalog row. An
@@ -1124,6 +1130,9 @@ behavior is wired to the input's `focus` event (`onInputFocus`), not a `click` h
 itself.
 
 `focus(options?)` and `blur()` forward to the active semantic control in either rendering mode.
+If a catalog/`allowCustom` update replaces that control while it owns focus, focus follows from the
+closed trigger to the free-text input (or back again). A newer external focus destination is never
+overridden.
 
 `select()` and `setSelectionRange()` forward to the native input in free-text mode.
 `setRangeText()` applies the native range edit and silently synchronizes `value`, the form entry,
@@ -1914,13 +1923,18 @@ The per-message action toolbar for `lr-chat-message`'s `actions` slot: opt-in bu
 regenerate / edit / feedback) that emit intent events, plus a default slot for custom controls (e.g.
 a slotted `lr-branch-picker`). `role="toolbar"` with WAI-ARIA APG roving-tabindex; ArrowLeft/
 ArrowRight (RTL-aware) plus Home/End move focus across every stop — built-ins and slotted controls
-alike — via `.focus()`. Only the plain-button built-ins (`regenerate`/`edit`) get their `tabindex`
-toggled by this component itself; a composite child (`lr-copy-button`, the `feedback` built-in, any
-slotted custom element) remains independently reachable via the page's native Tab order alongside the
-toolbar's single roving stop, since a shadow-root-internal focusable element can't be suppressed from
-outside its own component. Disabled, hidden, `aria-hidden`, and inert controls (including controls
-beneath an inert ancestor) are excluded from arrow navigation before the usable roving fallback is
-chosen.
+alike — via `.focus()`. Every actual action target gets its `tabindex` toggled directly, including
+the real nested controls inside a composite child (`lr-copy-button`, the `feedback` built-in, or a
+slotted custom element), so the toolbar retains one sequential stop.
+Disabled, hidden, `aria-hidden`, `aria-disabled`, inert, or no-longer-actionable controls (including
+controls beneath an unavailable ancestor) are excluded before the usable roving fallback is chosen.
+Those states and `tabindex` are observed live, not only at mount/slot assignment; former stops are
+cleared immediately. Slotted custom elements contribute their actual composed action targets rather
+than their host merely because it has a `focus()` method; multiple nested actions (for example both
+feedback thumbs or branch-picker buttons) remain distinct stops. If the focused action is removed or
+becomes unavailable, focus moves to the nearest survivor or the stable toolbar, without overriding a
+newer external focus move. Keyboard movement starts from the action that actually received the event,
+even after a controlled state write changed the remembered stop.
 
 **Properties:** `controls: MessageActionControl[] = []` (attribute: false) —
 `MessageActionControl = 'copy' | 'regenerate' | 'edit' | 'feedback'` (exported here); which built-ins
@@ -2167,6 +2181,11 @@ range; does not re-engage `follow`.
 
 **Events:** `lr-follow-change` — `detail: { following }`, fired whenever `follow` flips (user
 scroll-up release, or reaching the bottom again). Never fired for the initial mount state.
+
+Activating a focused jump-to-latest pill, or directly setting `follow = true`, transfers focus to
+the transcript's stable scroll owner after the pill disappears: `[part="scroll"]` in slotted mode,
+or the nested virtual list's real focus owner in virtual mode. Focus that moved elsewhere before the
+update is preserved.
 
 **Slots:** default — the transcript: ordinary element children, or exactly one `lr-virtual-list`.
 
@@ -3068,7 +3087,10 @@ Nonmodal, Escape-dismissible text-selection toolbar carrying selected text plus 
 
 When a controlled `actions` refresh replaces the focused action, focus follows the same action id
 through reordering, otherwise moves to the nearest surviving action, or to the stable toolbar when
-the action set becomes empty. A newer focus destination is never overridden.
+the action set becomes empty. The same repair applies when a slotted action is removed or becomes
+disabled, hidden, inert, `aria-disabled`, or no longer actionable. Availability and `tabindex`
+changes are observed live, stale stops are cleared, and a newer focus destination is never
+overridden. Observation is rebound to the current document realm when the toolbar is adopted.
 
 **Events:** `lr-selection-action` (`SelectionActionDetail = { action, text, anchor }`);
 `lr-dismiss` (Escape); `lr-copy-error` (`{ error }`). Copy uses the Clipboard API when available;
@@ -3084,7 +3106,10 @@ instead: slotted elements render after the built-ins **inside** the same `role="
 and join the same roving-tabindex group (Home/End/Arrow, RTL-mirrored), so adding one does not mean
 reimplementing the toolbar's positioning, keyboard, and dismissal behavior. A slotted action brings
 its own accessible name and click handling; this component only manages its tab stop, and re-derives
-the group whenever the slot's assigned elements change.
+the group whenever the slot's assigned elements change. The group resolves actual composed action
+targets through open shadow roots and forwarding slots; decorative wrappers are not accepted as
+stops, while multiple actionable descendants remain independently arrow-reachable. Keyboard
+movement starts from the action that received the event rather than stale controlled state.
 
 **Themeable custom properties:** `--lr-selection-toolbar-inline-start` and
 `--lr-selection-toolbar-block-start` are normally computed from `rect`; hosts may override them to

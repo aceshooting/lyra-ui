@@ -101,8 +101,9 @@ therefore cannot widen a 320px LTR or RTL picker.
 - `placeholder: string = ''`
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`; also reflected as
-  `aria-required` on `<input part="combobox-input">` immediately, and `aria-invalid` once the field
-  has been touched, see gotchas)
+  `aria-required` on `<input part="combobox-input">` immediately. That semantic input exposes
+  `aria-invalid="true"` whenever visible error chrome is present, or after interaction while
+  intrinsic/custom validity fails; it explicitly returns to `"false"` when neither applies)
 - `name: string = ''`
 - `label: string = ''`
 - `hint: string = ''`
@@ -206,8 +207,10 @@ alias. Set the boolean `autocorrect` IDL, or use `autocorrect="on"` / `autocorre
 `ComboboxSourceRow = { value: string; label: string; sub?: string; icon?: unknown; badge?: string |
 number; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: string; disabled?:
 boolean }` — the row shape used by the async `source` path. `icon` renders as a decorative leading
-visual, `badge` as trailing metadata, `accessibleLabel` can provide richer spoken text than the
-visible label, and `data` is retained without being rendered for retrieval through `selectedRows`.
+visual whose rendered subtree stays visible but is inert and hidden from assistive technology;
+put independent actions outside it. `badge` renders as trailing metadata, `accessibleLabel` can
+provide richer spoken text than the visible label, and `data` is retained without being rendered
+for retrieval through `selectedRows`.
 `dotColor` accepts a valid CSS `color`; invalid values, declaration-breaking input, and `url()`
 render a transparent dot.
 The light-DOM `<lr-option>` path normalizes its supported label/sub/dot/group fields to the same
@@ -308,10 +311,10 @@ adornment-slot wrappers, each `hidden` while nothing is slotted into it), `tags`
 `group-label` (the heading of an option group — rows sharing a `group` — named as on `lr-select` and
 `lr-emoji-picker` so one rule styles every grouped list; it labels the `role="group"` wrapper here),
 `option`,
-`option-dot` (the leading status dot, when a row's `dotColor` is set), `option-icon` (the decorative
-leading visual for an async row), `option-label`, `option-sub` (a row's secondary line, when `sub`
-is set), `option-badge` (an async row's trailing metadata), `option-overflow` (the "+N more"
-indicator from `maxRender`), `error`, `hint`
+`option-dot` (the leading status dot, when a row's `dotColor` is set), `option-icon` (the inert,
+aria-hidden decorative leading visual for an async row), `option-label`, `option-sub` (a row's
+secondary line, when `sub` is set), `option-badge` (an async row's trailing metadata),
+`option-overflow` (the "+N more" indicator from `maxRender`), `error`, `hint`
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so
@@ -487,7 +490,8 @@ A plain closed-list dropdown — a direct `<lr-*>` counterpart to `<wa-select>`/
 as `lr-combobox`, see the shared-foundation notes above). The trigger is a `<button>`, not a text
 input: click/Enter/Space/ArrowDown opens it, and there's no typing-to-filter. Options are
 `<lr-option value>` children — the same element `<lr-combobox>` uses — reconciled the same way
-combobox does, and the popup reuses `internal/positioner.ts` for placement.
+combobox does. The popup reuses `internal/positioner.ts` for placement and participates in Lyra's
+shared nonmodal overlay stack.
 Session-history/autofill restoration assigns the stored string through the same synchronous
 value/form/validity path as a programmatic value write and does not emit `input`, `change`, or
 `lr-change`.
@@ -505,7 +509,10 @@ stay inside exact-320px LTR and RTL containers alongside start/end adornments.
 overlaid on the real trigger, so every built-in tag remove button is valid independently-focusable
 interactive content rather than a button nested inside another button. Picking a selected row,
 Backspace/Delete on the focused trigger, and the `with-clear` action remain equivalent removal
-paths. Turning `multiple` back off collapses
+paths. The trigger retains one genuinely visually-hidden current-value node containing **every**
+selected label, even past `max-options-visible`; painted built-in chip labels and the overflow chip
+are hidden from the accessibility tree so that value is announced once rather than truncated or
+duplicated. Turning `multiple` back off collapses
 the selection to its first entry, so the single-mode string and the submitted entry can never
 disagree with what the trigger shows.
 
@@ -522,8 +529,9 @@ consumer that read it as a plain string needs a narrowing step —
 
 **Single-option auto-commit.** Opt-in via `autoCommitSingleOption` (default `false` — a select always
 renders the normal combobox/listbox/chevron trigger unless enabled, matching pre-1.3.0 behavior).
-When set and exactly one option is enabled (regardless of how many disabled ones exist alongside
-it), the popup never opens at all: a click, Enter, Space, ArrowDown, or ArrowUp on the trigger
+When set and exactly one option is available (neither disabled nor inert, including through an
+inert ancestor), the popup never opens at all: a click, Enter, Space, ArrowDown, or ArrowUp on the
+trigger
 commits that sole option directly, and the trigger renders as a plain `role="button"` with no
 chevron/`aria-haspopup`/`aria-expanded`/`aria-controls`/`aria-activedescendant` rather than a
 combobox with a permanently inert popup state — opening a one-row list to pick the only available
@@ -541,7 +549,9 @@ exactly like the multi-option case, until the trigger is actually activated.
 - `hint: string = ''`
 - `errorText: string = ''` (attribute `error-text` — static error copy shown below the hint;
   overridden by slotted `error` content when provided)
-- `open: boolean = false` (reflected)
+- `open: boolean = false` (reflected). Direct or fieldset-cascaded disablement synchronously forces
+  it closed; every later property or attribute attempt to open remains normalized to `false` until
+  the control is enabled again
 - `size: LyraSize = 'm'` (reflected — the shared control ladder, same scale as
   `lr-input`/`lr-combobox`/`lr-button`, for compact toolbar placements that don't fit the default
   trigger height. Both spellings of every tier are accepted: `2xs`/`xs`/`s`/`m`/`l`/`xl` and
@@ -558,9 +568,11 @@ exactly like the multi-option case, until the trigger is actually activated.
   from an outer-tree rule) still wins over it
 - `placement: Placement = 'bottom'` (reflected) — preferred listbox placement, from the
   Floating UI vocabulary (`'top'`, `'bottom-end'`, …). `flip`/`shift` may still move the popup to
-  keep it in view, and the `left`/`right` component is swapped under RTL
+  keep it in view, and the `left`/`right` component is swapped under RTL. Assignment while open
+  refreshes positioning in place without closing, firing lifecycle events, or changing stack order
 - `hoist: boolean = false` (reflected) — switches Floating UI from its mapped absolute strategy to
-  fixed positioning, escaping clipping containers
+  fixed positioning, escaping clipping containers. It also switches live while open; an effective
+  direction change refreshes logical left/right placement by the same path
 - `filled: boolean = false` (reflected) — Shoelace alias for the filled trigger treatment
 - `autofocus: boolean = false` / `title: string = ''` — forwarded to the internal trigger
 - `multiple: boolean = false` (reflected) — several options selectable at once; see "Multi-select"
@@ -623,20 +635,26 @@ announces a no-op),
 `lr-show`, `lr-hide`, and bubbling, composed `focus`/`blur` events re-dispatched from the internal
 trigger, each with a prefixed alias — `lr-focus` and `lr-blur` (no detail) — fired immediately after
 its unprefixed counterpart. `lr-show` is cancelable; `lr-hide` is cancelable while connected and
-non-cancelable only for the disconnect-driven close, where a veto cannot be honoured.
+non-cancelable only for the disconnect-driven close, where a veto cannot be honoured. A direct or
+fieldset-cascaded disablement is a policy closure rather than a user-requested transition: it
+synchronously closes without the vetoable `lr-hide` or settled `lr-after-hide` lifecycle, and a
+listener cannot hold a disabled popup open.
 `lr-after-show` and `lr-after-hide` fire after the corresponding listbox transition has settled; an
 interrupted transition drops its stale after-event.
 `lr-invalid` (no detail, cancelable) fires when a validity check finds the control invalid.
 
 **Slots:** default (`<lr-option>` children), `label`, `hint`, `help-text` (alias), `error` (overrides
 the `errorText` attribute when provided), `start`/`prefix` (aliases before the selected-value label),
-`end`/`suffix` (aliases after the label), plus `clear-icon` and `expand-icon`. The adornments live
-inside the native trigger `<button>`, so never place links, buttons, inputs, or other interactive
-content in either slot.
+`end`/`suffix` (aliases after the label), plus `clear-icon` and `expand-icon`. Because the adornments
+live inside the native trigger `<button>`, both wrappers are unconditionally inert,
+`aria-hidden="true"`, and non-hit-testable. The names remain mirrored for decorative glyphs and
+text, but links, buttons, inputs, and other supplied controls cannot become nested interaction or
+accessibility stops.
 
-When hint/error content is present, the trigger's `aria-describedby` references stable shadow-local
-IDs for both messages (error first, then hint), so the visible supporting text is part of the
-control's accessible description.
+In populated multiple mode, the trigger's `aria-describedby` first references the complete
+visually-hidden selected-value node. When hint/error content is present it then references stable
+shadow-local IDs for both messages (error before hint), so the current value and visible supporting
+text are part of the focused control's accessible description.
 
 **CSS parts:** `form-control`, `form-control-label`, `label`, `form-control-input`, `combobox`,
 `trigger`, `display-input`, `start`, `prefix`, `end`, `suffix`, `tags` (the legal sibling
@@ -645,10 +663,11 @@ control's accessible description.
 `max-options-visible` — it carries **both** `tag` and `tag-overflow`, so `::part(tag)` styles every
 chip while `::part(tag-overflow)` reaches only that one; state after `::part()` never matches, so it
 is encoded in the part name instead), `clear-button` (the `with-clear` button, present only while
-there is a selection to clear), `listbox`,
+there is a selection to clear), `listbox` (the managed nonmodal popup, layered by
+`--lr-overlay-stack-index` with `--lr-layer-dropdown` as its standalone fallback),
 `group-label` (a heading row emitted inside the listbox whenever an option's `group` differs from
-the previous one's — a presentational `<div>`, not a `role="group"`; options with an empty `group`
-get no heading),
+the previous one's — its stable ID labels a `role="group"` wrapper that semantically owns the
+following option rows; options with an empty `group` get no heading or group wrapper),
 `option`, `option-dot` (the leading status dot, when a row's `dotColor` is set), `option-label`,
 `option-sub` (a row's secondary line, when `sub` is set), `expand-icon`, `error`, and
 `hint`/`form-control-help-text` (compatibility names on the same supporting-text node).
@@ -746,10 +765,17 @@ invalid CSS and never matches — which is exactly why these tokens exist.
   `aria-activedescendant`, never actual focus, matching the WAI-ARIA "select-only combobox" pattern
   (as opposed to `lr-combobox`'s editable-input pattern).
 - While open, live option reorders preserve the active row by option identity. Removing or
-  disabling that option rehomes activity to the nearest navigable survivor (preferring the
-  following row on a tie); removing every navigable option clears `aria-activedescendant`.
+  disabling/inerting that option rehomes activity to the nearest available survivor (preferring the
+  following row on a tie); removing every available option clears `aria-activedescendant`.
+- One availability rule governs keyboard navigation, type-ahead, single-option auto-commit,
+  pointer selection, and each proxy row's `aria-disabled`: an option is unavailable when it is
+  disabled, inert itself, or inside an inert ancestor. Pointer activation of such a row is a no-op.
+- The floating listbox participates in Lyra's shared nonmodal overlay stack. Its computed
+  `--lr-overlay-stack-index`, Escape owner, capture-phase outside-pointer dismissal, and focus
+  handoff follow the newest open overlay rather than DOM order. A single dismissal therefore closes
+  only the visual top layer, even when target code stops pointer bubbling.
 - No typing-to-filter, but a printable keypress still jumps to (while open) or directly selects
-  (while closed) the next non-disabled option whose label starts with what's been typed, matching a
+  (while closed) the next available option whose label starts with what's been typed, matching a
   native `<select>`'s own type-ahead; the buffer resets ~500ms after the last keystroke.
 - `<lr-option value="b" selected>` sets that option's `defaultSelected`, seeds the live selection,
   and supplies the `form.reset()` baseline, mirroring native `<select><option selected>`. Later
@@ -758,15 +784,16 @@ invalid CSS and never matches — which is exactly why these tokens exist.
   attribute/default.
 - `aria-required` on the trigger reflects `required` immediately; `aria-invalid` only reflects once
   the trigger has been blurred (touched) at least once, mirroring `lr-combobox`'s own input.
-  Blurring the trigger (Tab away) closes an open listbox, the same as a native `<select>`'s popup.
+  Blurring the trigger (Tab away) closes an open listbox, the same as a native `<select>`'s popup,
+  without restoring focus and undoing the browser's native Tab/Shift+Tab destination.
 - The trigger's accessible name now checks a host-level `aria-label` attribute first, before falling
   back to `label`/`placeholder`/`"Select"` — a plain `aria-label` on `<lr-select>` is no longer
   silently ignored. Precedence is presence-based: `aria-label=""` remains an explicit empty
   override rather than restoring any fallback.
-- With `autoCommitSingleOption` set, a select with exactly one enabled option never exposes
+- With `autoCommitSingleOption` set, a select with exactly one available option never exposes
   `role="combobox"`/opens a listbox at all — see "Single-option auto-commit" above.
   Testing/automation code that always expects a `role="combobox"` trigger, or that opens the
-  listbox before asserting on a row, either needs at least two enabled options or should leave
+  listbox before asserting on a row, either needs at least two available options or should leave
   `autoCommitSingleOption` unset to observe the normal dropdown chrome.
 
 ---
@@ -920,6 +947,10 @@ element-valued `form` IDL.
 they do nothing when already settled, and respect cancellation of their request event. `clear()`
 is a no-op while blank, disabled, or readonly; otherwise it emits `lr-clear`, then `input`, then
 `change`. Lyra also retains native-wrapper `select()`, `setSelectionRange()`, and `setRangeText()`.
+The text input is itself the popup-opening combobox owner: it exposes `role="combobox"`,
+`aria-haspopup="dialog"`, and explicit `aria-controls`/`aria-expanded` alongside the expand button.
+Host focus/click/show/clear calls are synchronous no-ops as soon as direct or fieldset disablement
+starts, including before Lit has updated the inner native controls.
 
 **Getters:** `input: HTMLInputElement | undefined` — the internal native `<input>`, for direct DOM
 access.
@@ -2258,6 +2289,12 @@ fixed-size actions, and the open picker contained.
 `error` is ordinary visible validation text referenced by the segmented input through
 `aria-describedby`, not a shadow `role="alert"`. Native `reportValidity()`/focus feedback therefore
 has one description path instead of being duplicated by a second live-region announcement.
+The group and every spinbutton expose explicit stateful `aria-invalid`: visible property/slotted
+error chrome makes it `"true"` immediately, as does intrinsic/custom invalidity after interaction;
+otherwise each owner explicitly exposes `"false"`.
+Every spinbutton renders explicit `aria-required="true"` or `"false"`. While required, the
+segmented `role="group"` also acquires a localized visually-hidden requiredness description without
+overwriting its existing hint/error relationship; removing `required` releases only that text.
 
 **Custom states:** `blank`, `disabled`, and `open`, plus the shared validity states.
 
@@ -2439,6 +2476,14 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
 - readonly `form`, `labels`, `validity`, `validationMessage`, `willValidate`, and
   `effectiveDisabled` — the shared form-associated native-like getters.
 
+**Events:** each text edit emits native `InputEvent` `input` then `lr-input`; telephone-input commit
+emits native `Event` `change` then `lr-change`; and a country pick emits both pairs in order:
+`input`, `lr-input`, `change`, `lr-change`. Native events carry no custom detail; the aliases carry
+`{ value, inputValue, country, valid, status }`.
+Internal `focus`/`blur` are relayed once as native `FocusEvent`s preserving `relatedTarget`,
+followed by `lr-focus`/`lr-blur`. `lr-invalid` has no detail and is the one bubbling/composed alias
+when native validity fails. Programmatic value writes remain silent.
+
 **Validity:** empty + `required` sets `valueMissing`; incomplete dial-like input sets `badInput`;
 completed-invalid input sets `typeMismatch`; valid E.164 input clears all three. Partial or invalid
 text remains in `inputValue`/the native input so validation never makes a number impossible to edit,
@@ -2454,18 +2499,6 @@ control's intrinsic phone-number validity. `resetValidity()` clears only that co
 recomputes the current phone-number constraints; it does not change the editable/canonical value,
 the reset default, or prior interaction state.
 `form.reset()` restores the original declarative `value` and the default country.
-
-**Events:**
-
-- `input` — every user edit and country change.
-- `change` — native telephone-input commit timing and every country change.
-- `focus` / `blur` — bubbling, composed bridges for the internal native input's non-crossing focus
-  events.
-- `lr-invalid` — no detail; one bubbling/composed alias when native validity fails.
-
-`input`/`change` detail is
-`{ value: string; inputValue: string; country: string; valid: boolean; status: PhoneNumberStatus }`.
-Programmatic property assignments and form reset/state restoration are silent.
 
 **Slots:** `label`, `hint`, `error`, `country-prefix` (optional visual before the country selector,
 such as a consumer-owned `<lr-flag>`; no flag package is imported automatically).
@@ -2767,6 +2800,8 @@ Arrow/Home/End navigation. First-party invention (no Web Awesome equivalent). Di
 of N designer-chosen named colors, the shape apps otherwise hand-roll as a row of round
 accent-color buttons. Its `options` are the _only_ choices; a `lr-color-picker`'s `swatches` are a
 shortcut list alongside a grid, a hue ramp and a text field that can still express any colour.
+Arrow/Home/End navigation starts from the swatch that actually received the keyboard event, even
+when a controlled `value` write changed the selected or remembered roving item first.
 
 **Properties:**
 
@@ -2774,9 +2809,10 @@ shortcut list alongside a grid, a hue ramp and a text field that can still expre
 label: string; icon?: unknown; gemstone?: GemstoneKey }`; a valid CSS `color` is used as the
   swatch fill, while invalid values, declaration-breaking input, and `url()` are ignored (and are
   never interpolated into a gemstone SVG). `label` is each swatch's accessible name and `title`.
-  `icon` is an optional custom shape rendered _instead of_ the plain filled circle; `gemstone`
-  selects the canonical faceted glyph when `mode="gemstone"`. An explicit `icon` wins over
-  `gemstone`.
+  `icon` is an optional custom shape rendered _instead of_ the plain filled circle. Its rendered
+  subtree stays visible but is inert and hidden from assistive technology, so the swatch button
+  remains the sole action. `gemstone` selects the canonical faceted glyph when
+  `mode="gemstone"`. An explicit `icon` wins over `gemstone`.
 - `value: string | null = null` — the currently selected option's `value` (controlled); `null`
   leaves nothing selected while keeping the first swatch tabbable.
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — scales the swatch hit-area and
@@ -2807,8 +2843,8 @@ swatch's interactive hit target, sized via `--lr-swatch-picker-hit-size` — def
 `--lr-swatch-picker-fill-size` — defaults to `--lr-size-1-5rem`, also swapped per `size` tier —
 rendered when the option has no `icon`), `swatch-icon` (the option's `icon` shape, rendered in its
 place when it has one, with its inherited `font-size` set to the same fill-size token so a `1em`
-glyph fills the wrapper). Exactly one of `swatch-fill`/`swatch-icon` is mounted per swatch, so the
-two never coexist.
+glyph fills the wrapper; the wrapper is inert and aria-hidden across the flattened subtree).
+Exactly one of `swatch-fill`/`swatch-icon` is mounted per swatch, so the two never coexist.
 
 **Themeable custom properties:** `--lr-swatch-picker-selected-color` (ring color around the
 selected swatch, defaults to `--lr-color-brand`, themeable independently of the focus ring),
@@ -2958,6 +2994,10 @@ visual: an element-only icon or intentionally visible `aria-hidden` decoration k
 independently of whether that node contributes to the accessible name. A host `aria-label` wins by
 presence and is forwarded verbatim, including `aria-label=""`.
 
+The internal `role="checkbox"` exposes explicit stateful `aria-invalid`. Visible property/slotted
+error chrome makes it `"true"` immediately; otherwise it becomes true only after interaction while
+intrinsic/custom validity fails, and explicitly returns to `"false"` when neither condition holds.
+
 Host `aria-describedby` targets in the host's own root are resolved onto the internal
 `role="checkbox"` through `ariaDescribedByElements`, so an externally-owned description remains
 valid across the shadow boundary. In supporting browsers the explicit element list intentionally
@@ -3102,6 +3142,8 @@ prefixed alias `lr-focus`/`lr-blur` (no detail). `lr-invalid` (no detail) fires 
 check finds the switch invalid.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal switch control;
+focus/click and stale keyboard/pointer activation are synchronous no-ops as soon as direct or
+fieldset disablement starts, even before the next render;
 `getForm()` returns its owning form (including an external owner selected by `form`).
 `setCustomValidity(message)` sets or clears a consumer-supplied error ("notifications are disabled
 for your plan"): a non-empty message raises `customError` and blocks submission, `''` restores the
@@ -3194,6 +3236,11 @@ crosses its sibling, it pushes that sibling to the same value instead of stoppin
 thumb remains under the pointer/key. A track click moves whichever handle is nearer the clicked
 position. `[part~="base"]` then carries `role="group"`, named from
 `label`/`aria-label`, so the pair is announced as one control.
+
+Switching `range` while the outgoing handle owns focus transfers focus to the equivalent replacement
+(single value to lower handle; either range handle to single value) without reclaiming newer
+external focus. A mode switch during a pointer drag releases capture and cancels that gesture
+without an extra commit.
 
 A named range slider submits **two same-name entries**, lower then upper. For example,
 `<lr-slider range name="window">` contributes `window=0&window=50` by default. Read both with
@@ -3832,8 +3879,9 @@ options and its messages, scaled by `size` through the shared control ladder.
 non-empty message raises `customError` and blocks submission; `setCustomValidity('')` and
 `resetValidity()` restore the group's computed validity, including `valueMissing` when a required
 group has no selected radio. `focus()` moves focus to the selected (or first enabled) radio;
-`click()` mirrors it by activating that same radio, so the group behaves like a single control
-under both APIs rather than leaving `click()` a no-op.
+`blur()` releases whichever owned radio currently contains deep focus, and `click()` mirrors
+`focus()` by activating the selected/first enabled radio. All three are inert under direct or
+fieldset disablement, so the group behaves like one native control.
 
 ## `lr-checkbox-group`
 
@@ -3875,8 +3923,14 @@ goes back to `valueMissing`. It survives every child toggle, slot change and for
 Session restore uses a `FormData` state containing the repeated selected strings; it is independent
 of the control's current `name`, preserves duplicate-value cardinality, waits for early-arriving
 option children, and falls back to an empty selection for malformed state. Restoration is silent.
-`click()` forwards focus to the first enabled checkbox, so the host behaves like a single control
-rather than a no-op under a `<label>`-driven or programmatic click.
+`focus()` targets the first enabled checkbox, `blur()` releases whichever owned checkbox contains
+focus, and `click()` activates (toggles) the first enabled checkbox. Native validity UI anchors to
+that checkbox's focusable semantic owner. A required group also leases a localized visually-hidden
+aggregate requiredness description onto its fieldset without replacing hint/error IDs; it does not
+incorrectly mark every child checkbox required.
+The fieldset exposes explicit stateful `aria-invalid`: visible property/slotted error chrome makes
+it `"true"` immediately; otherwise only interacted intrinsic/custom invalidity does so, and the
+valid/pristine state is explicitly `"false"`.
 **CSS parts:** `form-control`, `form-control-label`, `options` / `form-control-input`, `hint`,
 `error`.
 **Disabled chrome.** A disabled group — its own `disabled` or an ancestor `<fieldset disabled>` —
@@ -3944,8 +3998,10 @@ rounds the token row's corners to a full pill by re-assigning `--lr-token-input-
 **Slots:** `label`, `hint`, `error`, `start` (adornment before the tokens), `end` (adornment after
 the draft input) — both wrapped in a `hidden`-toggling span, mirroring `lr-combobox`'s identical
 `start`/`end`.
-**Events:** native-style `input` and `change` (`detail: { value: string[] }`), bubbling/composed
-`focus` and `blur` re-dispatched from the draft and inline-editor text inputs, `lr-add` (`detail: { value }`),
+**Events:** native `InputEvent` `input`, `lr-input`, native `Event` `change`, then `lr-change` for
+each list mutation; native events have no detail and both aliases carry `{ value: string[] }`.
+Native `FocusEvent` `focus`/`blur` are relayed once from the draft and inline editor, preserving
+`relatedTarget`, followed by `lr-focus`/`lr-blur`. `lr-add` (`detail: { value }`),
 `lr-remove`
 (`detail: { value, index }` — cancelable; `preventDefault()` keeps the token in `value`
 unchanged), and `lr-token-edit`
@@ -3981,8 +4037,10 @@ editor on that token; ArrowLeft/ArrowRight move between tokens (swapped under RT
 previous/next _visually_), Home/End jump to the first/last. Inside the editor, Enter commits and
 returns focus to the token, Escape cancels (and is consumed rather than left to bubble, so an
 enclosing dialog or popover does not also close), and blurring commits _without_ pulling focus
-back — a blur means the user already aimed focus elsewhere. Both the draft and inline editor relay
-one bubbling/composed host `focus` or `blur` event while their native source event stays internal.
+back — a blur means the user already aimed focus elsewhere. A changed inline edit commits and emits
+its native/alias input-change sequence before the public native/alias blur sequence. Both the draft
+and inline editor relay one native bubbling/composed host `focus` or `blur` event while their source
+event stays internal.
 `lr-token-edit` fires only for an edit
 that actually changed something: a reverted, unchanged, emptied, or (under the default
 `allowDuplicates = false`) duplicate-colliding edit is discarded silently, mirroring how a
@@ -4084,6 +4142,9 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange(start, end, direction?)`,
 `setRangeText(replacement, start?, end?, selectMode?)` (writes the result back into `value` without
 emitting an event), plus the `selectionStart`/`selectionEnd` getters (both `0` before first render).
+The native textarea receives the actual `required` state. Its `aria-invalid` is true whenever
+visible property/slotted error chrome exists, or after interaction while native validity fails;
+showing error chrome alone does not mutate `ElementInternals` validity.
 
 **Events:** `input` and `change` — Lyra-emitted, bubbling/composed, each with `detail: { value }`
 (so they carry a detail a native `input`/`change` would not); also `focus`/`blur`, re-dispatched
@@ -4444,15 +4505,16 @@ supporting text rendered below the search/grid; unset renders no hint chrome. `e
 visual size; scales the glyph and preferred emoji box while every interactive option remains
 floored at the shared `--lr-icon-button-size`.
 
-**Methods:** `getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)`, and
+**Methods:** `focus(options?)`, `blur()`, and `click()` delegate to the search input/current owned
+focus target, plus `getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)`, and
 `resetValidity()` provide the shared form-validation surface. `resetValidity()` clears only
 consumer-supplied custom validity and recomputes current intrinsic constraints; it does not change
 `value`/`defaultValue`, clear prior interaction state, or force a required-empty picker valid.
 
-**Events:** a pick emits native-style composed `input`, then `change` (both with no detail), then
-`lr-change` with `detail: { emoji }` (click, or Enter/Space on the active grid cell; also sets
-`value`). The internal search input's `focus` and `blur` are re-dispatched as bubbling, composed
-host events. `lr-invalid` (no detail) is emitted once as a cancelable alias when native validity
+**Events:** a pick emits native `InputEvent` `input`, `lr-input`, native `Event` `change`, then
+`lr-change`; both aliases carry `detail: { value }`. The internal search input's `focus` and `blur`
+are relayed once as native `FocusEvent`s preserving `relatedTarget`, followed by
+`lr-focus`/`lr-blur`. `lr-invalid` (no detail) is emitted once as a cancelable alias when native validity
 fails; preventing it also prevents the native `invalid` event that produced it. Programmatic
 `value` changes are silent.
 
@@ -4678,8 +4740,9 @@ LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; country?: st
 **Events:** `lr-change` (`detail: { value, previousValue, direction }`, **cancelable**) — fired on
 every explicit pick; if not `defaultPrevented`, the component applies the pick itself via
 `setLyraLocale(value)`. A listener calling `event.preventDefault()` leaves `value` updated but the
-active locale untouched, so a host can persist the choice first and apply it later. `blur`/`focus`
-re-dispatched from the internal trigger as bubbling, composed events. `lr-invalid` is the single
+active locale untouched, so a host can persist the choice first and apply it later. `focus`/`blur`
+are relayed once from the trigger as native `FocusEvent`s preserving `relatedTarget`, followed
+respectively by `lr-focus`/`lr-blur`. `lr-invalid` is the single
 bubbling/composed, cancelable alias of a failed native validity check.
 
 `direction` (`'ltr' | 'rtl'`, typed as `LyraLocaleDirection`) is the picked locale's writing
@@ -4702,7 +4765,8 @@ longer leaves the host to work the direction out. `getLyraLocaleDirection()` is 
 choice applied on boot).
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` — all forward to the internal trigger
-button, same convention as `lr-select`'s identical trio. `setCustomValidity(message)` sets or clears
+button and synchronously no-op under direct or fieldset disablement, same convention as
+`lr-select`'s identical trio. `setCustomValidity(message)` sets or clears
 a consumer-supplied error ("that locale is not enabled for your account"): a non-empty message
 raises `customError` and blocks submission, `''` restores the picker's own computed validity so a
 required picker with nothing committed goes back to `valueMissing`. It survives every

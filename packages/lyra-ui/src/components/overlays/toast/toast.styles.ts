@@ -19,9 +19,17 @@ export const styles = css`
     gap: var(--lr-toast-gap);
     inline-size: min(var(--lr-toast-width), 100%);
     max-inline-size: 100%;
+    min-block-size: 0;
+    max-block-size: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
   ::slotted(*) {
     pointer-events: auto;
+  }
+  ::slotted([data-toast-queued]) {
+    display: none !important;
+    pointer-events: none;
   }
 
   :host([placement^='top']) [part='stack'] {

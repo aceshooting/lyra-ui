@@ -64,6 +64,31 @@ describe("icon slot", () => {
     ) as HTMLSlotElement;
     expect(iconSlot.assignedElements().length).to.equal(1);
   });
+
+  it("keeps nested interactive title-icon content visible but inert", async () => {
+    const root = await fixture<HTMLElement>(html`
+      <div>
+        <button id="outside-widget-title-icon" type="button">Outside</button>
+        <lr-widget label="Load">
+          <a id="nested-widget-title-icon" slot="icon" href="#nested-widget-title-icon">
+            Decorative title icon
+          </a>
+          content
+        </lr-widget>
+      </div>
+    `);
+    const el = root.querySelector<LyraWidget>('lr-widget')!;
+    const outside = root.querySelector<HTMLButtonElement>('#outside-widget-title-icon')!;
+    const nested = root.querySelector<HTMLAnchorElement>('#nested-widget-title-icon')!;
+    const slot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="icon"]')!;
+
+    expect(slot.closest<HTMLElement>('[inert]')?.getAttribute('aria-hidden')).to.equal('true');
+    expect(nested.getBoundingClientRect().width).to.be.greaterThan(0);
+    outside.focus();
+    nested.focus();
+    expect(document.activeElement?.id).to.equal(outside.id);
+    await expect(el).to.be.accessible();
+  });
 });
 
 describe("collapse-icon slot override", () => {
@@ -595,6 +620,27 @@ describe("views", () => {
     ) as HTMLElement;
     expect(icon.getAttribute("aria-hidden")).to.equal("true");
     expect(icon.textContent).to.equal("decorative icon text");
+  });
+
+  it("keeps an interactive view icon inert beneath the real toggle button", async () => {
+    const nestedIcon = html`<widget-test-shadow-input></widget-test-shadow-input>`;
+    const el = await fixture<LyraWidget>(html`
+      <lr-widget
+        label="Usage"
+        .views=${[{ id: "chart", label: "Chart", icon: nestedIcon }]}
+      ></lr-widget>
+    `);
+    const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="view-toggle"]')!;
+    const icon = toggle.querySelector<HTMLElement>('[part="view-icon"]')!;
+    const custom = icon.querySelector<HTMLElement>('widget-test-shadow-input')!;
+    const nested = custom.shadowRoot!.querySelector<HTMLInputElement>('input')!;
+
+    expect(icon.getAttribute('aria-hidden')).to.equal('true');
+    expect(icon.hasAttribute('inert')).to.be.true;
+    toggle.focus();
+    nested.focus();
+    expect(el.shadowRoot!.activeElement === toggle).to.equal(true);
+    await expect(el).to.be.accessible();
   });
 
   it("applies a first-occurrence policy to duplicate view ids", async () => {
@@ -1370,6 +1416,25 @@ it("names the fullscreen dialog from a slotted label, not just the label attribu
   await el.updateComplete;
 
   expect(base.getAttribute("aria-label")).to.equal("Energy production");
+});
+
+it("derives a rich slotted dialog name from aria-labelledby and image alternatives", async () => {
+  const el = (await fixture(html`
+    <lr-widget expandable>
+      <span slot="label" aria-labelledby="widget-semantic-name">Visible fallback</span>
+      <span id="widget-semantic-name" hidden><img alt="Energy diagram" /></span>
+      content
+    </lr-widget>
+  `)) as LyraWidget;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  (el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+
+  expect(base.getAttribute("aria-label")).to.equal("Energy diagram");
+  el.querySelector("img")!.alt = "Updated energy diagram";
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  await el.updateComplete;
+  expect(base.getAttribute("aria-label")).to.equal("Updated energy diagram");
 });
 
 it("lets a host aria-label override both label and a slotted label for the fullscreen dialog name", async () => {

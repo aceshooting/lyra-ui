@@ -1,9 +1,17 @@
 import { html, nothing, type PropertyValues, type ReactiveController, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import {
+  AnchoredValidityController,
+  resolveValidityAnchor,
+  VALIDITY_ANCHOR,
+} from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
-import { nextId } from '../../../internal/a11y.js';
+import { nextId, srOnly } from '../../../internal/a11y.js';
+import {
+  acquireAriaDescription,
+  type AriaDescriptionLease,
+} from '../../../internal/aria-controls.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './checkbox-group.styles.js';
@@ -63,6 +71,9 @@ export type CheckboxGroupOrientation = 'horizontal' | 'vertical';
  * `<lr-checkbox-group>` — a form-associated group of `<lr-checkbox>` elements.
  * Long label/hint/error content and horizontal option labels remain contained in a 320px LTR or
  * RTL allocation; options wrap without shrinking their checkbox targets.
+ * Its fieldset owns aggregate `aria-invalid` state and, while required, a localized hidden
+ * requiredness description that composes with existing hint/error relationships without marking
+ * every child checkbox required.
  *
  * @customElement lr-checkbox-group
  * @slot - `<lr-checkbox>` children.
@@ -121,7 +132,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static formAssociated = true;
-  static override styles = [LyraElement.styles, sizes, styles];
+  static override styles = [LyraElement.styles, sizes, srOnly, styles];
 
   static override properties = {
     customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
@@ -184,6 +195,9 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   private labelId = nextId('checkbox-group-label');
   private hintId = nextId('checkbox-group-hint');
   private errorId = nextId('checkbox-group-error');
+  private requiredDescriptionId = nextId('checkbox-group-required');
+  private requiredDescriptionLease?: AriaDescriptionLease;
+  private requiredDescriptionTarget?: HTMLElement;
   // Inherited from an ancestor `<fieldset disabled>` via `formDisabledCallback()`.
   // Tracked separately from the consumer's own `disabled` (see `effectiveDisabled`)
   // so a consumer's explicit `disabled` survives the fieldset re-enabling instead
@@ -485,6 +499,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     // schedules a redundant follow-up update and triggers Lit's change-in-update warning.
     this.onSlotChange();
     this.armChildObserver();
+    if (this.hasUpdated) this.syncRequiredDescription();
   }
 
   private armChildObserver(): void {
@@ -518,6 +533,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.releaseRequiredDescription();
     this.removeEventListener('input', this.onChildEvent);
     this.removeEventListener('change', this.onChildEvent);
     this.removeEventListener('lr-change', this.onChildEvent);
@@ -576,10 +592,37 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('size')) this.propagateSize();
+    this.syncRequiredDescription();
   }
 
-  /** @internal */
-  [VALIDITY_ANCHOR](): HTMLElement | null { return this.renderRoot?.querySelector('[part~="options"]') ?? null; }
+  /** Owns only the aggregate requiredness text; hint and error remain Lit's baseline relationship. */
+  private syncRequiredDescription(): void {
+    const target = this.renderRoot.querySelector<HTMLElement>('fieldset');
+    const description = this.renderRoot.querySelector<HTMLElement>(`#${this.requiredDescriptionId}`);
+    if (!this.required || !target || !description) {
+      this.releaseRequiredDescription();
+      return;
+    }
+    if (this.requiredDescriptionTarget !== target) {
+      this.releaseRequiredDescription();
+      this.requiredDescriptionTarget = target;
+      this.requiredDescriptionLease = acquireAriaDescription(target, [description]);
+      return;
+    }
+    this.requiredDescriptionLease?.update([description]);
+  }
+
+  private releaseRequiredDescription(): void {
+    this.requiredDescriptionLease?.release();
+    this.requiredDescriptionLease = undefined;
+    this.requiredDescriptionTarget = undefined;
+  }
+
+  /** @internal Aggregate validation targets the first enabled checkbox's focusable semantic owner. */
+  [VALIDITY_ANCHOR](): HTMLElement | null {
+    const first = this.firstEnabledBox();
+    return resolveValidityAnchor(first) ?? first ?? null;
+  }
   get form(): HTMLFormElement | null { return getFormOwner(this.internals); }
   set form(owner: FormOwnerValue) { setFormOwner(this, owner); }
   getForm(): HTMLFormElement | null { return getFormOwner(this.internals); }
@@ -619,14 +662,30 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.requestUpdate();
   }
 
-  private focusFirstControl(): void {
-    const first = this.boxes.find((box) => !box.effectiveDisabled);
-    first?.focus();
+  /** Synchronous disabled truth, including a fieldset cascade not yet reflected by callbacks. */
+  private get liveDisabled(): boolean {
+    return this.effectiveDisabled || this.matches(':disabled');
   }
 
-  /** Forwards host clicks to the first enabled checkbox in the group. */
+  private firstEnabledBox(): LyraCheckbox | undefined {
+    return this.boxes.find((box) => !box.effectiveDisabled && !box.matches(':disabled'));
+  }
+
+  /** Moves focus to the first enabled checkbox. */
+  override focus(options?: FocusOptions): void {
+    if (this.liveDisabled) return;
+    this.firstEnabledBox()?.focus(options);
+  }
+
+  /** Removes focus from whichever owned checkbox currently contains the deep active element. */
+  override blur(): void {
+    this.boxes.find((box) => box.matches(':focus-within'))?.blur();
+  }
+
+  /** Activates the first enabled checkbox, matching native `click()` rather than acting as focus. */
   override click(): void {
-    this.focusFirstControl();
+    if (this.liveDisabled) return;
+    this.firstEnabledBox()?.click();
   }
 
   formResetCallback(): void { this.boxes.forEach((box) => box.resetFromGroup()); this.touched = false; this.hasInteracted = false; this.sync(); }
@@ -648,13 +707,15 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   override render(): TemplateResult {
     const hasLabel = this.hasLabelSlot || Boolean(this.label) || this.withLabel;
     const hasHint = this.hasHintSlot || Boolean(this.hint) || this.withHint;
-    const described = [hasHint ? this.hintId : '', this.hasErrorSlot || this.errorText ? this.errorId : ''].filter(Boolean).join(' ') || nothing;
+    const hasError = this.hasErrorSlot || Boolean(this.errorText);
+    const described = [hasHint ? this.hintId : '', hasError ? this.errorId : ''].filter(Boolean).join(' ') || nothing;
+    const invalid = hasError || (this.touched && !this.internals.validity.valid);
     return html`<fieldset
       part="form-control"
       ?disabled=${this.effectiveDisabled}
       aria-label=${this.accessibleLabel || nothing}
       aria-describedby=${described}
-      aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
+      aria-invalid=${invalid ? 'true' : 'false'}
     >
       <legend part="form-control-label" id=${this.labelId} ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot></legend>
       <div part="options form-control-input">
@@ -662,6 +723,12 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
       </div>
       <div part="hint" id=${this.hintId} ?hidden=${!hasHint}><slot name="hint" @slotchange=${this.onSlotChange}>${this.hint}</slot></div>
       <div part="error" id=${this.errorId} ?hidden=${!this.errorText && !this.hasErrorSlot}><slot name="error" @slotchange=${this.onSlotChange}>${this.errorText}</slot></div>
+      <span
+        id=${this.requiredDescriptionId}
+        class="sr-only"
+        data-required-description
+        ?hidden=${!this.required}
+      >${this.localize('checkboxGroupRequired')}</span>
     </fieldset>`;
   }
 }

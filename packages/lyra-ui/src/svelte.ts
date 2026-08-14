@@ -213,7 +213,7 @@ import type { LyraRating, LyraRatingEventMap } from './components/overlays/ratin
 import type { LyraSkeleton } from './components/overlays/skeleton/skeleton.class.js';
 import type { LyraSpinner } from './components/overlays/spinner/spinner.class.js';
 import type { LyraToastItem, LyraToastItemEventMap } from './components/overlays/toast/toast-item.class.js';
-import type { LyraToast } from './components/overlays/toast/toast.class.js';
+import type { LyraToast, LyraToastEventMap } from './components/overlays/toast/toast.class.js';
 import type { LyraChunkInspector, LyraChunkInspectorEventMap } from './components/retrieval/chunk-inspector/chunk-inspector.class.js';
 import type { LyraCitationBadge, LyraCitationBadgeEventMap } from './components/retrieval/citation-badge/citation-badge.class.js';
 import type { LyraClaimEvidence, LyraClaimEvidenceEventMap } from './components/retrieval/claim-evidence/claim-evidence.class.js';
@@ -612,7 +612,9 @@ export type LyraAnimatedImageSvelteProps = LyraSvelteElementProps<
   LyraAnimatedImageEventMap,
   | 'blur'
   | 'focus'
+  | 'lr-blur'
   | 'lr-error'
+  | 'lr-focus'
   | 'lr-load'
   | 'lr-pause'
   | 'lr-play',
@@ -870,7 +872,9 @@ export type LyraAttachmentTriggerSvelteProps = LyraSvelteElementProps<
   | 'blur'
   | 'focus'
   | 'lr-audio-request'
+  | 'lr-blur'
   | 'lr-camera-request'
+  | 'lr-focus'
   | 'lr-pick',
 never,
   {
@@ -929,7 +933,9 @@ export type LyraAvPlayerSvelteProps = LyraSvelteElementProps<
   | 'focus'
   | 'loadedmetadata'
   | 'lr-anchor-result'
+  | 'lr-blur'
   | 'lr-cue-change'
+  | 'lr-focus'
   | 'lr-highlight-activate'
   | 'lr-load'
   | 'lr-pause'
@@ -1475,6 +1481,7 @@ export type LyraCalloutSvelteProps = LyraSvelteElementProps<
   | 'appearance'
   | 'closable'
   | 'heading'
+  | 'headingLevel'
   | 'inline'
   | 'locale'
   | 'open'
@@ -1492,6 +1499,7 @@ export type LyraCalloutSvelteProps = LyraSvelteElementProps<
   | '--lr-callout-padding',
   {
     'accessible-label'?: LyraCallout['accessibleLabel'];
+    'heading-level'?: LyraCallout['headingLevel'];
   }
 >;
 
@@ -2447,6 +2455,7 @@ export type LyraContactViewerSvelteProps = LyraSvelteElementProps<
   LyraContactViewer,
   | 'activeHighlightId'
   | 'anchor'
+  | 'headingLevel'
   | 'highlights'
   | 'locale'
   | 'maxHeight'
@@ -2461,6 +2470,7 @@ export type LyraContactViewerSvelteProps = LyraSvelteElementProps<
   | '--lr-contact-viewer-max-height',
   {
     'active-highlight-id'?: LyraContactViewer['activeHighlightId'];
+    'heading-level'?: LyraContactViewer['headingLevel'];
     'max-height'?: LyraContactViewer['maxHeight'];
   }
 >;
@@ -2995,6 +3005,7 @@ export type LyraDialogSvelteProps = LyraSvelteElementProps<
   | 'accessibleLabel'
   | 'closable'
   | 'heading'
+  | 'headingLevel'
   | 'label'
   | 'lightDismiss'
   | 'locale'
@@ -3031,6 +3042,7 @@ export type LyraDialogSvelteProps = LyraSvelteElementProps<
   {
     'accessible-label'?: LyraDialog['accessibleLabel'];
     'aria-label'?: LyraUnknownAttributeValue;
+    'heading-level'?: LyraDialog['headingLevel'];
     'light-dismiss'?: LyraDialog['lightDismiss'];
     'no-header'?: LyraDialog['noHeader'];
     'with-footer'?: LyraDialog['withFooter'];
@@ -3345,6 +3357,7 @@ export type LyraDrawerSvelteProps = LyraSvelteElementProps<
   | 'closable'
   | 'contained'
   | 'heading'
+  | 'headingLevel'
   | 'label'
   | 'lightDismiss'
   | 'locale'
@@ -3387,6 +3400,7 @@ export type LyraDrawerSvelteProps = LyraSvelteElementProps<
   {
     'accessible-label'?: LyraDrawer['accessibleLabel'];
     'aria-label'?: LyraUnknownAttributeValue;
+    'heading-level'?: LyraDrawer['headingLevel'];
     'light-dismiss'?: LyraDrawer['lightDismiss'];
     'no-header'?: LyraDrawer['noHeader'];
     'with-footer'?: LyraDrawer['withFooter'];
@@ -3579,7 +3593,10 @@ export type LyraEmojiPickerSvelteProps = LyraSvelteElementProps<
   | 'change'
   | 'focus'
   | 'input'
+  | 'lr-blur'
   | 'lr-change'
+  | 'lr-focus'
+  | 'lr-input'
   | 'lr-invalid',
   | '--lr-emoji-picker-active-bg'
   | '--lr-emoji-picker-control-gap'
@@ -3606,6 +3623,7 @@ export type LyraEmptySvelteProps = LyraSvelteElementProps<
   | 'compact'
   | 'description'
   | 'heading'
+  | 'headingLevel'
   | 'locale'
   | 'strings',
   {},
@@ -3614,7 +3632,9 @@ never,
   | '--lr-empty-compact-font-size'
   | '--lr-empty-compact-gap'
   | '--lr-empty-compact-padding',
-  {}
+  {
+    'heading-level'?: LyraEmpty['headingLevel'];
+  }
 >;
 
 export type LyraEntityCardSvelteProps = LyraSvelteElementProps<
@@ -4712,7 +4732,10 @@ export type LyraImageComparerSvelteProps = LyraSvelteElementProps<
   | 'blur'
   | 'change'
   | 'focus'
+  | 'input'
+  | 'lr-blur'
   | 'lr-change'
+  | 'lr-focus'
   | 'lr-position-change',
   | '--divider-width'
   | '--handle-size'
@@ -5330,7 +5353,9 @@ export type LyraLocalePickerSvelteProps = LyraSvelteElementProps<
   LyraLocalePickerEventMap,
   | 'blur'
   | 'focus'
+  | 'lr-blur'
   | 'lr-change'
+  | 'lr-focus'
   | 'lr-invalid',
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
@@ -6360,6 +6385,8 @@ export type LyraPanZoomSvelteProps = LyraSvelteElementProps<
   LyraPanZoomEventMap,
   | 'blur'
   | 'focus'
+  | 'lr-blur'
+  | 'lr-focus'
   | 'lr-zoom-change',
   | '--lr-pan-zoom-min-block-size'
   | '--lr-pan-zoom-zoom',
@@ -6456,6 +6483,10 @@ export type LyraPhoneInputSvelteProps = LyraSvelteElementProps<
   | 'change'
   | 'focus'
   | 'input'
+  | 'lr-blur'
+  | 'lr-change'
+  | 'lr-focus'
+  | 'lr-input'
   | 'lr-invalid',
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
@@ -6588,6 +6619,8 @@ export type LyraPlaybackSvelteProps = LyraSvelteElementProps<
   LyraPlaybackEventMap,
   | 'blur'
   | 'focus'
+  | 'lr-blur'
+  | 'lr-focus'
   | 'lr-pause'
   | 'lr-play'
   | 'lr-step',
@@ -8867,6 +8900,7 @@ export type LyraTaskListSvelteProps = LyraSvelteElementProps<
   | 'compact'
   | 'expanded'
   | 'frame'
+  | 'headingLevel'
   | 'items'
   | 'label'
   | 'locale'
@@ -8885,7 +8919,9 @@ export type LyraTaskListSvelteProps = LyraSvelteElementProps<
   | '--lr-task-list-running-color'
   | '--lr-task-list-spin'
   | '--lr-task-list-success-color',
-  {}
+  {
+    'heading-level'?: LyraTaskList['headingLevel'];
+  }
 >;
 
 export type LyraTerminalSvelteProps = LyraSvelteElementProps<
@@ -9276,8 +9312,8 @@ export type LyraToastSvelteProps = LyraSvelteElementProps<
   | 'locale'
   | 'placement'
   | 'strings',
-  {},
-never,
+  LyraToastEventMap,
+  | 'lr-toast-overflow',
   | '--gap'
   | '--lr-toast-accent-color'
   | '--lr-toast-accent-width'
@@ -9358,6 +9394,10 @@ export type LyraTokenInputSvelteProps = LyraSvelteElementProps<
   | 'focus'
   | 'input'
   | 'lr-add'
+  | 'lr-blur'
+  | 'lr-change'
+  | 'lr-focus'
+  | 'lr-input'
   | 'lr-invalid'
   | 'lr-remove'
   | 'lr-token-edit',
@@ -9861,6 +9901,8 @@ export type LyraVideoSvelteProps = LyraSvelteElementProps<
   | 'error'
   | 'focus'
   | 'loadedmetadata'
+  | 'lr-blur'
+  | 'lr-focus'
   | 'pause'
   | 'play'
   | 'timeupdate'
@@ -9889,6 +9931,8 @@ export type LyraVideoPlaylistSvelteProps = LyraSvelteElementProps<
   LyraVideoPlaylistEventMap,
   | 'blur'
   | 'focus'
+  | 'lr-blur'
+  | 'lr-focus'
   | 'lr-video-change',
   | '--lr-video-playlist-item-current-background'
   | '--lr-video-playlist-item-current-border-color',
@@ -10151,7 +10195,9 @@ export type LyraZoomableFrameSvelteProps = LyraSvelteElementProps<
   | 'blur'
   | 'error'
   | 'focus'
-  | 'load',
+  | 'load'
+  | 'lr-blur'
+  | 'lr-focus',
   | '--lr-zoomable-frame-control-hover-background'
   | '--lr-zoomable-frame-zoom',
   {

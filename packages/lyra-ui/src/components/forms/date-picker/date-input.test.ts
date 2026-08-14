@@ -14,7 +14,7 @@ it('parses typed input into an ISO value and emits change', async () => {
   expect(el.value).to.equal('2026-07-15');
 });
 
-it('forwards host click to the native input and suppresses it while effectively disabled', async () => {
+it('forwards host actions and suppresses click/focus in a same-task fieldset disablement', async () => {
   const form = (await fixture(html`
     <form><fieldset><lr-date-input></lr-date-input></fieldset></form>
   `)) as HTMLFormElement;
@@ -28,7 +28,93 @@ it('forwards host click to the native input and suppresses it while effectively 
   expect(clicks).to.equal(1);
   fieldset.disabled = true;
   el.click();
+  el.focus();
   expect(clicks).to.equal(1);
+  expect(el.shadowRoot!.activeElement === null).to.be.true;
+});
+
+it('blocks stale text input/change handlers when capture disables the control in the same task', async () => {
+  for (const authority of ['own', 'fieldset'] as const) {
+    for (const type of ['input', 'change'] as const) {
+      const form = await fixture<HTMLFormElement>(html`
+        <form><fieldset><lr-date-input value="2026-07-15"></lr-date-input></fieldset></form>
+      `);
+      const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+      const el = form.querySelector('lr-date-input') as LyraDateInput;
+      const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+      let captures = 0;
+      let bubbles = 0;
+      el.addEventListener(type, () => {
+        captures++;
+        if (authority === 'own') el.disabled = true;
+        else fieldset.disabled = true;
+      }, { capture: true });
+      form.addEventListener(type, () => bubbles++);
+
+      input.value = '2026-07-20';
+      const source = type === 'input'
+        ? new InputEvent('input', {
+            bubbles: true,
+            composed: true,
+            data: '0',
+            inputType: 'insertText',
+          })
+        : new Event('change', { bubbles: true, composed: true });
+      input.dispatchEvent(source);
+
+      expect(captures, `${authority} ${type}: only the captured source is visible`).to.equal(1);
+      expect(bubbles, `${authority} ${type}: no raw or relayed event escapes`).to.equal(0);
+      expect(el.value, `${authority} ${type}: committed value`).to.equal('2026-07-15');
+      expect(
+        (el as unknown as { inputRelayedSinceCommit: boolean }).inputRelayedSinceCommit,
+        `${authority} ${type}: relay bookkeeping`,
+      ).to.be.false;
+    }
+  }
+});
+
+it('blocks stale picker input/change handlers when capture disables the control in the same task', async () => {
+  for (const authority of ['own', 'fieldset'] as const) {
+    for (const type of ['input', 'change'] as const) {
+      const form = await fixture<HTMLFormElement>(html`
+        <form><fieldset><lr-date-input value="2026-07-15" open></lr-date-input></fieldset></form>
+      `);
+      const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+      const el = form.querySelector('lr-date-input') as LyraDateInput;
+      const picker = el.shadowRoot!.querySelector('lr-date-picker') as LyraDatePicker;
+      await picker.updateComplete;
+      let captures = 0;
+      let bubbles = 0;
+      const restoreFocusRequests: boolean[] = [];
+      const originalHide = el.hide;
+      el.hide = (restoreFocus = false): Promise<void> => {
+        restoreFocusRequests.push(restoreFocus);
+        return Promise.resolve();
+      };
+      el.addEventListener(type, () => {
+        captures++;
+        if (authority === 'own') el.disabled = true;
+        else fieldset.disabled = true;
+      }, { capture: true });
+      form.addEventListener(type, () => bubbles++);
+
+      picker.value = '2026-07-20';
+      const source = type === 'input'
+        ? new InputEvent('input', { bubbles: true, composed: true })
+        : new Event('change', { bubbles: true, composed: true });
+      picker.dispatchEvent(source);
+      el.hide = originalHide;
+
+      expect(captures, `${authority} picker ${type}: only the captured source is visible`).to.equal(1);
+      expect(bubbles, `${authority} picker ${type}: no raw or relayed event escapes`).to.equal(0);
+      expect(el.value, `${authority} picker ${type}: committed value`).to.equal('2026-07-15');
+      expect(
+        restoreFocusRequests.includes(true),
+        `${authority} picker ${type}: the stale picker handler did not request a focus-restoring close`,
+      ).to.be.false;
+      expect(el.open, `${authority} picker ${type}: disable-close calls were observed without closing`).to.be.true;
+    }
+  }
 });
 
 it('reverts an unparseable typed date to the last committed display text and flags badInput', async () => {
@@ -276,13 +362,22 @@ it('propagates disable-past/disable-future/with-outside-days to the nested lr-da
   expect(picker.withOutsideDays).to.be.true;
 });
 
-it('links the expand-button to the popup via aria-controls', async () => {
+it('links both popup-opening semantic owners to the dialog with explicit closed/open state', async () => {
   const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
   await el.updateComplete;
   const expandBtn = el.shadowRoot!.querySelector('[part="expand-button"]') as HTMLElement;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
   const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
   expect(popup.id, 'expected the popup to have an id').to.not.equal('');
   expect(expandBtn.getAttribute('aria-controls')).to.equal(popup.id);
+  expect(input.getAttribute('role')).to.equal('combobox');
+  expect(input.getAttribute('aria-controls')).to.equal(popup.id);
+  expect(input.getAttribute('aria-haspopup')).to.equal('dialog');
+  expect(input.getAttribute('aria-expanded')).to.equal('false');
+
+  await el.show();
+  await el.updateComplete;
+  expect(input.getAttribute('aria-expanded')).to.equal('true');
 });
 
 it('shows a formatted display value', async () => {
@@ -2117,6 +2212,62 @@ describe('reviewed date-input parity surface', () => {
     el.valueAsDate = new Date(2026, 6, 20);
     expect(el.value).to.equal('2026-07-20');
     expect(el.valueAsDate?.getDate()).to.equal(20);
+  });
+
+  it('accepts branded Date values from another realm for values, ranges, and disabled dates', async () => {
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+    const ForeignDate = frame.contentWindow!.Date;
+    const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+
+    const single = new ForeignDate(2026, 6, 12);
+    expect(single instanceof Date).to.equal(false);
+    el.valueAsDate = single;
+    expect(el.value).to.equal('2026-07-12');
+
+    el.mode = 'range';
+    el.valueAsRange = {
+      from: new ForeignDate(2026, 6, 20),
+      to: new ForeignDate(2026, 6, 10),
+    };
+    expect(el.value).to.equal('2026-07-10/2026-07-20');
+
+    el.mode = 'single';
+    el.value = '2026-07-15';
+    el.disabledDates = [new ForeignDate(2026, 6, 16)];
+    el.show();
+    await el.updateComplete;
+    const picker = el.shadowRoot!.querySelector('lr-date-picker') as LyraDatePicker;
+    await picker.updateComplete;
+    const disabledDay = picker.shadowRoot!.querySelector('[data-date="2026-07-16"]') as HTMLButtonElement;
+    expect(disabledDay.disabled).to.equal(true);
+  });
+
+  it('rejects structural Date lookalikes for values, ranges, and disabled dates', async () => {
+    const forged = {
+      getTime: () => new Date(2026, 6, 16).getTime(),
+      getFullYear: () => 2026,
+      getMonth: () => 6,
+      getDate: () => 16,
+      [Symbol.toStringTag]: 'Date',
+    } as unknown as Date;
+    const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+
+    el.valueAsDate = forged;
+    expect(el.value).to.equal('');
+
+    el.mode = 'range';
+    el.valueAsRange = { from: forged, to: new Date(2026, 6, 20) };
+    expect(el.value).to.equal('');
+
+    el.mode = 'single';
+    el.value = '2026-07-15';
+    el.disabledDates = [forged];
+    el.show();
+    await el.updateComplete;
+    const picker = el.shadowRoot!.querySelector('lr-date-picker') as LyraDatePicker;
+    await picker.updateComplete;
+    const ordinaryDay = picker.shadowRoot!.querySelector('[data-date="2026-07-16"]') as HTMLButtonElement;
+    expect(ordinaryDay.disabled).to.equal(false);
   });
 
   it('makes clear() inert while blank, disabled, or readonly and emits the reviewed trio otherwise', async () => {

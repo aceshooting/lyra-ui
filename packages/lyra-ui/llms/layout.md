@@ -393,8 +393,9 @@ toggle button. Not emitted when a consumer assigns `fullscreen` directly), `lr-v
 active view's `id`. Not emitted when a consumer sets `activeView` directly)
 
 **Slots:** default (the panel body, rendered only while `views` is empty), `icon` (optional leading
-icon in the title row), `label` (rich label content, overrides the `label` attribute), `sublabel`
-(rich sublabel content, overrides the `sublabel` attribute), `actions` (header action controls,
+icon in the title row; its flattened subtree is inert and aria-hidden), `label` (rich label content,
+overrides the `label` attribute), `sublabel` (rich sublabel content, overrides the `sublabel`
+attribute), `actions` (header action controls,
 rendered before the collapse/expand buttons), `collapse-icon` (replaces the built-in chevron in the
 collapse toggle via native slot fallback; its assigned content is decorative, inert, and aria-hidden
 so the outer toggle remains the only action; only meaningful while `collapsible`),
@@ -407,7 +408,8 @@ slot per `views` entry, used instead of the default slot
 **CSS parts:** `base`, `header`, `title`, `icon` (wrapper around the `icon` slot, hidden entirely when
 empty), `label-group` (wrapper around the label and sublabel), `label`, `sublabel`, `actions`,
 `view-toggles` (the header toggle-button group, only rendered when `views` is non-empty),
-`view-toggle` (a single view toggle button), `view-icon` (a decorative view glyph), `view-label`
+`view-toggle` (a single view toggle button), `view-icon` (a decorative view glyph whose rendered
+subtree is inert and aria-hidden, leaving the toggle as the sole action), `view-label`
 (a view's visible label), `collapse-button`, `fullscreen-button`, `body`, `backdrop`
 
 Both header rows (`actions` and `view-toggles`) scroll horizontally on their own when the header is
@@ -585,9 +587,13 @@ summaries. A registered locale or the instance's `strings` override can customiz
 Horizontal Left/Right keys follow logical direction and swap under RTL; vertical carousels use
 Up/Down without an RTL inversion. Home and End move to the first and final reachable start. The
 populated multi-slide state remains accessible at a 320px allocation.
+If a controlled page/index/page-size change or slide removal would make the currently focused slide
+inert or disconnected, focus moves to the stable `scroll-container viewport` before exclusion. A
+newer external focus destination is never reclaimed.
 
 **Slots:** default slides, `previous-icon`, and `next-icon`. Named icon slots replace only the
-decorative glyph content; Lyra retains the localized button names and minimum hit areas.
+decorative glyph content; their flattened subtrees remain visible but are inert and aria-hidden.
+Lyra retains the localized native-button names, actions, and minimum hit areas.
 
 **CSS parts:** `base carousel` (same region node), `scroll-container viewport` (same focusable
 scroll port), `navigation`, `navigation-button`, `navigation-button-previous` /
@@ -780,6 +786,8 @@ Implements the WAI-ARIA APG tabs pattern. With the default `activation="auto"`, 
 under RTL, or Up/Down when `placement` is `start`/`end`) move focus *and* selection together; with
 `activation="manual"` they move focus only and Enter/Space commits. Home/End jump to the first/last
 enabled tab, and a roving `tabindex` follows the focused tab.
+Keyboard handling starts from the real event-target tab (then actual shadow focus), so a controlled
+`active` write cannot make Arrow/Delete/Enter operate on a different remembered tab.
 An enabled `closable` `<lr-tab>` also puts `aria-keyshortcuts="Delete"` on its real tab button.
 Delete emits that descriptor's `lr-close` request without creating a second tab stop or changing
 selection.
@@ -1337,6 +1345,8 @@ A single-select button row with the WAI-ARIA APG `radiogroup` contract built in:
 both select immediately, like a native radio group), cyclic Arrow/Home/End navigation among
 non-disabled items. First-party invention (no `wa-*`/`sl-*` counterpart) — "choose exactly one of N
 labeled options, rendered as a button row" is ubiquitous settings/filter-panel UI.
+Navigation starts from the segment that actually received the keyboard event, even when a
+controlled `value` write changed the selected or remembered roving item first.
 
 **Properties:**
 - `items: SegmentedItem[] = []` (attribute: false) — `SegmentedItem { value: string; label: string;
@@ -1942,8 +1952,14 @@ same precedence supplies the tooltip text when that opt-in flyout is visible.
 **Methods:** `click(): void` activates the internal native link or button; it is a no-op while
 `disabled`.
 
+If an `href`/`disabled` update replaces a focused link or button, focus follows an available native
+replacement. When that replacement is disabled or inert, focus returns to the available element
+that led into the item, or to the stable owning rail surface when no return target exists. A newer
+external focus move is always preserved, and this repair dispatches no activation event.
+
 **Slots:** default (the visible label), `icon` (the leading decorative icon, always hidden from
-assistive technology; the default slot or host `aria-label` names the native control).
+assistive technology and inert across its flattened subtree; the default slot or host `aria-label`
+names the native control, which remains the sole action).
 
 **CSS parts:** `base`, `icon`, `label`, `tooltip` (the hover/focus label flyout, only rendered while
 `tooltip` is set, the item is `icon-only`, and it is hovered or focused).
@@ -1988,9 +2004,9 @@ sidebar that's a permanent docked pane on a wide screen but a modal on a phone.
   (`h1`–`h6` or `[role="heading"]`) among the slotted header content wins if present, otherwise the
   header slot's combined text content is used (mirrors `lr-dialog`'s `detectHeading()` fallback,
   via `aria-label` rather than `aria-labelledby` since the header content is light DOM while
-  `[part="panel"]` is in shadow DOM). A panel opened with neither `label` nor header content still
-  renders `role="dialog"` with no accessible name. Unused in the inline presentation, which has no
-  dialog semantics to name.
+  `[part="panel"]` is in shadow DOM). A panel opened with neither `label` nor header content uses
+  the localized `responsivePanel` fallback (`"Panel"` in the default locale), so its dialog is
+  never unnamed. Unused in the inline presentation, which has no dialog semantics to name.
 - `mobileBreakpoint: string = '768px'` (attribute `mobile-breakpoint`) — CSS length passed to
   `matchMedia` as `(max-width: <this>)` to decide, in `mode="auto"`, whether the effective
   presentation is `'overlay'` (below/at this width) or `'inline'` (above it).
@@ -2131,7 +2147,9 @@ the WAI-ARIA "menu button" pattern —
 **Properties:**
 - `open: boolean = false` (reflected) — controls the anchored/trigger-owned popup. A triggerless,
   unanchored standalone menu remains visible so an exact `sl-menu` → `lr-menu` tag rename keeps its
-  presentation
+  presentation. Every post-mount property or attribute write runs the same synchronous,
+  cancelable preflight as `show()`/`hide()`; a veto leaves open state, focus, roving state, and the
+  type-ahead session untouched. Initial open markup remains silent
 - `placement?: Placement` (reflected — resolved through `rtlAwarePlacement()` (`internal/rtl.ts`),
   then forwarded to `place()`; defaults to whatever `place()` itself defaults to. A `left`/`right`
   side is mirrored under `dir="rtl"`, so e.g. `placement="left-start"` still anchors to the menu's
@@ -2139,8 +2157,8 @@ the WAI-ARIA "menu button" pattern —
 - `label: string = 'Menu'` — accessible name for the `role="menu"` popup; override with something
   specific (e.g. "Row actions") when a page has more than one menu. A host-level `aria-label`
   attribute takes precedence over both this prop and the localized default (unset by default, so
-  a no-op for existing consumers), matching `lr-select`/`lr-model-select`'s
-  `this.getAttribute('aria-label') || <computed default>` precedence
+  a no-op for existing consumers), matching `lr-select`/`lr-model-select`'s presence-based
+  precedence; an explicit `aria-label=""` is therefore authoritative
 
 - `closeOnEscapeAnywhere: boolean = false` (attribute `close-on-escape-anywhere`) — lets Escape
   close the menu when focus is on non-menu-item content slotted into the **default** slot, i.e.
@@ -2189,15 +2207,13 @@ menu opening or closing; listen on the nested `<lr-menu>` element itself for tho
 only for the disconnect-driven close, where the removed menu cannot honour a veto.
 
 **Slots:** `trigger` (the consumer's own trigger element — first assigned element wins if several
-are assigned; enhanced imperatively with `aria-haspopup="menu"`/`aria-expanded`/`aria-controls`
-since those attributes belong on the actual interactive trigger, which lives outside this
-component's shadow root. `aria-controls` targets the `lr-menu` host, which receives a stable
-generated id only when the consumer did not provide one, rather than the shadow-private list id.
-`lr-button`/`lr-icon-button` forward the popup/expanded values to their focused shadow-internal
-native control and resolve the controls element-reference across their shadow boundary. In a
-supporting browser, the reflected `ariaControlsElements` list is the source of truth and its setter
-intentionally clears the internal control's serialized `aria-controls` value; browsers without the
-API retain the string as a best-effort fallback), default
+are assigned. `aria-haspopup="menu"`, `aria-expanded`, and the controls relationship are owned on
+both that public element and the composed descendant that actually receives focus, so a generic
+custom wrapper works without forwarding host attributes. The component supplies its real popup to
+the shared ownership controller; current browsers expose the `lr-menu` host for the inward
+light-DOM-to-shadow relationship. Authored relationship tokens compose, generated whole-value
+attributes stay authoritative while assigned, and exact late-authored baselines return on
+replacement or disconnect), default
 (`<lr-menu-item>` elements, plus optionally plain `<hr>` dividers — native `<hr>` already carries
 an implicit `separator` role),
 `header` and `footer` (composed, deliberately non-menu-item content — a filter/search field, a
@@ -2302,15 +2318,17 @@ through it, everything below it; it leaves focus alone, because the caller that 
 where it belongs. The parent `<lr-menu>` owns the interaction policy (arrow keys, pointer intent,
 one-submenu-per-level) and drives it through exactly these two methods, so calling them by hand
 behaves identically.
-`getTextLabel(): string` returns the visible label used by type-ahead and Shoelace-compatible
-integrations, without including nested submenu text. Direct and flattened, forwarded default-slot
-labels are observed live: in-place text edits, forwarding-slot reassignments, and relevant
-visibility changes update type-ahead, the computed submenu-parent name, and the computed
+`getTextLabel(): string` returns the visible label used by Shoelace-compatible integrations and
+computed submenu fallbacks, without including nested submenu text. Direct and flattened, forwarded
+default-slot labels are observed live: in-place text edits, forwarding-slot reassignments, and
+relevant visibility changes update type-ahead, the computed submenu-parent name, and the computed
 submenu-panel name together. Accessibility-hidden branches do not contribute. A real forwarding
 assignment stays authoritative even while hidden and therefore does not expose slot fallback;
 fallback contributes after the assignment is removed. A consumer-authored `aria-label` or
-`aria-labelledby` on the item remains authoritative for its host name; the latter does not change
-type-ahead or the computed submenu-panel name. `label`/`aria-label` on the submenu itself also wins.
+same-root `aria-labelledby` on the item remains authoritative for its host name and the parent
+menu's type-ahead; image alternatives, flattened slots, and open shadow content participate in
+that match through the same bounded composed accessible-text traversal. `label`/`aria-label` on the
+submenu itself also wins.
 An explicitly empty item `aria-label` and a value supplied after Lyra initially computed the name
 both remain authoritative.
 
@@ -2738,6 +2756,10 @@ own action buttons (see the gotchas below).
 safe, or the activation button while `interactive` is set without a link. Passive cards remain
 inert.
 
+Changing `href` or `interactive` while the whole-card owner has focus transfers focus across the
+link, activation button, and a programmatically focusable passive base. It never overrides a newer
+external focus destination.
+
 **Slots:** default (the card body), `header` (vertical header content), `media` and `image` (aliases
 for media above the header vertically or at logical start horizontally), `footer` (vertical footer
 content), `header-actions` and `footer-actions` (controls aligned with those vertical sections), and
@@ -2825,7 +2847,9 @@ overlay infrastructure as `lr-dialog` (focus-trapping Tab, Escape dismissal, bac
 dismissal, ref-counted document scroll lock).
 
 **Properties:**
-- `open: boolean = false` (reflected)
+- `open: boolean = false` (reflected) — after the initial silent render, property and attribute
+  writes use the same synchronous cancelable transaction as `openPalette()`/`close()`; a veto
+  restores reflection and prevents query/active-row opening side effects
 - `commands: LyraCommand[] = []` (attribute: false) — `{ id, label, description?, group?, shortcut?,
   keywords?, disabled?, icon?, onSelect? }`. `icon` is an optional leading glyph (a `TemplateResult`,
   an emoji string, etc. — not restricted to a square icon) rendered in the `icon` part before the
@@ -2838,7 +2862,8 @@ dismissal, ref-counted document scroll lock).
   Cmd on Mac and Ctrl elsewhere. The listener is on `window`, added in `connectedCallback`.
 - `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the localized dialog name
 
-**Methods:** `openPalette()` (clears the query and resets the active row; no-op if already open),
+**Methods:** `openPalette()` (after an accepted open, clears the query and resets the active row;
+no-op if already open),
 `close()`, `registerCommand(command)` — appends to `commands` and returns an unregister function.
 
 **Keyboard:** ArrowUp/ArrowDown move the active option, skipping `disabled` rows and clamping (not
@@ -3000,7 +3025,9 @@ inside the nearest nested accordion.
 property → `summary` property → localized `"Details"` is the precedence order. The two label-slot
 aliases accept rich visible markup, but their flattened subtrees are inert and hidden from
 assistive technology: do not place independent links, buttons, inputs, form state, or focus targets
-there. Details has `summary`, `expand-icon`, `collapse-icon`, plus default content.
+there. The accordion-item `icon` slot follows the same flattened-tree inert and aria-hidden visual
+contract, while the trigger button remains the sole action. Details has `summary`, `expand-icon`,
+`collapse-icon`, plus default content.
 
 **CSS parts:** accordion exposes `base`. Accordion item exposes `base` and `accordion-item` on the
 same outer wrapper; `button` and the Details-compatible `summary` name are on the same trigger; and
@@ -3107,6 +3134,9 @@ explicitly empty value; when absent, the default slot supplies its name.
 
 **`lr-breadcrumb-item` methods:** `click(): void` activates the internal native link or button. It
 is a no-op for the current-page label.
+
+Changing `href` or `current` while that native owner has focus transfers focus across the link,
+button, and programmatically focusable current-page label. External focus is preserved.
 
 **Slots:** breadcrumb's default slot takes `lr-breadcrumb-item` children and its `separator` slot is
 copied to every item without an item-level override. Both breadcrumb and item `separator` slots are
@@ -3371,16 +3401,19 @@ click, Escape, or the default/custom navigation-toggle control, all of which rou
 same methods. Call `preventDefault()` to leave `navOpen` unchanged.)
 
 The default mobile toggle is a native button with localized open/close names and explicit
-`aria-expanded="true|false"` plus `aria-controls` pointing to this Page's unique drawer. Opening
+`aria-haspopup="dialog"`, `aria-expanded="true|false"`, plus `aria-controls` pointing to this
+Page's unique drawer. Opening
 uses Lyra's shared modal overlay stack for inerting, scroll lock, Escape/backdrop dismissal, focus
-trapping, stacking, reconnect suspension, and focus return. A custom `navigation-toggle` element is
-wired to the same state and receives synchronized `aria-expanded` plus a localized label when it
-did not supply its own. Its light-DOM `aria-controls` points to the Page host, a resolvable public
-bridge to the private shadow drawer; supporting browsers therefore report the Page in
-`ariaControlsElements` instead of an empty list for an unresolvable shadow ID. When that toggle is
-replaced, removed, or its Page disconnects, component-owned attributes are restored to their prior
-author values (or removed when they were absent). A consumer write made after assignment wins and
-is not restored over.
+trapping, stacking, reconnect suspension, and focus return. Modal inerting is scoped to the live
+drawer root, so header/main/footer siblings inside the Page become inert without inerting the
+drawer itself. A custom `navigation-toggle` and the composed descendant that actually receives
+focus are wired to the same state with `aria-haspopup="dialog"`, synchronized `aria-expanded`, and
+a localized label when unnamed. The component supplies the real drawer to the shared controls
+owner; current browsers normalize that inward private relationship to the public Page host.
+Generated whole-value state remains authoritative while assigned, authored relationship tokens
+compose, and exact initial or late-authored baselines return when the toggle is replaced, removed,
+or the Page disconnects. If the opening toggle is replaced while the drawer is open, both the ARIA
+owner and eventual focus-return target retarget to the replacement's real composed control.
 
 `navigation-toggle-icon` is decorative visual content: its assigned subtree is inert and hidden
 from assistive technology, while the native toggle retains the sole action and localized name.

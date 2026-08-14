@@ -190,6 +190,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     color: var(--lr-color-text-quiet);
+    pointer-events: none;
   }
   [part='start'][hidden],
   [part='end'][hidden] {
@@ -209,11 +210,8 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
   }
   /* In multiple mode the real, independently-focusable tags are a sibling layered over the
-     trigger. Keep the trigger's text as its accessible/value fallback and sizing seam, but do not
-     paint a duplicate underneath the chips. */
-  .trigger-label[data-multiple-value] {
-    visibility: hidden;
-  }
+     trigger. The shared sr-only rule keeps this complete joined value available to assistive
+     technology without painting a duplicate underneath the chips. */
 
   /* Multi-select chip row. Wraps rather than scrolls, so a long selection grows the trigger's
      block size instead of hiding chips behind an invisible scroll axis. */
@@ -359,7 +357,7 @@ export const styles = css`
 
   [part='listbox'] {
     position: absolute;
-    z-index: var(--lr-layer-dropdown);
+    z-index: var(--lr-overlay-stack-index, var(--lr-layer-dropdown));
     box-sizing: border-box;
     max-block-size: var(--lr-size-18rem);
     /* Per the CSS overflow spec, pinning one axis to a non-'visible' value forces the other
@@ -400,6 +398,14 @@ export const styles = css`
       opacity var(--show-duration, var(--lr-transition-fast)),
       transform var(--show-duration, var(--lr-transition-fast)),
       visibility var(--show-duration, var(--lr-transition-fast));
+  }
+  /* A disabled form control cannot retain even the outgoing visibility frame of an ordinary
+     close transition: fieldset-cascaded disablement uses :disabled too, unlike [disabled]. */
+  :host(:disabled) [part='listbox'] {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: none;
   }
   @media (prefers-reduced-motion: reduce) {
     [part='listbox'] {

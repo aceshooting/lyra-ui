@@ -224,6 +224,18 @@ it('forwards a host click() to the internal base button', async () => {
   expect(ev.detail).to.deep.equal({ name: 'web_search', callId: 'call-42' });
 });
 
+it('forwards host focus() and blur() to the current internal base button', async () => {
+  const el = (await fixture(
+    html`<lr-tool-call-chip name="web_search"></lr-tool-call-chip>`,
+  )) as LyraToolCallChip;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+
+  el.focus({ preventScroll: true });
+  expect(el.shadowRoot!.activeElement === base).to.be.true;
+  el.blur();
+  expect(el.shadowRoot!.activeElement === null).to.be.true;
+});
+
 it('emits only lr-tool-call-chip-select — the removed lr-tool-chip-select alias never fires', async () => {
   const el = (await fixture(
     html`<lr-tool-call-chip name="web_search" call-id="call-42"></lr-tool-call-chip>`,

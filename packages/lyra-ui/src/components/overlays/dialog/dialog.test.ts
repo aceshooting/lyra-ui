@@ -449,9 +449,36 @@ it('renders the mapped label prop visibly and uses it for aria-labelledby', asyn
   expect(getComputedStyle(labelEl!).display).to.not.equal('none');
 });
 
+it('gives mapped property and rich-slot titles the configured heading level with a none opt-out', async () => {
+  const propertyTitle = (await fixture(
+    html`<lr-dialog label="Delete item?">body</lr-dialog>`,
+  )) as LyraDialog;
+  const propertyHeading = propertyTitle.shadowRoot!.querySelector<HTMLElement>('[part~="heading"]')!;
+  expect(propertyHeading.getAttribute('role')).to.equal('heading');
+  expect(propertyHeading.getAttribute('aria-level')).to.equal('3');
+
+  const richTitle = (await fixture(html`
+    <lr-dialog heading-level="2" open>
+      <span slot="label">Project <strong>settings</strong></span>
+      <button slot="footer">Done</button>
+    </lr-dialog>
+  `)) as LyraDialog;
+  const richHeading = richTitle.shadowRoot!.querySelector<HTMLElement>('[part~="heading"]')!;
+  expect(richHeading.getAttribute('role')).to.equal('heading');
+  expect(richHeading.getAttribute('aria-level')).to.equal('2');
+  await expect(richTitle).to.be.accessible();
+
+  const unheaded = (await fixture(
+    html`<lr-dialog label="Visual title" heading-level="none">body</lr-dialog>`,
+  )) as LyraDialog;
+  const unheadedWrapper = unheaded.shadowRoot!.querySelector<HTMLElement>('[part~="heading"]')!;
+  expect(unheadedWrapper.hasAttribute('role')).to.equal(false);
+  expect(unheadedWrapper.hasAttribute('aria-level')).to.equal(false);
+});
+
 it('prefers a slotted heading over the label prop, using aria-label (not aria-labelledby) for it', async () => {
   const el = (await fixture(
-    html`<lr-dialog label="ignored"><h2>Real heading</h2></lr-dialog>`,
+    html`<lr-dialog label="ignored" heading-level="5"><h2>Real heading</h2></lr-dialog>`,
   )) as LyraDialog;
   await el.updateComplete;
   const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
@@ -461,6 +488,8 @@ it('prefers a slotted heading over the label prop, using aria-label (not aria-la
   // ID-reference attribute can't resolve across that boundary.
   expect(panel.getAttribute('aria-label')).to.equal('Real heading');
   expect(panel.hasAttribute('aria-labelledby')).to.be.false;
+  expect(el.shadowRoot!.querySelectorAll('[part~="heading"]')).to.have.lengthOf(0);
+  expect(el.querySelector('h2')!.tagName).to.equal('H2');
   // The label prop's own sr-only element must not be rendered once a heading wins.
   expect((el.shadowRoot!.querySelector('[part="label"]')) == null).to.be.true;
 });

@@ -3,6 +3,14 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
+import {
+  applyComposedFocusRepair,
+  captureComposedFocusRepair,
+  collectComposedFocusTargets,
+  type ComposedFocusRepairSnapshot,
+} from '../../../internal/focus-navigation.js';
+import { composedContains } from '../../../internal/overlay-manager.js';
 import { styles } from './chip-group.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -16,6 +24,12 @@ export interface ChipGroupOverflowToggleDetail {
 
 export interface LyraChipGroupEventMap {
   'lr-overflow-toggle': CustomEvent<ChipGroupOverflowToggleDetail>;
+}
+
+interface TrackedChipFocus {
+  child: HTMLElement;
+  index: number;
+  repair: ComposedFocusRepairSnapshot;
 }
 
 /**
@@ -102,13 +116,14 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   private visibilityObserver?: MutationObserver;
   private visibilityObserverDocument?: Document;
   private visibilityObserverGeneration = 0;
+  private trackedChipFocus?: TrackedChipFocus;
 
   override connectedCallback(): void {
     super.connectedCallback();
     this.armVisibilityObserver();
     // A synchronous disconnect/reconnect has no reactive property change, so updated() does not
     // rerun. Re-snapshot the restored author state and reapply collapse ownership immediately.
-    if (this.hasUpdated) this.syncChildVisibility();
+    if (this.hasUpdated) this.reconcileChildVisibilityAndFocus();
   }
 
   private armVisibilityObserver(): void {
@@ -129,7 +144,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
       ) {
         return;
       }
-      if (this.processHiddenMutations(records)) this.syncChildVisibility();
+      if (this.processHiddenMutations(records)) this.reconcileChildVisibilityAndFocus();
     });
     this.visibilityObserver = observer;
     this.visibilityObserverDocument = ownerDocument;
@@ -170,13 +185,14 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
-    this.syncChildVisibility();
+    this.reconcileChildVisibilityAndFocus();
   }
 
   override disconnectedCallback(): void {
     this.resetVisibilityObserver();
     this.observedChildren.clear();
     this.pendingHiddenWrites.clear();
+    this.trackedChipFocus = undefined;
     this.restoreChildVisibility();
     super.disconnectedCallback();
   }
@@ -185,6 +201,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     this.resetVisibilityObserver();
     this.observedChildren.clear();
     this.pendingHiddenWrites.clear();
+    this.trackedChipFocus = undefined;
   }
 
   private resetVisibilityObserver(): void {
@@ -201,11 +218,94 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     return max != null && this.childCount > max;
   }
 
-  private syncChildVisibility(): void {
+  private assignedChildren(): HTMLElement[] {
+    const slot = this.shadowRoot?.querySelector('slot');
+    return (slot?.assignedElements({ flatten: true }) ?? Array.from(this.children)) as HTMLElement[];
+  }
+
+  private childWillBeVisible(child: HTMLElement, index: number): boolean {
+    const authored = this.authorHidden.get(child) ?? child.hasAttribute('hidden');
+    const managedHidden =
+      this.hasOverflow && !this.expanded && index >= (this.maxVisible as number);
+    return !authored && !managedHidden;
+  }
+
+  private focusRepairBeforeVisibility(
+    assignedChildren: HTMLElement[],
+  ): { index: number; repair: ComposedFocusRepairSnapshot } | null {
+    const tracked = this.trackedChipFocus;
+    if (!tracked) return null;
+    const currentIndex = assignedChildren.indexOf(tracked.child);
+    if (currentIndex >= 0 && this.childWillBeVisible(tracked.child, currentIndex)) {
+      tracked.index = currentIndex;
+      return null;
+    }
+
+    const active = deepActiveElementIn(this.ownerDocument);
+    const stillOwnsFocus = active !== null && composedContains(tracked.child, active);
+    const focusWasLostWithRemovedBranch =
+      currentIndex < 0 &&
+      (active === null || active === this.ownerDocument.body || active === this.ownerDocument.documentElement);
+    const focusWasLostWithAlreadyHiddenBranch =
+      tracked.child.hidden &&
+      (active === null || active === this.ownerDocument.body || active === this.ownerDocument.documentElement);
+    if (!stillOwnsFocus && !focusWasLostWithRemovedBranch && !focusWasLostWithAlreadyHiddenBranch) {
+      return null;
+    }
+    return {
+      index: currentIndex >= 0 ? currentIndex : tracked.index,
+      repair: tracked.repair,
+    };
+  }
+
+  private focusTargetAfterVisibility(
+    assignedChildren: HTMLElement[],
+    originIndex: number,
+  ): HTMLElement | null {
+    const chipTargets = assignedChildren
+      .map((child, index) => ({
+        index,
+        target: collectComposedFocusTargets(child, {
+          includeRoot: false,
+          mode: 'programmatic',
+        }).elements[0],
+      }))
+      .filter((entry): entry is { index: number; target: HTMLElement } => entry.target !== undefined)
+      .sort((first, second) => {
+        const distance = Math.abs(first.index - originIndex) - Math.abs(second.index - originIndex);
+        return distance || first.index - second.index;
+      });
+    if (chipTargets[0]) return chipTargets[0].target;
+
+    const disclosure = this.renderRoot.querySelector<HTMLElement>('[part="overflow-indicator"]');
+    if (disclosure) {
+      const available = collectComposedFocusTargets(disclosure, {
+        mode: 'programmatic',
+      }).elements[0];
+      if (available) return available;
+    }
+    const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+    if (!base) return null;
+    return collectComposedFocusTargets(base, {
+      mode: 'programmatic',
+    }).elements.find((target) => target === base) ?? null;
+  }
+
+  private reconcileChildVisibilityAndFocus(): void {
+    const assignedChildren = this.assignedChildren();
+    const focusRepair = this.focusRepairBeforeVisibility(assignedChildren);
+    this.syncChildVisibility(assignedChildren);
+    if (!focusRepair) return;
+    const candidate = this.focusTargetAfterVisibility(assignedChildren, focusRepair.index);
+    this.trackedChipFocus = undefined;
+    if (candidate) {
+      applyComposedFocusRepair(focusRepair.repair, candidate);
+    }
+  }
+
+  private syncChildVisibility(assignedChildren = this.assignedChildren()): void {
     const max = this.maxVisible;
     const overflowing = this.hasOverflow;
-    const slot = this.shadowRoot?.querySelector('slot');
-    const assignedChildren = (slot?.assignedElements({ flatten: true }) ?? Array.from(this.children)) as HTMLElement[];
     this.observeChildren(assignedChildren);
     const current = new Set(assignedChildren);
     for (const [child, hidden] of this.authorHidden) {
@@ -296,6 +396,34 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     });
   };
 
+  private onFocusIn = (): void => {
+    const active = deepActiveElementIn(this.ownerDocument);
+    const children = this.assignedChildren();
+    const index = children.findIndex((child) => composedContains(child, active));
+    const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+    if (index < 0 || !base) {
+      this.trackedChipFocus = undefined;
+      return;
+    }
+    const child = children[index]!;
+    const repair = captureComposedFocusRepair(child, base);
+    this.trackedChipFocus = repair ? { child, index, repair } : undefined;
+  };
+
+  private onFocusOut = (): void => {
+    const tracked = this.trackedChipFocus;
+    if (!tracked) return;
+    queueMicrotask(() => {
+      if (this.trackedChipFocus !== tracked) return;
+      const active = deepActiveElementIn(this.ownerDocument);
+      if (active !== null && composedContains(tracked.child, active)) return;
+      const lostWithRemovedBranch =
+        !tracked.child.isConnected &&
+        (active === null || active === this.ownerDocument.body || active === this.ownerDocument.documentElement);
+      if (!lostWithRemovedBranch) this.trackedChipFocus = undefined;
+    });
+  };
+
   private onToggleOverflow = (): void => {
     this.expanded = !this.expanded;
     this.emit('lr-overflow-toggle', { expanded: this.expanded });
@@ -307,7 +435,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     const formattedHiddenCount = getNumberFormat(this.effectiveLocale).format(hiddenCount);
 
     return html`
-      <div part="base">
+      <div part="base" tabindex="-1" @focusin=${this.onFocusIn} @focusout=${this.onFocusOut}>
         <slot @slotchange=${this.onSlotChange}></slot>
         ${overflowing
           ? html`<button

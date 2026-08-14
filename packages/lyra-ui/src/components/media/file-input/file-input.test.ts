@@ -414,6 +414,23 @@ it('focus() delegates to the semantic dropzone', async () => {
   expect((el.shadowRoot!.activeElement as HTMLElement | null)?.part.contains('base')).to.be.true;
 });
 
+it('rejects host focus synchronously when direct or fieldset disablement starts', async () => {
+  const fieldset = await fixture<HTMLFieldSetElement>(html`
+    <fieldset><lr-file-input></lr-file-input></fieldset>
+  `);
+  const el = fieldset.querySelector('lr-file-input') as LyraFileInput;
+
+  el.disabled = true;
+  el.focus();
+  expect(el.shadowRoot!.activeElement === null, 'direct disabled write').to.be.true;
+
+  el.disabled = false;
+  await el.updateComplete;
+  fieldset.disabled = true;
+  el.focus();
+  expect(el.shadowRoot!.activeElement === null, 'same-task fieldset cascade').to.be.true;
+});
+
 it('blur() and click() delegate to the semantic dropzone contract', async () => {
   const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;

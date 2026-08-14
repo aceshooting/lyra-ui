@@ -95,6 +95,31 @@ it('does not reserve icon chrome for an empty slot or slot fallback', async () =
   expect(icon.hidden, 'slot fallback is component chrome, not consumer-provided presence').to.be.true;
 });
 
+it('keeps flattened interactive icon content visible but inert beside the close action', async () => {
+  const root = await fixture<HTMLElement>(html`<div>
+    <button id="before-alert-icon" type="button">Before</button>
+    <lr-alert open closable style=${motionless}>
+      <a id="nested-alert-icon" slot="icon" href="#nested-alert-icon">!</a>
+      Important message
+    </lr-alert>
+  </div>`);
+  const el = root.querySelector('lr-alert') as LyraAlert;
+  const before = root.querySelector<HTMLButtonElement>('#before-alert-icon')!;
+  const nested = root.querySelector<HTMLAnchorElement>('#nested-alert-icon')!;
+  const icon = el.shadowRoot!.querySelector<HTMLElement>('[part="icon"]')!;
+  const close = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="close-button"]')!;
+
+  expect(icon.getAttribute('aria-hidden')).to.equal('true');
+  expect(icon.hasAttribute('inert')).to.equal(true);
+  expect(nested.getBoundingClientRect().width).to.be.greaterThan(0);
+  before.focus();
+  nested.focus();
+  expect(el.ownerDocument.activeElement === before).to.equal(true);
+  close.focus();
+  expect(el.shadowRoot!.activeElement === close).to.equal(true);
+  await expect(el).to.be.accessible();
+});
+
 it('localizes the close action and lets per-instance strings reach the rendered button', async () => {
   const el = (await fixture(html`<lr-alert open closable>Message</lr-alert>`)) as LyraAlert;
   const close = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="close-button"]')!;
@@ -217,6 +242,55 @@ it('the close button hides the alert through the public lifecycle', async () => 
   el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="close-button"]')!.click();
   await hidden;
   expect(el.open).to.be.false;
+});
+
+it('repairs focused close actions only after the hide lifecycle is accepted', async () => {
+  const host = await fixture<HTMLDivElement>(html`
+    <div>
+      <lr-alert open closable style=${motionless}>Message</lr-alert>
+      <button id="after-alert">After</button>
+    </div>
+  `);
+  const el = host.querySelector('lr-alert') as LyraAlert;
+  const after = host.querySelector<HTMLButtonElement>('#after-alert')!;
+  const close = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="close-button"]')!;
+  const veto = (event: Event): void => event.preventDefault();
+  el.addEventListener('lr-hide', veto);
+  close.focus();
+  close.click();
+  expect(el.shadowRoot!.activeElement === close).to.equal(true);
+  expect(el.open).to.equal(true);
+
+  el.removeEventListener('lr-hide', veto);
+  close.click();
+  expect(el.ownerDocument.activeElement === after).to.equal(true);
+  await el.updateComplete;
+  expect(el.open).to.equal(false);
+});
+
+it('repairs direct open=false writes without overriding a newer hide-listener destination', async () => {
+  const host = await fixture<HTMLDivElement>(html`
+    <div>
+      <button id="explicit-alert-focus">Explicit</button>
+      <lr-alert open closable style=${motionless}>Message</lr-alert>
+      <button id="after-direct-alert">After</button>
+    </div>
+  `);
+  const el = host.querySelector('lr-alert') as LyraAlert;
+  const explicit = host.querySelector<HTMLButtonElement>('#explicit-alert-focus')!;
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="close-button"]')!.focus();
+  el.open = false;
+  expect(el.ownerDocument.activeElement?.id).to.equal('after-direct-alert');
+  await el.updateComplete;
+
+  el.open = true;
+  await el.updateComplete;
+  const close = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="close-button"]')!;
+  el.addEventListener('lr-hide', () => explicit.focus(), { once: true });
+  close.focus();
+  el.open = false;
+  await el.updateComplete;
+  expect(el.ownerDocument.activeElement === explicit).to.equal(true);
 });
 
 it('auto-hides after duration and restarts the full timer after interaction', async () => {
@@ -378,7 +452,7 @@ it('uses the adopted owner realm for motion preferences and focus containment', 
   }
 });
 
-it('toast() keeps an adopted alert in its owner document', async () => {
+it('fails closed and settles a burst when the adopted owner document has no toast controller', async () => {
   const frame = document.createElement('iframe');
   const loaded = oneEvent(frame, 'load');
   frame.srcdoc = '<!doctype html><html><body></body></html>';
@@ -386,24 +460,30 @@ it('toast() keeps an adopted alert in its owner document', async () => {
   await loaded;
 
   const frameDocument = frame.contentDocument!;
-  let el: LyraAlert | undefined;
   try {
-    el = (await fixture(html`
-      <lr-alert style=${motionless}>Adopted toast</lr-alert>
-    `)) as LyraAlert;
-    el.remove();
-    frameDocument.body.append(frameDocument.adoptNode(el));
-    await el.updateComplete;
+    const alerts: LyraAlert[] = [];
+    for (let index = 0; index < 24; index += 1) {
+      const alert = document.createElement('lr-alert') as LyraAlert;
+      alert.duration = Infinity;
+      alert.textContent = `Adopted toast ${index + 1}`;
+      document.body.append(alert);
+      await alert.updateComplete;
+      alert.remove();
+      frameDocument.body.append(frameDocument.adoptNode(alert));
+      alerts.push(alert);
+    }
+    expect(frame.contentWindow!.customElements.get('lr-toast')).to.equal(undefined);
 
-    const completion = el.toast();
-    await waitUntil(() => el?.parentElement?.localName === 'lr-toast');
-    expect(el.ownerDocument === frameDocument).to.be.true;
-    expect(el.parentElement?.ownerDocument === frameDocument).to.be.true;
-
-    await el.hide();
-    await completion;
+    const completions = alerts.map((alert) => alert.toast());
+    const settled = await Promise.race([
+      Promise.all(completions).then(() => true),
+      delay(120).then(() => false),
+    ]);
+    expect(settled, 'an unavailable owner-realm controller cannot strand toast() promises').to.equal(true);
+    expect(alerts.every((alert) => !alert.isConnected), 'failed work is removed instead of growing unchecked').to
+      .equal(true);
+    expect(frameDocument.querySelectorAll('lr-toast').length, 'no unupgraded fallback region remains').to.equal(0);
   } finally {
-    el?.remove();
     frame.remove();
   }
 });
@@ -457,6 +537,346 @@ it('settles an externally removed toast and lets the same alert be toasted again
   await waitUntil(() => el.parentElement?.localName === 'lr-toast');
   await el.hide();
   await second;
+});
+
+it('settles and releases a toast whose initial show is vetoed, so a later toast() can retry', async () => {
+  const el = (await fixture(html`
+    <lr-alert duration="0" style=${motionless}>Initially vetoed toast</lr-alert>
+  `)) as LyraAlert;
+  let showRequests = 0;
+  el.addEventListener('lr-show', (event) => {
+    showRequests += 1;
+    if (showRequests === 1) event.preventDefault();
+  });
+
+  const first = el.toast();
+  const firstSettled = await Promise.race([
+    first.then(() => true),
+    delay(120).then(() => false),
+  ]);
+  expect(firstSettled, 'a rejected initial show must settle its toast lifecycle').to.be.true;
+  expect(el.isConnected, 'a rejected toast must release the singleton region').to.be.false;
+  expect(el.open).to.be.false;
+
+  const second = el.toast();
+  expect(second === first, 'the retry must own a fresh lifecycle promise').to.be.false;
+  await second;
+  expect(showRequests).to.equal(2);
+  expect(el.isConnected).to.be.false;
+});
+
+it('coalesces reentrant show requests before an outer veto and keeps the retry fresh', async () => {
+  const el = (await fixture(html`
+    <lr-alert duration="0" style=${motionless}>Reentrant toast</lr-alert>
+  `)) as LyraAlert;
+  let showRequests = 0;
+  let nestedShow: Promise<void> = Promise.resolve();
+  el.addEventListener('lr-show', (event) => {
+    showRequests += 1;
+    if (showRequests !== 1) return;
+    el.open = true;
+    nestedShow = el.show();
+    event.preventDefault();
+  });
+
+  const first = el.toast();
+  await Promise.all([first, nestedShow]);
+  expect(showRequests, 'same-direction requests during the veto point share one event').to.equal(1);
+  expect(el.open, 'the outer veto wins before any nested request can commit').to.be.false;
+  expect(el.isConnected, 'the rejected toast releases its region').to.be.false;
+
+  const second = el.toast();
+  await second;
+  expect(showRequests, 'a later toast starts a new request').to.equal(2);
+  expect(el.open).to.be.false;
+  expect(el.isConnected).to.be.false;
+});
+
+it('settles every permanently vetoed toast attempt without retaining stale lifecycle listeners', async () => {
+  const el = (await fixture(html`
+    <lr-alert style=${motionless}>Always vetoed toast</lr-alert>
+  `)) as LyraAlert;
+  let showRequests = 0;
+  el.addEventListener('lr-show', (event) => {
+    showRequests += 1;
+    event.preventDefault();
+  });
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const completion = el.toast();
+    const settled = await Promise.race([
+      completion.then(() => true),
+      delay(120).then(() => false),
+    ]);
+    expect(settled, `vetoed attempt ${attempt} must settle`).to.be.true;
+    expect(el.isConnected).to.be.false;
+  }
+  expect(showRequests).to.equal(3);
+});
+
+it('queues a fourth alert inertly and promotes it only after an active toast settles', async () => {
+  const alerts = Array.from({ length: 4 }, (_, index) => {
+    const alert = document.createElement('lr-alert') as LyraAlert;
+    alert.textContent = `Queued alert ${index + 1}`;
+    alert.style.setProperty('--lr-duration-fast', '0ms');
+    return alert;
+  });
+  const completions = alerts.map((alert) => alert.toast());
+  await waitUntil(() => alerts.slice(0, 3).every((alert) => alert.open));
+
+  const queuedBase = alerts[3]!.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  expect(alerts[3]!.hasAttribute('data-toast-queued')).to.be.true;
+  expect(alerts[3]!.open).to.be.false;
+  expect(queuedBase.hidden).to.be.true;
+  expect(queuedBase.inert).to.be.true;
+
+  await alerts[0]!.hide();
+  await completions[0];
+  await waitUntil(() => alerts[3]!.open, 'the oldest queued alert should promote');
+  expect(alerts[3]!.hasAttribute('data-toast-queued')).to.be.false;
+  expect(queuedBase.hidden).to.be.false;
+  expect(queuedBase.inert).to.be.false;
+
+  for (const alert of alerts.slice(1)) await alert.hide();
+  await Promise.all(completions);
+});
+
+it('keeps an already-open alert surface hidden and inert while queued, then releases it on promotion', async () => {
+  const alerts = Array.from({ length: 3 }, (_, index) => {
+    const alert = document.createElement('lr-alert') as LyraAlert;
+    alert.textContent = `Active alert ${index + 1}`;
+    alert.style.setProperty('--lr-duration-fast', '0ms');
+    return alert;
+  });
+  const completions = alerts.map((alert) => alert.toast());
+  await waitUntil(() => alerts.every((alert) => alert.open));
+
+  const queued = (await fixture(html`
+    <lr-alert open closable style=${motionless}>Already open alert</lr-alert>
+  `)) as LyraAlert;
+  let showRequests = 0;
+  queued.addEventListener('lr-show', () => { showRequests += 1; });
+  const queuedCompletion = queued.toast();
+  await queued.updateComplete;
+
+  const queuedBase = queued.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  expect(queued.hasAttribute('data-toast-queued')).to.be.true;
+  expect(queued.open, 'queueing preserves the accepted open state').to.be.true;
+  expect(queuedBase.hidden, 'the inactive internal surface is explicitly hidden').to.be.true;
+  expect(queuedBase.inert, 'the inactive internal surface is explicitly inert').to.be.true;
+
+  await alerts[0]!.hide();
+  await completions[0];
+  await waitUntil(() => !queued.hasAttribute('data-toast-queued'), 'the open alert should promote');
+  await queued.updateComplete;
+  expect(queuedBase.hidden).to.be.false;
+  expect(queuedBase.inert).to.be.false;
+  expect(showRequests, 'promotion does not replay a show lifecycle already accepted inline').to.equal(0);
+
+  await queued.hide();
+  await queuedCompletion;
+  for (const alert of alerts.slice(1)) await alert.hide();
+  await Promise.all(completions.slice(1));
+});
+
+it('repairs focus when an already-open focused alert enters a full toast region', async () => {
+  const active = Array.from({ length: 3 }, (_, index) => {
+    const alert = document.createElement('lr-alert') as LyraAlert;
+    alert.textContent = `Active focus alert ${index + 1}`;
+    alert.style.setProperty('--lr-duration-fast', '0ms');
+    return alert;
+  });
+  const activeCompletions = active.map((alert) => alert.toast());
+  await waitUntil(() => active.every((alert) => alert.open));
+
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <lr-alert open closable style=${motionless}>Already open focused alert</lr-alert>
+      <button id="after-focused-alert">Return target</button>
+    </div>
+  `);
+  const queued = wrapper.querySelector('lr-alert') as LyraAlert;
+  const returnTarget = wrapper.querySelector<HTMLButtonElement>('#after-focused-alert')!;
+  const close = queued.shadowRoot!.querySelector<HTMLButtonElement>('[part~="close-button"]')!;
+  returnTarget.focus();
+  close.focus();
+  expect(queued.shadowRoot!.activeElement === close).to.equal(true);
+
+  const queuedCompletion = queued.toast();
+  await queued.updateComplete;
+
+  expect(queued.hasAttribute('data-toast-queued')).to.equal(true);
+  expect(document.activeElement === document.body, 'queue admission must not strand focus on body').to.equal(false);
+  expect(document.activeElement === returnTarget, 'focus returns to the adjacent external control').to.equal(true);
+
+  document.querySelector('body > lr-toast')?.remove();
+  await Promise.all([...activeCompletions, queuedCompletion]);
+});
+
+it('restores focus inside an active alert when its toast lifecycle moves to another active region', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div><lr-alert closable style=${motionless}>Moving active alert</lr-alert><lr-toast></lr-toast></div>
+  `);
+  const alert = wrapper.querySelector('lr-alert') as LyraAlert;
+  const second = wrapper.querySelector('lr-toast')!;
+  const completion = alert.toast();
+  await waitUntil(() => alert.open);
+  const close = alert.shadowRoot!.querySelector<HTMLButtonElement>('[part~="close-button"]')!;
+  close.focus();
+  expect(alert.shadowRoot!.activeElement === close).to.equal(true);
+
+  second.append(alert);
+  await delay(0);
+
+  expect(alert.hasAttribute('data-toast-queued')).to.equal(false);
+  expect(
+    alert.shadowRoot!.activeElement === close,
+    'the focused control remains the logical target when the alert remains active',
+  ).to.equal(true);
+  await alert.hide();
+  await completion;
+  expect(alert.isConnected).to.equal(false);
+});
+
+it('discards stale managed alerts before a toast region is reconnected after a lasting disconnect', async () => {
+  const alert = document.createElement('lr-alert') as LyraAlert;
+  alert.textContent = 'stale region alert';
+  alert.style.setProperty('--lr-duration-fast', '0ms');
+  const completion = alert.toast();
+  await waitUntil(() => alert.open && alert.parentElement?.localName === 'lr-toast');
+  const region = alert.parentElement!;
+
+  region.remove();
+  const settled = await Promise.race([completion.then(() => true), delay(120).then(() => false)]);
+  expect(settled).to.equal(true);
+  document.body.append(region);
+  await delay(0);
+
+  expect(alert.isConnected, 'a settled toast must not resurrect when its old region reconnects').to.equal(false);
+  expect(region.children.length).to.equal(0);
+});
+
+it('resumes same-task show and hide transitions after reconnect with exactly one terminal event', async () => {
+  const el = (await fixture(html`
+    <lr-alert closable style="--lr-duration-fast: 30ms;">Transition reconnect</lr-alert>
+  `)) as LyraAlert;
+  const parent = el.parentElement!;
+  let afterShowCount = 0;
+  let afterHideCount = 0;
+  el.addEventListener('lr-after-show', () => afterShowCount++);
+  el.addEventListener('lr-after-hide', () => afterHideCount++);
+
+  const showStarted = oneEvent(el, 'lr-show');
+  const shown = el.show();
+  await showStarted;
+  el.remove();
+  parent.append(el);
+  const showCompleted = await Promise.race([
+    waitUntil(() => afterShowCount === 1).then(() => true),
+    delay(250).then(() => false),
+  ]);
+  expect(showCompleted, 'the accepted show must reach its terminal event after reconnect').to.equal(true);
+  await shown;
+  expect(afterShowCount).to.equal(1);
+
+  const hideStarted = oneEvent(el, 'lr-hide');
+  const hidden = el.hide();
+  await hideStarted;
+  el.remove();
+  parent.append(el);
+  const hideCompleted = await Promise.race([
+    waitUntil(() => afterHideCount === 1).then(() => true),
+    delay(250).then(() => false),
+  ]);
+  expect(hideCompleted, 'the accepted hide must reach its terminal event after reconnect').to.equal(true);
+  await hidden;
+  expect(afterHideCount).to.equal(1);
+});
+
+it('settles disconnected method promises but resumes their terminal lifecycle after a later reconnect', async () => {
+  const el = (await fixture(html`
+    <lr-alert style="--lr-duration-fast: 30ms;">Later transition reconnect</lr-alert>
+  `)) as LyraAlert;
+  const parent = el.parentElement!;
+  let afterShowCount = 0;
+  let afterHideCount = 0;
+  el.addEventListener('lr-after-show', () => afterShowCount++);
+  el.addEventListener('lr-after-hide', () => afterHideCount++);
+
+  const showStarted = oneEvent(el, 'lr-show');
+  const shown = el.show();
+  await showStarted;
+  el.remove();
+  await shown;
+  expect(afterShowCount, 'disconnect settles the method without a detached terminal event').to.equal(0);
+  parent.append(el);
+  await waitUntil(() => afterShowCount === 1);
+
+  const hideStarted = oneEvent(el, 'lr-hide');
+  const hidden = el.hide();
+  await hideStarted;
+  el.remove();
+  await hidden;
+  expect(afterHideCount).to.equal(0);
+  parent.append(el);
+  await waitUntil(() => afterHideCount === 1);
+
+  expect(afterShowCount).to.equal(1);
+  expect(afterHideCount).to.equal(1);
+});
+
+it('keeps toast() and hide() pending through same-task region reconnects until one terminal event each', async () => {
+  const el = document.createElement('lr-alert') as LyraAlert;
+  el.textContent = 'Toast transition reconnect';
+  el.style.setProperty('--lr-duration-fast', '30ms');
+  let afterShowCount = 0;
+  let afterHideCount = 0;
+  let toastSettled = false;
+  el.addEventListener('lr-after-show', () => afterShowCount++);
+  el.addEventListener('lr-after-hide', () => afterHideCount++);
+
+  const showStarted = oneEvent(el, 'lr-show');
+  const toasted = el.toast().then(() => { toastSettled = true; });
+  await showStarted;
+  const region = el.parentElement!;
+  region.remove();
+  document.body.append(region);
+  await waitUntil(() => afterShowCount === 1);
+  expect(toastSettled, 'the toast lifecycle remains owned until dismissal').to.equal(false);
+
+  const hideStarted = oneEvent(el, 'lr-hide');
+  const hidden = el.hide();
+  await hideStarted;
+  region.remove();
+  document.body.append(region);
+  await Promise.all([waitUntil(() => afterHideCount === 1), hidden, toasted]);
+
+  expect(afterShowCount).to.equal(1);
+  expect(afterHideCount).to.equal(1);
+  expect(el.isConnected).to.equal(false);
+});
+
+it('settles an alert evicted from the bounded queue without disturbing active alerts', async () => {
+  const alerts = Array.from({ length: 24 }, (_, index) => {
+    const alert = document.createElement('lr-alert') as LyraAlert;
+    alert.textContent = `Burst alert ${index + 1}`;
+    alert.style.setProperty('--lr-duration-fast', '0ms');
+    return alert;
+  });
+  const completions = alerts.map((alert) => alert.toast());
+  await waitUntil(() => alerts.slice(0, 3).every((alert) => alert.open));
+
+  const oldestQueuedSettled = await Promise.race([
+    completions[3]!.then(() => true),
+    delay(120).then(() => false),
+  ]);
+  expect(oldestQueuedSettled, 'overflow eviction must settle alert.toast()').to.be.true;
+  expect(alerts[3]!.isConnected).to.be.false;
+  expect(alerts.slice(0, 3).every((alert) => alert.isConnected && alert.open)).to.be.true;
+  expect(document.querySelector('lr-toast')!.children.length).to.equal(23);
+
+  document.querySelector('lr-toast')!.remove();
+  await Promise.all(completions);
 });
 
 it('disconnecting an open timed alert clears stale work and reconnect restarts its timer', async () => {

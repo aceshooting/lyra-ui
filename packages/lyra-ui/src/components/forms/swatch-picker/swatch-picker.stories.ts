@@ -123,7 +123,7 @@ export const CustomIcon: Story = {
     docs: {
       description: {
         story:
-          "Per-option `icon` replaces the plain filled circle with a consumer-supplied shape -- here, several distinct gemstone glyphs (brilliant, round, emerald-cut), one per swatch. A `stroke=\"currentColor\"`/`fill=\"currentColor\"` SVG is tinted automatically through the swatch's `color` custom property, so each option's `color` still drives both the value and its own glyph's tint.",
+          "Per-option `icon` replaces the plain filled circle with a consumer-supplied shape -- here, several distinct gemstone glyphs (brilliant, round, emerald-cut), one per swatch. The shape's subtree remains visible but inert and aria-hidden so the swatch button stays the sole action. A `stroke=\"currentColor\"`/`fill=\"currentColor\"` SVG is tinted automatically through the swatch's `color` custom property, so each option's `color` still drives both the value and its own glyph's tint.",
       },
     },
   },

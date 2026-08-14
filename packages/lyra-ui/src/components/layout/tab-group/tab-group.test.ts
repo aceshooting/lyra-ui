@@ -352,6 +352,28 @@ it("ArrowRight moves focus and selection to the next tab, wrapping from the last
   expect(el.active).to.equal("input");
 });
 
+it("starts arrow navigation from the event-target tab after a controlled active change", async () => {
+  const el = (await fixture(basic())) as LyraTabGroup;
+  tabButtons(el)[1]!.focus();
+  el.active = "settings";
+  await el.updateComplete;
+
+  press(tabButtons(el)[1]!, "ArrowRight");
+  await el.updateComplete;
+
+  expect(el.active).to.equal("settings");
+  expect(el.shadowRoot!.activeElement === tabButtons(el)[2]).to.equal(true);
+});
+
+it("uses a directly dispatched tab event ahead of remembered roving state", async () => {
+  const el = (await fixture(basic())) as LyraTabGroup;
+  press(tabButtons(el)[2]!, "ArrowRight");
+  await el.updateComplete;
+
+  expect(el.active).to.equal("input");
+  expect(el.shadowRoot!.activeElement === tabButtons(el)[0]).to.equal(true);
+});
+
 it("ArrowLeft moves focus and selection to the previous tab, wrapping from the first to the last", async () => {
   const el = (await fixture(basic())) as LyraTabGroup;
   press(tabButtons(el)[0], "ArrowLeft");
@@ -1241,6 +1263,25 @@ it("derives a rich tab name from accessible default-slot content and observes vi
   expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal(
     "Ignored hidden Ignored CSS hidden Alternate label",
   );
+});
+
+it("derives a rich tab name from aria-labelledby and image alternatives", async () => {
+  const el = (await fixture(html`
+    <lr-tab-group aria-label="Workspace tabs">
+      <lr-tab panel="general">
+        <span aria-labelledby="tab-semantic-name">Visible fallback</span>
+        <span id="tab-semantic-name" hidden><img alt="Settings diagram" /></span>
+      </lr-tab>
+      <lr-tab-panel name="general">General body</lr-tab-panel>
+    </lr-tab-group>
+  `)) as LyraTabGroup;
+  await el.updateComplete;
+
+  expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal("Settings diagram");
+  el.querySelector("img")!.alt = "Updated settings diagram";
+  await aTimeout(0);
+  await el.updateComplete;
+  expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal("Updated settings diagram");
 });
 
 it("omits a rich label branch skipped by content-visibility:auto", async () => {

@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './message-actions.js';
 import '../branch-picker/branch-picker.js';
 import type { LyraMessageActions } from './message-actions.js';
@@ -213,6 +213,48 @@ it('keeps one sequential Tab stop after composite children finish their own upda
   expect(controls.filter((control) => control.tabIndex === 0).length).to.equal(1);
 });
 
+it('treats every nested feedback action as its own toolbar stop', async () => {
+  const el = (await fixture(
+    html`<lr-message-actions .controls=${['feedback', 'regenerate']}></lr-message-actions>`,
+  )) as LyraMessageActions;
+  const feedback = el.shadowRoot!.querySelector('lr-message-feedback') as HTMLElement & {
+    updateComplete: Promise<unknown>;
+  };
+  await feedback.updateComplete;
+  await Promise.resolve();
+  const [up, down] = [...feedback.shadowRoot!.querySelectorAll<HTMLButtonElement>('button')];
+  const regenerate = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="regenerate-button"]')!;
+
+  expect([up!.tabIndex, down!.tabIndex, regenerate.tabIndex]).to.deep.equal([0, -1, -1]);
+  up!.focus();
+  up!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
+  expect(feedback.shadowRoot!.activeElement === down).to.equal(true);
+  expect([up!.tabIndex, down!.tabIndex, regenerate.tabIndex]).to.deep.equal([-1, 0, -1]);
+
+  down!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
+  expect(el.shadowRoot!.activeElement === regenerate).to.equal(true);
+  expect([up!.tabIndex, down!.tabIndex, regenerate.tabIndex]).to.deep.equal([-1, -1, 0]);
+});
+
+it('treats both enabled controls inside a slotted composite as distinct toolbar stops', async () => {
+  const el = (await fixture(html`
+    <lr-message-actions .controls=${['regenerate']}>
+      <lr-branch-picker index="1" count="3"></lr-branch-picker>
+    </lr-message-actions>
+  `)) as LyraMessageActions;
+  const picker = el.querySelector('lr-branch-picker') as HTMLElement & { updateComplete: Promise<unknown> };
+  await picker.updateComplete;
+  await Promise.resolve();
+  const [previous, next] = [...picker.shadowRoot!.querySelectorAll<HTMLButtonElement>('button')];
+  const regenerate = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="regenerate-button"]')!;
+
+  regenerate.focus();
+  regenerate.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
+  expect(picker.shadowRoot!.activeElement === previous).to.equal(true);
+  previous!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
+  expect(picker.shadowRoot!.activeElement === next).to.equal(true);
+});
+
 it('ArrowLeft/ArrowRight swap under RTL', async () => {
   const el = (await fixture(
     html`<lr-message-actions dir="rtl" .controls=${['regenerate', 'edit']}></lr-message-actions>`,
@@ -240,10 +282,8 @@ it('Home/End jump roving tabindex to the first/last stop', async () => {
 
   base.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true }));
   await el.updateComplete;
-  // lr-copy-button is a custom element, not a <button> -- roving tabindex bookkeeping only
-  // toggles tabindex on this component's own plain buttons (see the class doc's Known limitation),
-  // so it is never assigned tabindex 0 here even though Home moved the *logical* active stop to it.
-  expect((el.shadowRoot!.querySelector('lr-copy-button') as HTMLElement).tabIndex).to.equal(-1);
+  const copy = el.shadowRoot!.querySelector('lr-copy-button') as HTMLElement;
+  expect((copy.shadowRoot!.querySelector('button') as HTMLButtonElement).tabIndex).to.equal(0);
   expect((el.shadowRoot!.querySelector('[part~="regenerate-button"]') as HTMLButtonElement).tabIndex).to.equal(-1);
 });
 
@@ -274,6 +314,124 @@ it('excludes inert slotted controls and keeps exactly one usable roving fallback
   const access = el as unknown as { focusableStops(): HTMLElement[] };
   expect(access.focusableStops().map((stop) => stop.id)).to.deep.equal(['usable-message-action']);
   expect(el.querySelector<HTMLButtonElement>('#usable-message-action')!.tabIndex).to.equal(0);
+});
+
+it('rejects decorative and aria-hidden slotted roots instead of accepting their focus method', async () => {
+  const el = (await fixture(html`
+    <lr-message-actions>
+      <span id="decorative-message-action">Decoration</span>
+      <span aria-hidden=" TRUE "><button id="hidden-message-action">Hidden</button></span>
+      <button id="visible-message-action">Visible</button>
+    </lr-message-actions>
+  `)) as LyraMessageActions;
+  await el.updateComplete;
+  await Promise.resolve();
+
+  const access = el as unknown as { focusableStops(): HTMLElement[] };
+  expect(access.focusableStops().map((stop) => stop.id)).to.deep.equal(['visible-message-action']);
+});
+
+it('live-reconciles every authored availability and actionability change without stale tab stops', async () => {
+  const el = (await fixture(html`
+    <lr-message-actions>
+      <button id="first-live-message-action">First</button>
+      <button id="second-live-message-action">Second</button>
+      <span id="promoted-live-message-action">Promoted</span>
+    </lr-message-actions>
+  `)) as LyraMessageActions;
+  const first = el.querySelector<HTMLButtonElement>('#first-live-message-action')!;
+  const second = el.querySelector<HTMLButtonElement>('#second-live-message-action')!;
+  const promoted = el.querySelector<HTMLElement>('#promoted-live-message-action')!;
+  const access = el as unknown as { focusableStops(): HTMLElement[] };
+  await waitUntil(() => first.tabIndex === 0);
+
+  first.disabled = true;
+  await waitUntil(() => second.tabIndex === 0);
+  expect(first.tabIndex, 'a newly disabled former stop is cleared').to.equal(-1);
+
+  second.setAttribute('aria-disabled', ' TRUE ');
+  await waitUntil(() => second.tabIndex === -1);
+  expect(access.focusableStops()).to.have.lengthOf(0);
+  expect(second.tabIndex, 'an aria-disabled former stop is cleared').to.equal(-1);
+
+  first.disabled = false;
+  second.removeAttribute('aria-disabled');
+  await waitUntil(() => first.tabIndex === 0);
+  first.hidden = true;
+  await waitUntil(() => second.tabIndex === 0);
+  second.inert = true;
+  await waitUntil(() => second.tabIndex === -1);
+  expect(access.focusableStops()).to.have.lengthOf(0);
+  expect(second.tabIndex, 'an inert former stop is cleared').to.equal(-1);
+
+  promoted.setAttribute('tabindex', '-1');
+  await waitUntil(() => promoted.tabIndex === 0);
+  expect(access.focusableStops().includes(promoted)).to.equal(true);
+  promoted.removeAttribute('tabindex');
+  await waitUntil(() => !access.focusableStops().includes(promoted));
+  expect(promoted.tabIndex, 'a node that stops being actionable is cleared').to.equal(-1);
+});
+
+it('drops a role-only action when its authored actionability is removed', async () => {
+  const el = (await fixture(html`
+    <lr-message-actions>
+      <span id="role-only-message-action" role="button">Role action</span>
+      <button id="native-message-fallback">Native fallback</button>
+    </lr-message-actions>
+  `)) as LyraMessageActions;
+  const roleAction = el.querySelector<HTMLElement>('#role-only-message-action')!;
+  const fallback = el.querySelector<HTMLButtonElement>('#native-message-fallback')!;
+  const access = el as unknown as { focusableStops(): HTMLElement[] };
+  await waitUntil(() => roleAction.tabIndex === 0);
+
+  roleAction.removeAttribute('role');
+  await waitUntil(() => fallback.tabIndex === 0);
+
+  expect(roleAction.tabIndex).to.equal(-1);
+  expect(access.focusableStops().map((stop) => stop.id)).to.deep.equal(['native-message-fallback']);
+});
+
+it('repairs focus after a focused slotted action is removed or becomes unavailable', async () => {
+  const el = (await fixture(html`
+    <lr-message-actions>
+      <button id="removed-live-message-action">Removed</button>
+      <button id="surviving-live-message-action">Survivor</button>
+    </lr-message-actions>
+  `)) as LyraMessageActions;
+  const removed = el.querySelector<HTMLButtonElement>('#removed-live-message-action')!;
+  const survivor = el.querySelector<HTMLButtonElement>('#surviving-live-message-action')!;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  await waitUntil(() => removed.tabIndex === 0);
+
+  removed.focus();
+  removed.remove();
+  await waitUntil(() => el.ownerDocument.activeElement === survivor);
+  expect(survivor.tabIndex).to.equal(0);
+
+  survivor.setAttribute('aria-disabled', 'true');
+  await waitUntil(() => el.shadowRoot!.activeElement === base);
+  expect(survivor.tabIndex).to.equal(-1);
+});
+
+it('does not steal newer external focus while live action availability reconciles', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <lr-message-actions><button id="invalidated-message-action">Action</button></lr-message-actions>
+      <button id="outside-message-actions">Outside</button>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-message-actions') as LyraMessageActions;
+  const action = wrapper.querySelector<HTMLButtonElement>('#invalidated-message-action')!;
+  const outside = wrapper.querySelector<HTMLButtonElement>('#outside-message-actions')!;
+  await waitUntil(() => action.tabIndex === 0);
+
+  action.focus();
+  action.hidden = true;
+  outside.focus();
+  await aTimeout(0);
+  await aTimeout(0);
+
+  expect(el.ownerDocument.activeElement === outside).to.equal(true);
 });
 
 it('reveal-on-hover binds to the closest lr-chat-message ancestor', async () => {
@@ -360,6 +518,42 @@ it('includes foreign-realm slotted controls and awaits their update promises', a
     release();
     await reconciliation;
   } finally {
+    iframe.remove();
+  }
+});
+
+it('rebinds live action observation to the current realm after adoption', async () => {
+  const el = (await fixture(html`
+    <lr-message-actions>
+      <button id="adopted-first-message-action">First</button>
+      <button id="adopted-second-message-action">Second</button>
+    </lr-message-actions>
+  `)) as LyraMessageActions;
+  const first = el.querySelector<HTMLButtonElement>('#adopted-first-message-action')!;
+  const second = el.querySelector<HTMLButtonElement>('#adopted-second-message-action')!;
+  await waitUntil(() => first.tabIndex === 0);
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameWindow = iframe.contentWindow!;
+  const NativeObserver = frameWindow.MutationObserver;
+  let observerConstructions = 0;
+  frameWindow.MutationObserver = class extends NativeObserver {
+    constructor(callback: MutationCallback) {
+      observerConstructions++;
+      super(callback);
+    }
+  };
+  try {
+    iframe.contentDocument!.body.append(iframe.contentDocument!.adoptNode(el));
+    await aTimeout(0);
+    first.disabled = true;
+    await waitUntil(() => second.tabIndex === 0);
+
+    expect(observerConstructions).to.be.greaterThan(0);
+    expect(first.tabIndex).to.equal(-1);
+  } finally {
+    frameWindow.MutationObserver = NativeObserver;
+    el.remove();
     iframe.remove();
   }
 });

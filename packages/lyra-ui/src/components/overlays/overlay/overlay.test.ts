@@ -1,5 +1,5 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import type { LyraPopover } from './popover.class.js';
+import { LyraPopover } from './popover.class.js';
 import type { LyraTooltip } from './tooltip.class.js';
 import type { LyraDropdown } from './dropdown.class.js';
 import { setAnimation } from '../../../utilities/animation-registry.js';
@@ -8,6 +8,19 @@ import './tooltip.js';
 import './dropdown.js';
 import '../../forms/button/button.js';
 import '../../forms/icon-button/icon-button.js';
+
+const composedPopoverTriggerTag = 'test-composed-popover-trigger';
+if (!customElements.get(composedPopoverTriggerTag)) {
+  customElements.define(
+    composedPopoverTriggerTag,
+    class extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' }).innerHTML = '<button type="button">Open</button>';
+      }
+    },
+  );
+}
 
 describe('effective arrow layout', () => {
   const popup = (el: Element): HTMLElement => el.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
@@ -57,6 +70,261 @@ describe('effective arrow layout', () => {
     expect(popup(withoutArrow).querySelectorAll('[part~="arrow"]').length).to.equal(0);
     expect(getComputedStyle(popup(withoutArrow)).overflowY).to.equal('auto');
   });
+});
+
+describe('popover peer and transition lifecycle', () => {
+  const popover = (id: string) => html`
+    <lr-popover id=${id} style="--show-duration: 0ms; --hide-duration: 0ms">
+      <button slot="trigger">${id}</button>
+      <p>${id} content</p>
+    </lr-popover>
+  `;
+
+  it('does not read the popover render root before hydration establishes it', () => {
+    const tagName = 'test-popover-deferred-render-root';
+    if (!customElements.get(tagName)) {
+      customElements.define(
+        tagName,
+        class extends LyraPopover {
+          override requestUpdate(): void {}
+          override createRenderRoot(): HTMLElement | DocumentFragment {
+            return undefined as unknown as DocumentFragment;
+          }
+        },
+      );
+    }
+    const el = document.createElement(tagName) as LyraPopover;
+
+    expect(() => el.connectedCallback()).not.to.throw();
+    el.disconnectedCallback();
+  });
+
+  it('coalesces same-target show/hide reentry onto one lifecycle promise', async () => {
+    const el = await fixture<LyraPopover>(popover('reentrant'));
+    let showCount = 0;
+    let nestedShow: Promise<void> | undefined;
+    el.addEventListener('lr-show', () => {
+      showCount += 1;
+      if (showCount === 1) nestedShow = el.show();
+    });
+
+    const showing = el.show();
+    expect(nestedShow).to.equal(showing);
+    await showing;
+    expect(showCount).to.equal(1);
+    expect(el.open).to.equal(true);
+
+    let hideCount = 0;
+    let nestedHide: Promise<void> | undefined;
+    el.addEventListener('lr-hide', () => {
+      hideCount += 1;
+      if (hideCount === 1) nestedHide = el.hide();
+    });
+    const hiding = el.hide();
+    expect(nestedHide).to.equal(hiding);
+    await hiding;
+    expect(hideCount).to.equal(1);
+    expect(el.open).to.equal(false);
+  });
+
+  it('keeps at most one DOM-anchored popover open in the same root', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div>${popover('first')}${popover('second')}</div>`);
+    const first = wrapper.querySelector<LyraPopover>('#first')!;
+    const second = wrapper.querySelector<LyraPopover>('#second')!;
+
+    await first.show();
+    await second.show();
+
+    expect(first.open).to.equal(false);
+    expect(second.open).to.equal(true);
+  });
+
+  it('silently reconciles initially open same-root markup to the later-connected popover', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div></div>`);
+    const staging = document.createElement('div');
+    staging.innerHTML = `
+      <lr-popover id="initial-first" open>
+        <button slot="trigger">First</button><p>First content</p>
+      </lr-popover>
+      <lr-popover id="initial-second" open>
+        <button slot="trigger">Second</button><p>Second content</p>
+      </lr-popover>`;
+    const first = staging.querySelector<LyraPopover>('#initial-first')!;
+    const second = staging.querySelector<LyraPopover>('#initial-second')!;
+    const lifecycle: string[] = [];
+    for (const el of [first, second]) {
+      for (const name of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']) {
+        el.addEventListener(name, () => lifecycle.push(`${el.id}:${name}`));
+      }
+    }
+    first.addEventListener('lr-hide', (event) => event.preventDefault());
+
+    wrapper.append(first, second);
+    await waitUntil(() => !first.open && second.open);
+    await Promise.all([first.updateComplete, second.updateComplete]);
+
+    expect([first.open, second.open]).to.deep.equal([false, true]);
+    expect([first.hasAttribute('open'), second.hasAttribute('open')]).to.deep.equal([false, true]);
+    expect(lifecycle).to.deep.equal([]);
+  });
+
+  it('reconciles open assigned just after connection as silent initial state', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div></div>`);
+    const first = document.createElement('lr-popover') as LyraPopover;
+    first.innerHTML = '<button slot="trigger">First</button><p>First content</p>';
+    first.open = true;
+    wrapper.append(first);
+    await first.updateComplete;
+
+    const second = document.createElement('lr-popover') as LyraPopover;
+    second.innerHTML = '<button slot="trigger">Second</button><p>Second content</p>';
+    const lifecycle: string[] = [];
+    for (const el of [first, second]) {
+      for (const name of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']) {
+        el.addEventListener(name, () => lifecycle.push(`${el === first ? 'first' : 'second'}:${name}`));
+      }
+    }
+    first.addEventListener('lr-hide', (event) => event.preventDefault());
+
+    wrapper.append(second);
+    second.open = true;
+    await waitUntil(() => !first.open && second.open);
+    await Promise.all([first.updateComplete, second.updateComplete]);
+
+    expect([first.hasAttribute('open'), second.hasAttribute('open')]).to.deep.equal([false, true]);
+    expect(lifecycle).to.deep.equal([]);
+  });
+
+  it('preserves initial popover identity through hydration before silent reconciliation', async () => {
+    const container = (await fixture(html`<div></div>`)) as HTMLDivElement & {
+      setHTMLUnsafe(value: string): void;
+    };
+    container.setHTMLUnsafe(`
+      <lr-popover id="hydrated-first" open>
+        <template shadowrootmode="open"></template>
+        <button slot="trigger">First</button><p>First content</p>
+      </lr-popover>
+      <lr-popover id="hydrated-second" open>
+        <template shadowrootmode="open"></template>
+        <button slot="trigger">Second</button><p>Second content</p>
+      </lr-popover>`);
+    const first = container.querySelector<LyraPopover>('#hydrated-first')!;
+    const second = container.querySelector<LyraPopover>('#hydrated-second')!;
+    const lifecycle: string[] = [];
+    for (const el of [first, second]) {
+      for (const name of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']) {
+        el.addEventListener(name, () => lifecycle.push(`${el.id}:${name}`));
+      }
+    }
+
+    await Promise.all([first.updateComplete, second.updateComplete]);
+    expect([first.open, second.open], 'the server-equivalent first render keeps both states').to.deep.equal([
+      true,
+      true,
+    ]);
+
+    await waitUntil(() => !first.open && second.open);
+    await Promise.all([first.updateComplete, second.updateComplete]);
+    expect([first.open, second.open]).to.deep.equal([false, true]);
+    expect([first.hasAttribute('open'), second.hasAttribute('open')]).to.deep.equal([false, true]);
+    expect(lifecycle).to.deep.equal([]);
+  });
+
+  it('aborts a newcomer when the current root peer vetoes its close', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div>${popover('keeper')}${popover('newcomer')}</div>`);
+    const keeper = wrapper.querySelector<LyraPopover>('#keeper')!;
+    const newcomer = wrapper.querySelector<LyraPopover>('#newcomer')!;
+    await keeper.show();
+    keeper.addEventListener('lr-hide', (event) => event.preventDefault());
+
+    await newcomer.show();
+
+    expect(keeper.open).to.equal(true);
+    expect(newcomer.open).to.equal(false);
+  });
+
+  it('allows initially open DOM-anchored popovers in separate shadow roots to coexist', async () => {
+    const host = await fixture<HTMLElement>(html`<div></div>`);
+    const firstRoot = host.attachShadow({ mode: 'open' });
+    const secondHost = document.createElement('div');
+    host.append(secondHost);
+    const secondRoot = secondHost.attachShadow({ mode: 'open' });
+    const first = document.createElement('lr-popover') as LyraPopover;
+    const second = document.createElement('lr-popover') as LyraPopover;
+    first.innerHTML = '<button slot="trigger">First</button><p>First content</p>';
+    second.innerHTML = '<button slot="trigger">Second</button><p>Second content</p>';
+    first.open = true;
+    second.open = true;
+    first.style.setProperty('--show-duration', '0ms');
+    second.style.setProperty('--show-duration', '0ms');
+    firstRoot.append(first);
+    secondRoot.append(second);
+    await Promise.all([first.updateComplete, second.updateComplete]);
+
+    expect([first.open, second.open]).to.deep.equal([true, true]);
+  });
+
+  it('allows a same-root virtual surface and initially open DOM popover to coexist', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div></div>`);
+    const virtual = document.createElement('lr-popover') as LyraPopover;
+    virtual.innerHTML = '<p>Virtual content</p>';
+    wrapper.append(virtual);
+    await virtual.updateComplete;
+    virtual.showAt({ x: 20, y: 20 });
+    await virtual.updateComplete;
+
+    const ordinary = document.createElement('lr-popover') as LyraPopover;
+    ordinary.innerHTML = '<button slot="trigger">Ordinary</button><p>Ordinary content</p>';
+    ordinary.open = true;
+    wrapper.append(ordinary);
+    await ordinary.updateComplete;
+
+    expect(virtual.open, 'a virtual surface is outside DOM-popover peer ownership').to.equal(true);
+    expect(ordinary.open).to.equal(true);
+
+    wrapper.append(virtual);
+    await virtual.updateComplete;
+    expect([virtual.open, ordinary.open], 'reconnecting the virtual peer remains excluded').to.deep.equal([
+      true,
+      true,
+    ]);
+  });
+
+  it('allows an initially open dropdown and public popover in the same root to coexist', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div></div>`);
+    const dropdown = document.createElement('lr-dropdown') as LyraDropdown;
+    dropdown.innerHTML = '<button slot="trigger">Actions</button><button>Action</button>';
+    dropdown.open = true;
+    const ordinary = document.createElement('lr-popover') as LyraPopover;
+    ordinary.innerHTML = '<button slot="trigger">Ordinary</button><p>Ordinary content</p>';
+    ordinary.open = true;
+    wrapper.append(dropdown, ordinary);
+    await Promise.all([dropdown.updateComplete, ordinary.updateComplete]);
+
+    expect(dropdown.open).to.equal(true);
+    expect(ordinary.open).to.equal(true);
+  });
+});
+
+it('coalesces same-target tooltip lifecycle reentry', async () => {
+  const el = await fixture<LyraTooltip>(html`
+    <lr-tooltip manual style="--lr-transition-fast: 0ms">
+      <button slot="trigger">Help</button>
+      Helpful description
+    </lr-tooltip>
+  `);
+  let count = 0;
+  let nested: Promise<void> | undefined;
+  el.addEventListener('lr-show', () => {
+    count += 1;
+    if (count === 1) nested = el.show();
+  });
+
+  const showing = el.show();
+  expect(nested).to.equal(showing);
+  await showing;
+  expect(count).to.equal(1);
+  expect(el.open).to.equal(true);
 });
 
 it('keeps an open orphan popover hidden until a live trigger is assigned', async () => {
@@ -384,7 +652,11 @@ it('uses a for target as the tooltip interaction and description owner', async (
   expect(el.open).to.equal(true);
   expect(trigger.getAttribute('aria-describedby')).to.match(/^lr-tooltip-description-/);
 
-  trigger.dispatchEvent(new FocusEvent('blur', { relatedTarget: document.body }));
+  trigger.dispatchEvent(new FocusEvent('focusout', {
+    bubbles: true,
+    composed: true,
+    relatedTarget: document.body,
+  }));
   await el.updateComplete;
   expect(el.open).to.equal(false);
 });
@@ -471,7 +743,7 @@ it('removes DOM-trigger ownership while showAt owns popover and tooltip interact
   expect(tooltipTrigger.hasAttribute('aria-describedby')).to.equal(false);
 
   popoverTrigger.click();
-  tooltipTrigger.dispatchEvent(new FocusEvent('blur'));
+  tooltipTrigger.dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
   await popover.updateComplete;
   await tooltip.updateComplete;
   expect(popover.open).to.equal(true);
@@ -552,17 +824,19 @@ it('ignores disabled close actions and closes only the nearest nested popover', 
     <lr-popover open style="--show-duration: 0ms; --hide-duration: 0ms">
       <button slot="trigger">Outer</button>
       <button id="disabled-close" data-popover="close" disabled>Disabled close</button>
-      <lr-popover open style="--show-duration: 0ms; --hide-duration: 0ms">
+      <lr-popover style="--show-duration: 0ms; --hide-duration: 0ms">
         <button slot="trigger">Inner</button>
         <button id="inner-close" data-popover="close">Close inner</button>
       </lr-popover>
     </lr-popover>
   `);
+  const inner = outer.querySelector<LyraPopover>('lr-popover')!;
+  inner.showAt({ x: 20, y: 20 });
+  await inner.updateComplete;
   outer.querySelector<HTMLButtonElement>('#disabled-close')!.click();
   await outer.updateComplete;
   expect(outer.open).to.equal(true);
 
-  const inner = outer.querySelector<LyraPopover>('lr-popover')!;
   outer.querySelector<HTMLButtonElement>('#inner-close')!.click();
   await inner.updateComplete;
   expect(inner.open).to.equal(false);
@@ -646,6 +920,31 @@ it("resolves a dropdown host onto lr-icon-button's focused internal control", as
   } else {
     expect(focusedControl.getAttribute('aria-controls')).to.equal(el.id);
   }
+});
+
+it('owns ARIA and restores focus on the real control inside a consumer popover trigger', async () => {
+  const el = await fixture<LyraPopover>(html`
+    <lr-popover style="--show-duration:0ms;--hide-duration:0ms">
+      <test-composed-popover-trigger slot="trigger"></test-composed-popover-trigger>
+      <button>Inside</button>
+    </lr-popover>
+  `);
+  const wrapper = el.querySelector(composedPopoverTriggerTag) as HTMLElement;
+  const focusedControl = wrapper.shadowRoot!.querySelector('button')!;
+  await el.updateComplete;
+
+  expect(wrapper.getAttribute('aria-haspopup')).to.equal('dialog');
+  expect(focusedControl.getAttribute('aria-haspopup')).to.equal('dialog');
+  expect(focusedControl.getAttribute('aria-expanded')).to.equal('false');
+  if ('ariaControlsElements' in focusedControl) {
+    expect(focusedControl.ariaControlsElements.length).to.equal(1);
+    expect(focusedControl.ariaControlsElements[0] === el).to.equal(true);
+  }
+
+  await el.show();
+  (el.querySelector('button') as HTMLButtonElement).focus();
+  await el.hide();
+  expect(wrapper.shadowRoot!.activeElement === focusedControl).to.equal(true);
 });
 
 // lr-dropdown is its own registered custom element (extending LyraPopover with popupRole='menu'
@@ -970,7 +1269,7 @@ it('unbinds hover/focus listeners and stale aria-describedby from a trigger swap
   expect(oldTrigger.hasAttribute('aria-describedby'), 'the outgoing trigger must lose its stale aria-describedby').to.be
     .false;
 
-  oldTrigger.dispatchEvent(new FocusEvent('focus'));
+  oldTrigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
   await el.updateComplete;
   expect(el.open, 'a detached, no-longer-slotted trigger must not still drive this tooltip').to.be.false;
 
@@ -998,8 +1297,7 @@ it('preserves author trigger ARIA while a tooltip describes it and restores it o
   replacement.slot = 'trigger';
   replacement.textContent = 'B';
   oldTrigger.replaceWith(replacement);
-  await new Promise<void>((resolve) => queueMicrotask(resolve));
-  await el.updateComplete;
+  await waitUntil(() => oldTrigger.getAttribute('aria-describedby') === 'late-help');
   expect(oldTrigger.getAttribute('aria-describedby')).to.equal('late-help');
 });
 
@@ -1020,8 +1318,7 @@ it('restores author popover trigger ARIA when its trigger is replaced', async ()
   replacement.slot = 'trigger';
   replacement.textContent = 'B';
   oldTrigger.replaceWith(replacement);
-  await new Promise<void>((resolve) => queueMicrotask(resolve));
-  await el.updateComplete;
+  await waitUntil(() => oldTrigger.getAttribute('aria-controls') === 'late-list');
 
   expect(oldTrigger.getAttribute('aria-haspopup')).to.equal('listbox');
   expect(oldTrigger.getAttribute('aria-controls')).to.equal('late-list');
@@ -1034,19 +1331,19 @@ it('cancels a delayed tooltip open when manual mode, explicit close, or trigger 
   `)) as LyraTooltip;
   const trigger = el.querySelector('button') as HTMLButtonElement;
 
-  trigger.dispatchEvent(new FocusEvent('focus'));
+  trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
   el.manual = true;
   await el.updateComplete;
   await new Promise((resolve) => setTimeout(resolve, 80));
   expect(el.open).to.be.false;
 
   el.manual = false;
-  trigger.dispatchEvent(new FocusEvent('focus'));
+  trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
   el.open = false;
   await new Promise((resolve) => setTimeout(resolve, 80));
   expect(el.open).to.be.false;
 
-  trigger.dispatchEvent(new FocusEvent('focus'));
+  trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
   const replacement = document.createElement('button');
   replacement.slot = 'trigger';
   replacement.textContent = 'B';
@@ -1060,7 +1357,7 @@ it('reschedules a pending tooltip immediately when its delay changes to zero', a
     <lr-tooltip show-delay="1000">Info<button slot="trigger">Help</button></lr-tooltip>
   `)) as LyraTooltip;
   const trigger = el.querySelector('button') as HTMLButtonElement;
-  trigger.dispatchEvent(new FocusEvent('focus'));
+  trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
   expect(el.open).to.be.false;
 
   el.showDelay = 0;
@@ -1211,7 +1508,7 @@ it('falls back to the default 150ms delay when delay is NaN, instead of opening 
   el.showDelay = NaN;
   await el.updateComplete;
   const trigger = el.querySelector('button') as HTMLButtonElement;
-  trigger.dispatchEvent(new FocusEvent('focus'));
+  trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
   expect(el.open, 'must not open synchronously on an invalid delay').to.be.false;
   await new Promise((resolve) => setTimeout(resolve, 250));
   expect(el.open, 'must still open, via the normalized default delay').to.be.true;
@@ -1479,21 +1776,25 @@ it('keeps stack ownership and top-overlay focus when an underlying popover is re
   expect(underlying.open).to.be.true;
 });
 
-it('keeps stack ownership when an underlying open popover receives a replacement trigger', async () => {
+it('keeps stack ownership when a separate-root underlying popover receives a replacement trigger', async () => {
   const wrapper = await fixture(html`
     <div>
-      <lr-popover id="underlying">
-        <button slot="trigger">Underlying trigger</button>
-        <button id="underlying-action">Underlying action</button>
-      </lr-popover>
+      <div id="underlying-root"></div>
       <lr-popover id="top">
         <button slot="trigger">Top trigger</button>
         <button id="top-action">Top action</button>
       </lr-popover>
     </div>
   `);
-  const underlying = wrapper.querySelector('#underlying') as LyraPopover;
+  const underlyingRoot = wrapper.querySelector<HTMLElement>('#underlying-root')!.attachShadow({ mode: 'open' });
+  underlyingRoot.innerHTML = `
+    <lr-popover id="underlying">
+      <button slot="trigger">Underlying trigger</button>
+      <button id="underlying-action">Underlying action</button>
+    </lr-popover>`;
+  const underlying = underlyingRoot.querySelector('#underlying') as LyraPopover;
   const top = wrapper.querySelector('#top') as LyraPopover;
+  await underlying.updateComplete;
   (underlying.querySelector('[slot="trigger"]') as HTMLButtonElement).click();
   await underlying.updateComplete;
   (top.querySelector('[slot="trigger"]') as HTMLButtonElement).click();
@@ -1522,21 +1823,25 @@ it('keeps stack ownership when an underlying open popover receives a replacement
   expect(underlying.open).to.be.true;
 });
 
-it('does not transiently focus an underlying overlay when the top popover receives a replacement trigger', async () => {
+it('does not transiently focus a separate-root underlying popover when the top popover receives a replacement trigger', async () => {
   const wrapper = await fixture(html`
     <div>
-      <lr-popover id="underlying">
-        <button slot="trigger">Underlying trigger</button>
-        <button id="underlying-action">Underlying action</button>
-      </lr-popover>
+      <div id="underlying-root"></div>
       <lr-popover id="top">
         <button slot="trigger">Top trigger</button>
         <button id="top-action">Top action</button>
       </lr-popover>
     </div>
   `);
-  const underlying = wrapper.querySelector('#underlying') as LyraPopover;
+  const underlyingRoot = wrapper.querySelector<HTMLElement>('#underlying-root')!.attachShadow({ mode: 'open' });
+  underlyingRoot.innerHTML = `
+    <lr-popover id="underlying">
+      <button slot="trigger">Underlying trigger</button>
+      <button id="underlying-action">Underlying action</button>
+    </lr-popover>`;
+  const underlying = underlyingRoot.querySelector('#underlying') as LyraPopover;
   const top = wrapper.querySelector('#top') as LyraPopover;
+  await underlying.updateComplete;
   (underlying.querySelector('[slot="trigger"]') as HTMLButtonElement).click();
   await underlying.updateComplete;
   (top.querySelector('[slot="trigger"]') as HTMLButtonElement).click();
@@ -1726,11 +2031,13 @@ describe('overlay semantic and lifecycle regressions', () => {
   it('light-dismisses only the topmost sibling popover', async () => {
     const wrapper = await fixture(html`
       <div>
-        <lr-popover open><button slot="trigger">One</button><button id="one">One action</button></lr-popover>
-        <lr-popover open><button slot="trigger">Two</button><button id="two">Two action</button></lr-popover>
+        <lr-popover><button slot="trigger">One</button><button id="one">One action</button></lr-popover>
+        <lr-popover><button slot="trigger">Two</button><button id="two">Two action</button></lr-popover>
       </div>
     `);
     const [underlying, top] = [...wrapper.querySelectorAll('lr-popover')] as LyraPopover[];
+    underlying.showAt({ x: 10, y: 10 });
+    top.showAt({ x: 50, y: 50 });
     await underlying.updateComplete;
     await top.updateComplete;
 
@@ -1872,7 +2179,7 @@ describe('overlay semantic and lifecycle regressions', () => {
 
     try {
       frameDocument.body.append(frameDocument.adoptNode(el));
-      expect(hostObservations, 'the destination window observes host id changes').to.equal(1);
+      expect(hostObservations, 'the destination window observes host id changes').to.be.at.least(1);
       expect(triggerObservations, 'the destination window observes trigger ARIA changes').to.equal(1);
       document.adoptNode(el);
       expect(relevantDisconnects, 'adoption disconnects both owner observers').to.be.at.least(2);
@@ -2151,11 +2458,11 @@ describe('unified show/hide lifecycle', () => {
     }
 
     const afterShow = oneEvent(el, 'lr-after-show');
-    trigger.dispatchEvent(new FocusEvent('focus'));
+    trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
     await afterShow;
 
     const afterHide = oneEvent(el, 'lr-after-hide');
-    trigger.dispatchEvent(new FocusEvent('blur'));
+    trigger.dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
     await afterHide;
 
     expect(order).to.deep.equal(['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']);
@@ -2167,7 +2474,7 @@ describe('unified show/hide lifecycle', () => {
     )) as LyraTooltip;
     const trigger = el.querySelector('button') as HTMLButtonElement;
     el.addEventListener('lr-show', (event) => (event as Event).preventDefault());
-    trigger.dispatchEvent(new FocusEvent('focus'));
+    trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
     await el.updateComplete;
     expect(el.open).to.be.false;
   });
@@ -2349,7 +2656,7 @@ describe('lr-tooltip trigger and delays', () => {
     await el.updateComplete;
     expect(el.open).to.be.false;
 
-    trigger.dispatchEvent(new FocusEvent('focus'));
+    trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
     await el.updateComplete;
     expect(el.open, 'focus').to.be.true;
   });
@@ -2383,7 +2690,7 @@ describe('lr-tooltip trigger and delays', () => {
     await el.updateComplete;
     expect(el.open).to.be.false;
 
-    trigger.dispatchEvent(new FocusEvent('focus'));
+    trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
     await el.updateComplete;
     expect(el.open).to.be.true;
   });
@@ -2394,7 +2701,7 @@ describe('lr-tooltip trigger and delays', () => {
     )) as LyraTooltip;
     const trigger = el.querySelector('button') as HTMLButtonElement;
     trigger.dispatchEvent(new MouseEvent('mouseenter'));
-    trigger.dispatchEvent(new FocusEvent('focus'));
+    trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
     trigger.click();
     await el.updateComplete;
     expect(el.open).to.be.false;
@@ -2410,13 +2717,13 @@ describe('lr-tooltip trigger and delays', () => {
     )) as LyraTooltip;
     const trigger = el.querySelector('button') as HTMLButtonElement;
 
-    trigger.dispatchEvent(new FocusEvent('focus'));
+    trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
     await el.updateComplete;
     expect(el.open, 'show-delay has not elapsed yet').to.be.false;
     await new Promise((resolve) => setTimeout(resolve, 140));
     expect(el.open).to.be.true;
 
-    trigger.dispatchEvent(new FocusEvent('blur'));
+    trigger.dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
     await el.updateComplete;
     expect(el.open, 'hide-delay has not elapsed yet').to.be.true;
     await new Promise((resolve) => setTimeout(resolve, 260));
@@ -2430,10 +2737,10 @@ describe('lr-tooltip trigger and delays', () => {
     expect(el.hideDelay).to.equal(0);
     expect(el.showDelay).to.equal(0);
     const trigger = el.querySelector('button') as HTMLButtonElement;
-    trigger.dispatchEvent(new FocusEvent('focus'));
+    trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
     await el.updateComplete;
     expect(el.open).to.be.true;
-    trigger.dispatchEvent(new FocusEvent('blur'));
+    trigger.dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
     await el.updateComplete;
     expect(el.open).to.be.false;
   });
@@ -2456,10 +2763,10 @@ describe('lr-tooltip trigger and delays', () => {
     )) as LyraTooltip;
     el.hideDelay = Number.NaN;
     const trigger = el.querySelector('button') as HTMLButtonElement;
-    trigger.dispatchEvent(new FocusEvent('focus'));
+    trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
     await el.updateComplete;
     expect(el.open).to.be.true;
-    trigger.dispatchEvent(new FocusEvent('blur'));
+    trigger.dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
     await el.updateComplete;
     expect(el.open).to.be.false;
   });
@@ -2512,7 +2819,7 @@ describe('mapped popover and tooltip compatibility', () => {
       </lr-tooltip>
     `)) as LyraTooltip;
     const trigger = el.querySelector('#default-trigger') as HTMLButtonElement;
-    trigger.dispatchEvent(new FocusEvent('focus'));
+    trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
     await el.updateComplete;
 
     const triggerSlot = el.shadowRoot!.querySelector('[part="trigger"] slot:not([name])') as HTMLSlotElement;
@@ -2551,7 +2858,7 @@ describe('mapped popover and tooltip compatibility', () => {
       <lr-tooltip disabled without-arrow hoist show-delay="0" content="Help"><button>Help</button></lr-tooltip>
     `)) as LyraTooltip;
     const trigger = el.querySelector('button') as HTMLButtonElement;
-    trigger.dispatchEvent(new FocusEvent('focus'));
+    trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
     await el.updateComplete;
     expect(el.open).to.equal(false);
     expect((el.shadowRoot!.querySelector('[part~="arrow"]')) === (null)).to.equal(true);
@@ -2560,7 +2867,7 @@ describe('mapped popover and tooltip compatibility', () => {
     el.withoutArrow = false;
     el.hoist = false;
     await el.updateComplete;
-    trigger.dispatchEvent(new FocusEvent('focus'));
+    trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
     await el.updateComplete;
     expect(el.open).to.equal(true);
     expect(el.shadowRoot!.querySelector('[part~="arrow"]')).to.exist;

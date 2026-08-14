@@ -15,6 +15,7 @@ import { closeIcon, calendarIcon, chevronIcon } from '../../../internal/icons.js
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
+import { isDateObject } from '../../../internal/dom-guards.js';
 import {
   dateTimeFormat,
   parseISO,
@@ -192,6 +193,9 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * submission a native `<input>` would (see `internal/submit-on-enter.ts` — the internal input is
  * in a shadow root and has no form owner, so the platform can never do it here); the commit runs
  * first so the submitted value is the date the field visibly shows.
+ * That text field is also the popup-opening `role="combobox"` owner, with explicit
+ * `aria-haspopup`, `aria-controls`, and `aria-expanded`; the adjacent button remains an equivalent
+ * pointer/keyboard toggle rather than carrying the only popup relationship.
  *
  * `size` uses the same `2xs`–`xl` scale as `lr-input`/`lr-select`/`lr-combobox`'s own `size`,
  * default `m`. The calendar-toggle and clear buttons keep a constant touch-target size at every
@@ -576,7 +580,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   }
 
   set valueAsDate(next: Date | null) {
-    this.value = next instanceof Date && Number.isFinite(next.getTime()) ? formatISO(next) : '';
+    this.value = isDateObject(next) && Number.isFinite(next.getTime()) ? formatISO(next) : '';
   }
 
   /** Date-range projection of `value`; writes normalize reversed endpoints and remain event-silent. */
@@ -587,8 +591,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   }
 
   set valueAsRange(next: DateRange) {
-    let from = next?.from instanceof Date && Number.isFinite(next.from.getTime()) ? next.from : null;
-    let to = next?.to instanceof Date && Number.isFinite(next.to.getTime()) ? next.to : null;
+    let from = isDateObject(next?.from) && Number.isFinite(next.from.getTime()) ? next.from : null;
+    let to = isDateObject(next?.to) && Number.isFinite(next.to.getTime()) ? next.to : null;
     if (from && to && to < from) [from, to] = [to, from];
     this.value = from ? (to ? `${formatISO(from)}/${formatISO(to)}` : formatISO(from)) : '';
   }
@@ -659,8 +663,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       : String(this.disabledDates || '').split(/[\s,]+/);
     return new Set(
       values
-        .map((value) => value instanceof Date ? value : parseISO(String(value)))
-        .filter((value): value is Date => value instanceof Date && Number.isFinite(value.getTime()))
+        .map((value) => isDateObject(value) ? value : parseISO(String(value)))
+        .filter((value): value is Date => isDateObject(value) && Number.isFinite(value.getTime()))
         .map((value) => formatISO(value)),
     );
   }
@@ -881,9 +885,15 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     }
   }
 
+  /** Synchronous disabled truth for public actions, including an ancestor fieldset cascade that
+   * can precede `formDisabledCallback()` and the next rendered native `disabled` attribute. */
+  private get liveDisabled(): boolean {
+    return this.effectiveDisabled || this.matches(':disabled');
+  }
+
   /** Open the calendar popover, unless the cancelable `lr-show` request is vetoed. */
   show(): Promise<void> {
-    if (this.open || this.effectiveDisabled || this.readonly) return Promise.resolve();
+    if (this.open || this.liveDisabled || this.readonly) return Promise.resolve();
     const request = this.emit('lr-show', undefined, { cancelable: true });
     if (request.defaultPrevented) return Promise.resolve();
     this.resolveTransitionWaiters('lr-after-hide');
@@ -1001,7 +1011,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   /** Clear the value. */
   clear(): void {
-    if (!this.value || this.effectiveDisabled || this.readonly) return;
+    if (!this.value || this.liveDisabled || this.readonly) return;
     // Matches how `onInputBlur` already flips this on the first blur -- an
     // explicit user-initiated clear() is itself an interaction, so a
     // required-and-now-empty field must surface its invalid state right
@@ -1235,6 +1245,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     // The native `change` originates inside this shadow root. Always stop that source and expose
     // one host-originating equivalent below only when the raw text commits successfully.
     e.stopPropagation();
+    if (this.liveDisabled) return;
     const raw = (e.target as HTMLInputElement).value;
     // The Enter key already committed this text (see `onInputKey`), and the browser fires its own
     // `change` for that same keystroke -- and again on the following blur, by which point the
@@ -1260,6 +1271,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   };
 
   private onInput = (event: InputEvent): void => {
+    event.stopPropagation();
+    if (this.liveDisabled) return;
     this.inputRelayedSinceCommit = true;
     relayNativeEvent(this, event);
   };
@@ -1342,7 +1355,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       this.show();
       return;
     }
-    if (this.effectiveDisabled || this.readonly) return;
+    if (this.liveDisabled || this.readonly) return;
     if (!isImplicitSubmission(e)) return;
     // Commit first, submit second. The submitted form value is read synchronously from
     // `ElementInternals`, and the typed text has not reached it yet -- the native `change` that
@@ -1372,22 +1385,26 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     // real user interaction -- marking `touched` for it could reenter an in-flight Lit update and
     // trip Lit's dev-mode "scheduled an update after an update completed" warning; this is the
     // same fix as <lr-input>'s onBlur.
-    if (!this.effectiveDisabled) this.touched = true;
+    if (!this.liveDisabled) this.touched = true;
     relayNativeEvent(this, event);
   };
 
   private onInputFocus = (event: FocusEvent): void => {
+    if (this.liveDisabled) {
+      event.stopPropagation();
+      return;
+    }
     relayNativeEvent(this, event);
   };
 
   /** Activate the internal date text input unless the form control is effectively disabled. */
   override click(): void {
-    if (!this.effectiveDisabled) this.inputElement?.click();
+    if (!this.liveDisabled) this.inputElement?.click();
   }
 
-  /** Focus the internal date text input. */
+  /** Focus the internal date text input unless the form control is effectively disabled. */
   override focus(options?: FocusOptions): void {
-    this.inputElement?.focus(options);
+    if (!this.liveDisabled) this.inputElement?.focus(options);
   }
 
   /** Blur the internal date text input. */
@@ -1471,6 +1488,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   // (LyraElement.emit always dispatches bubbles:true, composed:true) and
   // fires on this host a *second* time, on top of the explicit emit below.
   private onPickerInput = (e: InputEvent): void => {
+    e.stopPropagation();
+    if (this.liveDisabled) return;
     const picker = e.target as LyraDatePicker;
     this.value = picker.value;
     this.inputRelayedSinceCommit = false;
@@ -1478,6 +1497,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   };
 
   private onPickerChange = (e: Event): void => {
+    e.stopPropagation();
+    if (this.liveDisabled) return;
     const picker = e.target as LyraDatePicker;
     this.value = picker.value;
     relayNativeEvent(this, e);
@@ -1519,10 +1540,14 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                     id=${this.inputId}
                     part="input"
                     type="text"
+                    role="combobox"
                     aria-label=${this.accessibleLabel || (hasLabel ? nothing : this.placeholder || this.localize('date'))}
                     aria-describedby=${describedBy || nothing}
                     aria-required=${this.required ? 'true' : 'false'}
                     aria-invalid=${invalid ? 'true' : 'false'}
+                    aria-haspopup="dialog"
+                    aria-expanded=${this.open ? 'true' : 'false'}
+                    aria-controls=${this.popupId}
                     spellcheck=${this.spellcheck}
                     autocapitalize=${this.autocapitalize || nothing}
                     autocorrect=${this.autoCorrect || nothing}

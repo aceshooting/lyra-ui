@@ -120,6 +120,7 @@ export interface LyraSliderEventMap {
 interface SliderDragState {
   handle: SliderHandle;
   changed: boolean;
+  captureTarget: HTMLElement;
   /** `[part="track"]`'s rect and the resolved direction, snapshotted once per
    *  gesture rather than re-read on every pointermove:
    *  getBoundingClientRect()/getComputedStyle() in a window-level pointermove
@@ -680,6 +681,8 @@ export class LyraSlider extends LyraSliderBase {
   private pendingKeyHandle: SliderHandle | null = null;
   /** The focused handle, tracked only to decide tooltip visibility. */
   private focusedHandle: SliderHandle | null = null;
+  private rangeFocusTransfer?: { origin: Element; target: SliderHandle };
+  private rangeFocusGeneration = 0;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -715,10 +718,46 @@ export class LyraSlider extends LyraSliderBase {
    * states can only be correct once reflection has run. `disabled` has a hand-written setter that
    * already republishes synchronously; this covers the other barring channel.
    */
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (!changed.has('range') || !this.hasUpdated) return;
+    const active = activeElementIn(this.shadowRoot);
+    if (active?.matches('[part~="thumb"]')) {
+      const target = this.range ? 'min' : 'value';
+      this.rangeFocusTransfer = {
+        origin: active,
+        target,
+      };
+      // Render the replacement handle's focused affordance in this same update. If Lit reuses the
+      // focused node, calling focus() later emits no second focus event to repair this identity.
+      this.focusedHandle = target;
+      this.syncInteractionStates();
+      this.rangeFocusGeneration++;
+    }
+    this.pendingKeyHandle = null;
+    this.abortActiveDrags();
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (!changed.has('readonly')) return;
-    this.syncValidityStates();
+    if (changed.has('readonly')) this.syncValidityStates();
+    if (!changed.has('range')) return;
+    const transfer = this.rangeFocusTransfer;
+    this.rangeFocusTransfer = undefined;
+    if (!transfer) return;
+    const generation = this.rangeFocusGeneration;
+    this.scheduleAfterUpdate(() => {
+      if (generation !== this.rangeFocusGeneration || !this.isConnected || this.effectiveDisabled) return;
+      const internalActive = activeElementIn(this.shadowRoot);
+      const documentActive = activeElementIn(this.ownerDocument);
+      const focusStayedAtOrigin = internalActive === transfer.origin;
+      const originWasRemovedWithoutReplacement =
+        internalActive === null
+        && (documentActive === null || documentActive === this || documentActive === this.ownerDocument.body);
+      if (!focusStayedAtOrigin && !originWasRemovedWithoutReplacement) return;
+      const target = this.handleElement(transfer.target);
+      target?.focus();
+    }, 'slider-range-focus');
   }
 
   protected override firstUpdated(changed: PropertyValues): void {
@@ -741,7 +780,9 @@ export class LyraSlider extends LyraSliderBase {
     // `window`), these window-level listeners would otherwise leak. The
     // transient tooltip state is reset for the same reason a reconnected
     // popover must not resume open at a stale position.
-    this.drags.clear();
+    this.rangeFocusGeneration++;
+    this.rangeFocusTransfer = undefined;
+    this.abortActiveDrags();
     this.pendingKeyHandle = null;
     this.focusedHandle = null;
     this.syncInteractionStates();
@@ -752,7 +793,9 @@ export class LyraSlider extends LyraSliderBase {
   adoptedCallback(): void {
     // Adoption can happen while already disconnected, so do not rely on another disconnect to
     // retire work retained from the previous realm.
-    this.drags.clear();
+    this.rangeFocusGeneration++;
+    this.rangeFocusTransfer = undefined;
+    this.abortActiveDrags();
     this.pendingKeyHandle = null;
     this.focusedHandle = null;
     this.syncInteractionStates();
@@ -1216,7 +1259,7 @@ export class LyraSlider extends LyraSliderBase {
     const firstDrag = this.drags.size === 0;
     if (!firstDrag && this.dragWindow !== dragWindow) return undefined;
     captureTarget.setPointerCapture(pointerId);
-    const drag: SliderDragState = { handle, changed: false, rect, rtl };
+    const drag: SliderDragState = { handle, changed: false, captureTarget, rect, rtl };
     this.drags.set(pointerId, drag);
     if (firstDrag) {
       this.dragWindow = dragWindow;
@@ -1318,10 +1361,29 @@ export class LyraSlider extends LyraSliderBase {
     dragWindow?.removeEventListener('lostpointercapture', this.onPointerUp);
   }
 
-  private onHandleFocus(handle: SliderHandle, event: FocusEvent): void {
-    this.focusedHandle = handle;
+  private abortActiveDrags(): void {
+    const activeDrags = [...this.drags.entries()];
+    if (activeDrags.length === 0) return;
+    this.drags.clear();
+    this.teardownDragWindow();
+    for (const [pointerId, drag] of activeDrags) {
+      try {
+        if (drag.captureTarget.hasPointerCapture(pointerId)) {
+          drag.captureTarget.releasePointerCapture(pointerId);
+        }
+      } catch {
+        // The browser may already have released capture while replacing or disconnecting a thumb.
+      }
+    }
     this.syncInteractionStates();
-    this.requestUpdate();
+  }
+
+  private onHandleFocus(handle: SliderHandle, event: FocusEvent): void {
+    if (this.focusedHandle !== handle) {
+      this.focusedHandle = handle;
+      this.syncInteractionStates();
+      this.requestUpdate();
+    }
     relayNativeEvent(this, event);
     this.emit('lr-focus');
   }

@@ -2,6 +2,7 @@ import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGT
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { chevronIcon } from '../../../internal/icons.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { styles } from './attachment-trigger.styles.js';
 import type { LyraMenu, MenuSelectDetail } from '../../layout/menu/menu.class.js';
 import '../../layout/menu/menu.class.js';
@@ -109,8 +110,10 @@ export interface LyraAttachmentTriggerEventMap {
   'lr-camera-request': CustomEvent<undefined>;
   'lr-audio-request': CustomEvent<undefined>;
   'lr-pick': CustomEvent<AttachmentPickDetail>;
-  blur: CustomEvent<undefined>;
-  focus: CustomEvent<undefined>;
+  blur: FocusEvent;
+  focus: FocusEvent;
+  'lr-blur': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<undefined>;
 }
 /**
  * `<lr-attachment-trigger>` — a compact attach affordance designed for a
@@ -154,8 +157,12 @@ export interface LyraAttachmentTriggerEventMap {
  * @event lr-audio-request - The `audio` capability was activated. No
  * detail payload — same request-only scope as `lr-camera-request`; the
  * host implements the actual recording flow (typically `<lr-push-to-talk>`).
- * @event focus - Re-dispatched from the active trigger button as a bubbling, composed event.
- * @event blur - Re-dispatched from the active trigger button as a bubbling, composed event.
+ * @event {FocusEvent} focus - Relayed once from the active trigger button as a bubbling, composed
+ *   native event.
+ * @event {FocusEvent} blur - Relayed once from the active trigger button as a bubbling, composed
+ *   native event.
+ * @event lr-focus - Prefixed compatibility alias for `focus`.
+ * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @csspart trigger - The single-capability icon button. Only rendered when `capabilities.length === 1`.
  * @csspart menu - The `<lr-menu>` wrapper. Only rendered when `capabilities.length > 1`.
  * @csspart menu-trigger - The multi-capability button slotted into `<lr-menu>`'s own `trigger` slot. Only rendered when `capabilities.length > 1`.
@@ -298,12 +305,12 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
     input.value = '';
   };
   private onControlFocus = (event: FocusEvent): void => {
-    event.stopPropagation();
-    this.emit('focus');
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
   private onControlBlur = (event: FocusEvent): void => {
-    event.stopPropagation();
-    this.emit('blur');
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
   private stopInternalEvent = (event: Event): void => {
     event.stopPropagation();

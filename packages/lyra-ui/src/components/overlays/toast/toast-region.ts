@@ -21,7 +21,7 @@ export function getToastRegion(
     regions.set(ownerDocument, documentRegions);
   }
   let region = documentRegions.get(placement);
-  if (!region || !region.isConnected) {
+  if (!region || !region.isConnected || region.ownerDocument !== ownerDocument) {
     region = ownerDocument.createElement(tag('toast')) as LyraToast;
     region.placement = placement;
     ownerDocument.body.appendChild(region);

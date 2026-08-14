@@ -31,6 +31,14 @@ const meta: Meta = {
   title: 'Forms/PhoneInput',
   component: 'lr-phone-input',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Text edits relay native input then lr-input; commits relay native change then lr-change, and a country pick emits both pairs. Focus/blur preserve native FocusEvent payload before their lr-* aliases.',
+      },
+    },
+  },
 };
 
 export default meta;

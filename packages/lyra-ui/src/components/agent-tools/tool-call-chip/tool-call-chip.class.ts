@@ -383,6 +383,16 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
 
   @query('[part="base"]') private baseEl?: HTMLButtonElement;
 
+  /** Moves focus to the currently rendered chip button. */
+  override focus(options?: FocusOptions): void {
+    this.baseEl?.focus(options);
+  }
+
+  /** Removes focus from the currently rendered chip button. */
+  override blur(): void {
+    this.baseEl?.blur();
+  }
+
   /** Forwards host activation to the internal base button, mirroring `<lr-button>`'s `click()`
    *  override. */
   override click(): void {

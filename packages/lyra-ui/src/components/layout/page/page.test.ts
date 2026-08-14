@@ -1,4 +1,4 @@
-import { aTimeout, elementUpdated, expect, fixture, html } from '@open-wc/testing';
+import { aTimeout, elementUpdated, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './page.js';
 import type { LyraPage } from './page.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -10,6 +10,19 @@ interface PageTestAccess {
 const access = (page: LyraPage): PageTestAccess => page as unknown as PageTestAccess;
 const byPart = (page: LyraPage, part: string): HTMLElement =>
   page.shadowRoot!.querySelector<HTMLElement>(`[part~="${part}"]`)!;
+
+const composedPageToggleTag = 'test-composed-page-toggle';
+if (!customElements.get(composedPageToggleTag)) {
+  customElements.define(
+    composedPageToggleTag,
+    class extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' }).innerHTML = '<button type="button">Sections</button>';
+      }
+    },
+  );
+}
 
 function populatedPage(extra = ''): string {
   return `
@@ -329,6 +342,47 @@ it('keeps a custom navigation-toggle operable when the default is disabled and a
   expect(custom.getAttribute('aria-expanded')).to.equal('true');
 });
 
+it('owns the real custom-toggle control and retargets focus restoration after replacement', async () => {
+  const page = (await fixture(html`
+    <lr-page style="inline-size:320px" disable-navigation-toggle>
+      <test-composed-page-toggle slot="navigation-toggle"></test-composed-page-toggle>
+      <button slot="navigation">Inside navigation</button>
+    </lr-page>
+  `)) as LyraPage;
+  access(page).applyMeasuredInlineSize(320);
+  await page.updateComplete;
+  await aTimeout(0);
+  const first = page.querySelector(composedPageToggleTag) as HTMLElement;
+  const firstControl = first.shadowRoot!.querySelector('button')!;
+
+  expect(first.getAttribute('aria-haspopup')).to.equal('dialog');
+  expect(firstControl.getAttribute('aria-haspopup')).to.equal('dialog');
+  expect(firstControl.getAttribute('aria-expanded')).to.equal('false');
+  if ('ariaControlsElements' in firstControl) {
+    expect(firstControl.ariaControlsElements.length).to.equal(1);
+    expect(firstControl.ariaControlsElements[0] === page).to.equal(true);
+  }
+
+  firstControl.click();
+  await page.updateComplete;
+  expect(page.navOpen).to.equal(true);
+
+  const replacement = document.createElement(composedPageToggleTag);
+  replacement.slot = 'navigation-toggle';
+  first.replaceWith(replacement);
+  const replacementControl = replacement.shadowRoot!.querySelector('button')!;
+  await waitUntil(() => replacement.getAttribute('aria-expanded') === 'true');
+  expect(replacementControl.getAttribute('aria-expanded')).to.equal(
+    null,
+    'the private control remains unavailable while its Page header is inert',
+  );
+
+  page.hideNavigation();
+  await page.updateComplete;
+  expect(replacementControl.getAttribute('aria-expanded')).to.equal('false');
+  expect(replacement.shadowRoot!.activeElement === replacementControl).to.equal(true);
+});
+
 it('gives a custom navigation toggle a cross-shadow controls reference and cleans owned ARIA on release', async () => {
   const page = (await fixture(html`
     <lr-page style="inline-size:320px" disable-navigation-toggle>
@@ -385,7 +439,7 @@ it('restores authored custom-toggle ARIA across replacement and preserves later 
   expect(replacement.getAttribute('aria-controls')).to.equal('consumer-late-target');
 });
 
-it('hands generated custom-toggle ARIA back to an author who changes it in place', async () => {
+it('keeps generated custom-toggle ARIA authoritative and restores late author state on release', async () => {
   const page = (await fixture(html`
     <lr-page disable-navigation-toggle>
       <button slot="navigation-toggle">Sections</button>
@@ -398,19 +452,26 @@ it('hands generated custom-toggle ARIA back to an author who changes it in place
   custom.setAttribute('aria-expanded', 'mixed');
   custom.setAttribute('aria-controls', 'author-navigation');
   custom.setAttribute('aria-label', 'Author navigation');
+  await aTimeout(0);
   page.showNavigation();
   await page.updateComplete;
 
   expect(generatedControls).to.equal(page.id);
-  expect(custom.getAttribute('aria-expanded')).to.equal('mixed');
-  expect(custom.getAttribute('aria-controls')).to.equal('author-navigation');
-  expect(custom.getAttribute('aria-label')).to.equal('Author navigation');
+  expect(custom.getAttribute('aria-expanded')).to.equal('true');
+  expect(custom.getAttribute('aria-controls')?.split(/\s+/)).to.have.members([
+    'author-navigation',
+    page.id,
+  ]);
+  expect(custom.getAttribute('aria-label')).to.equal('Close navigation');
 
   page.hideNavigation();
   await page.updateComplete;
-  expect(custom.getAttribute('aria-expanded')).to.equal('mixed');
-  expect(custom.getAttribute('aria-controls')).to.equal('author-navigation');
-  expect(custom.getAttribute('aria-label')).to.equal('Author navigation');
+  expect(custom.getAttribute('aria-expanded')).to.equal('false');
+  expect(custom.getAttribute('aria-controls')?.split(/\s+/)).to.have.members([
+    'author-navigation',
+    page.id,
+  ]);
+  expect(custom.getAttribute('aria-label')).to.equal('Open navigation');
 
   page.remove();
   expect(custom.getAttribute('aria-expanded')).to.equal('mixed');
@@ -602,6 +663,32 @@ it('uses the shared mobile overlay lifecycle for Escape, scroll lock, and focus 
   expect(page.navOpen).to.be.false;
   expect(document.documentElement.style.overflow).to.equal('');
   expect(page.shadowRoot!.activeElement?.getAttribute('part')).to.contain('navigation-toggle');
+});
+
+it('excludes same-host Page chrome outside the open mobile drawer and restores it on close', async () => {
+  const page = (await fixture(html`
+    <lr-page style="inline-size:320px">
+      <button slot="navigation">Inside navigation</button>
+      <button>Main action</button>
+    </lr-page>
+  `)) as LyraPage;
+  access(page).applyMeasuredInlineSize(320);
+  await page.updateComplete;
+
+  page.showNavigation();
+  await page.updateComplete;
+
+  expect(byPart(page, 'header').inert).to.equal(true);
+  expect(byPart(page, 'main').inert).to.equal(true);
+  expect(byPart(page, 'footer').inert).to.equal(true);
+  expect(byPart(page, 'dialog-wrapper').inert).to.equal(false);
+  expect(byPart(page, 'drawer').inert).to.equal(false);
+
+  page.hideNavigation();
+  await page.updateComplete;
+  expect(byPart(page, 'header').inert).to.equal(false);
+  expect(byPart(page, 'main').inert).to.equal(false);
+  expect(byPart(page, 'footer').inert).to.equal(false);
 });
 
 it('dismisses the open mobile drawer from its backdrop wrapper', async () => {

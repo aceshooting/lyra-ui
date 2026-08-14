@@ -14,6 +14,7 @@ import {
   safeNativeMediaSource,
 } from '../../../internal/media-controller.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './video.styles.js';
@@ -46,8 +47,10 @@ export interface LyraVideoEventMap {
   play: Event;
   timeupdate: Event;
   volumechange: Event;
-  blur: CustomEvent<undefined>;
-  focus: CustomEvent<undefined>;
+  blur: FocusEvent;
+  focus: FocusEvent;
+  'lr-blur': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<undefined>;
 }
 
 interface ThumbnailCue {
@@ -202,8 +205,12 @@ function unsupportedPromise(message: string): Promise<never> {
  *   custom timeline also dispatches this event immediately.
  * @event {Event} volumechange - Relayed native video event; non-bubbling, non-composed, and
  *   non-cancelable.
- * @event focus - Re-dispatched from the internal play/pause control as a bubbling, composed event.
- * @event blur - Re-dispatched from the internal play/pause control as a bubbling, composed event.
+ * @event {FocusEvent} focus - Relayed once from the internal play/pause control as a bubbling,
+ *   composed native event.
+ * @event {FocusEvent} blur - Relayed once from the internal play/pause control as a bubbling,
+ *   composed native event.
+ * @event lr-focus - Prefixed compatibility alias for `focus`.
+ * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @csspart base - Alias on the same root node as `video-wrapper`.
  * @csspart caption - Active native caption text.
  * @csspart caption-overlay - Caption positioning layer.
@@ -355,13 +362,13 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   }
 
   private onControlFocus = (event: FocusEvent): void => {
-    event.stopPropagation();
-    this.emit('focus');
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
 
   private onControlBlur = (event: FocusEvent): void => {
-    event.stopPropagation();
-    this.emit('blur');
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
 
   override connectedCallback(): void {

@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
 import { property, state } from "lit/decorators.js";
 import { styleMap } from "lit/directives/style-map.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
+import { renderInertPresentation } from "../../../internal/inert-presentation.js";
 import {
   activateOverlay,
   collectFocusableElements,
@@ -13,6 +14,10 @@ import {
   writePersistedState,
 } from "../../../internal/persisted-state.js";
 import { nextId } from "../../../internal/a11y.js";
+import {
+  bindAccessibleTextObserver,
+  composedAccessibilityText,
+} from "../../../internal/accessibility-visibility.js";
 import { observeScrollOverflow } from "../../../internal/scroll-overflow.js";
 import { chevronIcon, closeIcon, expandIcon } from "../../../internal/icons.js";
 import { styles } from "./widget.styles.js";
@@ -29,6 +34,7 @@ export interface WidgetView {
    *  set `ariaLabel` too in that case so the button keeps a real accessible name; see `ariaLabel`'s
    *  own doc for what happens if both are left unset. */
   label?: string;
+  /** Decorative visual whose rendered subtree is inert and hidden from assistive technology. */
   icon?: TemplateResult;
   /** Accessible name for the toggle button, used only when `label` is omitted -- ignored otherwise,
    *  since the visible label text already supplies the accessible name. If both `label` and
@@ -53,7 +59,8 @@ export interface LyraWidgetEventMap {
  *
  * @customElement lr-widget
  * @slot - The panel body.
- * @slot icon - Optional leading icon in the title row.
+ * @slot icon - Optional decorative leading icon in the title row. Its flattened subtree is inert
+ *   and hidden from assistive technology.
  * @slot label - Rich label content (overrides the `label` attribute).
  * @slot sublabel - Rich sublabel content (overrides the `sublabel` attribute).
  * @slot actions - Header action controls, rendered before the collapse/expand buttons.
@@ -98,7 +105,8 @@ export interface LyraWidgetEventMap {
  * @csspart actions - The wrapper around the `actions` slot.
  * @csspart view-toggles - The header toggle-button group, only rendered when `views` is non-empty.
  * @csspart view-toggle - A single view toggle button.
- * @csspart view-icon - Decorative icon content inside a view toggle.
+ * @csspart view-icon - Decorative icon content inside a view toggle; its subtree is inert and
+ *   hidden from assistive technology.
  * @csspart view-label - Visible label text inside a view toggle.
  * @csspart collapse-button - The collapse/expand toggle button.
  * @csspart fullscreen-button - The fullscreen toggle button.
@@ -242,11 +250,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
         (el) => el.getAttribute("slot") === "label"
       );
       this.hasLabelSlot = labelChildren.length > 0;
-      this.labelSlotText =
-        labelChildren
-          .map((el) => el.textContent?.trim())
-          .filter(Boolean)
-          .join(" ") || undefined;
+      this.labelSlotText = this.readLabelSlotText(labelChildren);
       this.hasSublabelSlot = Array.from(this.children).some(
         (el) => el.getAttribute("slot") === "sublabel"
       );
@@ -412,11 +416,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
 
   private syncLabelSlot(assigned: Element[]): void {
     this.hasLabelSlot = assigned.length > 0;
-    this.labelSlotText =
-      assigned
-        .map((el) => el.textContent?.trim())
-        .filter(Boolean)
-        .join(" ") || undefined;
+    this.labelSlotText = this.readLabelSlotText(assigned);
     this.resetLabelSlotObserver();
     if (assigned.length === 0 || !this.isConnected) return;
     const ownerDocument = this.ownerDocument;
@@ -433,21 +433,24 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       ) {
         return;
       }
-      this.labelSlotText =
-        assigned
-          .map((el) => el.textContent?.trim())
-          .filter(Boolean)
-          .join(" ") || undefined;
+      this.labelSlotText = this.readLabelSlotText(assigned);
     });
     this.labelSlotObserver = observer;
     this.labelSlotObserverDocument = ownerDocument;
+    bindAccessibleTextObserver(observer, this, ["alt", "aria-labelledby", "slot"]);
     for (const element of assigned) {
       observer.observe(element, {
+        attributes: true,
+        attributeFilter: ["alt", "aria-hidden", "aria-label", "aria-labelledby", "class", "hidden", "inert", "style"],
         childList: true,
         characterData: true,
         subtree: true,
       });
     }
+  }
+
+  private readLabelSlotText(assigned: readonly Element[]): string | undefined {
+    return composedAccessibilityText(assigned).replace(/\s+/g, " ").trim() || undefined;
   }
 
   private resetLabelSlotObserver(): void {
@@ -557,9 +560,10 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       >
         <div part="header">
           <div part="title">
-            <span part="icon" ?hidden=${!this.hasIconSlot}>
-              <slot name="icon" @slotchange=${this.onIconSlotChange}></slot>
-            </span>
+            ${renderInertPresentation(
+              html`<slot name="icon" @slotchange=${this.onIconSlotChange}></slot>`,
+              { part: "icon", hidden: !this.hasIconSlot },
+            )}
             <div part="label-group">
               <span part="label" ?hidden=${!hasLabel && !this.hasLabelSlot}
                 ><slot name="label" @slotchange=${this.onLabelSlotChange}
@@ -598,9 +602,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
                     @click=${() => this.setActiveView(v.id)}
                   >
                     ${v.icon
-                      ? html`<span part="view-icon" aria-hidden="true"
-                          >${v.icon}</span
-                        >`
+                      ? renderInertPresentation(v.icon, { part: "view-icon" })
                       : nothing}${v.label
                       ? html`<span part="view-label">${v.label}</span>`
                       : nothing}
@@ -619,9 +621,9 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
                 aria-controls=${this.bodyId}
                 @click=${this.toggleCollapsed}
               >
-                <span aria-hidden="true" inert>
-                  <slot name="collapse-icon">${chevronIcon()}</slot>
-                </span>
+                ${renderInertPresentation(
+                  html`<slot name="collapse-icon">${chevronIcon()}</slot>`,
+                )}
               </button>`
             : nothing}
           ${this.expandable
@@ -634,11 +636,11 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
                   : this.localize("widgetExpandToFullscreen")}
                 @click=${this.toggleFullscreen}
               >
-                <span aria-hidden="true" inert>
+                ${renderInertPresentation(html`
                   <slot name="fullscreen-icon"
                     >${this.fullscreen ? closeIcon() : expandIcon()}</slot
                   >
-                </span>
+                `)}
               </button>`
             : nothing}
         </div>

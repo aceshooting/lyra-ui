@@ -20,6 +20,8 @@ it('defaults to items=[], label="Tasks", expanded=true, collapsible=true', async
   expect(el.expanded).to.be.true;
   expect(el.hasAttribute('expanded')).to.be.true;
   expect(el.collapsible).to.be.true;
+  const heading = el.shadowRoot!.querySelector<HTMLElement>('[role="heading"]')!;
+  expect(heading.getAttribute('aria-level')).to.equal('3');
 });
 
 it('renders one [part="item"] row per top-level item, carrying data-status/data-id/data-depth', async () => {
@@ -135,6 +137,37 @@ it('renders a static, non-interactive heading (no button, no toggle) when collap
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
   expect(header.tagName).to.not.equal('BUTTON');
   expect(header.hasAttribute('aria-expanded')).to.be.false;
+});
+
+it('wraps either header shape in the configured heading level and supports the explicit none opt-out', async () => {
+  const defaultList = (await fixture(
+    html`<lr-task-list .items=${items}></lr-task-list>`,
+  )) as LyraTaskList;
+  expect(defaultList.shadowRoot!.querySelector('[role="heading"]')!.getAttribute('aria-level')).to.equal('3');
+
+  const collapsible = (await fixture(
+    html`<lr-task-list heading-level="2" .items=${items}></lr-task-list>`,
+  )) as LyraTaskList;
+  const collapsibleHeading = collapsible.shadowRoot!.querySelector<HTMLElement>('[role="heading"]')!;
+  expect(collapsibleHeading.getAttribute('aria-level')).to.equal('2');
+  expect(collapsibleHeading.querySelectorAll('button[part="header"]')).to.have.lengthOf(1);
+
+  const staticList = (await fixture(
+    html`<lr-task-list heading-level="5" .collapsible=${false} .items=${items}></lr-task-list>`,
+  )) as LyraTaskList;
+  const staticHeading = staticList.shadowRoot!.querySelector<HTMLElement>('[role="heading"]')!;
+  expect(staticHeading.getAttribute('aria-level')).to.equal('5');
+  expect(staticHeading.querySelectorAll('[part="header"]')).to.have.lengthOf(1);
+
+  const unheaded = (await fixture(
+    html`<lr-task-list heading-level="none" .items=${items}></lr-task-list>`,
+  )) as LyraTaskList;
+  expect(unheaded.shadowRoot!.querySelectorAll('[role="heading"]')).to.have.lengthOf(0);
+
+  const invalid = (await fixture(
+    html`<lr-task-list heading-level="outside-range" .items=${items}></lr-task-list>`,
+  )) as LyraTaskList;
+  expect(invalid.shadowRoot!.querySelector('[role="heading"]')!.getAttribute('aria-level')).to.equal('3');
 });
 
 it('accepts collapsible="false" as a plain-HTML attribute string', async () => {

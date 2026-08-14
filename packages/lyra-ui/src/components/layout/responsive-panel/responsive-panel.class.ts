@@ -7,6 +7,10 @@ import {
   type OverlayHandle,
 } from "../../../internal/overlay-manager.js";
 import { styles } from "./responsive-panel.styles.js";
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_responsivePanel } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6, [role="heading"]';
 
@@ -96,8 +100,8 @@ export function resolveEffectiveMode(
  * rather than `aria-labelledby`: the header content is light DOM while
  * `[part="panel"]` lives in this element's shadow tree, and an ID-reference
  * attribute can't resolve across that boundary). A panel opened without a
- * host `aria-label`, `label`, or header content still renders `role="dialog"`
- * with no accessible name -- set one of those to avoid that.
+ * host `aria-label`, `label`, or header content receives the localized
+ * `responsivePanel` fallback, so every overlay dialog remains named.
  *
  * @customElement lr-responsive-panel
  * @slot - The panel body.
@@ -139,6 +143,14 @@ export function resolveEffectiveMode(
  * @since 4.0.0
  */
 export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    responsivePanel: LYRA_DEFAULT_responsivePanel,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
 
   /** Whether the panel is open. In the inline presentation this just means visible/mounted; in
@@ -496,7 +508,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   override render(): TemplateResult {
     const overlay = this.effectiveMode === "overlay";
     const accessibleName =
-      this.accessibleLabel ?? (this.label || this.headingText);
+      this.accessibleLabel ?? (this.label || this.headingText || this.localize("responsivePanel"));
     return html`
       <div part="base" class=${overlay ? "overlay" : "inline"}>
         ${overlay
@@ -506,7 +518,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
           part="panel"
           role=${overlay ? "dialog" : nothing}
           aria-modal=${overlay ? "true" : nothing}
-          aria-label=${overlay && accessibleName ? accessibleName : nothing}
+          aria-label=${overlay ? accessibleName : nothing}
           tabindex=${overlay ? "-1" : nothing}
         >
           <div part="header" ?hidden=${!this.hasHeaderSlot}>

@@ -16,7 +16,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Experimental inline native video with none, standard, and full custom-control presets. Safe light-DOM sources and tracks are cloned into the private media element; full controls add playback rate and capability-gated picture in picture.',
+          'Experimental inline native video with none, standard, and full custom-control presets. Safe light-DOM sources and tracks are cloned into the private media element; full controls add playback rate and capability-gated picture in picture. Play-control focus transitions relay exactly one native `FocusEvent` plus the `lr-focus`/`lr-blur` alias.',
       },
     },
   },

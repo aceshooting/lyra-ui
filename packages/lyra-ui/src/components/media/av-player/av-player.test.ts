@@ -2027,11 +2027,25 @@ it('forwards host focus()/blur()/click() to the native media element and re-disp
   const el = wrapper.querySelector('lr-av-player') as LyraAvPlayer;
   await el.updateComplete;
   const media = el.shadowRoot!.querySelector('[part="media"]') as HTMLMediaElement;
-  // Listening on the PARENT: a native focus/blur is composed but does not bubble, so only the
-  // component's own re-dispatched event reaches this listener.
-  const seen: string[] = [];
-  wrapper.addEventListener('focus', () => seen.push('focus'));
-  wrapper.addEventListener('blur', () => seen.push('blur'));
+  const nativeEvents: FocusEvent[] = [];
+  const aliases: string[] = [];
+  const sequence: string[] = [];
+  wrapper.addEventListener('focus', (event) => {
+    nativeEvents.push(event as FocusEvent);
+    sequence.push('focus');
+  });
+  wrapper.addEventListener('blur', (event) => {
+    nativeEvents.push(event as FocusEvent);
+    sequence.push('blur');
+  });
+  wrapper.addEventListener('lr-focus', () => {
+    aliases.push('lr-focus');
+    sequence.push('lr-focus');
+  });
+  wrapper.addEventListener('lr-blur', () => {
+    aliases.push('lr-blur');
+    sequence.push('lr-blur');
+  });
 
   el.focus();
   expect(el.shadowRoot!.activeElement === media).to.equal(true);
@@ -2045,5 +2059,9 @@ it('forwards host focus()/blur()/click() to the native media element and re-disp
 
   el.blur();
   expect(el.shadowRoot!.activeElement === null).to.equal(true);
-  expect(seen).to.deep.equal(['focus', 'blur']);
+  expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+  expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
+  expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
+  expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
+  expect(sequence).to.deep.equal(['focus', 'lr-focus', 'blur', 'lr-blur']);
 });

@@ -101,6 +101,48 @@ describe("lr-segmented", () => {
     expect(el.value).to.equal("day");
   });
 
+  it("starts navigation from the actually focused duplicate occurrence when nothing is selected", async () => {
+    const duplicateItems = [
+      { value: "same", label: "First" },
+      { value: "same", label: "Second" },
+      { value: "other", label: "Third" },
+    ];
+    const el = (await fixture(
+      html`<lr-segmented .items=${duplicateItems}></lr-segmented>`
+    )) as LyraSegmented;
+    const second = segmentButtons(el)[1]!;
+    second.focus();
+    second.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await el.updateComplete;
+
+    expect(el.value).to.equal("other");
+    expect(el.shadowRoot!.activeElement === segmentButtons(el)[2]).to.equal(true);
+  });
+
+  it("uses the keyboard event target ahead of controlled selection state", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()} value="week"></lr-segmented>`
+    )) as LyraSegmented;
+    const month = segmentButtons(el)[2]!;
+    month.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await el.updateComplete;
+
+    expect(el.value).to.equal("day");
+    expect(el.shadowRoot!.activeElement === segmentButtons(el)[0]).to.equal(true);
+  });
+
   it("selects on click and emits lr-change", async () => {
     const el = (await fixture(
       html`<lr-segmented .items=${items()} value="day"></lr-segmented>`

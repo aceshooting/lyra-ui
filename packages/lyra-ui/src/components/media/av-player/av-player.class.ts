@@ -22,6 +22,7 @@ import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { styles } from './av-player.styles.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -126,8 +127,10 @@ export interface LyraAvPlayerEventMap {
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
   'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
-  blur: CustomEvent<undefined>;
-  focus: CustomEvent<undefined>;
+  blur: FocusEvent;
+  focus: FocusEvent;
+  'lr-blur': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<undefined>;
 }
 
 class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
@@ -182,8 +185,12 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  * @event lr-search-change - Fired from `search()`/`searchNext()`/`searchPrevious()`/
  *   `clearSearch()`. `detail: { query, matchCount, activeIndex }`.
  * @event lr-render-error - The native media element reported an `error` event. `detail: { error }`.
- * @event focus - Re-dispatched from the native media element as a bubbling, composed event.
- * @event blur - Re-dispatched from the native media element as a bubbling, composed event.
+ * @event {FocusEvent} focus - Relayed once from the native media element as a bubbling, composed
+ *   native event.
+ * @event {FocusEvent} blur - Relayed once from the native media element as a bubbling, composed
+ *   native event.
+ * @event lr-focus - Prefixed compatibility alias for `focus`.
+ * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @csspart base - The root wrapper.
  * @csspart media - The native `<audio>`/`<video>` element.
  * @csspart toolbar - The playback-rate control row.
@@ -365,13 +372,13 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   }
 
   private onMediaFocus = (event: FocusEvent): void => {
-    event.stopPropagation();
-    this.emit('focus');
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
   };
 
   private onMediaBlur = (event: FocusEvent): void => {
-    event.stopPropagation();
-    this.emit('blur');
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
   };
 
   /** Live playback position: the media element's own `currentTime` once mounted, else the last

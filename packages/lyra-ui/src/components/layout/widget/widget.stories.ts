@@ -260,3 +260,29 @@ export const CustomCollapseAndFullscreenIcons: Story = {
     </lr-widget>
   `,
 };
+
+export const DecorativeTitleAndViewIcons: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Title and view icons are visible presentation content whose flattened subtrees are inert and aria-hidden. Header actions remain actionable because they use the separate actions slot.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-widget
+      label="Usage"
+      .views=${[
+        { id: 'chart', label: 'Chart', icon: html`<span>▥</span>` },
+        { id: 'table', label: 'Table', icon: html`<span>☷</span>` },
+      ]}
+      style="max-width: 28rem;"
+    >
+      <span slot="icon">◈</span>
+      <button slot="actions" type="button">Export</button>
+      <div slot="view-chart" style="padding: 1rem;">Chart view body.</div>
+      <div slot="view-table" style="padding: 1rem;">Table view body.</div>
+    </lr-widget>
+  `,
+};

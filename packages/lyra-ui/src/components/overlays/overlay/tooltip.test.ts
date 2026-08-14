@@ -172,9 +172,87 @@ it('opens from keyboard focus and lets Escape dismiss it without moving focus', 
   expect(trigger.ownerDocument.activeElement === trigger).to.be.true;
 });
 
-it('recreates both mutation observers from the current owner window after iframe adoption', async () => {
+it('keeps composed trigger and actionable-popup focus transitions inside the interaction', async () => {
+  const tagName = 'test-tooltip-composed-focus-trigger';
+  if (!customElements.get(tagName)) customElements.define(tagName, class extends HTMLElement {});
+  const outside = document.createElement('button');
+  outside.textContent = 'Outside';
+  document.body.append(outside);
+  const el = (await fixture(html`
+    <lr-tooltip show-delay="0">
+      <test-tooltip-composed-focus-trigger slot="trigger">
+        <button id="first-trigger-action">First</button>
+        <button id="second-trigger-action">Second</button>
+      </test-tooltip-composed-focus-trigger>
+      <button id="tooltip-action">Tooltip action</button>
+    </lr-tooltip>
+  `)) as LyraTooltip;
+  const first = el.querySelector<HTMLButtonElement>('#first-trigger-action')!;
+  const second = el.querySelector<HTMLButtonElement>('#second-trigger-action')!;
+  const action = el.querySelector<HTMLButtonElement>('#tooltip-action')!;
+
+  first.focus();
+  await waitUntil(() => el.open);
+  second.focus();
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  expect(el.open, 'moving within a composed trigger must not schedule a close').to.equal(true);
+
+  action.focus();
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  expect(el.open, 'moving from the trigger into actionable tooltip content keeps it open').to.equal(true);
+
+  outside.focus();
+  await waitUntil(() => !el.open);
+  outside.remove();
+});
+
+it('recognizes the shared native and ARIA-widget action vocabulary', async () => {
   const el = (await fixture(html`
     <lr-tooltip manual>
+      <button type="button" slot="trigger">Help</button>
+      <span role="switch">Toggle setting</span>
+    </lr-tooltip>
+  `)) as LyraTooltip;
+
+  await waitUntil(() => popup(el).getAttribute('role') === 'dialog');
+  expect(descriptionProxy(el).textContent).to.equal('Toggle setting');
+});
+
+it('treats an authored sequential focus stop as actionable content', async () => {
+  const el = (await fixture(html`
+    <lr-tooltip manual>
+      <button type="button" slot="trigger">Help</button>
+      <span tabindex="0">Focusable details</span>
+    </lr-tooltip>
+  `)) as LyraTooltip;
+
+  await waitUntil(() => popup(el).getAttribute('role') === 'dialog');
+  expect(descriptionProxy(el).textContent).to.equal('Focusable details');
+});
+
+it('bounds deep composed-content inspection and fails closed beyond the shared depth budget', async () => {
+  const el = (await fixture(html`
+    <lr-tooltip manual>
+      <button type="button" slot="trigger">Help</button>
+    </lr-tooltip>
+  `)) as LyraTooltip;
+  let branch: HTMLElement = document.createElement('span');
+  const root = branch;
+  for (let depth = 0; depth < 300; depth += 1) {
+    const child = document.createElement('span');
+    branch.append(child);
+    branch = child;
+  }
+  branch.innerHTML = '<button type="button">Past the traversal ceiling</button>';
+
+  el.append(root);
+  await waitUntil(() => descriptionProxy(el).textContent === '');
+  expect(popup(el).getAttribute('role')).to.equal('tooltip');
+});
+
+it('recreates content and generated-description observers from the current owner window after iframe adoption', async () => {
+  const el = (await fixture(html`
+    <lr-tooltip manual open>
       Helpful text
       <button type="button" slot="trigger">Help</button>
     </lr-tooltip>
@@ -203,7 +281,7 @@ it('recreates both mutation observers from the current owner window after iframe
     await el.updateComplete;
     expect(el.ownerDocument === frameDocument).to.be.true;
     // LyraElement itself creates one owner-realm observer. Requiring three proves Tooltip also
-    // recreated both its content observer and the trigger aria-describedby observer.
+    // recreated its content observer and the active shared description-ownership observer.
     expect(constructions).to.be.at.least(3);
   } finally {
     frameWindow.MutationObserver = OriginalMutationObserver;
@@ -260,13 +338,13 @@ it('cancels a delayed transition in its scheduling window and uses the adopted o
   }) as typeof frameWindow.clearTimeout;
 
   try {
-    trigger.dispatchEvent(new FocusEvent('focus'));
+    trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
     expect(topSchedules).to.equal(1);
     frameDocument.body.append(el);
     await el.updateComplete;
     expect(topCancellations).to.equal(1);
 
-    trigger.dispatchEvent(new frameWindow.FocusEvent('focus'));
+    trigger.dispatchEvent(new frameWindow.FocusEvent('focusin', { bubbles: true, composed: true }));
     expect(frameSchedules + topSchedules).to.equal(2);
     for (const [handle, callback] of [...frameTimers, ...topTimers]) {
       frameTimers.delete(handle);
@@ -362,7 +440,7 @@ it('resolves show-delay from the --show-delay custom property when no attribute 
   expect(el.showDelay).to.equal(150);
 
   const trigger = el.querySelector('button')!;
-  trigger.dispatchEvent(new FocusEvent('focus'));
+  trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
   await waitUntil(() => el.open, 'should open well before the 150ms default show-delay', {
     interval: 5,
     timeout: 120,
@@ -650,7 +728,7 @@ it('degrades open-content scheduling and observation gracefully after adoption i
 
   // A hide-delay timer has nothing to schedule against without an owner window, so the leave
   // interaction is dropped rather than throwing or eventually closing the tooltip.
-  trigger.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
+  trigger.dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
   await new Promise((resolve) => setTimeout(resolve, 150));
   expect(el.open).to.be.true;
 

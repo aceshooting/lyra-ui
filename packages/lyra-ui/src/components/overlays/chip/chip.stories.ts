@@ -88,7 +88,15 @@ export const Disabled: Story = {
 };
 
 export const WithIcon: Story = {
-  name: 'With a leading icon/dot',
+  name: 'With decorative icon content',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The icon slot is always visible presentation content whose flattened subtree is inert and aria-hidden. The end slot remains ordinary consumer content in passive/removable mode and follows that presentation contract only beneath a full-surface toggle.',
+      },
+    },
+  },
   render: () => html`
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
       <lr-chip variant="success">
@@ -106,6 +114,7 @@ export const WithIcon: Story = {
           <path d="M2 12l10 5 10-5" />
         </svg>
         research
+        <span slot="end">↗</span>
       </lr-chip>
     </div>
   `,
@@ -164,7 +173,7 @@ export const ToggleSelection: Story = {
     docs: {
       description: {
         story:
-          'Setting `selected` opts the chip into toggle mode, backed by a native `[part=toggle-button]` with keyboard activation and reflected `aria-pressed`. The label remains visible but becomes inert, so do not put interactive descendants in the default slot. Activation emits the cancelable `lr-chip-select` event with the proposed next state before mutation; call `preventDefault()` to keep the current selection. The opt-in survives toggling `selected` back off, so a chip that starts selected (left) stays clickable after the first click. A chip that must be clickable from the outset while starting **unselected** (right) sets `toggleable` explicitly.',
+          'Setting `selected` opts the chip into toggle mode, backed by a native `[part=toggle-button]` with keyboard activation and reflected `aria-pressed`. The visible label, icon, and end layers become inert and aria-hidden, so the toggle remains the sole action; do not put independent controls in those slots. Activation emits the cancelable `lr-chip-select` event with the proposed next state before mutation; call `preventDefault()` to keep the current selection. The opt-in survives toggling `selected` back off, so a chip that starts selected (left) stays clickable after the first click. A chip that must be clickable from the outset while starting **unselected** (right) sets `toggleable` explicitly.',
       },
     },
   },

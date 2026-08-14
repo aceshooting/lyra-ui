@@ -3,6 +3,7 @@ import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { gemstoneGlyph, type GemstoneKey } from '../../../theme/gemstones.js';
 import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
@@ -16,9 +17,10 @@ export interface SwatchOption {
   color: string;
   /** The swatch's accessible name; also used as its native `title` tooltip. */
   label: string;
-  /** Optional custom shape rendered in place of the plain filled circle -- e.g. a gem or other
-   *  brand-specific glyph. A `currentColor`-based SVG (fill or stroke) picks up `color` automatically
-   *  via the swatch's `color` CSS property, matching `<lr-segmented>`'s `SegmentedItem.icon` field. */
+  /** Optional decorative custom shape rendered in place of the plain filled circle -- e.g. a gem
+   *  or other brand-specific glyph. Its rendered subtree is inert and aria-hidden. A
+   *  `currentColor`-based SVG (fill or stroke) picks up `color` automatically via the swatch's
+   *  `color` CSS property, matching `<lr-segmented>`'s `SegmentedItem.icon` field. */
   icon?: unknown;
   /** Canonical gemstone to render automatically in `mode="gemstone"`. An explicit `icon` still
    * wins, so a consumer can customize one option without leaving gemstone mode. */
@@ -63,8 +65,9 @@ export interface LyraSwatchPickerEventMap {
  *   floored at 24px), independent of the smaller visible fill/icon rendered inside it. The
  *   selected one is `[part='swatch'][aria-checked='true']`.
  * @csspart swatch-fill - The compact filled circle rendered when the option has no custom `icon`.
- * @csspart swatch-icon - Optional custom shape supplied by the option's `icon` field; when present it
- *   replaces `swatch-fill` and the swatch renders unfilled/unbordered behind it.
+ * @csspart swatch-icon - Optional decorative custom shape supplied by the option's `icon` field;
+ *   its subtree is inert and hidden from assistive technology. When present it replaces
+ *   `swatch-fill` and the swatch renders unfilled/unbordered behind it.
  * @cssprop [--lr-swatch-picker-selected-color=var(--lr-color-brand)] - Ring color drawn around
  *   the selected swatch, themeable independently of the focus ring and every other ring color.
  * @cssprop [--lr-swatch-picker-selected-blur=0] - Blur radius of that same ring. 0 by default
@@ -234,6 +237,26 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     this.tabbableSwatch()?.blur();
   }
 
+  /** Returns the owned swatch that originated this keyboard event. A controlled `value` write can
+   * move selection while real focus deliberately remains on a different occurrence, so selection
+   * is only the fallback when neither the event path nor the current shadow focus identifies a
+   * swatch. */
+  private keyboardOriginIndex(event: KeyboardEvent): number {
+    const fromEvent = event.composedPath().find(
+      (candidate): candidate is HTMLElement =>
+        (candidate as Partial<Node>).nodeType === 1 &&
+        (candidate as Partial<Element>).getAttribute?.('part') === 'swatch' &&
+        (candidate as Element).getRootNode() === this.renderRoot,
+    );
+    const focused = this.shadowRoot?.activeElement;
+    const candidate = fromEvent ??
+      (focused?.getAttribute('part') === 'swatch' ? focused as HTMLElement : undefined);
+    const index = Number(candidate?.dataset['index']);
+    return Number.isInteger(index) && index >= 0 && index < this.options.length
+      ? index
+      : this.resolveSelectedIndex();
+  }
+
   private onKeyDown = (e: KeyboardEvent): void => {
     // A swatch that already held focus when `disabled` flipped can still deliver key events even
     // though every button is now `disabled` and unfocusable, so the guard lives here too rather
@@ -241,7 +264,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     if (this.disabled) return;
     const navigable = this.options;
     if (navigable.length === 0) return;
-    const currentIndex = this.resolveSelectedIndex();
+    const currentIndex = this.keyboardOriginIndex(e);
     const rtl = isRtl(this);
     const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
@@ -308,7 +331,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
             @click=${() => this.select(option, index)}
           >${
             icon
-              ? html`<span part="swatch-icon" aria-hidden="true">${icon}</span>`
+              ? renderInertPresentation(icon, { part: 'swatch-icon' })
               : html`<span part="swatch-fill" aria-hidden="true"></span>`
           }</button>`;
           },

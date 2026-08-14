@@ -1647,6 +1647,26 @@ test('manual mappings report one tag warning and every optional peer requirement
   );
 });
 
+test('Shoelace state-change lifecycle mappings remain unchanged with cancelability warnings', () => {
+  const tags = ['sl-alert', 'sl-dialog', 'sl-drawer', 'sl-dropdown', 'sl-tooltip'];
+  const input = `${tags.map((tag) => `<${tag}></${tag}>`).join('\n')}\n`;
+  const result = migrateText(input, buildMigrationContract(checkedInventory), {
+    file: 'shoelace-lifecycle.html',
+  });
+
+  assert.equal(result.content, input);
+  assert.deepEqual(result.changes, []);
+  assert.deepEqual(
+    result.warnings
+      .filter(({ warningCode }) => warningCode === 'WARNING_REQUIRED')
+      .map(({ upstreamTag }) => upstreamTag),
+    tags,
+  );
+  assert.ok(
+    result.warnings.every(({ message }) => /non-cancelable.*pre-state veto/iu.test(message)),
+  );
+});
+
 test('the checked-in inventory rewrites free-tier icon imports from both ecosystems with their dompurify peer requirement', () => {
   const checkedContract = buildMigrationContract(checkedInventory);
 

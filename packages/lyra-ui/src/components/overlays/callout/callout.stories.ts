@@ -12,7 +12,9 @@ export const Default: StoryObj = {
       },
     },
   },
-  render: () => html`<lr-callout heading="Update available">A new release is ready to install.</lr-callout>`,
+  render: () => html`<lr-callout heading="Update available" heading-level="2"
+    >A new release is ready to install.</lr-callout
+  >`,
 };
 export const Dismissible: StoryObj = {
   parameters: {

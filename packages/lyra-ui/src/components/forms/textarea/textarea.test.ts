@@ -126,7 +126,7 @@ it('themes the textarea hover border through a component hook', async () => {
   }
 });
 
-it('forwards host click to the textarea and suppresses it while effectively disabled', async () => {
+it('suppresses host click/focus in the same task that fieldset disablement starts', async () => {
   const form = (await fixture(html`
     <form><fieldset><lr-textarea></lr-textarea></fieldset></form>
   `)) as HTMLFormElement;
@@ -140,7 +140,9 @@ it('forwards host click to the textarea and suppresses it while effectively disa
   expect(clicks).to.equal(1);
   fieldset.disabled = true;
   el.click();
+  el.focus();
   expect(clicks).to.equal(1);
+  expect(el.shadowRoot!.activeElement === null).to.be.true;
 });
 
 it('calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wired in', async () => {

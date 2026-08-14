@@ -204,24 +204,39 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     }
   }
 
+  /** Resolves the physical occurrence that originated keyboard input before consulting controlled
+   * selection. Duplicate values and an unselected group both make value-derived origin ambiguous,
+   * while the event path and real shadow focus retain the exact rendered index. */
+  private keyboardOriginIndex(event: KeyboardEvent): number {
+    const fromEvent = event.composedPath().find(
+      (candidate): candidate is HTMLElement =>
+        (candidate as Partial<Node>).nodeType === 1 &&
+        (candidate as Partial<Element>).getAttribute?.("part") === "segment" &&
+        (candidate as Element).getRootNode() === this.renderRoot
+    );
+    const focused = activeElementIn(this.renderRoot as ShadowRoot);
+    const candidate = fromEvent ??
+      (focused?.getAttribute("part") === "segment" ? focused as HTMLElement : undefined);
+    const index = Number(candidate?.dataset["index"]);
+    return Number.isInteger(index) && index >= 0 && index < this.items.length ? index : -1;
+  }
+
   private onKeyDown = (e: KeyboardEvent): void => {
     const navigable = this.items
       .map((item, index) => ({ item, index }))
       .filter(({ item }) => !item.disabled);
     if (navigable.length === 0) return;
-    const focusedIndex = Number(
-      (activeElementIn(this.renderRoot as ShadowRoot) as HTMLElement | null)
-        ?.dataset["index"]
-    );
+    const focusedIndex = this.keyboardOriginIndex(e);
     const selectedIndex = this.items.indexOf(this.selectedItem!);
+    const originIndex = focusedIndex >= 0 ? focusedIndex : selectedIndex;
+    // A fresh group deliberately makes its first available item the sequential entry point. Its
+    // first arrow press selects that entry (the long-standing APG behavior); a consumer that has
+    // explicitly moved focus to a different `tabindex=-1` occurrence has supplied a real origin
+    // and must advance from there instead.
     const currentIndex =
-      selectedIndex < 0
+      selectedIndex < 0 && this.segmentButtonAt(originIndex)?.tabIndex === 0
         ? -1
-        : navigable.findIndex(
-            ({ index }) =>
-              index ===
-              (Number.isInteger(focusedIndex) ? focusedIndex : selectedIndex)
-          );
+        : navigable.findIndex(({ index }) => index === originIndex);
     const rtl = isRtl(this);
     const forwardKey = rtl ? "ArrowLeft" : "ArrowRight";
     const backwardKey = rtl ? "ArrowRight" : "ArrowLeft";

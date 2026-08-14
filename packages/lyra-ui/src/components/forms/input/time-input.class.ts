@@ -11,6 +11,10 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated, isBarredFromValidation } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
+import {
+  acquireAriaDescription,
+  type AriaDescriptionLease,
+} from '../../../internal/aria-controls.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { closeIcon, chevronIcon } from '../../../internal/icons.js';
 import { finiteInteger, finiteNumber } from '../../../internal/numbers.js';
@@ -174,6 +178,10 @@ function containsElement(container: Element | null, value: unknown): value is El
  * When a controlled locale, hour format, or step change removes the segment that currently owns
  * focus, focus moves to the first surviving segment after the new pattern renders. Changes never
  * reclaim focus from another control.
+ * The semantic group and every spinbutton expose explicit required/invalid states. Requiredness
+ * also has one localized hidden group description that composes with the visible hint/error
+ * relationship; visible error chrome wins `aria-invalid` immediately, while intrinsic/custom
+ * invalidity is exposed only after interaction.
  *
  * @customElement lr-time-input
  * @event input - Native `InputEvent` fired for user edits.
@@ -356,7 +364,10 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   private labelId = nextId('time-input-label');
   private hintId = nextId('time-input-hint');
   private errorId = nextId('time-input-error');
+  private requiredDescriptionId = nextId('time-input-required');
   private popupId = nextId('time-input-popup');
+  private requiredDescriptionLease?: AriaDescriptionLease;
+  private requiredDescriptionTarget?: HTMLElement;
   /** Clock seam for deterministic local-time tests. */
   private now = (): Date => new Date();
 
@@ -365,6 +376,11 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     this.addEventListener('invalid', () => {
       this.touched = true;
     });
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) this.syncRequiredDescription();
   }
 
   /** Whether the column picker is open.
@@ -468,6 +484,14 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
       .map((part) => part.type);
   }
 
+  /** Reads component state plus the UA's synchronous fieldset cascade when a browser selector
+   * predicate exists. Lit's server element shim has no callable `matches()`, so SSR falls back to
+   * the reactive authority instead of aborting public-state application before the first render. */
+  private get liveDisabled(): boolean {
+    const matches = (this as Partial<Element>).matches;
+    return this.effectiveDisabled || (typeof matches === 'function' && matches.call(this, ':disabled'));
+  }
+
   private activeSegmentFor(order = this.segmentOrder): SegmentName {
     return order.includes(this.activeSegment) ? this.activeSegment : (order[0] ?? 'hour');
   }
@@ -569,7 +593,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   }
 
   private setDraftSegment(name: SegmentName, value: number | DayPeriod | null, user = true): void {
-    if (this.effectiveDisabled || (user && this.readonly)) return;
+    if (this.liveDisabled || (user && this.readonly)) return;
     if (name === 'hour') {
       if (value === null) {
         this.draft.hour = null;
@@ -672,7 +696,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   private onSegmentKeyDown = (event: KeyboardEvent): void => {
     const target = event.currentTarget as HTMLElement;
     const name = target.dataset['segment'] as SegmentName;
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
 
     if (event.altKey && event.key === 'ArrowDown') {
       event.preventDefault();
@@ -722,7 +746,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   };
 
   private onSegmentPaste = (event: ClipboardEvent): void => {
-    if (this.effectiveDisabled || this.readonly) return;
+    if (this.liveDisabled || this.readonly) return;
     const pasted = normalizeTimeValue(event.clipboardData?.getData('text').trim() ?? '');
     if (!pasted) return;
     event.preventDefault();
@@ -732,6 +756,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
 
   private onSegmentFocus = (event: FocusEvent): void => {
     event.stopPropagation();
+    if (this.liveDisabled) return;
     const target = event.target as HTMLElement;
     const focusedSegment = (target.dataset['segment'] as SegmentName) ?? this.activeSegment;
     if (this.restoringSegmentFocus) {
@@ -761,7 +786,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     // Disabling a focused segment (its tabindex drops to -1) makes the
     // browser force a blur here that is not a real user interaction; don't mark the field touched
     // for it.
-    if (!this.effectiveDisabled) this.touched = true;
+    if (!this.liveDisabled) this.touched = true;
     this.resetDigitBuffer();
     relayNativeEvent(this, event);
     this.emit('lr-blur');
@@ -773,7 +798,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
 
   /** Focuses the active segment unless the control is directly or fieldset disabled. */
   override focus(options?: FocusOptions): void {
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
     const order = this.segmentOrder;
     const activeSegment = this.activeSegmentFor(order);
     if (activeSegment !== this.activeSegment) this.activeSegment = activeSegment;
@@ -788,7 +813,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   }
 
   override click(): void {
-    if (!this.effectiveDisabled) this.focus();
+    if (!this.liveDisabled) this.focus();
   }
 
   private setOpen(next: boolean): void {
@@ -805,7 +830,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
 
   private requestVisibility(next: boolean, announce: boolean, restoreFocus: boolean): Promise<void> {
     if (this._open === next) return this.visibilityPromise;
-    if (next && this.effectiveDisabled) {
+    if (next && this.liveDisabled) {
       this.syncOpenAttribute();
       return Promise.resolve();
     }
@@ -909,7 +934,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   };
 
   private onClear = (): void => {
-    if (this.effectiveDisabled || this.readonly || (!this.draftHasAny && this.value === '')) return;
+    if (this.liveDisabled || this.readonly || (!this.draftHasAny && this.value === '')) return;
     this.touched = true;
     this.commitUserValue('', 'deleteContentBackward', true);
     this.emit('lr-clear');
@@ -917,7 +942,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   };
 
   private onNow = (): void => {
-    if (this.effectiveDisabled || this.readonly) return;
+    if (this.liveDisabled || this.readonly) return;
     const now = this.now();
     let value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
     if (this.includeSeconds) value += `:${pad(now.getSeconds())}`;
@@ -925,7 +950,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   };
 
   private onColumnSelect(name: SegmentName, value: number | DayPeriod): void {
-    if (this.readonly || this.effectiveDisabled) return;
+    if (this.readonly || this.liveDisabled) return;
     this.resetDigitBuffer();
     this.setDraftSegment(name, value);
     this.activeSegment = name;
@@ -940,7 +965,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     event.stopPropagation();
     const input = event.currentTarget as HTMLInputElement;
     const normalized = normalizeTimeValue(input.value);
-    if (!normalized || this.readonly || this.effectiveDisabled) return;
+    if (!normalized || this.readonly || this.liveDisabled) return;
     this.value = normalized;
     dispatchNativeInputEvent(this, {
       data: event.data,
@@ -953,7 +978,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     event.stopPropagation();
     const input = event.currentTarget as HTMLInputElement;
     const normalized = normalizeTimeValue(input.value);
-    if (!normalized || this.readonly || this.effectiveDisabled) return;
+    if (!normalized || this.readonly || this.liveDisabled) return;
     this.value = normalized;
     dispatchNativeEvent(this, 'change');
     this.emit('lr-change', { value: this.value });
@@ -1091,6 +1116,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     }
     this.syncComponentStates();
     this.toggleAttribute('data-invalid', this.touched && !this.validity.valid);
+    this.syncRequiredDescription();
     const pendingSegmentFocus = this.pendingSegmentFocus;
     this.pendingSegmentFocus = undefined;
     if (pendingSegmentFocus && !this.effectiveDisabled) {
@@ -1104,6 +1130,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   }
 
   override disconnectedCallback(): void {
+    this.releaseRequiredDescription();
     this.transitionToken++;
     this.teardownPopup();
     this._open = false;
@@ -1114,7 +1141,30 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     super.disconnectedCallback();
   }
 
-  private renderSegment(name: SegmentName): TemplateResult {
+  /** Owns only requiredness text; the rendered hint and error IDs remain the baseline owners. */
+  private syncRequiredDescription(): void {
+    const target = this.renderRoot.querySelector<HTMLElement>('[part~="input"]');
+    const description = this.renderRoot.querySelector<HTMLElement>(`#${this.requiredDescriptionId}`);
+    if (!this.required || !target || !description) {
+      this.releaseRequiredDescription();
+      return;
+    }
+    if (this.requiredDescriptionTarget !== target) {
+      this.releaseRequiredDescription();
+      this.requiredDescriptionTarget = target;
+      this.requiredDescriptionLease = acquireAriaDescription(target, [description]);
+      return;
+    }
+    this.requiredDescriptionLease?.update([description]);
+  }
+
+  private releaseRequiredDescription(): void {
+    this.requiredDescriptionLease?.release();
+    this.requiredDescriptionLease = undefined;
+    this.requiredDescriptionTarget = undefined;
+  }
+
+  private renderSegment(name: SegmentName, invalid: boolean): TemplateResult {
     const value = this.segmentNumericValue(name);
     const bounds = this.segmentBounds(name);
     const empty = value === null;
@@ -1132,6 +1182,8 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
         aria-valuetext=${empty ? this.localize('timeInputEmptySegment') : this.segmentText(name)}
         aria-disabled=${String(this.effectiveDisabled)}
         aria-readonly=${String(this.readonly)}
+        aria-required=${String(this.required)}
+        aria-invalid=${String(invalid)}
         @keydown=${this.onSegmentKeyDown}
         @paste=${this.onSegmentPaste}
         @focus=${this.onSegmentFocus}
@@ -1140,10 +1192,10 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     `;
   }
 
-  private renderPatternPart(part: TimePatternPart): TemplateResult {
+  private renderPatternPart(part: TimePatternPart, invalid: boolean): TemplateResult {
     return part.type === 'literal'
       ? html`<span part="segment-literal" aria-hidden="true">${part.value}</span>`
-      : this.renderSegment(part.type);
+      : this.renderSegment(part.type, invalid);
   }
 
   private columnValues(name: SegmentName): Array<number | DayPeriod> {
@@ -1205,6 +1257,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     const shownError = this.errorText || (this.touched ? this.validationMessage : '');
     const hasError = this.hasErrorSlot || shownError.length > 0;
     const describedBy = [hasError ? this.errorId : '', hasHint ? this.hintId : ''].filter(Boolean).join(' ');
+    const invalid = hasError || (this.touched && !this.validity.valid);
     const hostAccessibleName = this.getAttribute('aria-label');
     const accessibleName = hostAccessibleName || this.label || this.localize('timeInputLabel');
     const showClear = this.withClear && (this.value !== '' || this.draftHasAny);
@@ -1226,10 +1279,11 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
             aria-label=${hostAccessibleName || !hasLabel ? accessibleName : nothing}
             aria-labelledby=${!hostAccessibleName && hasLabel ? this.labelId : nothing}
             aria-describedby=${describedBy || nothing}
+            aria-invalid=${String(invalid)}
             aria-controls=${this.popupId}
             aria-haspopup="dialog"
             aria-expanded=${String(this.open)}
-          >${this.pattern.map((part) => this.renderPatternPart(part))}</div>
+          >${this.pattern.map((part) => this.renderPatternPart(part, invalid))}</div>
           ${showClear
             ? html`
                 <button
@@ -1281,6 +1335,12 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
         <div id=${this.hintId} part="hint" ?hidden=${!hasHint}>
           ${this.hint}<slot name="hint" @slotchange=${this.updateSlotState}></slot>
         </div>
+        <span
+          id=${this.requiredDescriptionId}
+          class="sr-only"
+          data-required-description
+          ?hidden=${!this.required}
+        >${this.localize('fieldRequired')}</span>
         <input
           class="sr-only"
           data-autofill

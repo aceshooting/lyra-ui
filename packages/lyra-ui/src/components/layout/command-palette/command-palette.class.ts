@@ -116,7 +116,22 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
-  @property({ type: Boolean, reflect: true }) open = false;
+  private _open = false;
+  /** Whether the palette is open. Post-mount IDL and attribute writes use the same synchronous,
+   * cancelable lifecycle as `openPalette()` and `close()`; initial markup stays silent. */
+  @property({ type: Boolean, reflect: true })
+  get open(): boolean {
+    return this._open;
+  }
+  set open(next: boolean) {
+    const normalized = Boolean(next);
+    if (normalized === this._open) return;
+    if (!this.hasUpdated) {
+      this.commitOpen(normalized);
+      return;
+    }
+    this.requestOpen(normalized);
+  }
   @property({ attribute: false }) commands: LyraCommand[] = [];
   @property() shortcut = "mod+k";
   @property({ attribute: "aria-label" }) accessibleLabel = "";
@@ -151,6 +166,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private resultModelRowPitch?: number;
   private resultModelGroupPitch?: number;
   private resultModelCache?: CommandResultModel;
+  private openRequestTarget?: boolean;
 
   /** One lowercased searchable string per command, index-aligned with `commands`. `filtered`
    *  runs on every keystroke (and every ArrowUp/ArrowDown/Enter), so re-joining and lowercasing
@@ -373,19 +389,41 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   }
 
   openPalette(): void {
-    if (this.open) return;
-    if (this.emit("lr-open", undefined, { cancelable: true }).defaultPrevented) return;
-    this.open = true;
+    this.requestOpen(true);
+  }
+
+  close(): void {
+    this.requestOpen(false);
+  }
+
+  private requestOpen(next: boolean): boolean {
+    if (next === this._open || this.openRequestTarget === next) return false;
+    this.openRequestTarget = next;
+    const prevented = this.emit(next ? "lr-open" : "lr-close", undefined, {
+      cancelable: true,
+    }).defaultPrevented;
+    this.openRequestTarget = undefined;
+    if (prevented) {
+      this.toggleAttribute("open", this._open);
+      return false;
+    }
+    if (next) this.resetOpeningState();
+    this.commitOpen(next);
+    return true;
+  }
+
+  private resetOpeningState(): void {
     this.queryText = "";
     this.listScrollTop = 0;
     const rows = this.filtered;
     this.setActiveIndex(rows, this.seekEnabled(rows, 0, 1));
   }
 
-  close(): void {
-    if (!this.open) return;
-    if (this.emit("lr-close", undefined, { cancelable: true }).defaultPrevented) return;
-    this.open = false;
+  private commitOpen(next: boolean): void {
+    if (next === this._open) return;
+    const old = this._open;
+    this._open = next;
+    this.requestUpdate("open", old);
   }
 
   registerCommand(command: LyraCommand): () => void {

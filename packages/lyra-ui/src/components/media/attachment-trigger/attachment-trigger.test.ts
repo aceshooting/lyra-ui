@@ -266,16 +266,50 @@ describe('host control forwarding', () => {
     expect(selected).to.be.false;
   });
 
-  it('bridges focus and blur from the actual single/menu trigger buttons', async () => {
+  it('relays one native focus/blur pair with payload and aliases from the actual trigger', async () => {
     const single = (await fixture(
       html`<lr-attachment-trigger></lr-attachment-trigger>`,
     )) as LyraAttachmentTrigger;
-    const singleFocusEvent = oneEvent(single, 'focus');
-    trigger(single).focus();
-    expect((await singleFocusEvent).composed).to.be.true;
-    const singleBlurEvent = oneEvent(single, 'blur');
-    trigger(single).blur();
-    expect((await singleBlurEvent).bubbles).to.be.true;
+    const related = document.createElement('button');
+    const nativeEvents: FocusEvent[] = [];
+    const aliases: string[] = [];
+    const sequence: string[] = [];
+    single.addEventListener('focus', (event) => {
+      nativeEvents.push(event as FocusEvent);
+      sequence.push('focus');
+    });
+    single.addEventListener('blur', (event) => {
+      nativeEvents.push(event as FocusEvent);
+      sequence.push('blur');
+    });
+    single.addEventListener('lr-focus', () => {
+      aliases.push('lr-focus');
+      sequence.push('lr-focus');
+    });
+    single.addEventListener('lr-blur', () => {
+      aliases.push('lr-blur');
+      sequence.push('lr-blur');
+    });
+
+    trigger(single).dispatchEvent(new FocusEvent('focus', {
+      bubbles: true,
+      composed: true,
+      relatedTarget: related,
+      view: window,
+    }));
+    trigger(single).dispatchEvent(new FocusEvent('blur', {
+      bubbles: true,
+      composed: true,
+      relatedTarget: related,
+      view: window,
+    }));
+
+    expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+    expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
+    expect(nativeEvents.every((event) => event.target === single && event.bubbles && event.composed)).to.be.true;
+    expect(nativeEvents.every((event) => event.relatedTarget === related)).to.be.true;
+    expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
+    expect(sequence).to.deep.equal(['focus', 'lr-focus', 'blur', 'lr-blur']);
 
     const menu = (await fixture(html`
       <lr-attachment-trigger .capabilities=${['files', 'camera']}></lr-attachment-trigger>

@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Displays an animated GIF/APNG/WebP with a play/pause control. Defaults to a frozen first frame, both at rest and automatically under `prefers-reduced-motion: reduce` -- set `respect-reduced-motion="false"` to opt a specific instance back into ignoring that OS-level preference.',
+          'Displays an animated GIF/APNG/WebP with a play/pause control. Defaults to a frozen first frame, both at rest and automatically under `prefers-reduced-motion: reduce` -- set `respect-reduced-motion="false"` to opt a specific instance back into ignoring that OS-level preference. The control relays one native `FocusEvent` for `focus`/`blur`, followed by the `lr-focus`/`lr-blur` aliases.',
       },
     },
   },

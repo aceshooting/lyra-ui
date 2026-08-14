@@ -5,6 +5,7 @@ import {
   flip,
   shift,
   offset,
+  platform,
   size,
   type Boundary,
   type Placement,
@@ -103,24 +104,86 @@ export interface PlaceOptions {
 
 /** Corner order matches a `polygon()` traversal: top-left, top-right, bottom-right, bottom-left. */
 const HOVER_BRIDGE_CORNERS = ['top-left', 'top-right', 'bottom-right', 'bottom-left'] as const;
-
-/** Popups whose inline size a `place()` run wrote through `sync` -- see the release in `place()`. */
-const syncedPopups = new WeakSet<HTMLElement>();
+type HoverBridgeQuad = [number, number][];
+interface HoverBridgeRect {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+interface InlineStyleValue {
+  value: string;
+  priority: string;
+}
+interface PlacementStyleWrite {
+  element: HTMLElement;
+  property: string;
+  previous: InlineStyleValue;
+  previousOwner?: PlacementStyleWriteOwner;
+  written: InlineStyleValue;
+  owner?: PlacementStyleWriteOwner;
+}
+type PlacementStyleTransactionState = 'open' | 'committed' | 'rolled-back';
+interface PlacementStyleTransactionRecord {
+  state: PlacementStyleTransactionState;
+}
+interface PlacementStyleWriteOwner {
+  generation: number;
+  transaction: PlacementStyleTransactionRecord;
+  write: PlacementStyleWrite;
+}
+interface PlacementStyleTransaction {
+  set(element: HTMLElement, property: string, value: string, priority?: string): void;
+  ownedValue(element: HTMLElement, property: string): InlineStyleValue | undefined;
+  commit(): void;
+  rollback(): void;
+}
+interface StagedPlacementStyles {
+  availableInline?: string;
+  availableBlock?: string;
+}
+interface PlacementRunState {
+  generation: number;
+  nextUpdateGeneration: number;
+}
+interface PlacementUpdateState {
+  placementGeneration: number;
+  updateGeneration: number;
+}
+interface SyncedPopupDimensions {
+  width?: InlineStyleValue;
+  height?: InlineStyleValue;
+}
+interface SyncedPopupOwnership extends SyncedPopupDimensions {
+  placementGeneration: number;
+  updateGeneration: number;
+}
+interface PlacementSyncOwnershipController {
+  beginPlacement(popup: HTMLElement): PlacementRunState;
+  beginUpdate(run: PlacementRunState): PlacementUpdateState;
+  publish(
+    popup: HTMLElement,
+    update: PlacementUpdateState,
+    dimensions: SyncedPopupDimensions,
+  ): void;
+  release(popup: HTMLElement, run: PlacementRunState): void;
+}
+const placementStyleOwners = new WeakMap<HTMLElement, Map<string, PlacementStyleWriteOwner>>();
+let placementStyleGeneration = 0;
 
 /**
  * Clips `bridge` to the quad spanning the anchor and the popup, so the `offset` gap between them
  * stays hoverable. Written as physical coordinates on purpose: both rects are already viewport
  * pixels, and a logical property cannot express a quad whose two edges belong to different boxes.
  */
-function updateHoverBridge(
-  bridge: HTMLElement,
-  anchorRect: DOMRect,
-  popupRect: DOMRect,
+function hoverBridgeQuad(
+  anchorRect: HoverBridgeRect,
+  popupRect: HoverBridgeRect,
   placement: Placement,
-): void {
+): HoverBridgeQuad {
   const side = placement.split('-')[0];
   const onBlockAxis = side === 'top' || side === 'bottom';
-  let quad: [number, number][];
+  let quad: HoverBridgeQuad;
   if (onBlockAxis) {
     quad =
       anchorRect.top < popupRect.top
@@ -152,11 +215,220 @@ function updateHoverBridge(
             [popupRect.right, popupRect.bottom],
           ];
   }
+  return quad;
+}
+
+function readInlineStyle(element: HTMLElement, property: string): InlineStyleValue {
+  return {
+    value: element.style.getPropertyValue(property),
+    priority: element.style.getPropertyPriority(property),
+  };
+}
+
+function sameInlineStyle(left: InlineStyleValue, right: InlineStyleValue): boolean {
+  return left.value === right.value && left.priority === right.priority;
+}
+
+function writeInlineStyle(element: HTMLElement, property: string, value: InlineStyleValue): void {
+  element.style.removeProperty(property);
+  if (value.value) element.style.setProperty(property, value.value, value.priority);
+}
+
+/** @internal */
+export function createPlacementSyncOwnershipController(): PlacementSyncOwnershipController {
+  /** Exact popup dimensions a successful `sync` update still owns, or a no-sizing tombstone. */
+  const syncedDimensions = new WeakMap<HTMLElement, SyncedPopupOwnership>();
+  let nextPlacementGeneration = 0;
+
+  const isOlderThan = (
+    update: PlacementUpdateState,
+    current: SyncedPopupOwnership,
+  ): boolean =>
+    update.placementGeneration < current.placementGeneration ||
+    (update.placementGeneration === current.placementGeneration &&
+      update.updateGeneration < current.updateGeneration);
+
+  return {
+    beginPlacement() {
+      return { generation: ++nextPlacementGeneration, nextUpdateGeneration: 0 };
+    },
+    beginUpdate(run) {
+      return {
+        placementGeneration: run.generation,
+        updateGeneration: ++run.nextUpdateGeneration,
+      };
+    },
+    publish(popup, update, dimensions) {
+      const current = syncedDimensions.get(popup);
+      if (current && isOlderThan(update, current)) return;
+      // Keep an empty successful publication as a tombstone. Otherwise an older computation that
+      // settles later could recreate sizing ownership the newer successful update superseded.
+      syncedDimensions.set(popup, {
+        ...dimensions,
+        placementGeneration: update.placementGeneration,
+        updateGeneration: update.updateGeneration,
+      });
+    },
+    release(popup, run) {
+      const dimensions = syncedDimensions.get(popup);
+      if (dimensions && dimensions.placementGeneration > run.generation) return;
+      if (dimensions?.width && sameInlineStyle(readInlineStyle(popup, 'width'), dimensions.width)) {
+        writeInlineStyle(popup, 'width', { value: '', priority: '' });
+      }
+      if (
+        dimensions?.height &&
+        sameInlineStyle(readInlineStyle(popup, 'height'), dimensions.height)
+      ) {
+        writeInlineStyle(popup, 'height', { value: '', priority: '' });
+      }
+      // An unsynced placement is itself a successful ownership decision. Its tombstone prevents
+      // any later update from an older still-live placement from reintroducing a stale marker.
+      syncedDimensions.set(popup, {
+        placementGeneration: run.generation,
+        updateGeneration: Number.MAX_SAFE_INTEGER,
+      });
+    },
+  };
+}
+
+const placementSyncOwnership = createPlacementSyncOwnershipController();
+
+/** @internal */
+export function createPlacementStyleTransaction(): PlacementStyleTransaction {
+  const writes: PlacementStyleWrite[] = [];
+  const lastWrites = new WeakMap<HTMLElement, Map<string, PlacementStyleWrite>>();
+  const transaction: PlacementStyleTransactionRecord = { state: 'open' };
+
+  return {
+    set(element, property, value, priority = '') {
+      if (transaction.state !== 'open') return;
+      let owners = placementStyleOwners.get(element);
+      if (!owners) {
+        owners = new Map();
+        placementStyleOwners.set(element, owners);
+      }
+      // Record every write as a distinct ownership generation. Another placement transaction or
+      // consumer can intervene between two writes from this transaction; reusing the first
+      // predecessor would then roll back across that newer value. The reverse journal walk
+      // naturally collapses uninterrupted writes from one transaction back to their baseline.
+      const previous = readInlineStyle(element, property);
+      const currentOwner = owners.get(property);
+      const write: PlacementStyleWrite = {
+        element,
+        property,
+        previous,
+        // CSSOM does not expose setter provenance. Retain the recorded owner only while its last
+        // write still matches the observable value+priority; a distinct external write severs the
+        // ownership chain and becomes this generation's rollback baseline.
+        previousOwner:
+          currentOwner && sameInlineStyle(previous, currentOwner.write.written)
+            ? currentOwner
+            : undefined,
+        written: previous,
+      };
+      writes.push(write);
+      writeInlineStyle(element, property, { value, priority });
+      write.written = readInlineStyle(element, property);
+      write.owner = {
+        generation: ++placementStyleGeneration,
+        transaction,
+        write,
+      };
+      owners.set(property, write.owner);
+      let elementWrites = lastWrites.get(element);
+      if (!elementWrites) {
+        elementWrites = new Map();
+        lastWrites.set(element, elementWrites);
+      }
+      elementWrites.set(property, write);
+    },
+    ownedValue(element, property) {
+      if (transaction.state !== 'open') return undefined;
+      const write = lastWrites.get(element)?.get(property);
+      const owner = placementStyleOwners.get(element)?.get(property);
+      if (!write?.owner || owner?.generation !== write.owner.generation) return undefined;
+      const current = readInlineStyle(element, property);
+      return sameInlineStyle(current, write.written) ? current : undefined;
+    },
+    commit() {
+      if (transaction.state !== 'open') return;
+      transaction.state = 'committed';
+      for (const write of writes) {
+        const owners = placementStyleOwners.get(write.element);
+        if (
+          write.owner &&
+          owners?.get(write.property)?.generation === write.owner.generation
+        ) {
+          owners.delete(write.property);
+        }
+      }
+      writes.length = 0;
+    },
+    rollback() {
+      if (transaction.state !== 'open') return;
+      transaction.state = 'rolled-back';
+      for (const write of writes.reverse()) {
+        const owners = placementStyleOwners.get(write.element);
+        if (
+          !write.owner ||
+          owners?.get(write.property)?.generation !== write.owner.generation
+        ) {
+          continue;
+        }
+        // CSSOM exposes value and priority, but not setter provenance. Observable external
+        // changes are preserved; an exact no-op setter is indistinguishable from no mutation.
+        if (!sameInlineStyle(readInlineStyle(write.element, write.property), write.written)) {
+          owners.delete(write.property);
+          continue;
+        }
+        let previous = write.previous;
+        let previousOwner = write.previousOwner;
+        while (previousOwner?.transaction.state === 'rolled-back') {
+          previous = previousOwner.write.previous;
+          previousOwner = previousOwner.write.previousOwner;
+        }
+        writeInlineStyle(write.element, write.property, previous);
+        if (previousOwner?.transaction.state === 'open') owners.set(write.property, previousOwner);
+        else owners.delete(write.property);
+      }
+      writes.length = 0;
+    },
+  };
+}
+
+function writeHoverBridge(
+  bridge: HTMLElement,
+  quad: HoverBridgeQuad,
+  styleTransaction: PlacementStyleTransaction,
+): void {
   HOVER_BRIDGE_CORNERS.forEach((corner, index) => {
     const [x, y] = quad[index] as [number, number];
-    bridge.style.setProperty(`--lr-positioner-hover-bridge-${corner}-x`, `${x}px`);
-    bridge.style.setProperty(`--lr-positioner-hover-bridge-${corner}-y`, `${y}px`);
+    styleTransaction.set(bridge, `--lr-positioner-hover-bridge-${corner}-x`, `${x}px`);
+    styleTransaction.set(bridge, `--lr-positioner-hover-bridge-${corner}-y`, `${y}px`);
   });
+}
+
+async function popupRectAtPosition(
+  anchor: Element | VirtualAnchor,
+  popup: HTMLElement,
+  strategy: PlaceStrategy,
+  x: number,
+  y: number,
+  currentRect: DOMRect,
+): Promise<HoverBridgeRect> {
+  const offsetParent = await platform.getOffsetParent(popup);
+  const rect = await platform.convertOffsetParentRelativeRectToViewportRelativeRect({
+    elements: { reference: anchor, floating: popup },
+    rect: { x, y, width: currentRect.width, height: currentRect.height },
+    offsetParent: offsetParent as Element,
+    strategy,
+  });
+  return {
+    top: rect.y,
+    right: rect.x + rect.width,
+    bottom: rect.y + rect.height,
+    left: rect.x,
+  };
 }
 
 /**
@@ -202,6 +474,11 @@ export function place(
   popup: HTMLElement,
   opts: PlaceOptions = {},
 ): () => void {
+  // A placement computation may finish out of order after a visual-viewport or observer update,
+  // and an older `place()` call can likewise still be settling while its replacement starts.
+  // Style generations keep those computations from overwriting each other; placement/update
+  // generations apply the same rule to the separate successful-sync release marker.
+  const placementRun = placementSyncOwnership.beginPlacement(popup);
   // The popup defaults to `position: fixed`, so Floating UI must compute viewport-relative
   // coordinates; with the default 'absolute' strategy the popup would land off by the scroll
   // offset (appearing too far down on a scrolled page). A caller that deliberately wants the
@@ -215,141 +492,211 @@ export function place(
   const autoSize = opts.autoSize;
   const hoverBridge = opts.hoverBridge;
   let disposed = false;
+  let stopAutoUpdate: (() => void) | undefined;
+  const openStyleTransactions = new Set<PlacementStyleTransaction>();
+  const visualViewport = popup.ownerDocument.defaultView?.visualViewport;
+  const updateFromVisualViewport = () => update();
+
+  const dispose = (): void => {
+    if (disposed) return;
+    disposed = true;
+    stopAutoUpdate?.();
+    stopAutoUpdate = undefined;
+    visualViewport?.removeEventListener('resize', updateFromVisualViewport);
+    visualViewport?.removeEventListener('scroll', updateFromVisualViewport);
+    for (const transaction of [...openStyleTransactions].reverse()) transaction.rollback();
+    openStyleTransactions.clear();
+  };
 
   // `sync` is the only option here that writes inline sizing nothing else rewrites, so dropping it
   // has to release that sizing. Released on *setup* rather than in the returned cleanup: a caller
   // that re-`place()`s on every property change (which `<lr-popup>` does) would otherwise clear
   // the width a frame before the next async pass restores it, flashing the popup to full content
-  // size on every unrelated update. The WeakSet keeps that release scoped to popups a previous run
-  // actually sized -- an unconditional clear would trample inline sizing a different caller set
-  // for its own reasons. `autoSize` needs no equivalent: the always-on `size()` below rewrites
+  // size on every unrelated update. The ownership snapshot keeps that release scoped to the exact
+  // values a successful previous run actually sized. A failed/rolled-back run owns nothing, and a
+  // later consumer write is preserved rather than being cleared merely because an older sync run
+  // succeeded. `autoSize` needs no equivalent: the always-on `size()` below rewrites
   // both available-size properties on every pass, so a dropped `autoSize` self-corrects.
-  if (sync) syncedPopups.add(popup);
-  else if (syncedPopups.delete(popup)) {
-    popup.style.width = '';
-    popup.style.height = '';
+  if (!sync) {
+    placementSyncOwnership.release(popup, placementRun);
   }
   // `flip`/`shift` default on: every caller before these options existed got them unconditionally,
   // and they are what keeps a popup inside the viewport. Only `<lr-popup>` turns them off, and
   // only because it is the low-level primitive whose whole job is to expose the raw knobs.
   // Order is load-bearing and matches what shipped before `sync`/`autoSize` existed: with both
   // omitted the array below is exactly `[offset, flip, shift, arrow?, size]`.
-  const middleware = [
-    offset({ mainAxis: opts.offset ?? 4, crossAxis: opts.skidding ?? 0 }),
-    // Sizing to the anchor has to happen before flip/shift measure overflow, or they would each
-    // reason about the pre-sync box.
-    sync
-      ? size({
-          apply({ rects, elements }) {
-            if (disposed) return;
-            elements.floating.style.width =
-              sync === 'width' || sync === 'both' ? `${rects.reference.width}px` : '';
-            elements.floating.style.height =
-              sync === 'height' || sync === 'both' ? `${rects.reference.height}px` : '';
-          },
-        })
-      : undefined,
-    opts.flip === false
-      ? undefined
-      : flip({
-          boundary: (opts.flipBoundary ?? opts.boundary) as Boundary | undefined,
-          fallbackPlacements: opts.flipFallbackPlacements,
-          fallbackStrategy:
-            opts.flipFallbackStrategy === 'initial-placement'
-              ? 'initialPlacement'
-              : opts.flipFallbackStrategy === 'best-fit'
-                ? 'bestFit'
-                : undefined,
-          padding: opts.flipPadding,
-        }),
-    opts.shift === false
-      ? undefined
-      : shift({
-          boundary: (opts.shiftBoundary ?? opts.boundary) as Boundary | undefined,
-          padding: opts.shiftPadding ?? padding,
-        }),
-    opts.arrow ? arrow({ element: opts.arrow, padding: opts.arrowPadding ?? 0 }) : undefined,
-    size({
-      boundary: opts.boundary as Boundary | undefined,
-      padding,
-      apply({ availableWidth, availableHeight, elements }) {
-        if (disposed) return;
-        elements.floating.style.setProperty(
-          '--lr-positioner-available-inline-size',
-          `${Math.max(0, availableWidth)}px`,
-        );
-        elements.floating.style.setProperty(
-          '--lr-positioner-available-block-size',
-          `${Math.max(0, availableHeight)}px`,
-        );
-      },
-    }),
-    // Runs last so it overwrites the shared measurement above, and only on the axes it names.
-    autoSize
-      ? size({
-          boundary: (opts.autoSizeBoundary ?? opts.boundary) as Boundary | undefined,
-          padding: opts.autoSizePadding ?? 0,
-          apply({ availableWidth, availableHeight, elements }) {
-            if (disposed) return;
-            if (autoSize === 'horizontal' || autoSize === 'both') {
-              elements.floating.style.setProperty(
-                '--lr-positioner-available-inline-size',
-                `${Math.max(0, availableWidth)}px`,
+  const middlewareFor = (
+    styleTransaction: PlacementStyleTransaction,
+    stagedStyles: StagedPlacementStyles,
+  ) =>
+    [
+      offset({ mainAxis: opts.offset ?? 4, crossAxis: opts.skidding ?? 0 }),
+      // Sizing to the anchor has to happen before flip/shift measure overflow, or they would each
+      // reason about the pre-sync box.
+      sync
+        ? size({
+            apply({ rects, elements }) {
+              if (disposed) return;
+              styleTransaction.set(
+                elements.floating,
+                'width',
+                sync === 'width' || sync === 'both' ? `${rects.reference.width}px` : '',
               );
-            }
-            if (autoSize === 'vertical' || autoSize === 'both') {
-              elements.floating.style.setProperty(
-                '--lr-positioner-available-block-size',
-                `${Math.max(0, availableHeight)}px`,
+              styleTransaction.set(
+                elements.floating,
+                'height',
+                sync === 'height' || sync === 'both' ? `${rects.reference.height}px` : '',
               );
-            }
-          },
-        })
-      : undefined,
-  ].filter((entry) => entry !== undefined);
+            },
+          })
+        : undefined,
+      opts.flip === false
+        ? undefined
+        : flip({
+            boundary: (opts.flipBoundary ?? opts.boundary) as Boundary | undefined,
+            fallbackPlacements: opts.flipFallbackPlacements,
+            fallbackStrategy:
+              opts.flipFallbackStrategy === 'initial-placement'
+                ? 'initialPlacement'
+                : opts.flipFallbackStrategy === 'best-fit'
+                  ? 'bestFit'
+                  : undefined,
+            padding: opts.flipPadding,
+          }),
+      opts.shift === false
+        ? undefined
+        : shift({
+            boundary: (opts.shiftBoundary ?? opts.boundary) as Boundary | undefined,
+            padding: opts.shiftPadding ?? padding,
+          }),
+      opts.arrow ? arrow({ element: opts.arrow, padding: opts.arrowPadding ?? 0 }) : undefined,
+      size({
+        boundary: opts.boundary as Boundary | undefined,
+        padding,
+        apply({ availableWidth, availableHeight }) {
+          if (disposed) return;
+          // Available-size variables do not affect middleware measurement, so keep them off the
+          // live element until every later geometry read has succeeded. Synced dimensions cannot
+          // be staged because flip and shift must measure the resized box; those writes stay in
+          // the rollback journal above.
+          stagedStyles.availableInline = `${Math.max(0, availableWidth)}px`;
+          stagedStyles.availableBlock = `${Math.max(0, availableHeight)}px`;
+        },
+      }),
+      // Runs last so it overwrites the shared measurement above, and only on the axes it names.
+      autoSize
+        ? size({
+            boundary: (opts.autoSizeBoundary ?? opts.boundary) as Boundary | undefined,
+            padding: opts.autoSizePadding ?? 0,
+            apply({ availableWidth, availableHeight }) {
+              if (disposed) return;
+              if (autoSize === 'horizontal' || autoSize === 'both') {
+                stagedStyles.availableInline = `${Math.max(0, availableWidth)}px`;
+              }
+              if (autoSize === 'vertical' || autoSize === 'both') {
+                stagedStyles.availableBlock = `${Math.max(0, availableHeight)}px`;
+              }
+            },
+          })
+        : undefined,
+    ].filter((entry) => entry !== undefined);
 
-  const update = (): void => {
+  function update(): void {
     if (disposed) return;
+    const updateRun = placementSyncOwnership.beginUpdate(placementRun);
+    const styleTransaction = createPlacementStyleTransaction();
+    const stagedStyles: StagedPlacementStyles = {};
+    openStyleTransactions.add(styleTransaction);
     void computePosition(anchor, popup, {
       strategy,
       placement: opts.placement ?? 'bottom-start',
-      middleware,
-    }).then(({ x, y, placement, middlewareData }) => {
-      if (disposed) return;
-      popup.style.left = `${x}px`;
-      popup.style.top = `${y}px`;
-      // Read both rects back after the write: the hover bridge spans the rendered gap, and under
-      // the `absolute` strategy `x`/`y` are offset-parent-relative while the quad is not.
-      if (hoverBridge) {
-        updateHoverBridge(
-          hoverBridge,
-          anchor.getBoundingClientRect(),
-          popup.getBoundingClientRect(),
-          placement,
-        );
-      }
-      opts.onPlaced?.({ placement, arrow: middlewareData.arrow });
-    });
-  };
+      middleware: middlewareFor(styleTransaction, stagedStyles),
+    }).then(
+      async ({ x, y, placement, middlewareData }) => {
+        if (disposed) {
+          styleTransaction.rollback();
+          openStyleTransactions.delete(styleTransaction);
+          return;
+        }
+        let bridgeQuad: HoverBridgeQuad | undefined;
+        try {
+          if (hoverBridge) {
+            const anchorRect = anchor.getBoundingClientRect();
+            const currentPopupRect = popup.getBoundingClientRect();
+            const placedPopupRect = await popupRectAtPosition(
+              anchor,
+              popup,
+              strategy,
+              x,
+              y,
+              currentPopupRect,
+            );
+            if (disposed) {
+              styleTransaction.rollback();
+              openStyleTransactions.delete(styleTransaction);
+              return;
+            }
+            bridgeQuad = hoverBridgeQuad(anchorRect, placedPopupRect, placement);
+          }
+          if (stagedStyles.availableInline !== undefined) {
+            styleTransaction.set(
+              popup,
+              '--lr-positioner-available-inline-size',
+              stagedStyles.availableInline,
+            );
+          }
+          if (stagedStyles.availableBlock !== undefined) {
+            styleTransaction.set(
+              popup,
+              '--lr-positioner-available-block-size',
+              stagedStyles.availableBlock,
+            );
+          }
+          styleTransaction.set(popup, 'left', `${x}px`);
+          styleTransaction.set(popup, 'top', `${y}px`);
+          if (hoverBridge && bridgeQuad) writeHoverBridge(hoverBridge, bridgeQuad, styleTransaction);
+          const ownedSyncDimensions = sync
+            ? {
+                width: styleTransaction.ownedValue(popup, 'width'),
+                height: styleTransaction.ownedValue(popup, 'height'),
+              }
+            : undefined;
+          styleTransaction.commit();
+          openStyleTransactions.delete(styleTransaction);
+          if (sync) {
+            // A distinct external or newer placement write may have won before commit. Publishing
+            // an empty marker advances the successful-update generation without claiming sizing;
+            // an older completion can therefore neither erase nor relabel newer ownership.
+            placementSyncOwnership.publish(
+              popup,
+              updateRun,
+              ownedSyncDimensions ?? {},
+            );
+          }
+        } catch {
+          dispose();
+          return;
+        }
+        // Consumer callbacks deliberately sit outside the internal failure boundary. A callback
+        // exception remains observable to its caller instead of being mistaken for positioning
+        // failure and silently suppressed.
+        opts.onPlaced?.({ placement, arrow: middlewareData.arrow });
+      },
+      () => dispose(),
+    );
+  }
 
-  const stopAutoUpdate = autoUpdate(anchor, popup, update);
+  stopAutoUpdate = autoUpdate(anchor, popup, update);
   // The visual viewport changes independently of the layout viewport when a
   // mobile on-screen keyboard opens or closes. Floating UI's normal window
   // resize listener does not receive those events, so keep the available-size
   // CSS variables and fixed coordinates in sync with the visual viewport too.
   // Read from `popup` rather than `anchor` -- a VirtualAnchor has no `ownerDocument` of its own,
   // and `popup` is always a real element in the same document a real `anchor` would be anyway.
-  const visualViewport = popup.ownerDocument.defaultView?.visualViewport;
-  const updateFromVisualViewport = () => void update();
   visualViewport?.addEventListener('resize', updateFromVisualViewport);
   visualViewport?.addEventListener('scroll', updateFromVisualViewport);
 
-  return () => {
-    disposed = true;
-    stopAutoUpdate();
-    visualViewport?.removeEventListener('resize', updateFromVisualViewport);
-    visualViewport?.removeEventListener('scroll', updateFromVisualViewport);
-  };
+  return dispose;
 }
 
 /**

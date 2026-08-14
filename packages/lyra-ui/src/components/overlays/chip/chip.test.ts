@@ -361,6 +361,31 @@ describe('icon slot', () => {
     await el.updateComplete;
     expect(icon.hidden).to.be.false;
   });
+
+  it('keeps arbitrary interactive icon content visible but inert beside a real action', async () => {
+    const root = await fixture<HTMLElement>(html`<div>
+      <button id="before-chip-icon" type="button">Before</button>
+      <lr-chip removable>
+        <a id="nested-chip-icon" slot="icon" href="#nested-chip-icon">I</a>
+        Research
+      </lr-chip>
+    </div>`);
+    const el = root.querySelector('lr-chip') as LyraChip;
+    const before = root.querySelector<HTMLButtonElement>('#before-chip-icon')!;
+    const nested = root.querySelector<HTMLAnchorElement>('#nested-chip-icon')!;
+    const icon = el.shadowRoot!.querySelector<HTMLElement>('[part="icon"]')!;
+    const remove = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!;
+
+    expect(icon.getAttribute('aria-hidden')).to.equal('true');
+    expect(icon.hasAttribute('inert')).to.equal(true);
+    expect(nested.getBoundingClientRect().width).to.be.greaterThan(0);
+    before.focus();
+    nested.focus();
+    expect(el.ownerDocument.activeElement === before).to.equal(true);
+    remove.focus();
+    expect(el.shadowRoot!.activeElement === remove).to.equal(true);
+    await expect(el).to.be.accessible();
+  });
 });
 
 describe('end slot', () => {
@@ -391,6 +416,43 @@ describe('end slot', () => {
     await new Promise((resolve) => requestAnimationFrame(resolve));
     await el.updateComplete;
     expect(end.hidden).to.be.false;
+  });
+
+  it('keeps end content actionable in passive mode but presentation-only beneath a toggle', async () => {
+    const root = await fixture<HTMLElement>(html`<div>
+      <lr-chip id="passive-end-chip">
+        Passive
+        <a id="passive-chip-end" slot="end" href="#passive-chip-end">Details</a>
+      </lr-chip>
+      <button id="before-toggle-chip-end" type="button">Before</button>
+      <lr-chip id="toggle-end-chip" toggleable>
+        Toggle
+        <button id="nested-toggle-chip-end" slot="end" type="button">E</button>
+      </lr-chip>
+    </div>`);
+    const passive = root.querySelector('#passive-end-chip') as LyraChip;
+    const toggle = root.querySelector('#toggle-end-chip') as LyraChip;
+    const passiveEnd = passive.shadowRoot!.querySelector<HTMLElement>('[part="end"]')!;
+    const toggleEnd = toggle.shadowRoot!.querySelector<HTMLElement>('[part="end"]')!;
+    const passiveAction = root.querySelector<HTMLAnchorElement>('#passive-chip-end')!;
+    const before = root.querySelector<HTMLButtonElement>('#before-toggle-chip-end')!;
+    const nestedToggleAction = root.querySelector<HTMLButtonElement>('#nested-toggle-chip-end')!;
+    const toggleButton = toggle.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle-button"]')!;
+
+    expect(passiveEnd.hasAttribute('inert')).to.equal(false);
+    expect(passiveEnd.hasAttribute('aria-hidden')).to.equal(false);
+    passiveAction.focus();
+    expect(passive.ownerDocument.activeElement === passiveAction).to.equal(true);
+
+    expect(toggleEnd.getAttribute('aria-hidden')).to.equal('true');
+    expect(toggleEnd.hasAttribute('inert')).to.equal(true);
+    expect(nestedToggleAction.getBoundingClientRect().width).to.be.greaterThan(0);
+    before.focus();
+    nestedToggleAction.focus();
+    expect(toggle.ownerDocument.activeElement === before).to.equal(true);
+    toggleButton.focus();
+    expect(toggle.shadowRoot!.activeElement === toggleButton).to.equal(true);
+    await expect(toggle).to.be.accessible();
   });
 });
 
@@ -539,6 +601,27 @@ describe('remove affordance', () => {
     expect(el.shadowRoot!.querySelector('[part="remove-button"]')).to.exist;
   });
 
+  it('moves focus to the next composed action when a controlled listener removes the focused chip', async () => {
+    const host = await fixture<HTMLDivElement>(html`
+      <div>
+        <button id="before-removed-chip">Before</button>
+        <lr-chip removable>Tag</lr-chip>
+        <button id="after-removed-chip">After</button>
+      </div>
+    `);
+    const el = host.querySelector('lr-chip') as LyraChip;
+    const remove = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!;
+    const after = host.querySelector<HTMLButtonElement>('#after-removed-chip')!;
+    el.addEventListener('lr-remove', () => el.remove());
+    remove.focus();
+
+    remove.click();
+    await Promise.resolve();
+
+    expect(el.isConnected).to.equal(false);
+    expect(el.ownerDocument.activeElement === after).to.equal(true);
+  });
+
   it('gives the remove button the shared minimum hit area', async () => {
     const el = (await fixture(html`<lr-chip removable>Tag</lr-chip>`)) as LyraChip;
     const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
@@ -631,6 +714,7 @@ describe('selected', () => {
     expect(button?.localName).to.equal('button');
     expect(button.contains(label)).to.be.false;
     expect(label.hasAttribute('inert')).to.be.true;
+    expect(label.getAttribute('aria-hidden')).to.equal('true');
 
     let changes = 0;
     el.addEventListener('lr-chip-select', () => changes++);
@@ -638,6 +722,7 @@ describe('selected', () => {
     expect(changes).to.equal(0);
     button.click();
     expect(changes).to.equal(1);
+    await expect(el).to.be.accessible();
   });
 
   it('emits the proposed selection before mutation and honors preventDefault', async () => {
@@ -668,6 +753,66 @@ describe('selected', () => {
     expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
     el.click();
     expect(el.selected).to.be.true;
+  });
+
+  it('transfers owned focus to the equivalent control when removable mode changes', async () => {
+    const el = (await fixture(html`<lr-chip removable toggleable>Tag</lr-chip>`)) as LyraChip;
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!.focus();
+
+    el.removable = false;
+    await el.updateComplete;
+    await Promise.resolve();
+    const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle-button"]')!;
+    expect(el.shadowRoot!.activeElement === toggle).to.equal(true);
+
+    el.removable = true;
+    await el.updateComplete;
+    await Promise.resolve();
+    const remove = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!;
+    expect(el.shadowRoot!.activeElement === remove).to.equal(true);
+  });
+
+  it('moves focus outside when a direct mode or disabled write leaves no usable chip control', async () => {
+    const host = await fixture<HTMLDivElement>(html`
+      <div>
+        <lr-chip toggleable>Tag</lr-chip>
+        <button id="after-chip-mode">After</button>
+      </div>
+    `);
+    const el = host.querySelector('lr-chip') as LyraChip;
+    const after = host.querySelector<HTMLButtonElement>('#after-chip-mode')!;
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle-button"]')!.focus();
+
+    el.toggleable = false;
+    await el.updateComplete;
+    await Promise.resolve();
+    expect(el.ownerDocument.activeElement === after).to.equal(true);
+
+    el.toggleable = true;
+    await el.updateComplete;
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle-button"]')!.focus();
+    el.disabled = true;
+    await el.updateComplete;
+    await Promise.resolve();
+    expect(el.ownerDocument.activeElement === after).to.equal(true);
+  });
+
+  it('does not steal newer external focus during a chip mode replacement', async () => {
+    const host = await fixture<HTMLDivElement>(html`
+      <div>
+        <button id="chip-explicit-focus">Explicit</button>
+        <lr-chip removable toggleable>Tag</lr-chip>
+      </div>
+    `);
+    const el = host.querySelector('lr-chip') as LyraChip;
+    const explicit = host.querySelector<HTMLButtonElement>('#chip-explicit-focus')!;
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!.focus();
+    el.removable = false;
+    explicit.focus();
+
+    await el.updateComplete;
+    await Promise.resolve();
+    expect(el.ownerDocument.activeElement === explicit).to.equal(true);
   });
 
   it('tracks action names through a forwarding slot and preserves explicit-empty host labels', async () => {

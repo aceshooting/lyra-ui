@@ -121,3 +121,109 @@ it('stops observing and can be restarted with a fresh current-state report', asy
   expect(states).to.deep.equal([true, false]);
   controller.stop();
 });
+
+it('shares one document mutation observer across active controllers', () => {
+  const descriptor = Object.getOwnPropertyDescriptor(window, 'MutationObserver');
+  const NativeMutationObserver = window.MutationObserver;
+  let constructions = 0;
+  class CountingMutationObserver implements MutationObserver {
+    private readonly inner: MutationObserver;
+
+    constructor(callback: MutationCallback) {
+      constructions += 1;
+      this.inner = new NativeMutationObserver(callback);
+    }
+
+    disconnect(): void {
+      this.inner.disconnect();
+    }
+
+    observe(target: Node, options?: MutationObserverInit): void {
+      this.inner.observe(target, options);
+    }
+
+    takeRecords(): MutationRecord[] {
+      return this.inner.takeRecords();
+    }
+  }
+  Object.defineProperty(window, 'MutationObserver', {
+    configurable: true,
+    writable: true,
+    value: CountingMutationObserver,
+  });
+
+  const controllers: RenderedStateController[] = [];
+  try {
+    for (let index = 0; index < 5; index += 1) {
+      const { host } = createRenderedHost();
+      const controller = new RenderedStateController(host, () => undefined);
+      controllers.push(controller);
+      controller.start();
+    }
+    expect(constructions).to.equal(1);
+  } finally {
+    controllers.forEach((controller) => controller.stop());
+    if (descriptor) Object.defineProperty(window, 'MutationObserver', descriptor);
+  }
+});
+
+it('does not read layout for unrelated document mutations', async () => {
+  const controllers: RenderedStateController[] = [];
+  let layoutReads = 0;
+  try {
+    for (let index = 0; index < 5; index += 1) {
+      const { host } = createRenderedHost();
+      const nativeGetClientRects = host.getClientRects.bind(host);
+      Object.defineProperty(host, 'getClientRects', {
+        configurable: true,
+        value: () => {
+          layoutReads += 1;
+          return nativeGetClientRects();
+        },
+      });
+      const controller = new RenderedStateController(host, () => undefined);
+      controllers.push(controller);
+      controller.start();
+    }
+    layoutReads = 0;
+
+    const unrelated = document.createTextNode('0');
+    document.body.append(unrelated);
+    for (let index = 1; index <= 10; index += 1) {
+      unrelated.data = String(index);
+      await new Promise<void>((resolve) => queueMicrotask(resolve));
+    }
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+
+    expect(layoutReads).to.equal(0);
+    unrelated.remove();
+  } finally {
+    controllers.forEach((controller) => controller.stop());
+  }
+});
+
+it('observes hidden-state changes on composed ancestors inside a shadow root', async () => {
+  const outer = document.createElement('section');
+  outer.dataset.renderedStateTest = '';
+  const shadow = outer.attachShadow({ mode: 'open' });
+  const wrapper = document.createElement('div');
+  const host = document.createElement('div');
+  host.style.inlineSize = '10px';
+  host.style.blockSize = '10px';
+  wrapper.append(host);
+  shadow.append(wrapper);
+  document.body.append(outer);
+  const states: boolean[] = [];
+  const controller = new RenderedStateController(host, (rendered) => states.push(rendered));
+
+  try {
+    controller.start();
+    wrapper.hidden = true;
+    await waitForState(states, 2);
+    wrapper.hidden = false;
+    await waitForState(states, 3);
+    expect(states).to.deep.equal([true, false, true]);
+  } finally {
+    controller.stop();
+  }
+});

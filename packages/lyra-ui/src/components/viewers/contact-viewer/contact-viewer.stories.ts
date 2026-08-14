@@ -16,7 +16,9 @@ const src = `data:text/vcard,${encodeURIComponent(source)}`;
 const narrowSource = ['BEGIN:VCARD', 'VERSION:4.0', 'FN:Ada Augusta King, Countess of Lovelace', 'ORG:International Society for Analytical Engine Research;Mathematical Correspondence Division', 'EMAIL;TYPE=work,preferred:ada.lovelace@example.com', 'TEL;TYPE=work,voice:+352 555 0100', 'END:VCARD'].join('\r\n');
 const narrowSrc = `data:text/vcard,${encodeURIComponent(narrowSource)}`;
 
-export const Default: Story = { render: () => html`<lr-contact-viewer src=${src} name="Contacts"></lr-contact-viewer>` };
+export const Default: Story = {
+  render: () => html`<lr-contact-viewer heading-level="2" src=${src} name="Contacts"></lr-contact-viewer>`,
+};
 export const Empty: Story = { render: () => html`<lr-contact-viewer></lr-contact-viewer>` };
 
 /** Baseline narrow-allocation coverage with long contact metadata. */

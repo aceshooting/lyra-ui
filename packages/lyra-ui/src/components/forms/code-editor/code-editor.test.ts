@@ -251,6 +251,22 @@ it('renders hint/errorText text and wires aria-describedby to the visible parts'
   expect(error.textContent).to.contain('Required');
   const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
   expect(textarea.getAttribute('aria-describedby')).to.equal(`${error.id} ${hint.id}`);
+  expect(textarea.getAttribute('aria-invalid')).to.equal('true');
+  expect(el.checkValidity(), 'visible consumer error chrome does not rewrite FACE validity').to.be.true;
+});
+
+it('projects requiredness to the native textarea in optional, required, and disabled states', async () => {
+  const el = (await fixture(html`<lr-code-editor></lr-code-editor>`)) as LyraCodeEditor;
+  const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+  expect(textarea.required).to.be.false;
+
+  el.required = true;
+  await el.updateComplete;
+  expect(textarea.required).to.be.true;
+
+  el.disabled = true;
+  await el.updateComplete;
+  expect(textarea.required, 'disablement bars validity but does not erase authored requiredness').to.be.true;
 });
 
 it('supports label, hint, and error slots with same-shadow description ids', async () => {
@@ -270,6 +286,7 @@ it('supports label, hint, and error slots with same-shadow description ids', asy
   expect(error.hidden).to.be.false;
   const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
   expect(textarea.getAttribute('aria-describedby')).to.equal(`${error.id} ${hint.id}`);
+  expect(textarea.getAttribute('aria-invalid')).to.equal('true');
 });
 
 it('hides hint/error parts and omits aria-describedby when unset', async () => {
@@ -465,6 +482,23 @@ it('forwards the complete native focus, selection, and range-editing surface', a
   el.blur();
   expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
   expect(forwarded).to.deep.equal(['focus', 'blur']);
+});
+
+it('rejects host focus synchronously when direct or fieldset disablement starts', async () => {
+  const fieldset = await fixture<HTMLFieldSetElement>(html`
+    <fieldset><lr-code-editor></lr-code-editor></fieldset>
+  `);
+  const el = fieldset.querySelector('lr-code-editor') as LyraCodeEditor;
+
+  el.disabled = true;
+  el.focus();
+  expect(el.shadowRoot!.activeElement === null, 'direct disabled write').to.be.true;
+
+  el.disabled = false;
+  await el.updateComplete;
+  fieldset.disabled = true;
+  el.focus();
+  expect(el.shadowRoot!.activeElement === null, 'same-task fieldset cascade').to.be.true;
 });
 
 it('synchronizes user edits and re-emits input/change with the current value', async () => {

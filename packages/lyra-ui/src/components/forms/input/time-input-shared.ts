@@ -1,4 +1,5 @@
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
+import { isDateObject } from '../../../internal/dom-guards.js';
 
 export type TimePrecision = 'minute' | 'second' | 'millisecond';
 
@@ -47,7 +48,7 @@ export function parseTimeValue(value: string): ParsedTimeValue | undefined {
 export function normalizeTimeValue(value: string | Date | null | undefined): string {
   if (value == null) return '';
 
-  if (value instanceof Date) {
+  if (isDateObject(value)) {
     if (!Number.isFinite(value.getTime())) return '';
     const base = `${pad(value.getHours())}:${pad(value.getMinutes())}`;
     if (value.getMilliseconds() !== 0) {

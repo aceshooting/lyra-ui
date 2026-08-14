@@ -2,12 +2,22 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import type { DocumentLocator } from '../../../ai/types.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
+import { composedParentElement } from '../../../internal/active-element.js';
+import {
+  applyComposedFocusRepair,
+  captureComposedFocusRepair,
+  collectComposedFocusTargets,
+  isActionableElement,
+  isSemanticActionElement,
+  type ComposedFocusRepairSnapshot,
+} from '../../../internal/focus-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import {
   activateOverlay,
+  composedContains,
   type OverlayHandle,
 } from '../../../internal/overlay-manager.js';
 import { styles } from './selection-toolbar.styles.js';
@@ -40,6 +50,13 @@ const ACTION_KEYS: Record<SelectionAction, string> = {
 
 const DEFAULT_PLACEMENT_GAP_PX = 8;
 
+interface ActionFocusRepair {
+  action?: SelectionAction;
+  index: number;
+  repair: ComposedFocusRepairSnapshot;
+  stop: HTMLElement;
+}
+
 /**
  * `<lr-selection-toolbar>` — a nonmodal action toolbar positioned above selected text. It carries
  * the selected text and a format-neutral document anchor into ask, quote, cite, or copy actions.
@@ -50,8 +67,12 @@ const DEFAULT_PLACEMENT_GAP_PX = 8;
  * beyond them -- "translate", "define", "search web" -- goes in the `actions` slot, which renders
  * after the built-ins inside the same `role="toolbar"` element and joins the same roving-tabindex
  * group (Home/End/Arrow, RTL-mirrored), so a fifth action does not mean reimplementing the
- * positioning, keyboard, and dismissal behavior from scratch. A slotted action carries its own
- * accessible name and click handling; this component only manages its tab stop.
+ * positioning, keyboard, and dismissal behavior from scratch. The toolbar traverses open shadow
+ * roots and slots to manage each real action rather than treating a custom-element or wrapper root
+ * as a focus target merely because it exposes `focus()`. A slotted action carries its own
+ * accessible name and click handling; this component only manages its tab stop. Availability,
+ * actionability, and `tabindex` changes are reconciled live; focused removals/unavailable actions
+ * move to the nearest survivor or stable toolbar without overriding newer external focus.
  *
  * @customElement lr-selection-toolbar
  * @slot actions - Extra actions rendered after the built-in ask/quote/cite/copy buttons, inside
@@ -111,7 +132,11 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   private lifecycleGeneration = 0;
   private positioningGeneration = 0;
   private rovingGeneration = 0;
-  private pendingActionFocus?: { action: SelectionAction; index: number; origin: Element };
+  private pendingActionFocus?: ActionFocusRepair;
+  private focusedAction?: ActionFocusRepair;
+  private actionObserver?: MutationObserver;
+  private managedActionStops = new Set<HTMLElement>();
+  private authoredActionTabIndex = new WeakMap<HTMLElement, string | null>();
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -120,13 +145,19 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     // updated()'s `changed.has('open')` branch never reruns to notice `open` is still true --
     // resume the overlay registration *and* restart the positioning subscription
     // disconnectedCallback tore down (mirrors lr-tooltip's identical reconnect handling).
-    if (this.hasUpdated) this.syncOpenLifecycle();
+    if (this.hasUpdated) {
+      this.syncOpenLifecycle();
+      void this.syncRovingStops();
+    }
   }
 
   override disconnectedCallback(): void {
     this.lifecycleGeneration++;
     this.rovingGeneration++;
     this.pendingActionFocus = undefined;
+    this.focusedAction = undefined;
+    this.actionObserver?.disconnect();
+    this.actionObserver = undefined;
     this.retirePositioning();
     this.overlay?.suspend();
     super.disconnectedCallback();
@@ -138,19 +169,28 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     this.lifecycleGeneration++;
     this.rovingGeneration++;
     this.pendingActionFocus = undefined;
+    this.focusedAction = undefined;
+    this.actionObserver?.disconnect();
+    this.actionObserver = undefined;
     this.retirePositioning();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!changed.has('actions')) return;
-    const active = activeElementIn(this.shadowRoot);
-    if (active?.nodeType !== 1 || !active.matches('lr-button[data-action]')) return;
-    const activeButton = active as HTMLElement;
-    const action = activeButton.getAttribute('data-action') as SelectionAction | null;
-    const index = this.actionButtons().indexOf(activeButton);
-    if (!action || index < 0) return;
-    this.pendingActionFocus = { action, index, origin: activeButton };
+    const active = deepActiveElementIn(this.ownerDocument);
+    const toolbar = this.toolbar;
+    if (!active || !toolbar) return;
+    const index = this.actionButtons().indexOf(active as HTMLElement);
+    if (index < 0) return;
+    const repair = captureComposedFocusRepair(active, toolbar);
+    if (!repair) return;
+    this.pendingActionFocus = {
+      action: this.actionForStop(active),
+      index,
+      repair,
+      stop: active as HTMLElement,
+    };
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -166,34 +206,8 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
         void this.syncRovingStops();
         return;
       }
-      const buttons = this.actionButtons();
-      const retainedIndex = buttons.findIndex(
-        (button) => button.getAttribute('data-action') === pending.action,
-      );
-      const targetIndex = retainedIndex >= 0
-        ? retainedIndex
-        : Math.min(Math.max(pending.index, 0), buttons.length - 1);
-      if (buttons.length === 0) {
-        this.scheduleAfterUpdate(() => {
-          if (this.canRestoreActionFocus(pending.origin)) this.toolbar?.focus();
-        }, 'selection-toolbar-focus');
-        return;
-      }
-      void this.syncRovingStops(targetIndex).then((button) => {
-        if (button && this.canRestoreActionFocus(pending.origin)) button.focus();
-      });
+      void this.syncRovingStops(pending.index, pending);
     }
-  }
-
-  private canRestoreActionFocus(origin: Element): boolean {
-    const documentActive = activeElementIn(this.ownerDocument);
-    if (
-      documentActive !== null &&
-      documentActive !== this.ownerDocument.body &&
-      documentActive !== this
-    ) return false;
-    const internalActive = activeElementIn(this.shadowRoot);
-    return internalActive === null || internalActive === origin;
   }
 
   private syncOpenLifecycle(): void {
@@ -262,22 +276,35 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
    *  first, then whatever a consumer slotted into `actions`. Slotted stops live in the host's
    *  light DOM (not `renderRoot`), so every containment check below has to accept both. */
   private actionButtons(): HTMLElement[] {
-    const builtIn = [...this.renderRoot.querySelectorAll<HTMLElement>('lr-button[data-action]')];
-    return [...builtIn, ...this.slottedActions()];
+    const toolbar = this.toolbar;
+    if (!toolbar) return [];
+    return collectComposedFocusTargets(toolbar, {
+      mode: 'programmatic',
+      includeRoot: false,
+    }).elements.filter((button) =>
+      Boolean(isSemanticActionElement(button))
+      || (this.authoredActionTabIndex.has(button)
+        ? this.authoredActionTabIndex.get(button) !== null
+        : button.hasAttribute('tabindex')));
   }
 
-  private slottedActions(): HTMLElement[] {
+  private actionRoots(): Element[] {
+    const builtIn = [...this.renderRoot.querySelectorAll<HTMLElement>('lr-button[data-action]')];
     const slot = this.renderRoot.querySelector<HTMLSlotElement>('slot[name="actions"]');
-    if (!slot) return [];
-    return slot
-      .assignedElements({ flatten: true })
-      .filter((element): element is HTMLElement => element instanceof HTMLElement);
+    return [...builtIn, ...(slot?.assignedElements({ flatten: true }) ?? [])];
+  }
+
+  private actionForStop(stop: Element): SelectionAction | undefined {
+    const owner = [...this.renderRoot.querySelectorAll<HTMLElement>('lr-button[data-action]')]
+      .find((button) => composedContains(button, stop));
+    const action = owner?.getAttribute('data-action');
+    return action && action in ACTION_KEYS ? action as SelectionAction : undefined;
   }
 
   /** Whether `button` is still one of this toolbar's own stops -- rendered inside the shadow root,
    *  or slotted as a light-DOM child of the host. */
   private ownsActionButton(button: HTMLElement): boolean {
-    return this.renderRoot.contains(button) || this.slottedActions().includes(button);
+    return this.actionButtons().includes(button);
   }
 
   private onActionsSlotChange = (): void => {
@@ -288,15 +315,18 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
 
   private async syncRovingStops(
     preferredIndex = this.activeActionIndex,
+    requestedRepair?: ActionFocusRepair,
   ): Promise<HTMLElement | undefined> {
     const generation = this.lifecycleGeneration;
     const owner = this.ownerDocument.defaultView;
     const request = ++this.rovingGeneration;
     if (!owner || !this.isConnected) return undefined;
-    const buttons = this.actionButtons();
+    const roots = this.actionRoots();
     await Promise.all(
-      buttons.map((button) => (button as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete),
+      roots.map((root) => (root as Element & { updateComplete?: Promise<unknown> }).updateComplete),
     );
+    await Promise.resolve();
+    const buttons = this.actionButtons();
     if (
       request !== this.rovingGeneration
       || !this.isCurrentLifecycle(generation, owner)
@@ -307,38 +337,150 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
           || !this.ownsActionButton(button),
       )
     ) return undefined;
-    if (buttons.length === 0) return undefined;
-    this.activeActionIndex = Math.min(Math.max(0, preferredIndex), buttons.length - 1);
-    buttons.forEach((button, index) => {
-      const stop = index === this.activeActionIndex ? 0 : -1;
-      // A built-in `<lr-button>` owns its real control inside its own shadow root; a slotted
-      // action is whatever the consumer supplied, so its own tabIndex is the stop.
-      const inner = button.shadowRoot?.querySelector<HTMLElement>('[part~="base"]');
-      if (inner) inner.tabIndex = stop;
-      else button.tabIndex = stop;
-    });
-    return buttons[this.activeActionIndex];
+    const focused = requestedRepair ?? this.focusedAction;
+    const exactIndex = focused ? buttons.indexOf(focused.stop) : -1;
+    const retainedIndex = exactIndex >= 0
+      ? exactIndex
+      : focused?.action
+        ? buttons.findIndex((button) => this.actionForStop(button) === focused.action)
+        : -1;
+    const targetIndex = retainedIndex >= 0
+      ? retainedIndex
+      : focused
+        ? Math.min(Math.max(0, focused.index), Math.max(0, buttons.length - 1))
+        : Math.min(Math.max(0, preferredIndex), Math.max(0, buttons.length - 1));
+    this.setRovingStops(buttons, targetIndex);
+    const target = buttons[targetIndex];
+    if (focused && target !== focused.stop) {
+      applyComposedFocusRepair(focused.repair, target ?? this.toolbar ?? null);
+      if (this.focusedAction === focused) this.focusedAction = undefined;
+    }
+    return target;
   }
+
+  private setRovingStops(buttons: HTMLElement[], index: number): void {
+    this.actionObserver?.disconnect();
+    for (const button of buttons) {
+      if (!this.authoredActionTabIndex.has(button)) {
+        this.authoredActionTabIndex.set(button, button.getAttribute('tabindex'));
+      }
+    }
+    for (const previous of this.managedActionStops) {
+      if (!buttons.includes(previous) && (previous.hasAttribute('tabindex') || Boolean(isActionableElement(previous)))) {
+        previous.tabIndex = -1;
+      }
+    }
+    this.activeActionIndex = buttons.length === 0
+      ? 0
+      : Math.min(Math.max(0, index), buttons.length - 1);
+    buttons.forEach((button, buttonIndex) => {
+      button.tabIndex = buttonIndex === this.activeActionIndex ? 0 : -1;
+    });
+    this.managedActionStops = new Set(buttons);
+    this.observeActionChanges(buttons);
+  }
+
+  private observeActionChanges(buttons: HTMLElement[]): void {
+    this.actionObserver?.disconnect();
+    const Observer = this.ownerDocument.defaultView?.MutationObserver;
+    const toolbar = this.toolbar;
+    if (!Observer || !toolbar || !this.isConnected) {
+      this.actionObserver = undefined;
+      return;
+    }
+    const observer = new Observer(this.onActionMutations);
+    const roots = new Set<Node>([toolbar, ...this.actionRoots()]);
+    for (const button of buttons) {
+      let current: Element | null = button;
+      while (current && current !== this) {
+        const root = current.getRootNode();
+        if (root.nodeType === 11 && 'host' in root) roots.add(root);
+        current = composedParentElement(current);
+      }
+    }
+    const options: MutationObserverInit = {
+      attributes: true,
+      attributeOldValue: true,
+      attributeFilter: [
+        'aria-disabled',
+        'aria-hidden',
+        'contenteditable',
+        'controls',
+        'disabled',
+        'hidden',
+        'href',
+        'inert',
+        'open',
+        'role',
+        'tabindex',
+        'type',
+      ],
+      childList: true,
+      subtree: true,
+    };
+    for (const root of roots) observer.observe(root, options);
+    this.actionObserver = observer;
+  }
+
+  private onActionMutations = (records: MutationRecord[]): void => {
+    for (const record of records) {
+      if (record.type !== 'attributes' || record.attributeName !== 'tabindex') continue;
+      const target = record.target as HTMLElement;
+      if (this.authoredActionTabIndex.has(target)) {
+        this.authoredActionTabIndex.set(target, target.getAttribute('tabindex'));
+      }
+    }
+    void this.syncRovingStops();
+  };
 
   private onToolbarFocusIn = (event: FocusEvent): void => {
     const buttons = this.actionButtons();
     const path = event.composedPath();
     const index = buttons.findIndex((button) => path.includes(button));
-    if (index >= 0) void this.syncRovingStops(index);
+    if (index < 0) {
+      this.focusedAction = undefined;
+      return;
+    }
+    const origin = path[0] as Partial<HTMLElement> | undefined;
+    const stop = origin?.nodeType === 1 && typeof origin.focus === 'function'
+      ? origin as HTMLElement
+      : buttons[index];
+    const toolbar = this.toolbar;
+    const repair = stop && toolbar ? captureComposedFocusRepair(stop, toolbar) : null;
+    this.focusedAction = stop && repair
+      ? { action: this.actionForStop(stop), index, repair, stop }
+      : undefined;
+    void this.syncRovingStops(index);
+  };
+
+  private onToolbarFocusOut = (event: FocusEvent): void => {
+    const destination = event.relatedTarget;
+    if (
+      destination
+      && (destination as Node).nodeType === 1
+      && !composedContains(this, destination as Element)
+    ) {
+      this.focusedAction = undefined;
+    }
   };
 
   private onToolbarKeyDown = (event: KeyboardEvent): void => {
     const buttons = this.actionButtons();
     if (buttons.length === 0) return;
+    const originIndex = buttons.findIndex((button) => event.composedPath().includes(button));
+    const currentIndex = originIndex >= 0 ? originIndex : this.activeActionIndex;
     const forward = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
     const backward = this.effectiveDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
     let next: number;
-    if (event.key === forward) next = (this.activeActionIndex + 1) % buttons.length;
-    else if (event.key === backward) next = (this.activeActionIndex - 1 + buttons.length) % buttons.length;
+    if (event.key === forward) next = (currentIndex + 1) % buttons.length;
+    else if (event.key === backward) next = (currentIndex - 1 + buttons.length) % buttons.length;
     else if (event.key === 'Home') next = 0;
     else if (event.key === 'End') next = buttons.length - 1;
     else return;
     event.preventDefault();
+    // Arrow/Home/End is an intentional move away from the currently focused stop, so the live
+    // repair snapshot must not pin reconciliation to that old stop.
+    this.focusedAction = undefined;
     const generation = this.lifecycleGeneration;
     const owner = this.ownerDocument.defaultView;
     void this.syncRovingStops(next).then((button) => {
@@ -495,6 +637,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
       tabindex="-1"
       style=${styleMap(this.coordinates())}
       @focusin=${this.onToolbarFocusIn}
+      @focusout=${this.onToolbarFocusOut}
       @keydown=${this.onToolbarKeyDown}
     >${this.actions.map((action) => html`<lr-button
         part=${this.actionPartNames(action)}

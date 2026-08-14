@@ -50,6 +50,48 @@ describe("lr-card", () => {
     expect(anchor.getAttribute("href")).to.equal("/x");
   });
 
+  it('does not inspect an unavailable render root during the server-side first update', () => {
+    const el = document.createElement('lr-card') as LyraCard;
+    el.interactive = true;
+    const access = el as unknown as { willUpdate(changed: Map<PropertyKey, unknown>): void };
+
+    expect(() => access.willUpdate(new Map([['interactive', false]]))).not.to.throw();
+  });
+
+  it("preserves focus across link, activation-button, and passive owner replacements", async () => {
+    const el = (await fixture(
+      html`<lr-card interactive>body</lr-card>`
+    )) as LyraCard;
+    (el.shadowRoot!.querySelector('[part="activation-button"]') as HTMLElement).focus();
+
+    el.href = "/reports";
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement?.tagName).to.equal("A");
+
+    el.href = undefined;
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('activation-button');
+
+    el.interactive = false;
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.tabIndex).to.equal(-1);
+  });
+
+  it("does not move external focus when its semantic owner changes", async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <button id="outside">Outside</button>
+        <lr-card interactive>body</lr-card>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-card') as LyraCard;
+    wrapper.querySelector<HTMLElement>('#outside')!.focus();
+    el.href = '/reports';
+    await el.updateComplete;
+    expect(el.ownerDocument.activeElement?.id).to.equal('outside');
+  });
+
   it("defaults appearance to outlined, interactive to false", async () => {
     const el = (await fixture(html`<lr-card>body</lr-card>`)) as LyraCard;
     expect(el.appearance).to.equal("outlined");
@@ -362,6 +404,24 @@ describe("lr-card", () => {
       const fired = oneEvent(el, "lr-card-activate");
       base(el).click();
       await fired;
+    });
+
+    it("derives its fallback name from aria-labelledby and image alternatives", async () => {
+      const el = (await fixture(html`
+        <lr-card interactive>
+          <span aria-labelledby="card-semantic-name">Visible fallback</span>
+          <span id="card-semantic-name" hidden><img alt="Quarterly chart" /></span>
+        </lr-card>
+      `)) as LyraCard;
+      const activation = el.shadowRoot!.querySelector(
+        '[part="activation-button"]'
+      ) as HTMLButtonElement;
+
+      expect(activation.getAttribute("aria-label")).to.equal("Quarterly chart");
+      el.querySelector("img")!.alt = "Annual chart";
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      await el.updateComplete;
+      expect(activation.getAttribute("aria-label")).to.equal("Annual chart");
     });
 
     it("uses the native activation button for keyboard-equivalent activation", async () => {

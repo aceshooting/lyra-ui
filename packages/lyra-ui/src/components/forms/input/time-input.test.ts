@@ -18,6 +18,27 @@ const paste = (target: Element, value: string): Event => {
 };
 
 describe('lr-time-input segmented field', () => {
+  it('completes its open-state first update on an SSR-shaped host without Element.matches()', async () => {
+    const container = await fixture<HTMLDivElement>(html`<div></div>`);
+    const el = container.ownerDocument.createElement('lr-time-input') as LyraTimeInput;
+    Object.defineProperty(el, 'matches', {
+      configurable: true,
+      value: undefined,
+    });
+
+    expect(typeof (el as unknown as { matches?: unknown }).matches).to.equal('undefined');
+    // Lit's server element shim applies the public state before the first render, but does not
+    // implement the browser-only selector predicate. Keep this order: setting `open` is the path
+    // that consults live disabled state before the source component's first update.
+    el.setAttribute('open', '');
+    container.append(el);
+    await el.updateComplete;
+
+    expect(el.hasUpdated).to.equal(true);
+    expect(el.open).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part~="time-input"]')).to.exist;
+  });
+
   it('inherits component-scoped gap and radius hooks across size and pill fallbacks', async () => {
     const wrapper = await fixture<HTMLDivElement>(html`
       <div style="--lr-time-input-gap: 13px; --lr-time-input-radius: 17px">
@@ -240,9 +261,10 @@ describe('lr-time-input segmented field', () => {
   it('rejects host focus while directly or fieldset disabled without relaying focus events', async () => {
     const direct = await fixture<LyraTimeInput>(html`<lr-time-input disabled value="10:00"></lr-time-input>`);
     const form = await fixture<HTMLFormElement>(html`
-      <form><fieldset disabled><lr-time-input value="10:00"></lr-time-input></fieldset></form>
+      <form><fieldset><lr-time-input value="10:00"></lr-time-input></fieldset></form>
     `);
     const inherited = form.querySelector('lr-time-input') as LyraTimeInput;
+    (form.querySelector('fieldset') as HTMLFieldSetElement).disabled = true;
 
     for (const el of [direct, inherited]) {
       const seen: string[] = [];
@@ -1044,6 +1066,54 @@ describe('lr-time-input validity, value coercion, and slots', () => {
       el.shadowRoot!.querySelector('[part="error"]')!.id,
       el.shadowRoot!.querySelector('[part="hint"]')!.id,
     ]);
+    const group = el.shadowRoot!.querySelector('[part="input"]')!;
+    expect(group.getAttribute('aria-invalid')).to.equal('true');
+    expect(
+      [...el.shadowRoot!.querySelectorAll('[role="spinbutton"]')].map((segment) => segment.getAttribute('aria-invalid')),
+    ).to.deep.equal([...el.shadowRoot!.querySelectorAll('[role="spinbutton"]')].map(() => 'true'));
+    expect(el.checkValidity(), 'visible consumer error chrome does not rewrite FACE validity').to.be.true;
+  });
+
+  it('projects explicit required state to every supported segment owner without erasing it when disabled', async () => {
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input></lr-time-input>`);
+    const requiredStates = (): Array<string | null> =>
+      [...el.shadowRoot!.querySelectorAll('[role="spinbutton"]')]
+        .map((segment) => segment.getAttribute('aria-required'));
+
+    expect(requiredStates()).to.deep.equal(requiredStates().map(() => 'false'));
+    el.required = true;
+    await el.updateComplete;
+    expect(requiredStates()).to.deep.equal(requiredStates().map(() => 'true'));
+
+    el.disabled = true;
+    await el.updateComplete;
+    expect(requiredStates()).to.deep.equal(requiredStates().map(() => 'true'));
+  });
+
+  it('adds a localized group-level required description without replacing hint or error relationships', async () => {
+    const el = await fixture<LyraTimeInput>(html`
+      <lr-time-input
+        required
+        hint="Enter local time"
+        error-text="Time missing"
+        .strings=${{ fieldRequired: 'Heure obligatoire.' }}
+      ></lr-time-input>
+    `);
+    const group = el.shadowRoot!.querySelector<HTMLElement>('[part="input"]')!;
+    const description = el.shadowRoot!.querySelector<HTMLElement>('[data-required-description]')!;
+    const ids = group.getAttribute('aria-describedby')?.match(/\S+/g) ?? [];
+
+    expect(description.textContent?.trim()).to.equal('Heure obligatoire.');
+    expect(ids).to.include(description.id);
+    expect(ids).to.include(el.shadowRoot!.querySelector('[part="hint"]')!.id);
+    expect(ids).to.include(el.shadowRoot!.querySelector('[part="error"]')!.id);
+
+    el.required = false;
+    await el.updateComplete;
+    const optionalIds = group.getAttribute('aria-describedby')?.match(/\S+/g) ?? [];
+    expect(optionalIds).not.to.include(description.id);
+    expect(optionalIds).to.include(el.shadowRoot!.querySelector('[part="hint"]')!.id);
+    expect(optionalIds).to.include(el.shadowRoot!.querySelector('[part="error"]')!.id);
   });
 });
 

@@ -1,5 +1,5 @@
 {
-  "$comment": "Authoritative component, public-surface, and upstream mapping inventory. Refresh with generate-component-inventory.mjs using the pinned published manifests; do not infer upstream behavior from implementation source.",
+  "$comment": "Authoritative component, public-surface, and upstream mapping inventory. Refresh with generate-component-inventory.mjs using the pinned published manifests and artifact-bound black-box evidence; do not infer upstream behavior from implementation source.",
   "schemaVersion": 1,
   "pins": {
     "lyraVersion": "8.2.3",
@@ -4361,7 +4361,7 @@
           "upstream": "shoelace",
           "tag": "sl-alert",
           "tier": "free",
-          "classification": "rewritten"
+          "classification": "warning-required"
         }
       ],
       "surface": {
@@ -4778,22 +4778,34 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<undefined>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
           },
           {
             "name": "focus",
-            "type": "CustomEvent<undefined>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
           },
           {
+            "name": "lr-blur",
+            "type": "CustomEvent<undefined>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-error",
+            "type": "CustomEvent<undefined>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-focus",
             "type": "CustomEvent<undefined>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -7821,17 +7833,17 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<undefined>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
           },
           {
             "name": "focus",
-            "type": "CustomEvent<undefined>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
           },
@@ -7842,7 +7854,19 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-blur",
+            "type": "CustomEvent<undefined>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-camera-request",
+            "type": "CustomEvent<undefined>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-focus",
             "type": "CustomEvent<undefined>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -8518,9 +8542,9 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<undefined>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
           },
@@ -8542,9 +8566,9 @@
           },
           {
             "name": "focus",
-            "type": "CustomEvent<undefined>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
           },
@@ -8563,8 +8587,20 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-blur",
+            "type": "CustomEvent<undefined>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-cue-change",
             "type": "CustomEvent<{ id: string | null }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-focus",
+            "type": "CustomEvent<undefined>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -14968,6 +15004,16 @@
             "default": ""
           },
           {
+            "name": "heading-level",
+            "property": "headingLevel",
+            "type": "LyraHeadingLevel",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "3"
+          },
+          {
             "name": "inline",
             "property": "inline",
             "type": "boolean",
@@ -15057,6 +15103,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "headingLevel",
+            "attribute": "heading-level",
+            "type": "LyraHeadingLevel",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "3"
           },
           {
             "name": "inline",
@@ -20477,6 +20533,15 @@
         ],
         "methods": [
           {
+            "name": "blur",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "checkValidity",
             "overloads": [
               {
@@ -20490,6 +20555,22 @@
             "overloads": [
               {
                 "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "focus",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "FocusOptions",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
                 "returnType": "void"
               }
             ]
@@ -20602,7 +20683,9 @@
             "input"
           ],
           "delegatedMethods": [
-            "click"
+            "blur",
+            "click",
+            "focus"
           ]
         }
       }
@@ -26871,8 +26954,7 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": false
+            "hasDefault": false
           },
           {
             "name": "shortcut",
@@ -26923,8 +27005,7 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": true,
-            "default": false
+            "hasDefault": false
           },
           {
             "name": "shortcut",
@@ -28375,6 +28456,16 @@
             "default": null
           },
           {
+            "name": "heading-level",
+            "property": "headingLevel",
+            "type": "LyraHeadingLevel",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "3"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -28445,6 +28536,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "headingLevel",
+            "attribute": "heading-level",
+            "type": "LyraHeadingLevel",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "3"
           },
           {
             "name": "highlights",
@@ -36039,7 +36140,7 @@
           "upstream": "shoelace",
           "tag": "sl-dialog",
           "tier": "free",
-          "classification": "rewritten"
+          "classification": "warning-required"
         },
         {
           "upstream": "webawesome",
@@ -36088,6 +36189,16 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "heading-level",
+            "property": "headingLevel",
+            "type": "LyraHeadingLevel",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "3"
           },
           {
             "name": "label",
@@ -36189,6 +36300,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "headingLevel",
+            "attribute": "heading-level",
+            "type": "LyraHeadingLevel",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "3"
           },
           {
             "name": "label",
@@ -39870,7 +39991,7 @@
           "upstream": "shoelace",
           "tag": "sl-drawer",
           "tier": "free",
-          "classification": "rewritten"
+          "classification": "warning-required"
         },
         {
           "upstream": "webawesome",
@@ -39929,6 +40050,16 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "heading-level",
+            "property": "headingLevel",
+            "type": "LyraHeadingLevel",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "3"
           },
           {
             "name": "label",
@@ -40050,6 +40181,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "headingLevel",
+            "attribute": "heading-level",
+            "type": "LyraHeadingLevel",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "3"
           },
           {
             "name": "label",
@@ -40694,7 +40835,7 @@
           "upstream": "shoelace",
           "tag": "sl-dropdown",
           "tier": "free",
-          "classification": "rewritten"
+          "classification": "warning-required"
         },
         {
           "upstream": "webawesome",
@@ -43016,35 +43157,49 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<undefined>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
-            "bubbles": true,
-            "composed": true
+            "constructor": "FocusEvent"
           },
           {
             "name": "change",
-            "type": "CustomEvent<undefined>",
+            "type": "Event",
             "cancelable": "never",
-            "constructor": "CustomEvent",
-            "composed": true
+            "constructor": "Event"
           },
           {
             "name": "focus",
+            "type": "FocusEvent",
+            "cancelable": "never",
+            "constructor": "FocusEvent"
+          },
+          {
+            "name": "input",
+            "type": "InputEvent",
+            "cancelable": "never",
+            "constructor": "InputEvent"
+          },
+          {
+            "name": "lr-blur",
             "type": "CustomEvent<undefined>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
-            "name": "input",
-            "type": "CustomEvent<undefined>",
+            "name": "lr-change",
+            "type": "CustomEvent<{ value: string }>",
             "cancelable": "never",
-            "constructor": "CustomEvent",
-            "composed": true
+            "constructor": "CustomEvent"
           },
           {
-            "name": "lr-change",
-            "type": "CustomEvent<{ emoji: string }>",
+            "name": "lr-focus",
+            "type": "CustomEvent<undefined>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-input",
+            "type": "CustomEvent<{ value: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -43194,11 +43349,45 @@
         "cssStates": [],
         "methods": [
           {
+            "name": "blur",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "checkValidity",
             "overloads": [
               {
                 "parameters": [],
                 "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "click",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "focus",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "FocusOptions",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
               }
             ]
           },
@@ -43296,7 +43485,11 @@
             "focus",
             "input"
           ],
-          "delegatedMethods": []
+          "delegatedMethods": [
+            "blur",
+            "click",
+            "focus"
+          ]
         }
       }
     },
@@ -43364,6 +43557,16 @@
             "default": ""
           },
           {
+            "name": "heading-level",
+            "property": "headingLevel",
+            "type": "LyraHeadingLevel",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "3"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -43404,6 +43607,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "headingLevel",
+            "attribute": "heading-level",
+            "type": "LyraHeadingLevel",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "3"
           },
           {
             "name": "locale",
@@ -52626,6 +52839,15 @@
         ],
         "methods": [
           {
+            "name": "blur",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "checkValidity",
             "overloads": [
               {
@@ -52639,6 +52861,22 @@
             "overloads": [
               {
                 "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "focus",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "FocusOptions",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
                 "returnType": "void"
               }
             ]
@@ -52747,7 +52985,9 @@
         "native": {
           "forwardedEvents": [],
           "delegatedMethods": [
-            "click"
+            "blur",
+            "click",
+            "focus"
           ]
         }
       }
@@ -56587,9 +56827,9 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<undefined>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
           },
@@ -56603,14 +56843,34 @@
           },
           {
             "name": "focus",
-            "type": "CustomEvent<undefined>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
           },
           {
+            "name": "input",
+            "type": "Event",
+            "cancelable": "never",
+            "constructor": "Event",
+            "bubbles": true,
+            "composed": true
+          },
+          {
+            "name": "lr-blur",
+            "type": "CustomEvent<undefined>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-change",
+            "type": "CustomEvent<undefined>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-focus",
             "type": "CustomEvent<undefined>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -56729,7 +56989,8 @@
           "forwardedEvents": [
             "blur",
             "change",
-            "focus"
+            "focus",
+            "input"
           ],
           "delegatedMethods": [
             "blur",
@@ -64456,24 +64717,32 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<undefined>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
-            "bubbles": true,
-            "composed": true
+            "constructor": "FocusEvent"
           },
           {
             "name": "focus",
+            "type": "FocusEvent",
+            "cancelable": "never",
+            "constructor": "FocusEvent"
+          },
+          {
+            "name": "lr-blur",
             "type": "CustomEvent<undefined>",
             "cancelable": "never",
-            "constructor": "CustomEvent",
-            "bubbles": true,
-            "composed": true
+            "constructor": "CustomEvent"
           },
           {
             "name": "lr-change",
             "type": "CustomEvent<LyraLocaleChangeDetail>",
             "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-focus",
+            "type": "CustomEvent<undefined>",
+            "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
@@ -67479,8 +67748,7 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": false
+            "hasDefault": false
           },
           {
             "name": "placement",
@@ -67540,8 +67808,7 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": true,
-            "default": false
+            "hasDefault": false
           },
           {
             "name": "placement",
@@ -78356,19 +78623,31 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<undefined>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
           },
           {
             "name": "focus",
-            "type": "CustomEvent<undefined>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
+          },
+          {
+            "name": "lr-blur",
+            "type": "CustomEvent<undefined>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-focus",
+            "type": "CustomEvent<undefined>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           },
           {
             "name": "lr-zoom-change",
@@ -79909,24 +80188,48 @@
         "events": [
           {
             "name": "blur",
+            "type": "FocusEvent",
+            "cancelable": "never",
+            "constructor": "FocusEvent"
+          },
+          {
+            "name": "change",
+            "type": "Event",
+            "cancelable": "never",
+            "constructor": "Event"
+          },
+          {
+            "name": "focus",
+            "type": "FocusEvent",
+            "cancelable": "never",
+            "constructor": "FocusEvent"
+          },
+          {
+            "name": "input",
+            "type": "InputEvent",
+            "cancelable": "never",
+            "constructor": "InputEvent"
+          },
+          {
+            "name": "lr-blur",
             "type": "CustomEvent<undefined>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
-            "name": "change",
+            "name": "lr-change",
             "type": "CustomEvent<LyraPhoneInputEventDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
-            "name": "focus",
+            "name": "lr-focus",
             "type": "CustomEvent<undefined>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
-            "name": "input",
+            "name": "lr-input",
             "type": "CustomEvent<LyraPhoneInputEventDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -81443,19 +81746,31 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<undefined>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
           },
           {
             "name": "focus",
-            "type": "CustomEvent<undefined>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
+          },
+          {
+            "name": "lr-blur",
+            "type": "CustomEvent<undefined>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-focus",
+            "type": "CustomEvent<undefined>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           },
           {
             "name": "lr-pause",
@@ -90903,6 +91218,15 @@
         ],
         "methods": [
           {
+            "name": "blur",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "checkValidity",
             "overloads": [
               {
@@ -91055,6 +91379,7 @@
             "input"
           ],
           "delegatedMethods": [
+            "blur",
             "click",
             "focus"
           ]
@@ -98111,13 +98436,13 @@
           "upstream": "shoelace",
           "tag": "sl-select",
           "tier": "free",
-          "classification": "rewritten"
+          "classification": "unsupported"
         },
         {
           "upstream": "webawesome",
           "tag": "wa-select",
           "tier": "free",
-          "classification": "rewritten"
+          "classification": "unsupported"
         }
       ],
       "surface": {
@@ -98309,8 +98634,7 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": false
+            "hasDefault": false
           },
           {
             "name": "pill",
@@ -98628,8 +98952,7 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": true,
-            "default": false
+            "hasDefault": false
           },
           {
             "name": "pill",
@@ -109832,10 +110155,35 @@
         "cssStates": [],
         "methods": [
           {
+            "name": "blur",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "click",
             "overloads": [
               {
                 "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "focus",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "FocusOptions",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
                 "returnType": "void"
               }
             ]
@@ -109849,7 +110197,9 @@
         "native": {
           "forwardedEvents": [],
           "delegatedMethods": [
-            "click"
+            "blur",
+            "click",
+            "focus"
           ]
         }
       }
@@ -109930,6 +110280,16 @@
             "default": "card"
           },
           {
+            "name": "heading-level",
+            "property": "headingLevel",
+            "type": "LyraHeadingLevel",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "3"
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string",
@@ -110000,6 +110360,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "card"
+          },
+          {
+            "name": "headingLevel",
+            "attribute": "heading-level",
+            "type": "LyraHeadingLevel",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "3"
           },
           {
             "name": "items",
@@ -115471,7 +115841,14 @@
             "deprecated": null
           }
         ],
-        "events": [],
+        "events": [
+          {
+            "name": "lr-toast-overflow",
+            "type": "CustomEvent<ToastOverflowDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          }
+        ],
         "parts": [
           {
             "name": "stack",
@@ -116445,37 +116822,55 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<undefined>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
-            "bubbles": true,
-            "composed": true
+            "constructor": "FocusEvent"
           },
           {
             "name": "change",
-            "type": "CustomEvent<{ value: string[] }>",
+            "type": "Event",
             "cancelable": "never",
-            "constructor": "CustomEvent",
-            "composed": true
+            "constructor": "Event"
           },
           {
             "name": "focus",
-            "type": "CustomEvent<undefined>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
-            "bubbles": true,
-            "composed": true
+            "constructor": "FocusEvent"
           },
           {
             "name": "input",
-            "type": "CustomEvent<{ value: string[] }>",
+            "type": "InputEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
-            "composed": true
+            "constructor": "InputEvent"
           },
           {
             "name": "lr-add",
             "type": "CustomEvent<{ value: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-blur",
+            "type": "CustomEvent<undefined>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-change",
+            "type": "CustomEvent<{ value: string[] }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-focus",
+            "type": "CustomEvent<undefined>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-input",
+            "type": "CustomEvent<{ value: string[] }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -117726,10 +118121,35 @@
         "cssStates": [],
         "methods": [
           {
+            "name": "blur",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "click",
             "overloads": [
               {
                 "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "focus",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "FocusOptions",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
                 "returnType": "void"
               }
             ]
@@ -117745,7 +118165,9 @@
         "native": {
           "forwardedEvents": [],
           "delegatedMethods": [
-            "click"
+            "blur",
+            "click",
+            "focus"
           ]
         }
       }
@@ -119596,7 +120018,7 @@
           "upstream": "shoelace",
           "tag": "sl-tooltip",
           "tier": "free",
-          "classification": "rewritten"
+          "classification": "warning-required"
         },
         {
           "upstream": "webawesome",
@@ -123015,9 +123437,9 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<undefined>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
           },
@@ -123039,9 +123461,9 @@
           },
           {
             "name": "focus",
-            "type": "CustomEvent<undefined>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
           },
@@ -123052,6 +123474,18 @@
             "constructor": "Event",
             "bubbles": false,
             "composed": false
+          },
+          {
+            "name": "lr-blur",
+            "type": "CustomEvent<undefined>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-focus",
+            "type": "CustomEvent<undefined>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           },
           {
             "name": "pause",
@@ -123557,19 +123991,31 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<undefined>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
           },
           {
             "name": "focus",
-            "type": "CustomEvent<undefined>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
+          },
+          {
+            "name": "lr-blur",
+            "type": "CustomEvent<undefined>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-focus",
+            "type": "CustomEvent<undefined>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           },
           {
             "name": "lr-video-change",
@@ -127060,9 +127506,9 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<undefined>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
           },
@@ -127076,9 +127522,9 @@
           },
           {
             "name": "focus",
-            "type": "CustomEvent<undefined>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
           },
@@ -127089,6 +127535,18 @@
             "constructor": "Event",
             "bubbles": false,
             "composed": false
+          },
+          {
+            "name": "lr-blur",
+            "type": "CustomEvent<undefined>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-focus",
+            "type": "CustomEvent<undefined>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -162412,22 +162870,26 @@
               {
                 "name": "sl-after-hide",
                 "type": "unknown",
-                "cancelable": "unspecified-public-documentation"
+                "cancelable": "never",
+                "cancelabilityEvidence": "pinned-runtime"
               },
               {
                 "name": "sl-after-show",
                 "type": "unknown",
-                "cancelable": "unspecified-public-documentation"
+                "cancelable": "never",
+                "cancelabilityEvidence": "pinned-runtime"
               },
               {
                 "name": "sl-hide",
                 "type": "unknown",
-                "cancelable": "unspecified-public-documentation"
+                "cancelable": "never",
+                "cancelabilityEvidence": "pinned-runtime"
               },
               {
                 "name": "sl-show",
                 "type": "unknown",
-                "cancelable": "unspecified-public-documentation"
+                "cancelable": "never",
+                "cancelabilityEvidence": "pinned-runtime"
               }
             ],
             "parts": [
@@ -166203,17 +166665,20 @@
               {
                 "name": "sl-after-hide",
                 "type": "unknown",
-                "cancelable": "unspecified-public-documentation"
+                "cancelable": "never",
+                "cancelabilityEvidence": "pinned-runtime"
               },
               {
                 "name": "sl-after-show",
                 "type": "unknown",
-                "cancelable": "unspecified-public-documentation"
+                "cancelable": "never",
+                "cancelabilityEvidence": "pinned-runtime"
               },
               {
                 "name": "sl-hide",
                 "type": "unknown",
-                "cancelable": "unspecified-public-documentation"
+                "cancelable": "never",
+                "cancelabilityEvidence": "pinned-runtime"
               },
               {
                 "name": "sl-initial-focus",
@@ -166228,7 +166693,8 @@
               {
                 "name": "sl-show",
                 "type": "unknown",
-                "cancelable": "unspecified-public-documentation"
+                "cancelable": "never",
+                "cancelabilityEvidence": "pinned-runtime"
               }
             ],
             "parts": [
@@ -166550,17 +167016,20 @@
               {
                 "name": "sl-after-hide",
                 "type": "unknown",
-                "cancelable": "unspecified-public-documentation"
+                "cancelable": "never",
+                "cancelabilityEvidence": "pinned-runtime"
               },
               {
                 "name": "sl-after-show",
                 "type": "unknown",
-                "cancelable": "unspecified-public-documentation"
+                "cancelable": "never",
+                "cancelabilityEvidence": "pinned-runtime"
               },
               {
                 "name": "sl-hide",
                 "type": "unknown",
-                "cancelable": "unspecified-public-documentation"
+                "cancelable": "never",
+                "cancelabilityEvidence": "pinned-runtime"
               },
               {
                 "name": "sl-initial-focus",
@@ -166575,7 +167044,8 @@
               {
                 "name": "sl-show",
                 "type": "unknown",
-                "cancelable": "unspecified-public-documentation"
+                "cancelable": "never",
+                "cancelabilityEvidence": "pinned-runtime"
               }
             ],
             "parts": [
@@ -166876,22 +167346,26 @@
               {
                 "name": "sl-after-hide",
                 "type": "unknown",
-                "cancelable": "unspecified-public-documentation"
+                "cancelable": "never",
+                "cancelabilityEvidence": "pinned-runtime"
               },
               {
                 "name": "sl-after-show",
                 "type": "unknown",
-                "cancelable": "unspecified-public-documentation"
+                "cancelable": "never",
+                "cancelabilityEvidence": "pinned-runtime"
               },
               {
                 "name": "sl-hide",
                 "type": "unknown",
-                "cancelable": "unspecified-public-documentation"
+                "cancelable": "never",
+                "cancelabilityEvidence": "pinned-runtime"
               },
               {
                 "name": "sl-show",
                 "type": "unknown",
-                "cancelable": "unspecified-public-documentation"
+                "cancelable": "never",
+                "cancelabilityEvidence": "pinned-runtime"
               }
             ],
             "parts": [
@@ -175252,22 +175726,26 @@
               {
                 "name": "sl-after-hide",
                 "type": "unknown",
-                "cancelable": "unspecified-public-documentation"
+                "cancelable": "never",
+                "cancelabilityEvidence": "pinned-runtime"
               },
               {
                 "name": "sl-after-show",
                 "type": "unknown",
-                "cancelable": "unspecified-public-documentation"
+                "cancelable": "never",
+                "cancelabilityEvidence": "pinned-runtime"
               },
               {
                 "name": "sl-hide",
                 "type": "unknown",
-                "cancelable": "unspecified-public-documentation"
+                "cancelable": "never",
+                "cancelabilityEvidence": "pinned-runtime"
               },
               {
                 "name": "sl-show",
                 "type": "unknown",
-                "cancelable": "unspecified-public-documentation"
+                "cancelable": "never",
+                "cancelabilityEvidence": "pinned-runtime"
               }
             ],
             "parts": [
@@ -175764,8 +176242,8 @@
       "upstreamTag": "sl-alert",
       "upstreamTier": "free",
       "targetTag": "lr-alert",
-      "classification": "rewritten",
-      "rationale": "All reviewed differences are covered by deterministic member rewrites.",
+      "classification": "warning-required",
+      "rationale": "Pinned runtime evidence shows Shoelace emits non-cancelable state-change lifecycle notifications while Lyra provides synchronous pre-state veto events; automatic migration therefore requires review of listener timing and preventDefault() behavior.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -175789,7 +176267,9 @@
           },
           "rationale": "sl-alert and lr-alert share the reviewed behavior profile: An assertive status message is named from its content."
         },
-        "behaviorReviewFlags": []
+        "behaviorReviewFlags": [
+          "lifecycle-event-cancelability-and-phase"
+        ]
       },
       "rewrites": {
         "attributes": [],
@@ -175845,7 +176325,22 @@
         "cssDefaultEquivalences": [],
         "deprecationEquivalences": []
       },
-      "drift": []
+      "drift": [
+        {
+          "code": "cancelability-mismatch",
+          "section": "events",
+          "member": "sl-hide",
+          "expected": "never",
+          "actual": "always"
+        },
+        {
+          "code": "cancelability-mismatch",
+          "section": "events",
+          "member": "sl-show",
+          "expected": "never",
+          "actual": "always"
+        }
+      ]
     },
     {
       "upstream": "shoelace",
@@ -177181,8 +177676,8 @@
       "upstreamTag": "sl-dialog",
       "upstreamTier": "free",
       "targetTag": "lr-dialog",
-      "classification": "rewritten",
-      "rationale": "All reviewed differences are covered by deterministic member rewrites.",
+      "classification": "warning-required",
+      "rationale": "Pinned runtime evidence shows Shoelace emits non-cancelable state-change lifecycle notifications while Lyra provides synchronous pre-state veto events; automatic migration therefore requires review of listener timing and preventDefault() behavior.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -177206,7 +177701,9 @@
           },
           "rationale": "sl-dialog and lr-dialog share the reviewed behavior profile: A named modal overlay traps initial focus, dismisses with Escape, and returns focus."
         },
-        "behaviorReviewFlags": []
+        "behaviorReviewFlags": [
+          "lifecycle-event-cancelability-and-phase"
+        ]
       },
       "rewrites": {
         "attributes": [],
@@ -177278,7 +177775,22 @@
         ],
         "deprecationEquivalences": []
       },
-      "drift": []
+      "drift": [
+        {
+          "code": "cancelability-mismatch",
+          "section": "events",
+          "member": "sl-hide",
+          "expected": "never",
+          "actual": "conditional"
+        },
+        {
+          "code": "cancelability-mismatch",
+          "section": "events",
+          "member": "sl-show",
+          "expected": "never",
+          "actual": "always"
+        }
+      ]
     },
     {
       "upstream": "shoelace",
@@ -177362,8 +177874,8 @@
       "upstreamTag": "sl-drawer",
       "upstreamTier": "free",
       "targetTag": "lr-drawer",
-      "classification": "rewritten",
-      "rationale": "All reviewed differences are covered by deterministic member rewrites.",
+      "classification": "warning-required",
+      "rationale": "Pinned runtime evidence shows Shoelace emits non-cancelable state-change lifecycle notifications while Lyra provides synchronous pre-state veto events; automatic migration therefore requires review of listener timing and preventDefault() behavior.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -177387,7 +177899,9 @@
           },
           "rationale": "sl-drawer and lr-drawer share the reviewed behavior profile: A named modal overlay traps initial focus, dismisses with Escape, and returns focus."
         },
-        "behaviorReviewFlags": []
+        "behaviorReviewFlags": [
+          "lifecycle-event-cancelability-and-phase"
+        ]
       },
       "rewrites": {
         "attributes": [],
@@ -177458,15 +177972,30 @@
         "cssDefaultEquivalences": [],
         "deprecationEquivalences": []
       },
-      "drift": []
+      "drift": [
+        {
+          "code": "cancelability-mismatch",
+          "section": "events",
+          "member": "sl-hide",
+          "expected": "never",
+          "actual": "always"
+        },
+        {
+          "code": "cancelability-mismatch",
+          "section": "events",
+          "member": "sl-show",
+          "expected": "never",
+          "actual": "always"
+        }
+      ]
     },
     {
       "upstream": "shoelace",
       "upstreamTag": "sl-dropdown",
       "upstreamTier": "free",
       "targetTag": "lr-dropdown",
-      "classification": "rewritten",
-      "rationale": "All reviewed differences are covered by deterministic member rewrites.",
+      "classification": "warning-required",
+      "rationale": "Pinned runtime evidence shows Shoelace emits non-cancelable state-change lifecycle notifications while Lyra provides synchronous pre-state veto events; automatic migration therefore requires review of listener timing and preventDefault() behavior.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -177490,7 +178019,9 @@
           },
           "rationale": "sl-dropdown and lr-dropdown share the reviewed behavior profile: A named trigger exposes menu expansion and returns focus after dismissal."
         },
-        "behaviorReviewFlags": []
+        "behaviorReviewFlags": [
+          "lifecycle-event-cancelability-and-phase"
+        ]
       },
       "rewrites": {
         "attributes": [],
@@ -177553,7 +178084,22 @@
         "cssDefaultEquivalences": [],
         "deprecationEquivalences": []
       },
-      "drift": []
+      "drift": [
+        {
+          "code": "cancelability-mismatch",
+          "section": "events",
+          "member": "sl-hide",
+          "expected": "never",
+          "actual": "always"
+        },
+        {
+          "code": "cancelability-mismatch",
+          "section": "events",
+          "member": "sl-show",
+          "expected": "never",
+          "actual": "always"
+        }
+      ]
     },
     {
       "upstream": "shoelace",
@@ -179743,8 +180289,8 @@
       "upstreamTag": "sl-select",
       "upstreamTier": "free",
       "targetTag": "lr-select",
-      "classification": "rewritten",
-      "rationale": "All reviewed differences are covered by deterministic member rewrites.",
+      "classification": "unsupported",
+      "rationale": "Prefix substitution is not currently public-surface safe: 1 default-mismatch (open).",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -179768,7 +180314,9 @@
           },
           "rationale": "sl-select and lr-select share the reviewed behavior profile: A labelled select coordinates a combobox, listbox, and selected options."
         },
-        "behaviorReviewFlags": []
+        "behaviorReviewFlags": [
+          "unsupported-mapping"
+        ]
       },
       "rewrites": {
         "attributes": [],
@@ -179892,7 +180440,15 @@
         "cssDefaultEquivalences": [],
         "deprecationEquivalences": []
       },
-      "drift": []
+      "drift": [
+        {
+          "code": "default-mismatch",
+          "section": "attributes",
+          "member": "open",
+          "expected": false,
+          "actual": null
+        }
+      ]
     },
     {
       "upstream": "shoelace",
@@ -180789,8 +181345,8 @@
       "upstreamTag": "sl-tooltip",
       "upstreamTier": "free",
       "targetTag": "lr-tooltip",
-      "classification": "rewritten",
-      "rationale": "All reviewed differences are covered by deterministic member rewrites.",
+      "classification": "warning-required",
+      "rationale": "Pinned runtime evidence shows Shoelace emits non-cancelable state-change lifecycle notifications while Lyra provides synchronous pre-state veto events; automatic migration therefore requires review of listener timing and preventDefault() behavior.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -180814,7 +181370,9 @@
           },
           "rationale": "sl-tooltip and lr-tooltip share the reviewed behavior profile: Non-interactive descriptive content appears on pointer hover or keyboard focus."
         },
-        "behaviorReviewFlags": []
+        "behaviorReviewFlags": [
+          "lifecycle-event-cancelability-and-phase"
+        ]
       },
       "rewrites": {
         "attributes": [],
@@ -180896,7 +181454,22 @@
         ],
         "deprecationEquivalences": []
       },
-      "drift": []
+      "drift": [
+        {
+          "code": "cancelability-mismatch",
+          "section": "events",
+          "member": "sl-hide",
+          "expected": "never",
+          "actual": "always"
+        },
+        {
+          "code": "cancelability-mismatch",
+          "section": "events",
+          "member": "sl-show",
+          "expected": "never",
+          "actual": "always"
+        }
+      ]
     },
     {
       "upstream": "shoelace",
@@ -189325,8 +189898,8 @@
       "upstreamTag": "wa-select",
       "upstreamTier": "free",
       "targetTag": "lr-select",
-      "classification": "rewritten",
-      "rationale": "All reviewed differences are covered by deterministic member rewrites.",
+      "classification": "unsupported",
+      "rationale": "Prefix substitution is not currently public-surface safe: 1 default-mismatch (open).",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -189350,7 +189923,9 @@
           },
           "rationale": "wa-select and lr-select share the reviewed behavior profile: A labelled select coordinates a combobox, listbox, and selected options."
         },
-        "behaviorReviewFlags": []
+        "behaviorReviewFlags": [
+          "unsupported-mapping"
+        ]
       },
       "rewrites": {
         "attributes": [],
@@ -189482,7 +190057,15 @@
           }
         ]
       },
-      "drift": []
+      "drift": [
+        {
+          "code": "default-mismatch",
+          "section": "attributes",
+          "member": "open",
+          "expected": false,
+          "actual": null
+        }
+      ]
     },
     {
       "upstream": "webawesome",

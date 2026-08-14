@@ -11,7 +11,7 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`
-    <lr-empty heading="No results" description="Try a different search.">
+    <lr-empty heading="No results" heading-level="2" description="Try a different search.">
       <span slot="actions"><button>Reset</button></span>
     </lr-empty>
   `,

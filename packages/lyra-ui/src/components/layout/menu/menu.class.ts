@@ -4,7 +4,11 @@ import type { Placement } from "@floating-ui/dom";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { place } from "../../../internal/positioner.js";
 import { rtlAwarePlacement } from "../../../internal/rtl.js";
-import { nextId } from "../../../internal/a11y.js";
+import { nextId, resolveAccessibleTrigger } from "../../../internal/a11y.js";
+import {
+  acquireAriaOwnership,
+  type AriaOwnershipLease,
+} from "../../../internal/aria-ownership.js";
 import type { LyraSize } from "../../../internal/variants.js";
 import {
   collectFocusableElements,
@@ -14,6 +18,7 @@ import {
 import { styles } from "./menu.styles.js";
 import { LyraMenuItem } from "./menu-item.class.js";
 import type { ContainedMenuOwner, MenuFocusTarget } from "./menu-shared.js";
+import { composedAccessibilityText } from "../../../internal/accessibility-visibility.js";
 import "./menu-item.class.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -143,18 +148,13 @@ export interface LyraMenuEventMap {
  * the focus moves: the roving-tabindex reset is centralized in `updated()`, so `el.open = false`
  * never leaves a stale `tabindex="0"` tab stop on the last active item.
  *
- * The trigger element itself is read from the `trigger` slot's assigned element (first one, if
- * several are assigned) and enhanced imperatively with
- * `aria-haspopup="menu"`/`aria-expanded`/`aria-controls` — the same "reach into a consumer-owned
- * light-DOM element to complete its a11y wiring" approach `<lr-dialog>` documents for its own
- * heading detection. `aria-controls` targets this menu host (which receives a stable generated
- * `id` only when the consumer did not supply one), rather than a shadow-private popup id, so the
- * relationship is resolvable from the trigger's root. `<lr-button>` and `<lr-icon-button>` observe
- * those attributes, forward the popup/expanded values to their shadow-internal native controls,
- * and resolve the controls element-reference onto that focused control. In supporting browsers,
- * assigning the element reference intentionally clears the internal control's serialized
- * `aria-controls` value; `ariaControlsElements` is the relationship's source of truth. Browsers
- * without the reflected element-reference API retain the string as a best-effort fallback.
+ * The trigger element itself is read from the `trigger` slot's first assigned element. The shared
+ * ARIA ownership controller applies `aria-haspopup="menu"`, `aria-expanded`, and a relationship to
+ * the real popup both to that public trigger and, when it is a wrapper/custom element, to the
+ * composed descendant that actually receives focus. Because a light-DOM target cannot expose a
+ * shadow-private relationship directly in current browsers, the controller normalizes that edge
+ * to this public menu host while retaining the real popup as the component's source. Replacement,
+ * disconnect, late author writes, and nested owners restore or compose their exact baselines.
  *
  * The popup is always rendered (never `display:none`) so `.focus()` calls on
  * its content work synchronously the instant it opens — visually hidden via
@@ -221,7 +221,28 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
   /** Whether an anchored/trigger-owned popup is open. A triggerless, unanchored standalone menu
    * remains visible so an exact `<sl-menu>` to `<lr-menu>` tag rename preserves its presentation. */
-  @property({ type: Boolean, reflect: true }) open = false;
+  private _open = false;
+  /** Whether this anchored menu is open. Every post-mount write runs the synchronous lifecycle
+   * preflight before committing state; initial markup and contained-owner synchronization stay
+   * silent. */
+  @property({ type: Boolean, reflect: true })
+  get open(): boolean {
+    return this._open;
+  }
+  set open(next: boolean) {
+    const normalized = Boolean(next);
+    if (normalized === this._open) return;
+    if (!this.hasUpdated || this.dropdownContained) {
+      this.commitOpen(normalized);
+      return;
+    }
+    if (!this.isConnected) {
+      if (!normalized) this.emit("lr-hide");
+      this.commitOpen(normalized);
+      return;
+    }
+    this.requestOpen(normalized);
+  }
 
   /**
    * Optional placement override forwarded to `place()`. Defaults to whatever `place()` itself
@@ -275,6 +296,10 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   /** @internal Owner of a contained engine's open/focus-return lifecycle. */
   dropdownOwner: ContainedMenuOwner | null = null;
 
+  /** @internal Renders the menu role inside a contained engine when its outer popup owns a
+   * different semantic role (for example, a dialog containing an action menu). */
+  @property({ type: Boolean, attribute: false }) dropdownRendersMenuRole = false;
+
   /** @internal Mirrors the mapped dropdown's default-close policy. */
   @property({ type: Boolean, attribute: false }) dropdownStayOpenOnSelect = false;
 
@@ -291,11 +316,12 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private activeIndex = -1;
 
   private triggerEl?: HTMLElement;
+  private triggerAria?: AriaOwnershipLease;
+  private accessibleTriggerAria?: AriaOwnershipLease;
   private cleanup?: () => void;
   private itemStateObserver?: MutationObserver;
   private pointerDocument?: Document;
-  private _isFirstUpdate = true;
-  private openVetoed = false;
+  private openRequestTarget?: boolean;
   private pendingFocus: MenuFocusTarget = "first";
   private submenuOpenTimer?: OwnedTimeout;
   private submenuCloseTimer?: OwnedTimeout;
@@ -314,40 +340,36 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     if (this.hasUpdated) {
       const slot = this.renderRoot.querySelector<HTMLSlotElement>("slot:not([name])");
       if (slot) this.syncItemsFromSlot(slot);
+      const triggerSlot = this.renderRoot.querySelector<HTMLSlotElement>('slot[name="trigger"]');
+      if (triggerSlot) this.syncTriggerFromSlot(triggerSlot);
     }
   }
 
-  protected override willUpdate(changed: PropertyValues): void {
-    super.willUpdate(changed);
-    this._isFirstUpdate = !this.hasUpdated;
-    this.announceOpenTransition(changed);
+  /** Runs the cancelable lifecycle before changing the property, reflected attribute, focus
+   * target, or type-ahead session. Same-target writes from inside the preflight coalesce with the
+   * active request instead of recursively dispatching the same event. */
+  private requestOpen(next: boolean, beforeCommit?: () => void): boolean {
+    if (next === this._open || this.openRequestTarget === next) return false;
+    this.openRequestTarget = next;
+    const prevented = this.emit(next ? "lr-show" : "lr-hide", undefined, {
+      cancelable: true,
+    }).defaultPrevented;
+    this.openRequestTarget = undefined;
+    if (prevented) {
+      this.toggleAttribute("open", this._open);
+      return false;
+    }
+    beforeCommit?.();
+    this.commitOpen(next);
+    return true;
   }
 
-  /**
-   * Emits the cancelable `lr-show`/`lr-hide` veto point for this update's `open` transition.
-   *
-   * It lives here rather than in `updated()` because a veto has to be answered *before* anything
-   * observable happens: `willUpdate()` still runs ahead of render and attribute reflection, so
-   * restoring `open` here leaves the menu, the reflected attribute and the property agreeing with
-   * each other without a visible open-then-close flash. Keeping it on the `open` transition
-   * (rather than inside `show()`/`hide()`) preserves the existing rule that the lifecycle fires
-   * however `open` changed, including a direct `el.open = true` that bypasses both methods. A
-   * dropdown-contained menu announces nothing here -- its owning `lr-dropdown` runs the lifecycle,
-   * and two vetoable events for one transition would be worse than none.
-   */
-  private announceOpenTransition(changed: PropertyValues): void {
-    this.openVetoed = false;
-    if (!changed.has("open") || this._isFirstUpdate || this.dropdownContained) return;
-    const name = this.open ? "lr-show" : "lr-hide";
-    // Removal cannot be vetoed -- the element is already gone -- so the disconnect-driven close
-    // is announced without offering a veto nobody could honour.
-    if (!this.isConnected) {
-      this.emit("lr-hide");
-      return;
-    }
-    if (!this.emit(name, undefined, { cancelable: true }).defaultPrevented) return;
-    this.openVetoed = true;
-    this.open = !this.open;
+  private commitOpen(next: boolean): void {
+    if (next === this._open) return;
+    const old = this._open;
+    this._open = next;
+    if (!next) this.resetTypeAhead();
+    this.requestUpdate("open", old);
   }
 
   protected override firstUpdated(changed: PropertyValues): void {
@@ -358,6 +380,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     // attributes, so seed them once from the real slots after the first render.
     this.syncRegionState();
     this.syncPresentationState();
+    this.syncTriggerA11y();
   }
 
   /** A mapped Shoelace menu without a trigger is an inline menu, not a closed popup. */
@@ -418,10 +441,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    // A vetoed transition already put `open` back during willUpdate(), so `changed` still names it
-    // while nothing about the state actually moved: tearing down and rebuilding the popup
-    // machinery here would undo the veto it was meant to honour.
-    if ((changed.has("open") || changed.has("dropdownContained")) && !this.openVetoed) {
+    if (changed.has("open") || changed.has("dropdownContained")) {
       this.cleanup?.();
       this.cleanup = undefined;
       // All open-driven side effects (positioning, the click-outside
@@ -507,6 +527,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     this.itemStateObserver?.disconnect();
     this.itemStateObserver = undefined;
     this.unbindDocumentPointer();
+    this.releaseTriggerA11y();
     // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
     // `updated()`'s `open`-driven branch -- without this, `open` stays
     // `true` across the disconnect/reconnect and `changed.has('open')` never
@@ -554,17 +575,25 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    * a moment earlier.
    */
   show(focus: MenuFocusTarget = "first"): void {
-    this.pendingFocus = focus;
     if (this.dropdownContained && this.dropdownOwner) {
-      if (this.dropdownOwner.open) this.focusRoving(focus);
-      else void this.dropdownOwner.show();
+      if (this.dropdownOwner.open) {
+        this.pendingFocus = focus;
+        this.focusRoving(focus);
+      } else {
+        const transition = this.dropdownOwner.show();
+        if (this.dropdownOwner.open) this.pendingFocus = focus;
+        void transition;
+      }
       return;
     }
     if (this.open) {
+      this.pendingFocus = focus;
       this.focusRoving(focus);
       return;
     }
-    this.open = true;
+    this.requestOpen(true, () => {
+      this.pendingFocus = focus;
+    });
   }
 
   /**
@@ -586,8 +615,10 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       return;
     }
     if (!this.open) return;
-    this.open = false;
-    if (options?.focusTrigger) (this.triggerEl ?? this.anchor)?.focus();
+    if (this.requestOpen(false) && options?.focusTrigger) {
+      const trigger = this.triggerEl ?? this.anchor;
+      if (trigger) resolveAccessibleTrigger(trigger).focus();
+    }
   }
 
   private onDocPointer = (e: PointerEvent): void => {
@@ -601,10 +632,12 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   };
 
   private onTriggerClick = (): void => {
+    this.syncTriggerA11y();
     this.open ? this.hide() : this.show();
   };
 
   private onTriggerKeyDown = (e: KeyboardEvent): void => {
+    this.syncTriggerA11y();
     // A safety net for a menu with zero navigable items: focus never leaves
     // the trigger in that edge case (see focusRoving()), so onListKeyDown's
     // own Escape handling would otherwise never run.
@@ -629,33 +662,51 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   };
 
   private onTriggerSlotChange = (e: Event): void => {
-    const assigned = (e.target as HTMLSlotElement).assignedElements({
-      flatten: true,
-    });
+    this.syncTriggerFromSlot(e.target as HTMLSlotElement);
+  };
+
+  private syncTriggerFromSlot(slot: HTMLSlotElement): void {
+    const assigned = slot.assignedElements({ flatten: true });
     const next = assigned[0] as HTMLElement | undefined;
-    if (next === this.triggerEl) return;
-    if (this.triggerEl) {
-      this.triggerEl.removeAttribute("aria-haspopup");
-      this.triggerEl.removeAttribute("aria-expanded");
-      this.triggerEl.removeAttribute("aria-controls");
+    if (next !== this.triggerEl) {
+      this.triggerEl = next;
+      this.syncPresentationState();
     }
-    this.triggerEl = next;
-    this.syncPresentationState();
     this.syncTriggerA11y();
     // Covers the "open from the start" race documented on reposition()'s
     // call in updated() -- a no-op resubscribe once already positioned.
     if (this.open) this.reposition();
-  };
+  }
 
-  /** `aria-haspopup`/`aria-expanded`/`aria-controls` belong on the actual interactive trigger,
-   *  which is consumer-owned light-DOM content outside this component's own shadow root. The
-   *  controls target is this host rather than `[part="list"]`: the latter's id is private to this
-   *  shadow root and cannot form a valid reference from the trigger -- see the class doc. */
+  /** Own both the public slotted trigger contract and the element that actually receives focus.
+   * Element-reference relationships keep the shadow-private popup resolvable across roots. */
   private syncTriggerA11y(): void {
-    if (!this.triggerEl) return;
-    this.triggerEl.setAttribute("aria-haspopup", "menu");
-    this.triggerEl.setAttribute("aria-expanded", this.open ? "true" : "false");
-    this.triggerEl.setAttribute("aria-controls", this.id);
+    const trigger = this.triggerEl ?? null;
+    const popup = this.renderRoot.querySelector<HTMLElement>('[part~="popup"]');
+    const contribution = {
+      attributes: {
+        "aria-haspopup": "menu",
+        "aria-expanded": this.open ? "true" : "false",
+      },
+      controls: popup ? [popup] : [],
+    };
+    if (this.triggerAria) this.triggerAria.update(trigger, contribution);
+    else this.triggerAria = acquireAriaOwnership(trigger, contribution);
+
+    const accessibleTrigger = trigger ? resolveAccessibleTrigger(trigger) : null;
+    const distinctAccessibleTrigger = accessibleTrigger !== trigger ? accessibleTrigger : null;
+    if (this.accessibleTriggerAria) {
+      this.accessibleTriggerAria.update(distinctAccessibleTrigger, contribution);
+    } else {
+      this.accessibleTriggerAria = acquireAriaOwnership(distinctAccessibleTrigger, contribution);
+    }
+  }
+
+  private releaseTriggerA11y(): void {
+    this.accessibleTriggerAria?.release();
+    this.accessibleTriggerAria = undefined;
+    this.triggerAria?.release();
+    this.triggerAria = undefined;
   }
 
   private onItemsSlotChange = (e: Event): void => {
@@ -1155,11 +1206,17 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     }
   }
 
+  private resetTypeAhead(): void {
+    this.clearOwnedTimeout(this.typeAheadTimer);
+    this.typeAheadTimer = undefined;
+    this.typeAheadBuffer = "";
+  }
+
   /** What type-ahead matches against: the row's accessible name where it has one, its text
    *  otherwise. The distinction is load-bearing for a submenu parent, whose `textContent` also
    *  contains every label inside the submenu. */
   private itemText(item: LyraMenuItem): string {
-    return (item.getAttribute("aria-label") ?? item.textContent ?? "").trim();
+    return composedAccessibilityText(item).trim();
   }
 
   /** Resolves `label`'s effective text: a host-level `aria-label` attribute wins first
@@ -1176,11 +1233,10 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
   override render(): TemplateResult {
     if (this.dropdownContained) {
-      // The outer dropdown already owns the positioned popup and its role="menu". This shadow
-      // slot contributes no accessibility node of its own, so assigned menuitem hosts flatten
-      // directly beneath that one role while still using this class's interaction engine.
-      return html`
-        <slot
+      // The default dropdown popup owns role="menu", so assigned items flatten directly beneath
+      // it. If the consumer chooses another popup role, keep a real inner menu owner instead of
+      // orphaning menuitem descendants beneath (for example) a dialog.
+      const content = html`<slot
           @slotchange=${this.onItemsSlotChange}
           @keydown=${this.onListKeyDown}
           @focusin=${this.onListFocusIn}
@@ -1189,8 +1245,10 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
           @lr-menu-item-select=${this.onItemSelect}
           @lr-menu-item-state-change=${this.onItemStateChange}
           @lr-select=${this.onNestedSelect}
-        ></slot>
-      `;
+        ></slot>`;
+      return this.dropdownRendersMenuRole
+        ? html`<div role="menu" aria-label=${this.effectiveLabel}>${content}</div>`
+        : content;
     }
     return html`
       <div
