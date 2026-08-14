@@ -57,7 +57,7 @@ export class LyraHistogram extends LyraChart {
    * Appends raw finite samples to `values`. The inherited signature is retained so histogram
    * remains substitutable for `LyraChart`; its category label has no meaning for rebinned samples.
    */
-  override appendData(_label: string, values: (number | null)[], maxPoints = 0): void {
+  override appendData(_label: string, values: (number | null)[], maxPoints: number = 0): void {
     const appended = values.filter((value): value is number =>
       typeof value === 'number' && Number.isFinite(value),
     );

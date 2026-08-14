@@ -1,6 +1,8 @@
-import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './tag.js';
-import type { LyraTag } from './tag.js';
+import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
+import { sendKeys } from "@web/test-runner-commands";
+import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import "./tag.js";
+import type { LyraTag } from "./tag.js";
 
 class TagLabelForwardWrapper extends HTMLElement {
   constructor() {
@@ -33,6 +35,8 @@ it('renders content and inherits the badge variant styling contract', async () =
 
 it('is accessible in its own right, not merely via lr-badge', async () => {
   const el = (await fixture(html`<lr-tag>Tag</lr-tag>`)) as LyraTag;
+  expect(el.hasAttribute("role")).to.be.false;
+  expect(el.shadowRoot!.querySelectorAll('[role="status"]').length).to.equal(0);
   await expect(el).to.be.accessible();
 });
 
@@ -74,12 +78,70 @@ describe('withRemove', () => {
     expect((removeButton(el)) === (null)).to.equal(true);
   });
 
-  it('forwards a host click() to the internal remove button', async () => {
-    const el = (await fixture(html`<lr-tag with-remove>Removable</lr-tag>`)) as LyraTag;
-    const removed = oneEvent(el, 'lr-remove');
+  it("uses either authored alias as shared presence authority regardless of mutation order", async () => {
+    const el = (await fixture(html`
+      <lr-tag with-remove removable>Both aliases</lr-tag>
+    `)) as LyraTag;
+    expect(el.withRemove).to.be.true;
+    expect(el.removable).to.be.true;
+
+    el.removeAttribute("with-remove");
+    await el.updateComplete;
+    expect(el.withRemove).to.be.true;
+    expect(el.removable).to.be.true;
+    expect(removeButton(el) === null).to.be.false;
+
+    el.setAttribute("with-remove", "");
+    el.removeAttribute("removable");
+    await el.updateComplete;
+    expect(el.withRemove).to.be.true;
+    expect(el.removable).to.be.true;
+
+    el.removable = false;
+    await el.updateComplete;
+    expect(el.withRemove).to.be.false;
+    expect(el.removable).to.be.false;
+    expect(el.hasAttribute("with-remove")).to.be.false;
+    expect(el.hasAttribute("removable")).to.be.false;
+
+    el.withRemove = true;
+    await el.updateComplete;
+    expect(el.withRemove).to.be.true;
+    expect(el.removable).to.be.true;
+    expect(el.hasAttribute("with-remove")).to.be.true;
+  });
+
+  it("recomputes shared alias authority after a disconnect and hydration-shaped first mount", async () => {
+    const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+    const el = document.createElement("lr-tag") as LyraTag;
+    el.setAttribute("with-remove", "");
+    el.setAttribute("removable", "");
+    el.attachShadow({ mode: "open" });
+    el.textContent = "Hydrated aliases";
+    container.append(el);
+    await el.updateComplete;
+
+    el.removeAttribute("with-remove");
+    el.remove();
+    container.append(el);
+    await el.updateComplete;
+    expect(el.withRemove).to.be.true;
+    expect(el.removable).to.be.true;
+    expect(removeButton(el) === null).to.be.false;
+    expect(el.hasAttribute("role")).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[role="status"]').length).to.equal(
+      0
+    );
+  });
+
+  it("forwards a host click() to the internal remove notification button", async () => {
+    const el = (await fixture(
+      html`<lr-tag with-remove>Removable</lr-tag>`
+    )) as LyraTag;
+    const removed = oneEvent(el, "lr-remove");
     el.click();
     await removed;
-    expect(el.isConnected).to.be.false;
+    expect(el.isConnected).to.be.true;
   });
 
   it('leaves a host click() a no-op when there is no remove button to forward to', async () => {
@@ -210,7 +272,7 @@ describe('withRemove', () => {
     const hydrationAction = removeButton(el);
     expect(hydrationAction?.getAttribute('aria-label')).to.equal('Remove');
 
-    await el.updateComplete;
+    await waitUntil(() => removeButton(el)?.getAttribute('aria-label') === 'Remove Alpha');
     expect(removeButton(el) === hydrationAction).to.be.true;
     expect(removeButton(el)?.getAttribute('aria-label')).to.equal('Remove Alpha');
 
@@ -303,32 +365,49 @@ describe('withRemove', () => {
   });
 });
 
-describe('lr-remove', () => {
-  it('emits a cancelable, bubbling, composed lr-remove on click', async () => {
-    const el = (await fixture(html`<div><lr-tag with-remove>beta</lr-tag></div>`)) as HTMLElement;
-    const tag = el.querySelector('lr-tag') as LyraTag;
+describe("lr-remove", () => {
+  it("emits a noncancelable, bubbling, composed lr-remove notification on click", async () => {
+    const el = (await fixture(
+      html`<div><lr-tag with-remove>beta</lr-tag></div>`
+    )) as HTMLElement;
+    const tag = el.querySelector("lr-tag") as LyraTag;
 
     const removed = oneEvent(tag, 'lr-remove');
     removeButton(tag)!.click();
     const event = await removed;
-    expect(event.cancelable).to.be.true;
+    expect(event.cancelable).to.be.false;
     expect(event.bubbles).to.be.true;
     expect(event.composed).to.be.true;
     expect((event.target as HTMLElement).localName).to.equal('lr-tag');
   });
 
-  it('removes the tag from the DOM when the event is not canceled', async () => {
-    const host = (await fixture(html`<div><lr-tag with-remove>beta</lr-tag></div>`)) as HTMLElement;
-    const tag = host.querySelector('lr-tag') as LyraTag;
-    removeButton(tag)!.click();
-    expect(host.querySelectorAll('lr-tag').length).to.equal(0);
-    expect(tag.isConnected).to.be.false;
+  it("leaves removal to consumer state after pointer activation", async () => {
+    const host = (await fixture(
+      html`<div><lr-tag with-remove>beta</lr-tag></div>`
+    )) as HTMLElement;
+    const tag = host.querySelector("lr-tag") as LyraTag;
+    const box = removeButton(tag)!.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: "click",
+        position: [
+          Math.round(box.left + box.width / 2),
+          Math.round(box.top + box.height / 2),
+        ],
+      });
+    } finally {
+      await resetMouse();
+    }
+    expect(host.querySelectorAll("lr-tag").length).to.equal(1);
+    expect(tag.isConnected).to.be.true;
   });
 
-  it('keeps the tag in the DOM when a listener calls preventDefault()', async () => {
-    const host = (await fixture(html`<div><lr-tag with-remove>beta</lr-tag></div>`)) as HTMLElement;
-    const tag = host.querySelector('lr-tag') as LyraTag;
-    tag.addEventListener('lr-remove', (event) => event.preventDefault());
+  it("cannot be vetoed because the event is notification-only and the tag always stays mounted", async () => {
+    const host = (await fixture(
+      html`<div><lr-tag with-remove>beta</lr-tag></div>`
+    )) as HTMLElement;
+    const tag = host.querySelector("lr-tag") as LyraTag;
+    tag.addEventListener("lr-remove", (event) => event.preventDefault());
     removeButton(tag)!.click();
     expect(host.querySelectorAll('lr-tag').length).to.equal(1);
     expect(tag.isConnected).to.be.true;
@@ -342,13 +421,10 @@ describe('lr-remove', () => {
     expect((tag.shadowRoot!.activeElement as HTMLElement | null)?.part.contains('remove-button')).to.be.true;
 
     let fired = 0;
-    tag.addEventListener('lr-remove', (event) => {
+    tag.addEventListener("lr-remove", () => {
       fired += 1;
-      event.preventDefault();
     });
-    // A native <button> turns Enter/Space into a click; dispatching the resulting click is the
-    // faithful stand-in for the key press in a headless run.
-    button.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+    await sendKeys({ press: "Enter" });
     expect(fired).to.equal(1);
   });
 
@@ -361,4 +437,32 @@ describe('lr-remove', () => {
     expect(fired).to.equal(0);
     expect(tag.isConnected).to.be.true;
   });
+});
+
+it("round-trips tag-only and shared upstream tokens through attributes, properties, selectors, and cloning", async () => {
+  const el = (await fixture(html`
+    <lr-tag variant="text" size="medium">Migrated tag</lr-tag>
+  `)) as LyraTag;
+  expect(el.variant).to.equal("text");
+  expect(el.size).to.equal("medium");
+  expect(el.dataset["effectiveVariant"]).to.equal("neutral");
+  expect(el.dataset["effectiveSize"]).to.equal("m");
+  expect(el.matches('[variant="text"][size="medium"]')).to.be.true;
+  const surface = getComputedStyle(
+    el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement
+  );
+  expect(surface.backgroundColor).to.equal("rgba(0, 0, 0, 0)");
+  expect(surface.borderTopColor).to.equal("rgba(0, 0, 0, 0)");
+
+  el.variant = "primary";
+  el.size = "large";
+  await el.updateComplete;
+  expect(el.variant).to.equal("primary");
+  expect(el.dataset["effectiveVariant"]).to.equal("brand");
+  expect(el.getAttribute("variant")).to.equal("primary");
+  expect(el.size).to.equal("large");
+  expect(el.getAttribute("size")).to.equal("large");
+  expect((el.cloneNode(true) as LyraTag).outerHTML).to.contain(
+    'variant="primary"'
+  );
 });

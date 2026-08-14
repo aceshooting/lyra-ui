@@ -429,6 +429,32 @@
       "rationale": "The date-picker part identifies the visible shell explicitly; base remains on that same node during the compatibility window."
     },
     {
+      "tag": "lr-file-input",
+      "kind": "part",
+      "name": "base",
+      "since": "8.2.3",
+      "replacement": {
+        "kind": "part",
+        "name": "file-input",
+        "usage": "::part(file-input)"
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "The file-input part names the interactive picker surface; base remains on that same node during the compatibility window."
+    },
+    {
+      "tag": "lr-file-input",
+      "kind": "part",
+      "name": "label",
+      "since": "8.2.3",
+      "replacement": {
+        "kind": "part",
+        "name": "form-control-label",
+        "usage": "::part(form-control-label)"
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "The form-control-label part follows the shared form-control vocabulary; label remains on that same node during the compatibility window."
+    },
+    {
       "tag": "lr-icon",
       "kind": "property",
       "name": "autoWidth",
@@ -454,6 +480,47 @@
       },
       "removalNotBefore": "10.0.0",
       "rationale": "The form-control-label part matches the shared form-control vocabulary; label remains on that same node during the compatibility window."
+    },
+    {
+      "tag": "lr-qr-code",
+      "kind": "part",
+      "name": "base",
+      "since": "8.2.3",
+      "replacement": {
+        "kind": "part",
+        "name": "qr-code",
+        "usage": "::part(qr-code)"
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "The qr-code part names the rendered code wrapper explicitly; base remains on that same node during the compatibility window."
+    },
+    {
+      "tag": "lr-qr-code",
+      "kind": "property",
+      "name": "background",
+      "attribute": "background",
+      "since": "8.2.3",
+      "replacement": {
+        "kind": "host-css-property",
+        "name": "background",
+        "usage": "style=\"background: …\""
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "The standard host background property themes both backing paint and canvas while background remains an attribute compatibility alias."
+    },
+    {
+      "tag": "lr-qr-code",
+      "kind": "property",
+      "name": "fill",
+      "attribute": "fill",
+      "since": "8.2.3",
+      "replacement": {
+        "kind": "host-css-property",
+        "name": "color",
+        "usage": "style=\"color: …\""
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "The standard host color property themes foreground modules while fill remains an attribute compatibility alias."
     },
     {
       "tag": "lr-sparkline",
@@ -10493,7 +10560,7 @@
     "current": {
       "version": "8.2.3",
       "sourceCommit": null,
-      "manifestSha256": "3b91e3fde6a13f1cc72f5ea51a56d9ef0eb498a7ea4501bd171a8986e71a79fe",
+      "manifestSha256": "d015b3a66bde6cb841c49b117c5907773156d6638b46a955ccadb3c18f315de5",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",

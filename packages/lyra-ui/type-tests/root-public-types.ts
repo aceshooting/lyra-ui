@@ -1,7 +1,13 @@
 import { DEFAULT_MAX_FILE_SIZE_BYTES } from '../src/lyra.js';
 import type {
+  BadgeSize,
+  BadgeVariant,
   BreadcrumbItemTarget,
+  CalloutAppearance,
+  CalloutSize,
   CardOrientation,
+  ChipSize,
+  ChipVariant,
   FormatBytesUnit,
   FormatDisplay,
   LyraCarouselOrientation,
@@ -23,6 +29,7 @@ import type {
   LyraLiteChartScale,
   LyraMarkedParser,
   LyraModelSelectSize,
+  LyraPopupRole,
   LyraTimeRangeSize,
   LyraTokenInputSize,
   MarkdownHeadingItem,
@@ -32,10 +39,17 @@ import type {
   MessageFeedbackRating,
   MessageFeedbackValue,
   OtpInputSelectionDirection,
+  OverlayVirtualRect,
+  PlaceAutoSize,
+  PlaceBoundary,
+  PlaceFlipFallbackStrategy,
+  PlaceStrategy,
+  PlaceSync,
   RadioAppearance,
   RadioGroupOrientation,
   ResultCardAppearance,
   ShikiLanguageInput,
+  TagVariant,
   TableColumnEditable,
   TableEdgeAlign,
   TableSelectionMode,
@@ -44,18 +58,44 @@ import type {
   ThinkingPanelAppearance,
   TreeBadgeTone,
   TreeSelection,
+  LyraRatingSize,
+  ToastSize,
+  VirtualAnchor,
   WordCloudLegendItem,
   WordCloudOrientations,
   WordCloudScale,
 } from '../src/lyra.js';
 
-// Registration-free package-root reachability for every public property/configuration type found
-// missing by the 2026-08-08 contract review. Keeping them in one tuple makes an accidental removal
-// fail `test:types` even though the same name remains reachable from a granular or family entry.
+// These pre-v9 compatibility names duplicated the canonical variant types even though their
+// properties have no corresponding `tone` alias. Their deliberate absence is part of the v9
+// public contract; an accidental re-export makes each `@ts-expect-error` fail.
+// @ts-expect-error ActivityEntryTone was removed in favor of LyraVariant.
+import type { ActivityEntryTone as RemovedActivityEntryTone } from '../src/lyra.js';
+// @ts-expect-error ConfirmBarTone was removed in favor of ConfirmBarVariant.
+import type { ConfirmBarTone as RemovedConfirmBarTone } from '../src/lyra.js';
+// @ts-expect-error ChipTone was removed in favor of ChipVariant.
+import type { ChipTone as RemovedChipTone } from '../src/lyra.js';
+
+declare const removedV9Aliases: [
+  RemovedActivityEntryTone,
+  RemovedConfirmBarTone,
+  RemovedChipTone,
+];
+void removedV9Aliases;
+
+// Registration-free package-root reachability for public property/configuration types. Keeping
+// them in one tuple makes an accidental removal fail `test:types` even when the same name remains
+// reachable from a granular component entry.
 const rootPublicTypes:
   | [
       BreadcrumbItemTarget,
+      BadgeSize,
+      BadgeVariant,
+      CalloutAppearance,
+      CalloutSize,
       CardOrientation,
+      ChipSize,
+      ChipVariant,
       FormatBytesUnit,
       FormatDisplay,
       LyraCarouselOrientation,
@@ -75,6 +115,7 @@ const rootPublicTypes:
       LyraLiteChartScale,
       LyraMarkedParser,
       LyraModelSelectSize,
+      LyraPopupRole,
       LyraTimeRangeSize,
       LyraTokenInputSize,
       MarkdownHeadingItem,
@@ -84,10 +125,17 @@ const rootPublicTypes:
       MessageFeedbackRating,
       MessageFeedbackValue,
       OtpInputSelectionDirection,
+      OverlayVirtualRect,
+      PlaceAutoSize,
+      PlaceBoundary,
+      PlaceFlipFallbackStrategy,
+      PlaceStrategy,
+      PlaceSync,
       RadioAppearance,
       RadioGroupOrientation,
       ResultCardAppearance,
       ShikiLanguageInput,
+      TagVariant,
       TableColumnEditable,
       TableEdgeAlign,
       TableSelectionMode,
@@ -96,6 +144,9 @@ const rootPublicTypes:
       ThinkingPanelAppearance,
       TreeBadgeTone,
       TreeSelection,
+      LyraRatingSize,
+      ToastSize,
+      VirtualAnchor,
       WordCloudLegendItem,
       WordCloudOrientations,
       WordCloudScale
@@ -104,6 +155,15 @@ const rootPublicTypes:
 
 void rootPublicTypes;
 void DEFAULT_MAX_FILE_SIZE_BYTES;
+
+const mirroredTokenSpellings: [BadgeVariant, BadgeSize, TagVariant, LyraRatingSize, ToastSize] = [
+  'primary',
+  'small',
+  'text',
+  'medium',
+  'large',
+];
+void mirroredTokenSpellings;
 
 declare const datePicker: LyraDatePicker;
 datePicker.firstDayOfWeek = 'mon';

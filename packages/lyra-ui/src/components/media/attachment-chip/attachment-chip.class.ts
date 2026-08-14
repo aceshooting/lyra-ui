@@ -352,6 +352,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (
       this.hasUpdated &&
       (changed.has('file') || changed.has('previewSrc') || changed.has('mimeType') || changed.has('name'))

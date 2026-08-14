@@ -464,14 +464,14 @@ it('resets the roving-focus cursor when words changes', async () => {
 
   el.words = [{ text: 'fresh', weight: 1 }];
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="focus-ring"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="focus-ring"]')) == null).to.be.true;
 });
 
 it('does not render a legend when show-legend is left at its default (unset regression)', async () => {
   const el = (await fixture(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`)) as LyraWordCloud;
   await el.updateComplete;
   expect(el.showLegend).to.be.false;
-  expect(el.shadowRoot!.querySelector('[part="legend"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="legend"]')) == null).to.be.true;
 });
 
 it('colors words sharing a group the same, and differently from an ungrouped word', async () => {

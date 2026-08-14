@@ -154,8 +154,8 @@ export const styles = css`
   }
   /* :where() zeroes the attribute qualifiers' specificity so this drops to (0,1,0), matching the
      :hover rule below -- otherwise a consumer's own ::part(header-cell) { cursor: ... } override
-     ((0,1,1)) would lose to this rule's (0,3,0) without !important, the same defect the :hover
-     remediation one rule down was written to fix. */
+     ((0,1,1)) would lose to this rule's (0,3,0) without !important, the same specificity conflict
+     handled by the :hover rule below. */
   :where([part='header-cell'][aria-sort]:not([aria-sort='none'])),
   :where([part='header-cell'][data-sortable]) {
     cursor: pointer;
@@ -176,7 +176,7 @@ export const styles = css`
      itself -- (0,1,0) total, functionally identical selection to
      [part='header-cell'][data-sortable]:hover ((0,3,0)) but now losing (on the pseudo-element
      tiebreak) to a consumer's own ::part(header-cell):hover override ((0,1,1)) without that
-     consumer needing !important. Matches attachment-trigger.styles.ts's remediation pattern. */
+     consumer needing !important. Matches attachment-trigger.styles.ts's low-specificity pattern. */
   :where([part='header-cell'][data-sortable]):hover {
     background: var(--lr-color-brand-quiet);
   }

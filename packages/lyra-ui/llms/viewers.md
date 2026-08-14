@@ -59,6 +59,9 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
   internal `<lr-pan-zoom>`. `false` (the default) preserves the exact pre-`zoomable` DOM — an
   inline thumbnail (e.g. in a chat stream) must not unexpectedly grow a focusable zoom-chrome
   viewport; an inspection surface opts in.
+- `suppressDownload: boolean = false` (attribute: false) — omits the generic fallback's download
+  action when a composing shell already owns that action. This is property-only composition state;
+  it does not suppress inline preview rendering.
 - `highlights: LyraHighlight[] = []` (attribute: false) — display-only `region` highlights painted
   over the image-format preview; ignored for the `text`/`generic` formats. A rectangle renders only
   when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative.
@@ -297,9 +300,11 @@ document; unresolved highlights and idle/loading/error states never expose an en
 `max-height`). A host `aria-label` names the rendered document by attribute presence, including an
 explicitly empty value; `name` and the localized label are fallbacks. `maxHeight` caps the
 scrollable document body; invalid CSS `max-height` values, declaration breaks, and `url()` are
-ignored. `anchorKinds: readonly LyraAnchorKind[] = ['fragment',
-'text-quote']` (this
-viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
+ignored. The inherited anchor-target properties are `highlights: LyraHighlight[] = []` (property
+only; reassign after mutation), `activeHighlightId: string | null = null` (attribute
+`active-highlight-id`), `anchor: LyraAnchor | string | null = null` (property only), and
+`anchorKinds: readonly LyraAnchorKind[] = ['fragment', 'text-quote']` (this viewer's supported
+`LyraAnchor.kind` values).
 
 **Methods:** `getHeadingTree()` returns the document-ordered outline as `DocxHeadingItem[]` (`{ id,
 label, level }`), cached on every successful load. `search(query)` resolves the match count via a
@@ -389,6 +394,9 @@ localized show/hide toggle. `false` (the default) preserves the full body render
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
   DOMRect[] }`) — fired after a selection ends inside the rendered message.
 
+`lr-highlight-activate` is not part of this viewer's event contract: painted text highlights are
+passive and cannot be activated.
+
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base`, `headers`, `from-label`, `from`, `to-label`, `to`, `subject-label`, `subject`,
@@ -434,6 +442,9 @@ precedence over `name` by attribute presence, including an explicitly empty valu
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
   DOMRect[] }`) — fired after a selection ends inside the rendered calendar.
 
+`lr-highlight-activate` is not part of this viewer's event contract: painted text highlights are
+passive and cannot be activated.
+
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base`, `body`, `event-list`, `event`, `event-summary`, `event-time`, `event-location`,
@@ -476,6 +487,8 @@ rather than a phantom success.
 `lr-search-change` (`detail: { query, matchCount, activeIndex }`) from search, navigation, and
 clear; `lr-text-select` (`detail: { text, anchor, rects }`) for a selection contained within one
 entry path; and `lr-anchor-result` (`detail: { found }`) after anchor resolution.
+`lr-highlight-activate` is not part of this viewer's event contract: archive entry-path highlights
+are passive and cannot be activated.
 
 **CSS parts:** `base`, `body`, `entry`, `entry-icon`, `entry-name`, `entry-name-dir`, `entry-size`,
 `highlight` (the `<mark>` fallback for a painted entry-path quote), `spinner`, and `error`. A
@@ -618,6 +631,9 @@ available for renderer output that exposes DOM text.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
   DOMRect[] }`) — fired after a selection ends inside the rendered presentation.
 
+`lr-highlight-activate` is not part of this viewer's event contract: painted renderer-text
+highlights are passive and cannot be activated.
+
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base` (the named region with explicit `aria-busy="true"|"false"`), `header`, `name`,
@@ -685,7 +701,9 @@ timers) rather than failing immediately.
 **Events:** `lr-render-error` with `detail.error` when fetching or sanitizing fails.
 `lr-highlight-activate` (`detail: { id }`) — a region highlight was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found: boolean }`) — fired after an `anchor` assignment
-or a `scrollToAnchor()` call is applied, whether or not a match was found.
+or a `scrollToAnchor()` call is applied, whether or not a match was found. `lr-text-select` is not
+part of this viewer's event contract because sanitized SVG has no extractable text-selection
+contract (`textSelect: false` in its registry capabilities).
 
 **CSS parts:** `base`, `body`, `svg`, `spinner` (ordinary loading content; later transitions use the
 shared document-level polite sink), `error` (ordinary visible text; later transitions use the shared
@@ -743,6 +761,9 @@ precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
   DOMRect[] }`) — fired after a selection ends inside the rendered document.
 
+`lr-highlight-activate` is not part of this viewer's event contract: painted sanitized-text
+highlights are passive and cannot be activated.
+
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base`, `body`, `html`, `spinner`, and `error`.
@@ -798,7 +819,8 @@ or extra cells are never silently presented as a clean parse.
 `lr-highlight-activate` (`detail: { id }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
-`search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
+`search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `lr-text-select` is not part of this
+grid viewer's event contract; its registry capabilities advertise `textSelect: false`.
 
 **CSS parts:** `base` (a persistent `role="region"` named by the host `aria-label` or `name`, in
 every fetch state), `body`, `table`, `header-row`, `header-cell`, `data-row`, `cell`,
@@ -856,6 +878,9 @@ precedence over `name` by attribute presence, including an explicitly empty valu
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
   DOMRect[] }`) — fired after a selection ends inside the rendered contacts.
 
+`lr-highlight-activate` is not part of this viewer's event contract: painted contact-text
+highlights are passive and cannot be activated.
+
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base`, `body`, `contact`, `contact-name`, `contact-org`, `contact-tel`,
@@ -888,7 +913,10 @@ CSS length that, once set, overrides `--lr-pdf-viewer-height` — the block size
  page list — declaratively, writing it inline on `[part="base"]`; invalid CSS `max-height` values,
  declaration breaks, and `url()` are ignored. `anchorKinds: readonly LyraAnchorKind[] = ['page',
 'text-quote', 'region']` (this viewer's supported `LyraAnchor.kind` values for the shared
-anchor-target contract). Page and page-addressed region anchors require an in-range integer page
+anchor-target contract). The other inherited anchor-target properties are `highlights:
+LyraHighlight[] = []` (property only; reassign after mutation), `activeHighlightId: string | null =
+null` (attribute `active-highlight-id`), and `anchor: LyraAnchor | string | null = null` (property
+only). Page and page-addressed region anchors require an in-range integer page
 and are rejected rather than clamped; region rectangles also require finite coordinates and
 nonnegative dimensions.
 
@@ -999,7 +1027,8 @@ matches, and painted marks.
 `lr-highlight-activate` (`detail: { id }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
-`search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
+`search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `lr-text-select` is not part of this
+grid viewer's event contract; its registry capabilities advertise `textSelect: false`.
 
 **CSS parts:** `base`, `body` (the scrollable wrapper around the fetched-state content, capped by
 `max-height`), `tabs`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a
@@ -1059,7 +1088,8 @@ painted marks.
 `lr-highlight-activate` (`detail: { id }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
-`search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
+`search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `lr-text-select` is not part of this
+grid viewer's event contract; its registry capabilities advertise `textSelect: false`.
 
 **CSS parts:** `base`, `body` (the capped scroll surface), `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a structural
 cell covered by a `highlights` entry), `cell-highlight-action` (the native button filling a
@@ -1152,6 +1182,9 @@ against the new fragment rather than leaving results from the previous content.
   `scrollToAnchor()` call is applied.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
   DOMRect[] }`) — fired after a selection ends inside the included content.
+
+`lr-highlight-activate` is not part of this component's event contract: included-text highlights
+are passive and cannot be activated.
 
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
@@ -1297,7 +1330,10 @@ collapsed behind a toggle; `0` disables collapsing. `maxHeight: string = ''` (at
 `max-height`) — once set, the notebook scrolls internally past this height; invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. `anchorKinds: readonly
 LyraAnchorKind[] = ['node-path', 'fragment']` (this viewer's supported `LyraAnchor.kind` values for
-the shared anchor-target contract).
+the shared anchor-target contract). The inherited carrier fields `highlights: LyraHighlight[] = []`
+(property only) and `activeHighlightId: string | null = null` (attribute `active-highlight-id`) are
+available for structural anchor-target compatibility, but this viewer does not paint them; use
+`anchor: LyraAnchor | string | null = null` or `scrollToAnchor()` for notebook-cell navigation.
 
 **Methods:** `search(query)` resolves the match count over cell sources and text outputs — a
 matching cell counts as one match (empty/whitespace query behaves like `clearSearch()`);
@@ -1314,9 +1350,9 @@ and validated (`language` from `metadata.language_info.name`/`kernelspec.languag
 non-cancelable; `detail: { found: boolean }`, fired after an `anchor` assignment or a
 `scrollToAnchor()` call is applied.
 
-Migration note: the previously declared `lr-highlight-activate` event was never emitted by
-`lr-notebook-viewer` and has been removed from its class/EventMap contract. Use `anchor` plus
-`lr-anchor-result` for notebook cell navigation outcomes.
+Neither `lr-highlight-activate` nor `lr-text-select` is part of `lr-notebook-viewer`'s event
+contract: notebook host highlights are not painted and no selection binding is installed. Use
+`anchor` plus `lr-anchor-result` for notebook cell navigation outcomes.
 
 **CSS parts:** `base` (the root scroll container), `cell` (`data-cell-type="code|markdown|raw"`,
 `data-active`), `cell-active` (added alongside `cell` on the cell currently targeted by an anchor
@@ -1403,7 +1439,8 @@ activeIndex }`. `lr-render-error` — `detail: { error }`, fetching or parsing f
 parse error or exceeding the node cap. `lr-anchor-result` — non-cancelable; `detail: { found:
 boolean }`, fired after an `anchor` assignment or a `scrollToAnchor()` call is applied.
 `lr-highlight-activate` — non-cancelable; `detail: { id }`, fired when a highlight's
-`[part='highlight-action']` button is activated by click or Enter/Space.
+`[part='highlight-action']` button is activated by click or Enter/Space. `lr-text-select` is not
+part of this structural tree viewer's event contract because it installs no selection binding.
 
 **CSS parts:** `base`, `toolbar` (the whole-document copy button row, only when `copyable`),
 `copy-button` (the whole-document one, or a per-node one), `tree`, `node` (`data-active` while it's
@@ -1548,6 +1585,9 @@ text, independent of whether the optional map peer is available.
   `scrollToAnchor()` call is applied.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
   DOMRect[] }`) — fired after a selection ends inside the serialized metadata.
+
+`lr-highlight-activate` is not part of this registry bridge's event contract: serialized-metadata
+highlights are passive and cannot be activated.
 
 The three shared text-viewer events bubble and compose and are non-cancelable.
 

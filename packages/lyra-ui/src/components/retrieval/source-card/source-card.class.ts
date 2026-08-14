@@ -164,7 +164,8 @@ export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) 
     }
   }
 
-  override firstUpdated(): void {
+  override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     const fullSlot = this.shadowRoot!.querySelector('slot[name="full"]') as HTMLSlotElement;
     const fullCount = fullSlot.assignedElements({ flatten: true }).length;
     this.hasFullSlot = fullCount > 0;

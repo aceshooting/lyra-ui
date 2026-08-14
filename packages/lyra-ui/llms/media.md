@@ -1677,16 +1677,26 @@ with `anchorKinds: ['region']` only — no text selection is bound.
 `<lr-pan-zoom>` as its own `.minZoom`/`.maxZoom`/`.zoomStep`, which does the actual
 clamping/normalizing; same names/defaults as `<lr-lightbox>`'s identical trio, both wrapping the
 same pan/zoom surface — `rotation: 0 | 90 | 180 | 270 = 0`
-(reflected), and `annotatable: boolean = false` (reflected).
+(reflected), and `annotatable: boolean = false` (reflected). The inherited anchor-target surface is
+`highlights: LyraHighlight[] = []` (property only; reassign after mutation),
+`activeHighlightId: string | null = null` (attribute `active-highlight-id`),
+`anchor: LyraAnchor | string | null = null` (property only), and readonly
+`anchorKinds: readonly LyraAnchorKind[] = ['region']`.
 
 **Methods:** `rotate()` advances `rotation` by 90°. `zoomIn()`, `zoomOut()`, and `resetZoom()` adjust
-the embedded pan-zoom surface's zoom.
+the embedded pan-zoom surface's zoom. `scrollToAnchor(target: LyraAnchor | string):
+Promise<boolean>` resolves a `region` anchor (or a highlight id) after the image loads, reports
+whether it resolved, and makes an id-addressed match active; the complete image is already inside
+the pan/zoom viewport, so no additional page scroll is needed.
 
 **Events:** `lr-load` (`detail: { naturalWidth, naturalHeight }`), `lr-zoom-change` (`detail: {
 zoom }`), `lr-rotation-change` (`detail: { rotation }`), `lr-fit-change` (`detail: { fit }`),
 `lr-highlight-activate` (`detail: { id }`), `lr-annotation-create` (`detail: { anchor }`, kind
 `'region'`), `lr-anchor-result` (`detail: { found }`), and `lr-render-error` (`detail: { error
 }`).
+
+`lr-text-select` is not part of this raster viewer's event contract because it binds no selectable
+text.
 
 **CSS parts:** `base`, `toolbar`, `fit-control`, `rotate-button`, `annotate-toggle`, `frame` (the
 embedded `lr-pan-zoom`), `image-wrapper`, `image`, `highlight-layer`, `highlight` (carries
@@ -1751,7 +1761,11 @@ distinct from `<lr-transcript-feed>` (live captions for an in-progress voice ses
 ''`, `loop: boolean = false`, `muted: boolean = false`, `preload: 'none' | 'metadata' | 'auto' =
 'metadata'`, `playbackRate: number = 1` (attribute `playback-rate`, reflected), `rates: number[] =
 [0.75, 1, 1.25, 1.5, 2]` (attribute: false), `cues: LyraAvCue[] = []` (attribute: false), `peaks:
-number[] = []` (attribute: false), and `tracks: LyraAvTrack[] = []` (attribute: false).
+number[] = []` (attribute: false), and `tracks: LyraAvTrack[] = []` (attribute: false). The inherited
+anchor-target surface is `highlights: LyraHighlight[] = []` (property only; reassign after
+mutation), `activeHighlightId: string | null = null` (attribute `active-highlight-id`),
+`anchor: LyraAnchor | string | null = null` (property only), and readonly
+`anchorKinds: readonly LyraAnchorKind[] = ['time-range']`.
 `LyraAvCue = { id, start, end?, text, speaker? }`; `LyraAvTrack = { src, kind: 'subtitles' |
 'captions' | 'descriptions', srclang, label, default? }`.
 
@@ -1780,7 +1794,9 @@ error state and emits `lr-render-error`. `seek(seconds)` sets `currentTime` and 
 and reveal the active match in the virtualized transcript without seeking playback; `clearSearch()`
 resets the query and match state. `focus(options?)`, `blur()`, and `click()` forward to the native
 `[part='media']` element, which carries `controls` and is therefore the player's primary focusable
-affordance.
+affordance. `scrollToAnchor(target: LyraAnchor | string): Promise<boolean>` seeks to a resolved
+`time-range` anchor's `start` after media metadata loads and makes an id-addressed highlight active;
+unsupported or unresolved targets report `false` through the return value and `lr-anchor-result`.
 
 **Events:** `lr-play`, `lr-pause`, `lr-load` (`detail: { duration, kind }`), `lr-time-change`
 (`detail: { currentTime }`, throttled to at most 4/s while playing plus one extra per `seek()`),
@@ -1792,7 +1808,9 @@ found }`), `lr-search-change` (`detail: { query, matchCount, activeIndex }`), an
 events are also relayed exactly once from the host as native `Event` instances. Like the original
 media notifications, these relays are non-bubbling, non-composed, and non-cancelable. The richer
 `lr-*` notifications above remain unchanged. The native media element's `focus`/`blur` are
-additionally bridged as bubbling, composed host events.
+additionally bridged as bubbling, composed host events. `lr-text-select` is not part of this
+player's event contract: transcript rows live inside the embedded virtual list's nested shadow
+root, so no selection binding is installed.
 
 **CSS parts:** `base`, `media` (the native `<audio>`/`<video>` element), `toolbar`, `rate-select`,
 `timeline` (click-to-seek and arrow-key seeking), `timeline-marker` (one per `time-range` highlight;
@@ -1961,10 +1979,16 @@ forwarded). Lyra additionally provides `autoAdvance: boolean = true` (attribute 
 `auto-advance="false"` disables completion-driven navigation) and `repeat: 'none' | 'one' | 'all' =
 'none'`. Keeping `autoAdvance` true preserves the mirrored behavior in which an ended video starts
 the next one. `repeat="one"` restarts the current video; `repeat="all"` wraps the final video to the
-first.
+first. `items: readonly LyraVideoPlaylistItem[] = []` (attribute: false) is deterministic
+first-render row metadata with `{ title, poster?, duration?, unavailable? }`, indexed to the direct
+video children. Assign the same value before the server and browser first render. Seeded rows stay
+visible but disabled while live children are unavailable; after hydration, each child's live
+title/poster/duration and native `inert` state become authoritative in a corrective update that
+reuses the server-rendered row nodes. Once live children have been observed, later removal does not
+make stale seed rows reappear.
 
 **Methods:** `goTo(index)` selects a finite integer direct-child index; invalid, fractional, and
-disabled indexes are inert. Calling it for the current index still emits `lr-video-change`, matching
+inert-child indexes are no-ops. Calling it for the current index still emits `lr-video-change`, matching
 the mirrored contract. `next()` and `previous()` select the next or previous enabled child when one
 exists. `focus(options?)`, `blur()`, and `click()` forward to the playlist row that currently owns
 the roving tab stop (falling back to the first enabled row), which is otherwise unreachable from
@@ -1997,19 +2021,20 @@ the current child. Removing or reordering duplicate-metadata children is identit
 disconnecting pauses/unloads every child before a later reconnect creates one fresh listener
 generation.
 
-The playlist buttons use one roving tab stop, skip disabled children, support Up/Down, Home/End, and
+The playlist buttons use one roving tab stop, skip inert children, support Up/Down, Home/End, and
 mirrored Left/Right navigation, and expose the selected item with `aria-current`. At narrow
 allocations the sidebar moves below the video through a container query; long titles ellipsize
 without widening the host.
 
-**A child marked `inert` is excluded exactly as a `disabled` one is:** it never becomes the active
-video, `next()`/`previous()`/`goTo()` and auto-advance step past it, and its playlist row renders
-`disabled` so the roving `tabindex` can never strand focus on it — an inert element refuses focus,
-which would leave `focus()` a silent no-op and kill the next arrow press. Only the child's **own**
-`inert` counts: a playlist inerted wholesale by an open modal keeps playing. The attribute is
-watched live, so marking the *current* video inert moves the selection to the nearest enabled child
-(emitting `lr-video-change`) and hands the roving focus to the row that replaced it, instead of
-leaving a stale tab stop on a row that can no longer take focus.
+**A child marked `inert` is unavailable:** it never becomes the active video,
+`next()`/`previous()`/`goTo()` and auto-advance step past it, and its playlist row renders `disabled`
+so the roving `tabindex` can never strand focus on it — an inert element refuses focus, which would
+leave `focus()` a silent no-op and kill the next arrow press. `<lr-video>` has no `disabled`
+property; use the platform `inert` state exclusively. Only the child's **own** `inert` counts: a
+playlist inerted wholesale by an open modal keeps playing. The attribute is watched live, so
+marking the *current* video inert moves the selection to the nearest enabled child (emitting
+`lr-video-change`) and hands the roving focus to the row that replaced it, instead of leaving a
+stale tab stop on a row that can no longer take focus.
 
 ```html
 <lr-video-playlist controls="full" repeat="all">

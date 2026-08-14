@@ -1312,7 +1312,7 @@ it('renders the required marker from the shared themeable rule, not a literal sp
   await el.updateComplete;
   const label = el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement;
   expect(getComputedStyle(label, '::after').content).to.contain('*');
-  expect(label.querySelector('span[aria-hidden]'), 'no hand-rolled glyph element').to.equal(null);
+  expect((label.querySelector('span[aria-hidden]')) === (null), 'no hand-rolled glyph element').to.equal(true);
 
   el.style.setProperty('--lr-form-control-required-content', "''");
   await el.updateComplete;

@@ -1050,7 +1050,7 @@ it('opens an editable cell on double-click and emits a typed edit intent', async
   expect(event.detail.value).to.equal('Renamed');
   expect(event.detail.row).to.deep.equal(rows[0]);
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="cell-editor"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="cell-editor"]')) == null).to.be.true;
 });
 
 it('commits an inline edit with Enter', async () => {
@@ -1076,7 +1076,7 @@ it('commits an inline edit with Enter', async () => {
   );
   const event = await eventPromise;
   expect(event.detail.value).to.equal('Enter name');
-  expect(el.shadowRoot!.querySelector('[part="cell-editor"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="cell-editor"]')) == null).to.be.true;
 });
 
 it('shows a rendered hover affordance on the public filter control', async () => {
@@ -1460,7 +1460,7 @@ it('treats a non-finite pageSize as "no pagination" (renders every row) instead 
 
   el.pageSize = NaN;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('lr-pagination')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('lr-pagination')) == null).to.be.true;
   expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(2);
 });
 
@@ -1659,7 +1659,7 @@ it('renders a visual sort-direction chevron only in the active sort column, mark
   el.sortDir = 'desc';
   await el.updateComplete;
   const [nameHeader, scoreHeader] = [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')];
-  expect(nameHeader.querySelector('[part="sort-icon"]')).to.not.exist;
+  expect((nameHeader.querySelector('[part="sort-icon"]')) == null).to.be.true;
   const icon = scoreHeader.querySelector('[part="sort-icon"]');
   expect(icon != null).to.equal(true);
   expect(icon!.getAttribute('aria-hidden')).to.equal('true');
@@ -1735,7 +1735,7 @@ it('renders [part="reveal-columns-button"] only when at least one column declare
   el.columns = columns; // no priority columns
   el.rows = rows;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="reveal-columns-button"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="reveal-columns-button"]')) == null).to.be.true;
 
   el.columns = priorityColumns;
   await el.updateComplete;
@@ -1846,7 +1846,7 @@ it('does not render [part="reveal-columns-button"] and keeps columnsHidden false
 
   const lowHeader = el.shadowRoot!.querySelector('[part="header-cell"][data-priority="low"]') as HTMLElement;
   expect(getComputedStyle(lowHeader).display).to.not.equal('none');
-  expect(el.shadowRoot!.querySelector('[part="reveal-columns-button"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="reveal-columns-button"]')) == null).to.be.true;
   expect(el.columnsHidden).to.be.false;
   expect(el.hasAttribute('columns-hidden')).to.be.false;
   expect(events).to.deep.equal([]);
@@ -1986,7 +1986,7 @@ it('never renders [part="reveal-columns-button"] and keeps columnsHidden false r
   el.rows = rows;
   await el.updateComplete;
 
-  expect(el.shadowRoot!.querySelector('[part="reveal-columns-button"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="reveal-columns-button"]')) == null).to.be.true;
   expect(el.columnsHidden).to.be.false;
   expect(events).to.deep.equal([]);
 });
@@ -2904,8 +2904,8 @@ describe('expandable rows', () => {
     el.columns = expandableColumns;
     el.rows = rows;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="expand-toggle-cell"]')).to.not.exist;
-    expect(el.shadowRoot!.querySelector('[data-row-expand-toggle]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="expand-toggle-cell"]')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('[data-row-expand-toggle]')) == null).to.be.true;
   });
 
   it('renders a leading toggle cell on the header and every row when expandedContent is set', async () => {
@@ -3014,7 +3014,7 @@ describe('expandable rows', () => {
 
     el.expandedKeys = new Set();
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="expanded-row"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="expanded-row"]')) == null).to.be.true;
   });
 
   it('does not render an expanded panel row for a row that fails canExpand, even if its key is in expandedKeys', async () => {
@@ -3117,9 +3117,14 @@ describe('localization', () => {
     el.columns = columns;
     el.rows = rows;
     await el.updateComplete;
-    const spinner = el.shadowRoot!.querySelector('[part="loading"] lr-spinner')!;
-    expect(spinner.getAttribute('accessible-label')).to.equal('Chargement des lignes');
-    expect(spinner.textContent).to.contain('Chargement des lignes');
+    const spinner = el.shadowRoot!.querySelector(
+      '[part="loading"] lr-spinner'
+    )!;
+    expect(spinner.getAttribute("aria-label")).to.equal(
+      "Chargement des lignes"
+    );
+    expect(spinner.hasAttribute("accessible-label")).to.be.false;
+    expect(spinner.textContent).to.contain("Chargement des lignes");
   });
 
   it('localizes the no-data empty-state heading (both the whole-table and filtered-to-empty variants)', async () => {
@@ -3508,8 +3513,8 @@ describe('rowTotal / grandTotal', () => {
     el.rows = rows;
     el.rowKey = (r) => r.id;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="row-total-cell"]')).to.not.exist;
-    expect(el.shadowRoot!.querySelector('[data-row-total]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="row-total-cell"]')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('[data-row-total]')) == null).to.be.true;
   });
 
   it('renders a trailing row-total cell on the header and every row when rowTotal is set', async () => {
@@ -3579,7 +3584,7 @@ describe('rowTotal / grandTotal', () => {
     el.rowTotal = (r) => r.score;
     el.grandTotal = (rs) => rs.reduce((sum, r) => sum + r.score, 0);
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="foot"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="foot"]')) == null).to.be.true;
   });
 
   it('extends the expanded-row and group-row colspan to include the new trailing column', async () => {
@@ -3798,8 +3803,10 @@ describe('empty-state addressability', () => {
     el.columns = [];
     el.rows = rows;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('slot[name="empty"]'), 'the no-columns branch is not slot-replaceable').to.not
-      .exist;
+    expect(
+      el.shadowRoot!.querySelector('slot[name="empty"]') == null,
+      'the no-columns branch is not slot-replaceable'
+    ).to.be.true;
     const builtIn = el.shadowRoot!.querySelector('[part~="empty"]')!;
     expect(builtIn.getAttribute('heading')).to.equal('No columns configured');
     expect((builtIn as HTMLElement).getClientRects().length).to.be.greaterThan(0);

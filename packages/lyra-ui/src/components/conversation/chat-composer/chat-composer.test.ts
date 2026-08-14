@@ -759,7 +759,7 @@ it('forwards required and touched validity state to the textarea', async () => {
 });
 
 it('does not mark touched from a blur caused by the control itself becoming disabled', async () => {
-  // Regression test for fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native control force-blurs
+  // Regression test: disabling a focused native control force-blurs
   // it as plain platform behavior, not a real user interaction -- that blur can land synchronously
   // nested inside the very property write that disabled this control, before this render has even
   // reached the internal textarea's own `disabled` attribute. Checked directly against the private

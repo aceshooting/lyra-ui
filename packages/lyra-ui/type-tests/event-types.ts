@@ -276,17 +276,10 @@ const barrelEventMapTypes: [
 ] | undefined = undefined;
 void barrelEventMapTypes;
 
-// Same guard as `barrelEventMapTypes` above, extended to the ~100 components
-// added by the 2026-07 "Agentic Expansion" epic (11 families / 103 tasks,
-// commits after 3910120) -- that whole wave went in without ever being added
-// here, which is exactly how `LyraEmojiPickerEventMap` (Family H/I) went
-// missing from the root barrel. Regenerate this list with:
-//   git diff --diff-filter=A --name-only 3910120..HEAD -- packages/lyra-ui/src/components \
-//     | grep '\.class\.ts$' | xargs grep -oP 'export interface \KLyra\w*EventMap' \
-//     | sort -u
-// (minus any name already covered by `barrelEventMapTypes` above) when the
-// next epic lands, rather than leaving new components uncovered again.
-const epicBarrelEventMapTypes: [
+// Same root-barrel reachability guard as `barrelEventMapTypes` above, covering the remaining
+// public component event maps. Keep it synchronized with exported event-map interfaces so a
+// missing package-root export fails `test:types`.
+const additionalBarrelEventMapTypes: [
   LyraActivityFeedEventMap,
   LyraAnimatedImageEventMap,
   LyraAnimationEventMap,
@@ -387,7 +380,7 @@ const epicBarrelEventMapTypes: [
   LyraWidgetRendererEventMap,
   LyraZoomableFrameEventMap,
 ] | undefined = undefined;
-void epicBarrelEventMapTypes;
+void additionalBarrelEventMapTypes;
 
 // Compile-only guard: each of these types the public surface of an @property,
 // an accessor, or an event detail on a component whose class the barrel

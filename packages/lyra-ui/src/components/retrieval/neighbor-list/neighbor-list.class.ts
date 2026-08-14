@@ -72,6 +72,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
+  /** Neighbor relationships to render, including direction, relation, and target node data. */
   @property({ attribute: false }) rows: LyraNeighborRow[] = [];
   /** Stable-sorts rows by relation and renders one group header per relation with a count. */
   @property({ type: Boolean, attribute: 'group-by-relation' }) groupByRelation = false;

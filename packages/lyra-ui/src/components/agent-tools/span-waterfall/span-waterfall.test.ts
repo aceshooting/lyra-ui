@@ -221,7 +221,7 @@ describe('lr-span-waterfall', () => {
   it('hides the axis when hide-axis is set', async () => {
     const el = (await fixture(html`<lr-span-waterfall .spans=${SPANS} hide-axis></lr-span-waterfall>`)) as LyraSpanWaterfall;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="axis"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="axis"]')) == null).to.be.true;
   });
 
   it('keeps the terminal axis label inside a 256px allocation', async () => {

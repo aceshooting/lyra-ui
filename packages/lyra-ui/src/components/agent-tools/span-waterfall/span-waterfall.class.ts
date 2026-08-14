@@ -286,6 +286,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   };
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('spans')) {
       this.sortedSource = undefined;
       const ids = new Set(this.sortedSpans().map((span) => span.id));
@@ -315,6 +316,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('activeSpanId') && this.activeSpanId) {
       const bar = this.renderedBarById(this.activeSpanId);
       if (bar) {

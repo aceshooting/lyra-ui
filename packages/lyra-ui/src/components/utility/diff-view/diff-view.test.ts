@@ -86,7 +86,7 @@ describe('lr-diff-view', () => {
 
   it('renders no copy button by default, one when copyable is set', async () => {
     const plain = (await fixture(html`<lr-diff-view .oldText=${'a'} .newText=${'b'}></lr-diff-view>`)) as LyraDiffView;
-    expect(plain.shadowRoot!.querySelector('[part="copy-button"]')).to.not.exist;
+    expect((plain.shadowRoot!.querySelector('[part="copy-button"]')) == null).to.be.true;
     const withCopy = (await fixture(html`<lr-diff-view copyable .oldText=${'a'} .newText=${'b'}></lr-diff-view>`)) as LyraDiffView;
     expect(withCopy.shadowRoot!.querySelector('[part="copy-button"]')).to.exist;
   });
@@ -579,7 +579,7 @@ describe('syntax highlighting', () => {
     await el.updateComplete;
     // No direct way to assert "no dynamic import happened" without a bundler-level check; this
     // test instead asserts the plain-text rendering path is used (no shiki-generated span classes).
-    expect(el.shadowRoot!.querySelector('.shiki')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('.shiki')) == null).to.be.true;
   });
 
   it('parses highlighted markup with the adopted owner DOMParser', async () => {
@@ -730,7 +730,7 @@ describe('contextLines', () => {
 
   it('does not fold anything when contextLines is unset, regardless of run length', async () => {
     const el = (await fixture(html`<lr-diff-view .oldText=${old8} .newText=${new8}></lr-diff-view>`)) as LyraDiffView;
-    expect(el.shadowRoot!.querySelector('[data-type="fold"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[data-type="fold"]')) == null).to.be.true;
     expect(el.shadowRoot!.querySelectorAll('[part="line"]').length).to.equal(10);
   });
 
@@ -743,7 +743,7 @@ describe('contextLines', () => {
           .contextLines=${contextLines}
         ></lr-diff-view>`,
       )) as LyraDiffView;
-      expect(el.shadowRoot!.querySelector('[data-type="fold"]')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('[data-type="fold"]')) == null).to.be.true;
       expect(el.shadowRoot!.querySelectorAll('[part="line"]').length).to.equal(10);
     });
   }
@@ -805,7 +805,7 @@ describe('contextLines', () => {
     const el = (await fixture(
       html`<lr-diff-view .oldText=${oldText} .newText=${newText} .contextLines=${2}></lr-diff-view>`,
     )) as LyraDiffView;
-    expect(el.shadowRoot!.querySelector('[data-type="fold"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[data-type="fold"]')) == null).to.be.true;
   });
 
   it('uses singular localized text for exactly one hidden line', async () => {
@@ -833,7 +833,7 @@ describe('contextLines', () => {
     const el = (await fixture(
       html`<lr-diff-view .oldText=${old8} .newText=${old8} .contextLines=${1}></lr-diff-view>`,
     )) as LyraDiffView;
-    expect(el.shadowRoot!.querySelector('[data-type="fold"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[data-type="fold"]')) == null).to.be.true;
   });
 });
 
@@ -864,9 +864,8 @@ describe('back-compat', () => {
     const lines = [...el.shadowRoot!.querySelectorAll('[part="line"]')].map((l) => l.textContent);
     // Today's actual (pre-existing, unchanged) template literally concatenates `${marker} ${text}`
     // -- for an `equal` op the marker itself is already a space, so the rendered prefix is two
-    // spaces (`"  a"`), not one. Asserted against the real current output, not the single-space
-    // literal the plan brief's own copy-pasted snippet used, so this genuinely proves the default
-    // unified path is untouched by the split/highlighting work below.
+    // spaces (`"  a"`), not one. Assert the actual output so this proves the default unified path
+    // is untouched by the split/highlighting behavior below.
     expect(lines).to.deep.equal(['  a', '- b', '+ c']);
   });
 });

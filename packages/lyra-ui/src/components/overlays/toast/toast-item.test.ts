@@ -56,8 +56,202 @@ it('auto-dismisses after its duration', async () => {
   expect(el.isConnected).to.be.false;
 });
 
-it('rearms an initial show and a visible auto-dismiss timer after reconnect', async () => {
-  const early = document.createElement('lr-toast-item') as LyraToastItem;
+it("restarts the full normalized duration after a one-shot auto-dismiss veto", async () => {
+  const el = (await fixture(html`
+    <lr-toast-item
+      duration="80"
+      style="--lr-toast-show-duration: 0ms; --lr-toast-hide-duration: 0ms"
+      >retry countdown</lr-toast-item
+    >
+  `)) as LyraToastItem;
+  const hideTimes: number[] = [];
+  el.addEventListener("lr-hide", (event) => {
+    hideTimes.push(performance.now());
+    if (hideTimes.length === 1) event.preventDefault();
+  });
+  await oneEvent(el, "lr-show");
+  const afterHide = oneEvent(el, "lr-after-hide");
+
+  await aTimeout(125);
+  expect(
+    hideTimes.length,
+    "a full restarted duration has not elapsed yet"
+  ).to.equal(1);
+  expect(el.isConnected).to.be.true;
+
+  await waitUntil(
+    () => hideTimes.length === 2,
+    "the restarted timer requests dismissal again"
+  );
+  expect(hideTimes[1]! - hideTimes[0]!).to.be.at.least(60);
+  await afterHide;
+  expect(el.isConnected).to.be.false;
+});
+
+it("restarts the rendered progress animation with a vetoed timer countdown", async () => {
+  const el = (await fixture(html`
+    <lr-toast-item
+      duration="180"
+      style="--lr-toast-show-duration: 0ms; --lr-toast-hide-duration: 0ms"
+      >retry progress</lr-toast-item
+    >
+  `)) as LyraToastItem;
+  await oneEvent(el, "lr-show");
+  const firstIndicator = el.shadowRoot!.querySelector<SVGCircleElement>(
+    '[part="progress-ring__indicator"]'
+  )!;
+  let hideCount = 0;
+  el.addEventListener("lr-hide", (event) => {
+    hideCount += 1;
+    event.preventDefault();
+  });
+
+  await waitUntil(() => hideCount === 1, "the first timer dismissal is vetoed");
+  await el.updateComplete;
+  const restartedIndicator = el.shadowRoot!.querySelector<SVGCircleElement>(
+    '[part="progress-ring__indicator"]'
+  )!;
+  expect(
+    restartedIndicator === firstIndicator,
+    "the finished animation node is replaced"
+  ).to.equal(false);
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const animation = restartedIndicator.getAnimations()[0];
+    expect(
+      animation !== undefined,
+      "the replacement owns a live progress animation"
+    ).to.equal(true);
+    expect(
+      Number(animation!.currentTime),
+      "the progress animation restarts near its origin"
+    ).to.be.lessThan(90);
+  }
+  el.remove();
+});
+
+it("keeps rearming a full duration while every timer dismissal is vetoed", async () => {
+  const el = (await fixture(html`
+    <lr-toast-item duration="35" style="--lr-toast-show-duration: 0ms"
+      >persistent veto</lr-toast-item
+    >
+  `)) as LyraToastItem;
+  let hideCount = 0;
+  el.addEventListener("lr-hide", (event) => {
+    hideCount += 1;
+    event.preventDefault();
+  });
+  await oneEvent(el, "lr-show");
+
+  await aTimeout(150);
+  expect(hideCount).to.be.at.least(3);
+  expect(el.isConnected).to.be.true;
+  expect(el.hasAttribute("data-visible")).to.be.true;
+  expect(el.hasAttribute("data-hiding")).to.be.false;
+  el.remove();
+});
+
+it("holds a restarted vetoed countdown while paused, then resumes from the full duration", async () => {
+  const el = (await fixture(html`
+    <lr-toast-item
+      duration="70"
+      style="--lr-toast-show-duration: 0ms; --lr-toast-hide-duration: 0ms"
+      >paused retry</lr-toast-item
+    >
+  `)) as LyraToastItem;
+  const surface = el.shadowRoot!.querySelector(
+    '[part="toast-item"]'
+  ) as HTMLElement;
+  let hideCount = 0;
+  el.addEventListener("lr-hide", (event) => {
+    hideCount += 1;
+    if (hideCount === 1) {
+      event.preventDefault();
+      surface.dispatchEvent(new PointerEvent("pointerenter"));
+    }
+  });
+  await oneEvent(el, "lr-show");
+  await waitUntil(() => hideCount === 1, "the first timer dismissal is vetoed");
+
+  await aTimeout(110);
+  expect(hideCount, "the pointer pause suppresses every retry").to.equal(1);
+  const afterHide = oneEvent(el, "lr-after-hide");
+  surface.dispatchEvent(new PointerEvent("pointerleave"));
+  await aTimeout(35);
+  expect(
+    hideCount,
+    "resume starts from a full duration, not an expired remainder"
+  ).to.equal(1);
+  await afterHide;
+  expect(hideCount).to.equal(2);
+});
+
+it("keeps a vetoed countdown stopped while disconnected and restarts it on reconnect", async () => {
+  const parent = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const el = document.createElement("lr-toast-item") as LyraToastItem;
+  el.duration = 70;
+  el.style.setProperty("--lr-toast-show-duration", "0ms");
+  el.style.setProperty("--lr-toast-hide-duration", "0ms");
+  el.textContent = "reconnected retry";
+  let hideCount = 0;
+  el.addEventListener("lr-hide", (event) => {
+    hideCount += 1;
+    if (hideCount === 1) {
+      event.preventDefault();
+      el.remove();
+    }
+  });
+  parent.append(el);
+  await oneEvent(el, "lr-show");
+  await waitUntil(() => hideCount === 1, "the first timer dismissal is vetoed");
+
+  await aTimeout(100);
+  expect(hideCount).to.equal(1);
+  parent.append(el);
+  const afterHide = oneEvent(el, "lr-after-hide");
+  await aTimeout(35);
+  expect(hideCount, "reconnect starts a full duration").to.equal(1);
+  await waitUntil(
+    () => hideCount === 2,
+    "the reconnected timer requests dismissal again"
+  );
+  await afterHide;
+  expect(el.isConnected).to.be.false;
+});
+
+it("uses a duration changed by the veto listener and lets a manual retry dismiss immediately", async () => {
+  const el = (await fixture(html`
+    <lr-toast-item
+      duration="45"
+      style="--lr-toast-show-duration: 0ms; --lr-toast-hide-duration: 0ms"
+      >changed retry</lr-toast-item
+    >
+  `)) as LyraToastItem;
+  let hideCount = 0;
+  el.addEventListener("lr-hide", (event) => {
+    hideCount += 1;
+    if (hideCount === 1) {
+      event.preventDefault();
+      el.duration = 300;
+    }
+  });
+  await oneEvent(el, "lr-show");
+  await waitUntil(() => hideCount === 1, "the first timer dismissal is vetoed");
+  await aTimeout(90);
+  expect(
+    hideCount,
+    "the changed normalized duration controls the retry"
+  ).to.equal(1);
+
+  const afterHide = oneEvent(el, "lr-after-hide");
+  await el.hide();
+  await afterHide;
+  expect(hideCount).to.equal(2);
+  await aTimeout(320);
+  expect(hideCount, "manual success clears the rearmed timer").to.equal(2);
+});
+
+it("rearms an initial show and a visible auto-dismiss timer after reconnect", async () => {
+  const early = document.createElement("lr-toast-item") as LyraToastItem;
   early.duration = 0;
   early.textContent = 'early';
   document.body.appendChild(early);
@@ -280,7 +474,43 @@ it('applies distinct visual sizing per the `size` property', async () => {
   expect(xlPadding, 'xl padding should render larger than xs').to.be.greaterThan(xsPadding);
 });
 
-it('covers the whole shared six-step ladder, including the 2xs step the local union used to omit', async () => {
+it("round-trips valid upstream size spellings through IDL, reflection, selectors, and cloning", async () => {
+  const el = (await fixture(
+    html`<lr-toast-item size="small" duration="0"
+      >Migrated toast</lr-toast-item
+    >`
+  )) as LyraToastItem;
+  expect(el.size).to.equal("small");
+  expect(el.getAttribute("size")).to.equal("small");
+  expect(el.matches('[size="small"]')).to.be.true;
+  expect(el.dataset["effectiveSize"]).to.equal("s");
+  const canonical = (await fixture(
+    html`<lr-toast-item size="s" duration="0">Canonical toast</lr-toast-item>`
+  )) as LyraToastItem;
+  const surface = el.shadowRoot!.querySelector(
+    '[part="toast-item"]'
+  ) as HTMLElement;
+  const canonicalSurface = canonical.shadowRoot!.querySelector(
+    '[part="toast-item"]'
+  ) as HTMLElement;
+  expect(getComputedStyle(surface).paddingTop).to.equal(
+    getComputedStyle(canonicalSurface).paddingTop
+  );
+  expect(getComputedStyle(surface).fontSize).to.equal(
+    getComputedStyle(canonicalSurface).fontSize
+  );
+
+  el.size = "large";
+  await el.updateComplete;
+  expect(el.size).to.equal("large");
+  expect(el.getAttribute("size")).to.equal("large");
+  expect(el.dataset["effectiveSize"]).to.equal("l");
+  expect((el.cloneNode(true) as LyraToastItem).getAttribute("size")).to.equal(
+    "large"
+  );
+});
+
+it("covers the whole shared six-step ladder, including the 2xs step the local union used to omit", async () => {
   const measured: { font: number; padding: number }[] = [];
   for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl'] as const) {
     const el = (await fixture(
@@ -356,7 +586,8 @@ it('renders the icon part/slot only when withIcon is true', async () => {
   const withoutIcon = (await fixture(
     html`<lr-toast-item duration="0">no icon</lr-toast-item>`,
   )) as LyraToastItem;
-  expect(withoutIcon.shadowRoot!.querySelector('[part="icon"]')).to.be.null;
+  expect(withoutIcon.shadowRoot!.querySelector('[part="icon"]') === null).to.be
+    .true;
 
   const withIcon = (await fixture(
     html`<lr-toast-item with-icon duration="0">has icon</lr-toast-item>`,
@@ -401,12 +632,51 @@ it('marks the close button aria-disabled once hiding starts and ignores a rapid 
   expect(afterHideCount, 'lr-after-hide should fire exactly once').to.equal(1);
 });
 
-it('gives the close button the shared minimum hit area', async () => {
-  const el = (await fixture(html`<lr-toast-item duration="0">dismiss me</lr-toast-item>`)) as LyraToastItem;
-  await oneEvent(el, 'lr-show');
-  const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement;
-  expect(getComputedStyle(button).minInlineSize).to.equal('40px');
-  expect(getComputedStyle(button).minBlockSize).to.equal('40px');
+it("keeps the close button operable after a one-shot hide veto and allows a retry", async () => {
+  const el = (await fixture(html`
+    <lr-toast-item duration="0" style="--lr-toast-hide-duration: 0ms">
+      retry dismissal
+    </lr-toast-item>
+  `)) as LyraToastItem;
+  await oneEvent(el, "lr-show");
+  const button = el.shadowRoot!.querySelector(
+    '[part="close-button"]'
+  ) as HTMLButtonElement;
+
+  let hideCount = 0;
+  el.addEventListener("lr-hide", (event) => {
+    hideCount += 1;
+    if (hideCount === 1) event.preventDefault();
+  });
+
+  button.click();
+  expect(hideCount, "the first click should reach the veto point").to.equal(1);
+  expect(button.getAttribute("aria-disabled")).to.equal("false");
+  expect(el.isConnected, "the vetoed toast should remain visible").to.equal(
+    true
+  );
+
+  const afterHide = oneEvent(el, "lr-after-hide");
+  button.click();
+  expect(button.getAttribute("aria-disabled")).to.equal("true");
+  await afterHide;
+
+  expect(hideCount, "the retry should request dismissal again").to.equal(2);
+  expect(el.isConnected, "the accepted retry should remove the toast").to.equal(
+    false
+  );
+});
+
+it("gives the close button the shared minimum hit area", async () => {
+  const el = (await fixture(
+    html`<lr-toast-item duration="0">dismiss me</lr-toast-item>`
+  )) as LyraToastItem;
+  await oneEvent(el, "lr-show");
+  const button = el.shadowRoot!.querySelector(
+    '[part="close-button"]'
+  ) as HTMLElement;
+  expect(getComputedStyle(button).minInlineSize).to.equal("40px");
+  expect(getComputedStyle(button).minBlockSize).to.equal("40px");
 });
 
 it('keeps focus on the close button once hiding starts, instead of dropping it to <body>', async () => {

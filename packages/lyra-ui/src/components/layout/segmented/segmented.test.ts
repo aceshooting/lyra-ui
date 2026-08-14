@@ -993,8 +993,8 @@ describe("focus rehoming under a hostile DOM", () => {
     // to decide focus rehoming after an items change. Under happy-dom -- the DOM a large share of
     // consumers get from Vitest -- that getter THROWS when the document has no active element, and
     // optional chaining is no defence because the throw happens inside the getter. Since the read
-    // sits in willUpdate(), it surfaced as an unhandled rejection: one downstream suite reported
-    // 120 in a single run, all this stack. The tests still passed; the runner just exited non-zero.
+    // sits in willUpdate(), it surfaced as an unhandled rejection on every affected re-render.
+    // Assertions could still pass while the runner exited non-zero.
     const el = (await fixture(
       html`<lr-segmented .items=${items()} value="week"></lr-segmented>`
     )) as LyraSegmented;

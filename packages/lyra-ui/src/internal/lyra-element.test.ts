@@ -325,7 +325,7 @@ it('disconnects the inherited class/style observer when the component is removed
 });
 
 it('does not request an update for an ancestor class/style mutation that leaves the computed direction/locale unchanged', async () => {
-  // Regression test for fr_asxOgk4UhNB07xevCWwFVQ: any unrelated inline `style`/`class` write on
+  // Regression test: any unrelated inline `style`/`class` write on
   // ANY ancestor (e.g. lr-dialog's own overlay stack-index custom property, set via
   // style.setProperty() when it opens) used to call requestUpdate() unconditionally, purely
   // because `style`/`class` sit in INHERITED_CONTEXT_ATTRIBUTES's MutationObserver filter. That

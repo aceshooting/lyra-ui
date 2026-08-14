@@ -98,7 +98,9 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
+  /** Node templates available for filtering, activation, dragging, and optional reordering. */
   @property({ attribute: false }) items: PaletteItem[] = [];
+  /** Accessible name for the palette; empty uses the localized default. */
   @property() label = '';
   /**
    * Opts into Ctrl/Cmd+ArrowUp/ArrowDown keyboard reordering (see the class doc). Defaults to

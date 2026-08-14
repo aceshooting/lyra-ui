@@ -78,6 +78,9 @@ against the new fragment rather than leaving results from the previous content.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
   DOMRect[] }`) — fired after a selection ends inside the included content.
 
+`lr-highlight-activate` is not part of this component's event contract: included-text highlights
+are passive and cannot be activated.
+
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **Slots:** default — fallback content shown until (or unless) a fetch succeeds. It is overwritten by

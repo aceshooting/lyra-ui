@@ -187,6 +187,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
   };
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('src')) {
       this.hasLoaded = false;
       this.hasError = false;

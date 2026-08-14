@@ -802,7 +802,7 @@ it("cancels a pending scroll frame when disconnected before it runs", async () =
       .items=${Array.from({ length: 30 }, (_, i) => i)}
       .renderItem=${renderText}
       .keyFunction=${numberKey}
-    ></lr-virtual-list>`
+    ></lr-virtual-list>`,
   )) as LyraVirtualList;
   await el.updateComplete;
   await nextFrame();
@@ -830,7 +830,7 @@ it("binds observers and frames to the adopted owner and rejects retired callback
       .items=${Array.from({ length: 30 }, (_, i) => i)}
       .renderItem=${renderText}
       .keyFunction=${numberKey}
-    ></lr-virtual-list>`,
+    ></lr-virtual-list>`
   )) as LyraVirtualList;
   await el.updateComplete;
   await nextFrame();

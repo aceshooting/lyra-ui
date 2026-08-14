@@ -202,13 +202,15 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   private hovering = false;
   private focused = false;
 
-  protected override willUpdate(): void {
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasPreviewSlot = Array.from(this.childNodes).some(isRealPreviewNode);
     }
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('popoverOpen')) {
       this.cleanupPositioner?.();
       this.cleanupPositioner = undefined;

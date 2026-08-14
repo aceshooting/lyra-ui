@@ -887,7 +887,7 @@ it('reflects an invalid state only after the field has been interacted with once
 });
 
 it('does not mark touched from a blur caused by the control itself becoming disabled', async () => {
-  // Regression test for fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native form control forces
+  // Regression test: disabling a focused native form control forces
   // a browser blur that is plain native HTML behavior, not a real user interaction, and must not
   // flip the interaction-tracking `touched` state (the same fix already landed on <lr-input>'s own
   // onBlur).
@@ -1527,8 +1527,8 @@ it('disables the combobox when its containing fieldset is disabled', async () =>
   await el.updateComplete;
   // `el.disabled` (the consumer-facing IDL property/attribute) is never
   // mutated by fieldset cascading -- only the combined `effectiveDisabled`
-  // reflects it (mirrors native `<input>` and the Task 2 FormAssociated
-  // mixin's own `_fieldsetDisabled`/`effectiveDisabled` pattern).
+  // reflects it (mirrors native `<input>` and the FormAssociated mixin's own
+  // `_fieldsetDisabled`/`effectiveDisabled` pattern).
   expect((el as unknown as { effectiveDisabled: boolean }).effectiveDisabled).to.be.true;
   expect(el.disabled).to.be.false;
   const combobox = el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
@@ -1710,7 +1710,7 @@ it('reflects `name` onto the attribute synchronously, with no await/microtask in
   // cycle (a microtask), not the property setter itself -- so
   // `el.name = 'b'; new FormData(form)` (no `await` in between) could still
   // observe the stale attribute. The hand-written `name` accessor must write
-  // the attribute inline, matching Task 2's `FormAssociated.name`.
+  // the attribute inline, matching the `FormAssociated.name` contract.
   const el = (await fixture(basic())) as LyraCombobox;
   el.name = 'b';
   expect(el.getAttribute('name')).to.equal('b');
@@ -2845,11 +2845,13 @@ describe('start/end adornment slots', () => {
 
   it('reveals the wrapper when an adornment is slotted in after first render', async () => {
     const el = (await fixture(basic())) as LyraCombobox;
+    const startSlot = el.shadowRoot!.querySelector('slot[name="start"]') as HTMLSlotElement;
+    const changed = oneEvent(startSlot, 'slotchange');
     const glyph = document.createElement('span');
     glyph.slot = 'start';
     glyph.textContent = '⌕';
     el.append(glyph);
-    await el.updateComplete;
+    await changed;
     await el.updateComplete;
     expect(part(el, 'start').hasAttribute('hidden')).to.be.false;
   });
@@ -4134,7 +4136,7 @@ it('makes lr-show/lr-hide cancelable and the settled after-events not', async ()
   }
 });
 
-// -- Coverage sweep: reconnect lifecycle, source edge cases, keyboard/mouse gaps ---------------
+// -- Reconnect lifecycle, source edge cases, and keyboard/mouse edge paths ---------------------
 
 it('re-runs source on reconnect while closed with a stale selection and empty async rows', async () => {
   const el = document.createElement('lr-combobox') as LyraCombobox;
@@ -4336,7 +4338,7 @@ it('suppresses the create row on an exact case-insensitive match against a local
     </lr-combobox>
   `)) as LyraCombobox;
   await typeQuery(el, 'EXISTING');
-  expect(el.shadowRoot!.querySelector('[data-create]')).to.equal(null);
+  expect((el.shadowRoot!.querySelector('[data-create]')) === (null)).to.equal(true);
 });
 
 it('checks async source rows, not local options, for an exact match when allow-create is combined with source', async () => {
@@ -4349,9 +4351,9 @@ it('checks async source rows, not local options, for an exact match when allow-c
   await aTimeout(250);
   await el.updateComplete;
   expect(
-    el.shadowRoot!.querySelector('[data-create]'),
+    (el.shadowRoot!.querySelector('[data-create]')) === (null),
     'an exact async-row label match suppresses the create row'
-  ).to.equal(null);
+  ).to.equal(true);
 
   await typeQuery(el, 'brand new');
   await aTimeout(250);
@@ -4451,9 +4453,9 @@ it('silently drops a source rejection that arrives after disconnect', async () =
     await aTimeout(0);
     expect(warned, 'a stale rejection after disconnect must not be warned about').to.be.false;
     expect(
-      el.shadowRoot!.querySelector('.source-error'),
+      (el.shadowRoot!.querySelector('.source-error')) === (null),
       'a stale rejection must not surface the error state'
-    ).to.equal(null);
+    ).to.equal(true);
   } finally {
     console.warn = originalWarn;
   }
@@ -4484,8 +4486,8 @@ it('swallows an AbortError the source rejects with while its request is still cu
     reject(new DOMException('aborted', 'AbortError'));
     await aTimeout(0);
     expect(warned, 'an AbortError must not be warned about').to.be.false;
-    expect(el.shadowRoot!.querySelector('.source-error'), 'an AbortError must not surface the failure state').to.equal(
-      null
+    expect((el.shadowRoot!.querySelector('.source-error')) === (null), 'an AbortError must not surface the failure state').to.equal(
+      true
     );
   } finally {
     console.warn = originalWarn;

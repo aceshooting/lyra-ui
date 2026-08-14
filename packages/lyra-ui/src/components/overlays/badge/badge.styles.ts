@@ -15,7 +15,7 @@ export const styles = css`
     --lr-badge-gap: var(--lr-space-2xs);
     /* Rounded rectangle by default; the pill treatment is opt-in through the 'pill' attribute
        below, matching the badge/tag shape vocabulary. Doesn't vary by size tier, so it's declared
-       once here rather than re-assigned per :host([size='...']) block -- mirrors lr-button's
+       once here rather than re-assigned per effective-size block -- mirrors lr-button's
        identical --lr-button-radius. */
     --lr-badge-radius: var(--lr-radius);
 
@@ -112,7 +112,7 @@ export const styles = css`
      surface/border/text "no signal" treatment declared on :host above instead of the grid's grey
      neutral row. Matching [variant] as well as :not([variant='neutral']) keeps a host that has not
      yet reflected its default attribute on the same neutral values. */
-  :host([variant]:not([variant='neutral'])) {
+  :host([data-effective-variant]:not([data-effective-variant='neutral'])) {
     --lr-badge-tint: var(--lr-color-fill-quiet);
     --lr-badge-edge: var(--lr-color-fill-loud);
     --lr-badge-ink: var(--lr-color-fill-loud);
@@ -148,29 +148,27 @@ export const styles = css`
   }
 
   /* --- size --------------------------------------------------------------------------------- */
-  :host([size='2xs']) {
+  :host([data-effective-size='2xs']) {
     --lr-badge-font-size: var(--lr-font-size-2xs);
     --lr-badge-padding-inline: var(--lr-space-2xs);
     --lr-badge-min-height: var(--lr-size-0-9375rem);
   }
-  :host([size='xs']) {
+  :host([data-effective-size='xs']) {
     --lr-badge-font-size: var(--lr-font-size-xs);
     --lr-badge-padding-inline: var(--lr-space-xs);
     --lr-badge-min-height: var(--lr-size-1rem);
   }
-  :host([size='s']),
-  :host([size='small']) {
+  :host([data-effective-size='s']) {
     --lr-badge-font-size: var(--lr-font-size-xs);
     --lr-badge-padding-inline: var(--lr-size-0-375rem);
     --lr-badge-min-height: var(--lr-size-1-1rem);
   }
-  :host([size='l']),
-  :host([size='large']) {
+  :host([data-effective-size='l']) {
     --lr-badge-font-size: var(--lr-font-size-m);
     --lr-badge-padding-inline: var(--lr-space-m);
     --lr-badge-min-height: var(--lr-size-1-5rem);
   }
-  :host([size='xl']) {
+  :host([data-effective-size='xl']) {
     --lr-badge-font-size: var(--lr-font-size-lg);
     --lr-badge-padding-inline: var(--lr-space-l);
     --lr-badge-min-height: var(--lr-size-1-75rem);

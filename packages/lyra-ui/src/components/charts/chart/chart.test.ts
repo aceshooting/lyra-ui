@@ -49,7 +49,7 @@ it('shows a loading skeleton and aria-busy while chart.js loads, then swaps to t
   await waitUntil(() => (el as any).chart != null, 'chart.js never initialized', { timeout: 5000 });
 
   expect(el.getAttribute('aria-busy')).to.equal('false');
-  expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('lr-skeleton')) == null).to.be.true;
   expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
 });
 
@@ -1423,7 +1423,7 @@ it('renders the reset-zoom-button part and emits `lr-zoom` once `onZoomComplete`
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
 
-  expect(el.shadowRoot!.querySelector('[part="reset-zoom-button"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="reset-zoom-button"]')) == null).to.be.true;
 
   const onZoomComplete = (el as any).buildConfig().options.plugins.zoom.zoom.onZoomComplete;
   let event: CustomEvent | undefined;
@@ -1438,7 +1438,7 @@ it('renders the reset-zoom-button part and emits `lr-zoom` once `onZoomComplete`
   el.resetZoom();
   await el.updateComplete;
   expect(resetEvent!.detail).to.deep.equal({ zoomed: false });
-  expect(el.shadowRoot!.querySelector('[part="reset-zoom-button"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="reset-zoom-button"]')) == null).to.be.true;
 });
 
 it('resets the zoomed flag (and hides the reset-zoom-button) when a type change rebuilds the Chart.js instance while zoomed', async () => {
@@ -1459,7 +1459,7 @@ it('resets the zoomed flag (and hides the reset-zoom-button) when a type change 
   await el.updateComplete;
   await waitUntil(() => (el as any).chart !== instance);
   expect((el as any).zoomed).to.equal(false);
-  expect(el.shadowRoot!.querySelector('[part="reset-zoom-button"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="reset-zoom-button"]')) == null).to.be.true;
 });
 
 it('disables Chart.js animation when the user prefers reduced motion', async () => {
@@ -4380,11 +4380,11 @@ describe('coverage: legend/tooltip/table label fallbacks and misc guards', () =>
     el.legend = false;
     await el.updateComplete;
     await waitUntil(() => (el as any).chart != null);
-    expect(el.shadowRoot!.querySelector('[part="legend"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="legend"]')) == null).to.be.true;
 
     el.legend = true;
     el.withoutLegend = true;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="legend"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="legend"]')) == null).to.be.true;
   });
 });

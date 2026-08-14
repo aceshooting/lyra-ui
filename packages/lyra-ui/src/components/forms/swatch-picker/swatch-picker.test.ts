@@ -263,7 +263,7 @@ describe('lr-swatch-picker', () => {
       html`<lr-swatch-picker .options=${withIcon} value="blue"></lr-swatch-picker>`,
     )) as LyraSwatchPicker;
     const buttons = swatches(el);
-    expect(buttons[0]!.querySelector('[part="swatch-icon"]')).to.equal(null);
+    expect((buttons[0]!.querySelector('[part="swatch-icon"]')) === (null)).to.equal(true);
     const iconSpan = buttons[1]!.querySelector('[part="swatch-icon"]');
     expect((iconSpan) !== (null)).to.equal(true);
     expect(iconSpan!.getAttribute('aria-hidden')).to.equal('true');
@@ -284,7 +284,7 @@ describe('lr-swatch-picker', () => {
       ></lr-swatch-picker>
     `)) as LyraSwatchPicker;
     const selected = swatches(el)[1]!;
-    expect(selected.querySelector('[part="swatch-fill"]')).to.equal(null);
+    expect((selected.querySelector('[part="swatch-fill"]')) === (null)).to.equal(true);
     expect(selected.querySelector('[part="swatch-icon"] svg')).to.not.equal(null);
     expect(selected.querySelector('[part="swatch-icon"] svg')?.getAttribute('viewBox')).to.equal('0 0 24 24');
   });

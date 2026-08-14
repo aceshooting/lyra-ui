@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './chip.js';
 import type { LyraChip } from './chip.js';
 import { styles } from './chip.styles.js';
@@ -39,15 +39,65 @@ function resolved(host: HTMLElement, property: string, token: string): string {
   return value;
 }
 
-it('defaults to size="m", variant="neutral", removable=false, pill=false, and value=undefined', async () => {
+it('defaults to size="m", variant="neutral", removable=false, disabled=false, pill=false, and value=undefined', async () => {
   const el = (await fixture(html`<lr-chip>Tag</lr-chip>`)) as LyraChip;
   expect(el.size).to.equal('m');
   expect(el.getAttribute('size')).to.equal('m');
   expect(el.variant).to.equal('neutral');
   expect(el.getAttribute('variant')).to.equal('neutral');
   expect(el.removable).to.be.false;
+  expect(el.disabled).to.be.false;
   expect(el.pill).to.be.false;
   expect(el.value).to.be.undefined;
+});
+
+describe('disabled', () => {
+  it('disables the native toggle control, blocks focus/click, and emits no selection request', async () => {
+    const el = (await fixture(
+      html`<lr-chip toggleable disabled value="filter">Filter</lr-chip>`,
+    )) as LyraChip;
+    const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
+    let changes = 0;
+    el.addEventListener('lr-chip-select', () => changes++);
+
+    expect(el.disabled).to.be.true;
+    expect(el.hasAttribute('disabled')).to.be.true;
+    expect(button.disabled).to.be.true;
+    el.focus();
+    expect(el.shadowRoot!.activeElement === null).to.equal(true);
+    el.click();
+    expect(changes).to.equal(0);
+    expect(el.selected).to.be.false;
+    await expect(el).to.be.accessible();
+  });
+
+  it('disables the native remove control and suppresses remove requests', async () => {
+    const el = (await fixture(html`<lr-chip removable disabled>Filter</lr-chip>`)) as LyraChip;
+    const button = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLButtonElement;
+    let removals = 0;
+    el.addEventListener('lr-remove', () => removals++);
+
+    expect(button.disabled).to.be.true;
+    button.click();
+    el.click();
+    expect(removals).to.equal(0);
+  });
+
+  it('reacts when disabled changes after mount and restores the existing interaction mode', async () => {
+    const el = (await fixture(html`<lr-chip toggleable>Filter</lr-chip>`)) as LyraChip;
+    const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
+    expect(button.disabled).to.be.false;
+
+    el.disabled = true;
+    await el.updateComplete;
+    expect(button.disabled).to.be.true;
+
+    el.disabled = false;
+    await el.updateComplete;
+    expect(button.disabled).to.be.false;
+    button.click();
+    expect(el.selected).to.be.true;
+  });
 });
 
 // -- pill / corner radius ----------------------------------------------------
@@ -239,21 +289,30 @@ it('keeps the server-first remove name during hydration, then adopts the declara
     el.shadowRoot?.querySelector('[part="remove-button"]')?.getAttribute('aria-label'),
   ).to.equal('Remove');
 
-  await el.updateComplete;
+  await waitUntil(
+    () =>
+      el.shadowRoot?.querySelector('[part="remove-button"]')?.getAttribute('aria-label') ===
+      'Remove Research',
+    'the corrective hydration update must adopt the declarative label',
+  );
   expect(
     el.shadowRoot?.querySelector('[part="remove-button"]')?.getAttribute('aria-label'),
   ).to.equal('Remove Research');
 });
 
-it('keeps the server-first icon state during hydration, then adopts the declarative icon', async () => {
+it('keeps the progressive server icon visible during hydration, then adopts its presence', async () => {
   const el = await mountServerRenderedChip(
     `<lr-chip removable>${SERVER_SHADOW}<span slot="icon">●</span>Research</lr-chip>`,
   );
   await el.updateComplete;
-  expect(el.shadowRoot?.querySelector('[part="icon"]')?.hasAttribute('hidden')).to.be.true;
+  const icon = el.shadowRoot?.querySelector('[part="icon"]');
+  expect(icon?.hasAttribute('hidden')).to.be.false;
 
-  await el.updateComplete;
-  expect(el.shadowRoot?.querySelector('[part="icon"]')?.hasAttribute('hidden')).to.be.false;
+  await waitUntil(
+    () => (el as unknown as { hasIconSlot: boolean }).hasIconSlot,
+    'the corrective hydration update must adopt the declarative icon',
+  );
+  expect(el.shadowRoot?.querySelector('[part="icon"]') === icon).to.be.true;
 });
 
 it('derives the removable name before the first paint on a browser-only mount', async () => {
@@ -338,7 +397,7 @@ describe('end slot', () => {
 describe('remove affordance', () => {
   it('is not rendered by default (removable=false)', async () => {
     const el = (await fixture(html`<lr-chip>Tag</lr-chip>`)) as LyraChip;
-    expect(el.shadowRoot!.querySelector('[part="remove-button"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="remove-button"]')) == null).to.be.true;
   });
 
   it('renders once removable is true', async () => {

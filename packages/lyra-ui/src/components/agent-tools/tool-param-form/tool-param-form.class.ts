@@ -800,6 +800,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('value') || changed.has('schema') || changed.has('_errors') || changed.has('_formError')) {
       const valid = Object.keys(this._errors).length === 0 && this._formError === '';
       const key = JSON.stringify({ valid, errors: this._errors, formError: this._formError });

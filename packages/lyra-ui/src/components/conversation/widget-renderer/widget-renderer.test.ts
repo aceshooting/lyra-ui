@@ -175,7 +175,7 @@ describe("lr-widget-renderer", () => {
 
     el.tree = { type: "button", id: "stable", actionId: "second", payload: 2 };
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector("lr-button")).to.equal(button);
+    expect((el.shadowRoot!.querySelector("lr-button")) === (button)).to.equal(true);
 
     const listener = oneEvent(el, "lr-widget-action");
     button.dispatchEvent(new Event("click", { bubbles: true, composed: true }));
@@ -268,7 +268,7 @@ describe("lr-widget-renderer", () => {
     };
     await el.updateComplete;
     const second = el.shadowRoot!.querySelector("lr-stat");
-    expect(second).to.equal(first); // same DOM element instance, not recreated
+    expect((second) === (first)).to.equal(true); // same DOM element instance, not recreated
     expect((second as HTMLElement & { value: string }).value).to.equal("101");
   });
 

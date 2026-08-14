@@ -180,7 +180,7 @@ describe('lr-csv-viewer', () => {
   it('can treat every row as data through a false property binding', async () => {
     const el = (await fixture(html`<lr-csv-viewer .hasHeaderRow=${false}></lr-csv-viewer>`)) as LyraCsvViewer;
     const restore = fetchText(CSV);
-    try { el.src = 'https://example.test/people.csv'; await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null); expect(el.shadowRoot!.querySelector('[part="header-row"]')).to.not.exist; expect((el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: unknown[][] }).items).to.have.lengthOf(3); } finally { restore(); }
+    try { el.src = 'https://example.test/people.csv'; await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null); expect((el.shadowRoot!.querySelector('[part="header-row"]')) == null).to.be.true; expect((el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: unknown[][] }).items).to.have.lengthOf(3); } finally { restore(); }
   });
   it('accepts has-header-row="false" as a plain-HTML attribute string, not only a property binding', async () => {
     // Regression test: Lit's default presence-based Boolean converter treats ANY attribute value,

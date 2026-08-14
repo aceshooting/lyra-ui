@@ -433,6 +433,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   };
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('spans') || changed.has('activeSpanId') || changed.has('collapsedIds')) {
       const hierarchy = this.buildHierarchy();
       const ids = new Set(hierarchy.byId.keys());
@@ -510,6 +511,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if ((changed.has('activeSpanId') || changed.has('spans') || changed.has('collapsedIds')) && this.activeSpanId) {
       const row = this.renderedRowById(this.activeSpanId);
       if (row) {

@@ -387,8 +387,8 @@ it('edits a variable name and value by index without disturbing its siblings', a
 it('keeps message reordering opt-in and disables boundary actions', async () => {
   const el = (await fixture(html`<lr-prompt-studio .messages=${reorderMessages}></lr-prompt-studio>`)) as LyraPromptStudio;
   expect(el.hasAttribute('reorderable')).to.be.false;
-  expect(el.shadowRoot!.querySelector('[part="message-actions"]')).to.not.exist;
-  expect(el.shadowRoot!.querySelector('[part="move-message-up"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="message-actions"]')) == null).to.be.true;
+  expect((el.shadowRoot!.querySelector('[part="move-message-up"]')) == null).to.be.true;
 
   el.reorderable = true;
   await el.updateComplete;
@@ -410,8 +410,8 @@ it('keeps message reordering opt-in and disables boundary actions', async () => 
   el.reorderable = false;
   await el.updateComplete;
   expect(el.hasAttribute('reorderable')).to.be.false;
-  expect(el.shadowRoot!.querySelector('[part="message-actions"]')).to.not.exist;
-  expect(el.shadowRoot!.querySelector('[part="move-message-up"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="message-actions"]')) == null).to.be.true;
+  expect((el.shadowRoot!.querySelector('[part="move-message-up"]')) == null).to.be.true;
 });
 
 it('emits a cancelable reorder request before applying an immutable next message order', async () => {

@@ -351,7 +351,8 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     }
   };
 
-  override firstUpdated(): void {
+  override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     this.captureThemeSignatures();
   }
 

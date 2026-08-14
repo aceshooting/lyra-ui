@@ -40,12 +40,13 @@ interactions open it is configurable as of 8.0.0; by default it is still hover a
 - `distance: number = 8` — anchor-offset distance in px; identical semantics to
   `<lr-popover>.distance` (both wrap the same `place()`/`offset()` middleware)
 - `skidding: number = 0` — offset along the anchor's edge, in px. New in 8.0.0.
-- `for: string = ''` (reflected) — id of an element in this tooltip's own root to position against
-  instead of the slotted trigger; the trigger keeps owning the interaction listeners and
-  `aria-describedby`. New in 8.0.0. Assigning `null` clears the attribute to the canonical `''`
-  read value; the getter itself remains non-nullable
-- `anchor: Element | null = null` (property only) — direct anchor, taking priority over `for` and
-  the active trigger
+- `for: string = ''` (reflected) — id of an element in this tooltip's own root. It positions behind
+  a direct `.anchor`; when it resolves to a live HTML element and no trigger is slotted, it also owns
+  the configured interaction listeners and `aria-describedby`. A slotted trigger wins interaction
+  and ARIA ownership. Assigning `null` clears the attribute to the canonical `''` read value; the
+  getter itself remains non-nullable
+- `anchor: Element | null = null` (property only) — positioning-only direct anchor, taking priority
+  over `for` and the active interaction owner without receiving listeners or generated ARIA
 - `disabled: boolean = false` (reflected) — prevents both interaction and programmatic opening;
   setting it while open closes the tooltip
 - `hoist: boolean = false` (reflected) — switches the mapped absolute positioning default to fixed
@@ -68,12 +69,12 @@ origin-aware migration emits those tokens.
   `lr-after-hide`
 - `showAt(rect: { x, y, width?, height?, contextElement? }, options?: { returnFocusTo?: HTMLElement })`
   — same virtual-anchor contract as `lr-popover.showAt()` above (anchors to an arbitrary rectangle
-  instead of the slotted `trigger`, `width`/`height` default to `0`, `contextElement` gives
+  instead of any DOM anchor, `width`/`height` default to `0`, `contextElement` gives
   `autoUpdate()` something to observe, Escape returns focus to `options.returnFocusTo` or skips
   focus-return, re-call with fresh coordinates to re-anchor a moving point). Opens immediately,
   bypassing `show-delay`/`trigger`/`manual` (all are interaction-debounce concerns for a slotted
-  trigger, not a deliberate programmatic call); close it with `hide()` or `open = false`. Non-finite
-  coordinates or dimensions are a no-op.
+  trigger, not a deliberate programmatic call); while active it removes every DOM interaction/ARIA
+  owner. Close it with `hide()` or `open = false`. Non-finite coordinates or dimensions are a no-op.
 
 **Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide` — the
 same four-event contract, timing and veto semantics `<lr-popover>` documents above, and all four are
@@ -123,6 +124,11 @@ whose explicit element-reference assignment intentionally leaves that control's 
 including a control's own internal hint/error text — are merged while open and restored when the
 tooltip closes, the trigger is replaced, or the tooltip disconnects.
 
+With no slotted trigger, a live HTML `for` target receives those same interactions and description;
+target insertion, removal, replacement and `id` changes are tracked without requiring reinsertion.
+Removing the sole connected direct or interaction anchor force-closes despite an `lr-hide` veto,
+while a live slotted/`for` positioning fallback is rebound and keeps the tooltip open.
+
 Plain content keeps `role="tooltip"`. If actionable content appears anywhere in the assigned
 default-slot subtree — including inside a nested custom element's open shadow root — the popup
 promotes to a named `role="dialog"` and remains open while pointer or focus is within it. Escape
@@ -132,6 +138,9 @@ external descendant text/actionability changes, and relevant composed-ancestor v
 update both the hidden description proxy and popup role; when a forwarding slot becomes genuinely
 unassigned, its own fallback content is restored. This classification also runs while the popup is
 closed, without treating the popup's internal closed-state visibility as consumer-hidden content.
+Image alternatives and `aria-labelledby` references contribute their accessible text; referenced
+targets outside the tooltip subtree are observed too, so a sibling label's live text mutation
+updates the proxy. Reference traversal is bounded and cycle-safe.
 While open, rootless custom-element content receives a bounded initialization grace period for an
 upgrade or newly attached open shadow root; later observable content mutations start a fresh
 grace period. This catches normal lazy initialization without scheduling perpetual animation-frame

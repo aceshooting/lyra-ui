@@ -142,6 +142,20 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
     return super.isInsideLightDismissBoundary(path) || Boolean(this.containingElement && path.includes(this.containingElement));
   }
 
+  protected override onPopupPositioned(): void {
+    super.onPopupPositioned();
+    const menu = this.menuEngine;
+    if (!menu?.open) return;
+    // The contained engine establishes the correct roving tabindex synchronously while the outer
+    // popup is still waiting for Floating UI. Firefox and WebKit reject focus in that hidden
+    // interval, so retry the one item the engine already selected once the popup is focusable.
+    const slot = menu.shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
+    const activeItem = slot
+      ?.assignedElements({ flatten: true })
+      .find((element) => (element as HTMLElement).tabIndex === 0) as HTMLElement | undefined;
+    activeItem?.focus();
+  }
+
   private get menuEngine(): LyraMenu | undefined {
     return this.consumerMenu ??
       (this.renderRoot.querySelector('[part~="menu"]') as LyraMenu | null) ??

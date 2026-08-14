@@ -8,6 +8,7 @@ import type {
   LyraHighlightTone,
   TextSelectDetail,
 } from '../src/components/viewers/document-viewer/document-viewer.js';
+import type { LyraDocumentPreview } from '../src/lyra.js';
 
 const anchor: LyraAnchor = { kind: 'page', page: 1 };
 const kind: LyraAnchorKind = anchor.kind;
@@ -19,3 +20,6 @@ const selected: TextSelectDetail = { text: '', anchor, rects: [] };
 const result: AnchorResultDetail = { found: true };
 
 void [capabilities, activated, selected, result];
+
+declare const preview: LyraDocumentPreview;
+preview.suppressDownload = true;

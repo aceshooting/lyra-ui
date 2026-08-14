@@ -67,9 +67,13 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
 
   static override styles = [LyraElement.styles, styles];
 
+  /** Named retrieval result sets rendered side by side. */
   @property({ attribute: false }) sets: RetrievalComparisonSet[] = [];
+  /** Maximum ranked chunks shown from each set after stable score ordering. */
   @property({ type: Number, attribute: 'top-k' }) topK = 10;
+  /** Controlled chunk id highlighted across every set that contains it. */
   @property({ attribute: 'selected-chunk-id' }) selectedChunkId = '';
+  /** Accessible name for the comparison region; empty uses the localized default. */
   @property() label = '';
 
   private readonly headingIdPrefix = `lr-retrieval-compare-${++retrievalCompareInstance}`;

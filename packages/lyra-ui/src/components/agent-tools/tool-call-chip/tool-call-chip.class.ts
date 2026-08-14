@@ -280,13 +280,15 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   private hovering = false;
   private focused = false;
 
-  protected override willUpdate(): void {
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasDetailSlot = Array.from(this.children).some((el) => !el.hasAttribute('slot'));
     }
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('tooltipOpen')) {
       this.cleanupPositioner?.();
       this.cleanupPositioner = undefined;

@@ -64,13 +64,13 @@ function rows(el: LyraModelSelect): NodeListOf<HTMLElement> {
 it('renders a closed dropdown (trigger button) when catalog is non-empty and allow-custom is unset', async () => {
   const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
   expect(trigger(el) != null).to.equal(true);
-  expect(el.shadowRoot!.querySelector('[part="combobox-input"]')).to.be.null;
+  expect((el.shadowRoot!.querySelector('[part="combobox-input"]')) === null).to.be.true;
 });
 
 it('renders a free-text input when catalog is empty/undefined', async () => {
   const el = (await fixture(html`<lr-model-select></lr-model-select>`)) as LyraModelSelect;
   expect(input(el) != null).to.equal(true);
-  expect(el.shadowRoot!.querySelector('[part="trigger"]')).to.be.null;
+  expect((el.shadowRoot!.querySelector('[part="trigger"]')) === null).to.be.true;
 });
 
 it('renders a free-text input when allow-custom is set, even with a non-empty catalog', async () => {
@@ -78,7 +78,7 @@ it('renders a free-text input when allow-custom is set, even with a non-empty ca
     html`<lr-model-select allow-custom .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   expect(input(el) != null).to.equal(true);
-  expect(el.shadowRoot!.querySelector('[part="trigger"]')).to.be.null;
+  expect((el.shadowRoot!.querySelector('[part="trigger"]')) === null).to.be.true;
 });
 
 it('forwards selection and range editing in free-text mode while synchronizing form state', async () => {
@@ -789,7 +789,7 @@ it('suppresses the free-text input blur handler during a mode switch back to the
 describe('touched state (disabled-forced blur)', () => {
   // A focused native control (button/input) auto-blurs the instant it becomes `disabled` -- plain
   // platform behavior, not a user interaction. Marking `touched` for it too was capable of
-  // reentering the very update that disabled the control (fr_asxOgk4UhNB07xevCWwFVQ).
+  // reentering the very update that disabled the control.
   it('does not mark touched from a blur caused by the trigger itself becoming disabled (closed-dropdown mode)', async () => {
     const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
     trigger(el).focus();

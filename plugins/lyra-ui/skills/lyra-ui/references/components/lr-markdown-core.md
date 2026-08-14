@@ -49,8 +49,10 @@ same peer-neutral configurable parser shared by both Markdown variants; `sanitiz
 `highlight-code`), `languages: Record<string, ShikiLanguageInput> = {}` (attribute: false) — required,
 unlike `<lr-markdown>`'s optional `languages?:`; empty (the default) means every fenced block stays
 unhighlighted permanently, `headingAnchors: boolean = false` (attribute `heading-anchors`),
-`math: boolean = false`, `anchorKinds: readonly ('fragment' | 'text-quote')[] = ['fragment',
-'text-quote']`.
+`math: boolean = false`; plus the same inherited anchor-target properties as `<lr-markdown>`:
+`highlights: LyraHighlight[] = []` (attribute: false), `activeHighlightId: string | null = null`
+(attribute `active-highlight-id`), `anchor: LyraAnchor | string | null = null` (attribute: false),
+and `anchorKinds: readonly ('fragment' | 'text-quote')[] = ['fragment', 'text-quote']`.
 
 **Methods:** `renderMarkdown(): void` — immediately reruns the current content through the parse,
 sanitize, highlight, and fallback pipeline after changing shared `marked` configuration; safely

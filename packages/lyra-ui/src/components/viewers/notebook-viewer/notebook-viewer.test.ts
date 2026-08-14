@@ -449,8 +449,8 @@ describe('loading a notebook from src', () => {
       el.remove();
       resolveFetch({ ok: true, status: 200, statusText: 'OK', text: () => Promise.resolve(JSON.stringify(NOTEBOOK)) } as Response);
       await aTimeout(20);
-      expect(el.shadowRoot!.querySelector('[part~="cell"]')).to.not.exist;
-      expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('[part~="cell"]')) == null).to.be.true;
+      expect((el.shadowRoot!.querySelector('[part="error"]')) == null).to.be.true;
     } finally { window.fetch = original; }
   });
 
@@ -484,7 +484,7 @@ describe('loading a notebook from src', () => {
       // allowed to do -- a throw aborts the retry loop instead of being treated as "not yet".
       await waitUntil(() => (el.shadowRoot?.querySelector('lr-virtual-list')?.shadowRoot?.querySelectorAll('[part~="cell"]').length ?? 0) > 0);
       // the aborted first request must not have surfaced any error state
-      expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('[part="error"]')) == null).to.be.true;
     } finally { window.fetch = original; }
   });
 });

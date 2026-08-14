@@ -170,7 +170,7 @@ it('does not recognize a GFM table when gfm is disabled', async () => {
   el.content = '| a | b |\n| --- | --- |\n| 1 | 2 |\n';
   await el.updateComplete;
   await waitUntil(() => (el as unknown as { renderedHtml: string | null }).renderedHtml !== null);
-  expect(el.shadowRoot!.querySelector('[part="table"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="table"]')) == null).to.be.true;
 });
 
 it('does not recognize a GFM table when gfm="false" is written as a plain HTML attribute string, not just a JS property', async () => {
@@ -471,7 +471,7 @@ it('adds an align attribute to an aligned table header cell, and omits <tbody> f
   const ths = el.shadowRoot!.querySelectorAll('[part="table"] th');
   expect(ths[0].getAttribute('align')).to.equal('left');
   expect(ths[1].getAttribute('align')).to.equal('right');
-  expect(el.shadowRoot!.querySelector('[part="table"] tbody')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="table"] tbody')) == null).to.be.true;
 });
 
 it('renders a 4-space indented code block (marked pre-escapes it; token.escaped is true)', async () => {
@@ -479,7 +479,7 @@ it('renders a 4-space indented code block (marked pre-escapes it; token.escaped 
   await waitUntil(() => el.shadowRoot!.querySelector('[part="code-block"]') !== null);
   const code = el.shadowRoot!.querySelector('[part="code-block"] code')!;
   expect(code.textContent).to.equal('<div>indented</div>\n');
-  expect(el.shadowRoot!.querySelector('[part="code-block"] div')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="code-block"] div')) == null).to.be.true;
 });
 
 it("defaults heading-offset to 0, preserving today's exact <h${depth}> output", async () => {
@@ -856,7 +856,7 @@ it('firstUpdated() no-ops (never calls bindTextSelection) when the render output
   document.body.appendChild(el);
   await el.updateComplete;
   try {
-    expect(el.shadowRoot!.querySelector('[part="content"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="content"]')) == null).to.be.true;
     expect(bindCalled, 'bindTextSelection must not be called when there is no content root to bind').to.be.false;
   } finally {
     el.remove();
@@ -1166,7 +1166,7 @@ describe('shiki highlighting (real peer)', () => {
     el.content = '```ts\nconst x = 1;\n```';
     await el.updateComplete;
     await aTimeout(300); // long enough that a wrongly-kicked-off highlight would have resolved
-    expect(el.shadowRoot!.querySelector('[part="code-block"] span')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="code-block"] span')) == null).to.be.true;
 
     el.streaming = false;
     await el.updateComplete;
@@ -1228,7 +1228,7 @@ describe('shiki highlighting (real peer)', () => {
     el.content = '```ts\nconst x = 1;\n```';
     await el.updateComplete;
     await aTimeout(500);
-    expect(el.shadowRoot!.querySelector('[part="code-block"] span')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="code-block"] span')) == null).to.be.true;
   });
 
   it('is accessible once a fenced code block has been highlighted', async () => {
@@ -1288,7 +1288,7 @@ describe('shiki highlighting (real peer)', () => {
       el.content = '```ts\nconst x = 1;\n```';
       await el.updateComplete;
       await aTimeout(300); // long enough that a wrongly-cached highlight would have appeared
-      expect(el.shadowRoot!.querySelector('[part="code-block"] span')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('[part="code-block"] span')) == null).to.be.true;
       expect(el.shadowRoot!.querySelector('[part="code-block"] code')!.textContent).to.equal('const x = 1;\n');
       type Internals = { failedHighlightKeys: Set<string> };
       expect((el as unknown as Internals).failedHighlightKeys.has('ts\nconst x = 1;\n')).to.be.true;
@@ -1325,7 +1325,7 @@ describe('languages (fine-grained shiki opt-in) — markdown', () => {
     el.content = '```ts\nconst x = 1;\n```';
     await el.updateComplete;
     await aTimeout(500);
-    expect(el.shadowRoot!.querySelector('[part="code-block"] span')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="code-block"] span')) == null).to.be.true;
   });
 });
 
@@ -1422,7 +1422,7 @@ describe('scrollToAnchor (fragment)', () => {
 
   it('applyAnchor/computeSelectionAnchor no-op when the content root is not yet in the DOM', async () => {
     const el = fixtureSync(html`<lr-markdown content=${'# Title'}></lr-markdown>`) as LyraMarkdown;
-    expect(el.shadowRoot!.querySelector('[part="content"]')).to.equal(null);
+    expect((el.shadowRoot!.querySelector('[part="content"]')) === (null)).to.equal(true);
     type Internals = {
       applyAnchor(anchor: { kind: 'fragment'; id: string }): Promise<boolean>;
       computeSelectionAnchor(range: Range): unknown;
@@ -1546,7 +1546,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     const el = fixtureSync(html`<lr-markdown></lr-markdown>`) as LyraMarkdown;
     // Precondition: fixtureSync() connects but does not await the first Lit update, so the
     // [part="content"] wrapper hasn't been rendered into the shadow root yet.
-    expect(el.shadowRoot!.querySelector('[part="content"]')).to.equal(null);
+    expect((el.shadowRoot!.querySelector('[part="content"]')) === (null)).to.equal(true);
     (el as unknown as { repaintHighlights(): void }).repaintHighlights();
     // No throw -- repaintHighlights() must bail out cleanly with nothing to paint into yet.
   });
@@ -1867,7 +1867,7 @@ describe('math (KaTeX)', () => {
     const text = el.shadowRoot!.querySelector('[part="content"]')!.textContent!;
     expect(text).to.contain('$x$');
     expect(text).to.contain('$$y$$');
-    expect(el.shadowRoot!.querySelector('[part="math"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="math"]')) == null).to.be.true;
     expect(fired, 'a throwing (but installed) peer is not "confirmed missing" -- no error event').to.be.false;
   });
 

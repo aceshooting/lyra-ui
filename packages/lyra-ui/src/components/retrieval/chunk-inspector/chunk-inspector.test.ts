@@ -104,8 +104,8 @@ it('compact rows have no text preview and no expand toggle', async () => {
   const el = (await fixture(html`<lr-chunk-inspector compact></lr-chunk-inspector>`)) as LyraChunkInspector;
   el.chunks = chunks;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="text"]')).to.not.exist;
-  expect(el.shadowRoot!.querySelector('[part="toggle"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="text"]')) == null).to.be.true;
+  expect((el.shadowRoot!.querySelector('[part="toggle"]')) == null).to.be.true;
 });
 
 it('renders through the internal virtual-list once chunks exceeds virtualizeAt', async () => {
@@ -161,7 +161,7 @@ it('normalizes a NaN virtualizeAt to the default (50) instead of silently disabl
   expect(Number.isNaN(el.virtualizeAt)).to.be.true;
   el.chunks = chunks;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('lr-virtual-list')) == null).to.be.true;
   expect(el.shadowRoot!.querySelectorAll('[part="chunk"]').length).to.equal(chunks.length);
 });
 

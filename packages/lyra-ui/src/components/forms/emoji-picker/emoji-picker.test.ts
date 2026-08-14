@@ -604,7 +604,7 @@ describe('native focus/blur bridging', () => {
   });
 });
 
-describe('touched vs. platform-forced blur (fr_asxOgk4UhNB07xevCWwFVQ)', () => {
+describe('touched state under platform-forced blur', () => {
   it('does not mark touched from a blur caused by the search input itself becoming disabled', async () => {
     const el = await connectEmojiPicker();
     el.groups = groups;
@@ -1172,7 +1172,7 @@ describe('virtualized scroll handling', () => {
     input.dispatchEvent(new Event('input', { bubbles: true }));
     await el.updateComplete;
 
-    expect(el.shadowRoot!.querySelector('[part="virtual-spacer"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="virtual-spacer"]')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
   });
 });

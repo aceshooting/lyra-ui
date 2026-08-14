@@ -148,16 +148,131 @@ it('does not show a pointer cursor on a readonly rating (it is still focusable b
 it('exposes a keyboard-accessible rating slider', async () => {
   const el = (await fixture(html`<lr-rating value="2"></lr-rating>`)) as LyraRating;
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
-  expect(base.getAttribute('role')).to.equal('slider');
-  expect(base.getAttribute('aria-valuenow')).to.equal('2');
-  base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  expect(el.getAttribute("role")).to.equal("slider");
+  expect(el.getAttribute("aria-valuenow")).to.equal("2");
+  expect(el.getAttribute("tabindex")).to.equal("0");
+  expect(base.hasAttribute("role")).to.be.false;
+  expect(base.getAttribute("aria-hidden")).to.equal("true");
+  el.setAttribute("role", "group");
+  expect(
+    el.getAttribute("role"),
+    "the component retains its host-owned slider contract"
+  ).to.equal("slider");
+  el.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      key: "ArrowRight",
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   expect(el.value).to.equal(3);
   await expect(el).to.be.accessible();
 });
 
-it('emits one native change Event before lr-change for a keyboard commit', async () => {
-  const wrapper = await fixture<HTMLElement>(html`<div><lr-rating value="2"></lr-rating></div>`);
-  const el = wrapper.querySelector('lr-rating') as LyraRating;
+it("round-trips valid upstream size spellings without canonicalizing the public surface", async () => {
+  const el = (await fixture(
+    html`<lr-rating size="small" value="2"></lr-rating>`
+  )) as LyraRating;
+  expect(el.size).to.equal("small");
+  expect(el.getAttribute("size")).to.equal("small");
+  expect(el.matches('[size="small"]')).to.be.true;
+  expect(el.dataset["effectiveSize"]).to.equal("s");
+  const canonical = (await fixture(
+    html`<lr-rating size="s" value="2"></lr-rating>`
+  )) as LyraRating;
+  expect(getComputedStyle(starsOf(el)[0]!).fontSize).to.equal(
+    getComputedStyle(starsOf(canonical)[0]!).fontSize
+  );
+
+  const mutations: string[] = [];
+  const observer = new MutationObserver((records) => {
+    mutations.push(
+      ...records.map(
+        (record) => (record.target as Element).getAttribute("size") ?? ""
+      )
+    );
+  });
+  observer.observe(el, { attributes: true, attributeFilter: ["size"] });
+  el.size = "large";
+  await el.updateComplete;
+  await Promise.resolve();
+  observer.disconnect();
+
+  expect(el.size).to.equal("large");
+  expect(el.getAttribute("size")).to.equal("large");
+  expect(el.dataset["effectiveSize"]).to.equal("l");
+  expect((el.cloneNode(true) as LyraRating).getAttribute("size")).to.equal(
+    "large"
+  );
+  expect(mutations).to.include("large");
+});
+
+it("keeps one host slider owner across a hydration-shaped mount and reconnect", async () => {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const el = document.createElement("lr-rating") as LyraRating;
+  el.setAttribute("size", "medium");
+  el.setAttribute("aria-label", "Server rating");
+  el.attachShadow({ mode: "open" });
+  container.append(el);
+  await el.updateComplete;
+
+  expect(el.getAttribute("role")).to.equal("slider");
+  expect(el.getAttribute("aria-label")).to.equal("Server rating");
+  expect(el.getAttribute("size")).to.equal("medium");
+  expect(el.shadowRoot!.querySelectorAll('[role="slider"]').length).to.equal(0);
+  expect(baseOf(el).getAttribute("aria-hidden")).to.equal("true");
+
+  el.remove();
+  container.append(el);
+  await el.updateComplete;
+  expect(el.getAttribute("role")).to.equal("slider");
+  expect(el.getAttribute("size")).to.equal("medium");
+});
+
+it("keeps a serialized generated fallback live across clone, reparse, and hydration-shaped mount", async () => {
+  const source = (await fixture(html`<lr-rating></lr-rating>`)) as LyraRating;
+  expect(source.getAttribute("aria-label")).to.equal("Rating");
+  expect(source.getAttribute("data-lr-rating-managed-label")).to.equal(
+    "Rating"
+  );
+
+  const clone = source.cloneNode(true) as LyraRating;
+  document.body.append(clone);
+  await clone.updateComplete;
+  clone.label = "Cloned score";
+  await clone.updateComplete;
+  expect(clone.getAttribute("aria-label")).to.equal("Cloned score");
+  clone.remove();
+
+  const reparsedContainer = document.createElement("div");
+  reparsedContainer.innerHTML = source.outerHTML;
+  const reparsed = reparsedContainer.firstElementChild as LyraRating;
+  document.body.append(reparsedContainer);
+  await reparsed.updateComplete;
+  reparsed.accessibleLabel = "Reparsed score";
+  await reparsed.updateComplete;
+  expect(reparsed.getAttribute("aria-label")).to.equal("Reparsed score");
+  reparsedContainer.remove();
+
+  const hydrationContainer = (await fixture(
+    html`<div></div>`
+  )) as HTMLDivElement;
+  const hydrated = document.createElement("lr-rating") as LyraRating;
+  hydrated.setAttribute("data-lr-rating-managed-label", "Rating");
+  hydrated.setAttribute("aria-label", "Rating");
+  hydrated.attachShadow({ mode: "open" });
+  hydrationContainer.append(hydrated);
+  await hydrated.updateComplete;
+  hydrated.strings = { rating: "Hydrated score" };
+  await hydrated.updateComplete;
+  expect(hydrated.getAttribute("aria-label")).to.equal("Hydrated score");
+});
+
+it("emits one native change Event before lr-change for a keyboard commit", async () => {
+  const wrapper = await fixture<HTMLElement>(
+    html`<div><lr-rating value="2"></lr-rating></div>`
+  );
+  const el = wrapper.querySelector("lr-rating") as LyraRating;
   const events: Event[] = [];
   wrapper.addEventListener('change', (event) => events.push(event));
   wrapper.addEventListener('lr-change', (event) => events.push(event));
@@ -211,38 +326,57 @@ it('keeps native and prefixed change events silent for programmatic/default/rese
   expect(events).to.deep.equal([]);
 });
 
-it('locale-formats the spoken slider value and forwards host focus/blur/click to the control', async () => {
-  const el = (await fixture(html`<lr-rating lang="ar" value="2.5" precision="0.5"></lr-rating>`)) as LyraRating;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
-  expect(base.getAttribute('aria-valuetext')).to.equal(new Intl.NumberFormat('ar').format(2.5));
+it("locale-formats the spoken slider value and forwards host focus/blur/click to the control", async () => {
+  const el = (await fixture(
+    html`<lr-rating lang="ar" value="2.5" precision="0.5"></lr-rating>`
+  )) as LyraRating;
+  expect(el.getAttribute("aria-valuetext")).to.equal(
+    new Intl.NumberFormat("ar").format(2.5)
+  );
 
   el.focus();
-  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base rating');
+  expect(document.activeElement === el).to.be.true;
   el.blur();
-  expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
+  expect(document.activeElement === el).to.be.false;
   let clicked = 0;
-  base.addEventListener('click', () => clicked++);
+  el.addEventListener("click", () => clicked++);
   el.click();
   expect(clicked).to.equal(1);
 });
 
-it('relays one native focus/blur pair and one prefixed alias pair from the slider control', async () => {
-  const wrapper = await fixture<HTMLElement>(html`<div><lr-rating value="2"></lr-rating></div>`);
-  const el = wrapper.querySelector('lr-rating') as LyraRating;
-  const nativeEvents: FocusEvent[] = [];
+it("exposes one native host focus/blur pair and one prefixed alias pair", async () => {
+  const wrapper = await fixture<HTMLElement>(
+    html`<div><lr-rating value="2"></lr-rating></div>`
+  );
+  const el = wrapper.querySelector("lr-rating") as LyraRating;
+  const directNativeEvents: FocusEvent[] = [];
+  const bubbledNativeEvents: FocusEvent[] = [];
   const aliases: string[] = [];
-  wrapper.addEventListener('focus', (event) => nativeEvents.push(event as FocusEvent));
-  wrapper.addEventListener('blur', (event) => nativeEvents.push(event as FocusEvent));
-  wrapper.addEventListener('lr-focus', () => aliases.push('lr-focus'));
-  wrapper.addEventListener('lr-blur', () => aliases.push('lr-blur'));
+  el.addEventListener("focus", (event) => directNativeEvents.push(event));
+  el.addEventListener("blur", (event) => directNativeEvents.push(event));
+  wrapper.addEventListener("focus", (event) =>
+    bubbledNativeEvents.push(event as FocusEvent)
+  );
+  wrapper.addEventListener("blur", (event) =>
+    bubbledNativeEvents.push(event as FocusEvent)
+  );
+  wrapper.addEventListener("lr-focus", () => aliases.push("lr-focus"));
+  wrapper.addEventListener("lr-blur", () => aliases.push("lr-blur"));
 
   el.focus();
   el.blur();
 
-  expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
-  expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
-  expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
-  expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
+  expect(directNativeEvents.map((event) => event.type)).to.deep.equal([
+    "focus",
+    "blur",
+  ]);
+  expect(directNativeEvents.every((event) => event instanceof FocusEvent)).to.be
+    .true;
+  expect(
+    directNativeEvents.every((event) => event.target === el && !event.bubbles)
+  ).to.be.true;
+  expect(bubbledNativeEvents).to.deep.equal([]);
+  expect(aliases).to.deep.equal(["lr-focus", "lr-blur"]);
 });
 
 it('reverses horizontal value movement under RTL', async () => {
@@ -275,27 +409,32 @@ it('does not emit lr-change when the clamped value is unchanged', async () => {
   expect(nativeChangeCount).to.equal(0);
 });
 
-it('clamps a non-finite or oversized max to a safe, bounded star count', async () => {
-  const nan = (await fixture(html`<lr-rating max="abc"></lr-rating>`)) as LyraRating;
-  const nanBase = nan.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
-  expect(nanBase.getAttribute('aria-valuemax')).to.equal('5');
+it("clamps a non-finite or oversized max to a safe, bounded star count", async () => {
+  const nan = (await fixture(
+    html`<lr-rating max="abc"></lr-rating>`
+  )) as LyraRating;
+  expect(nan.getAttribute("aria-valuemax")).to.equal("5");
   expect(nan.shadowRoot!.querySelectorAll('[part="star"]').length).to.equal(5);
 
   const huge = (await fixture(html`<lr-rating max="1000000"></lr-rating>`)) as LyraRating;
   expect(huge.shadowRoot!.querySelectorAll('[part="star"]').length).to.equal(100);
 });
 
-it('clamps an out-of-range or non-finite value to [0, max]', async () => {
-  const negative = (await fixture(html`<lr-rating value="-10" max="5"></lr-rating>`)) as LyraRating;
-  expect(negative.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-valuenow')).to.equal('0');
+it("clamps an out-of-range or non-finite value to [0, max]", async () => {
+  const negative = (await fixture(
+    html`<lr-rating value="-10" max="5"></lr-rating>`
+  )) as LyraRating;
+  expect(negative.getAttribute("aria-valuenow")).to.equal("0");
 
-  const over = (await fixture(html`<lr-rating value="999" max="5"></lr-rating>`)) as LyraRating;
-  expect(over.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-valuenow')).to.equal('5');
+  const over = (await fixture(
+    html`<lr-rating value="999" max="5"></lr-rating>`
+  )) as LyraRating;
+  expect(over.getAttribute("aria-valuenow")).to.equal("5");
 
   const nan = (await fixture(html`<lr-rating max="5"></lr-rating>`)) as LyraRating;
   nan.value = NaN;
   await nan.updateComplete;
-  expect(nan.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-valuenow')).to.equal('0');
+  expect(nan.getAttribute("aria-valuenow")).to.equal("0");
 });
 
 it('falls back to a safe positive precision instead of throwing when precision is non-finite', async () => {
@@ -380,7 +519,7 @@ function pointer(type: string, target: HTMLElement, clientX: number): void {
 
 // -- Form association -----------------------------------------------------
 
-it('participates in form submission under `name` and resets to the declarative value attribute', async () => {
+it("participates in form submission under `name` while reset uses the independent default", async () => {
   const form = (await fixture(html`
     <form><lr-rating name="score" value="2" max="5"></lr-rating></form>
   `)) as HTMLFormElement;
@@ -394,12 +533,15 @@ it('participates in form submission under `name` and resets to the declarative v
 
   form.reset();
   await el.updateComplete;
-  expect(el.value, 'form.reset() restores the value attribute, not 0').to.equal(2);
+  expect(
+    el.value,
+    "form.reset() restores the default, not the live value attribute"
+  ).to.equal(0);
 });
 
-it('keeps the reset default unclamped when the value attribute is parsed before max', async () => {
+it("keeps the reset default unclamped when default-value is parsed before max", async () => {
   const form = (await fixture(html`
-    <form><lr-rating name="score" value="8" max="10"></lr-rating></form>
+    <form><lr-rating name="score" default-value="8" max="10"></lr-rating></form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-rating') as LyraRating;
   expect(new FormData(form).get('score')).to.equal('8');
@@ -417,7 +559,7 @@ it('blocks submission while `required` and unrated, and clears the flag once rat
   expect(el.validity.valueMissing).to.be.true;
   expect(el.validationMessage.length).to.be.greaterThan(0);
   expect(form.checkValidity()).to.be.false;
-  expect(baseOf(el).getAttribute('aria-required')).to.equal('true');
+  expect(el.getAttribute("aria-required")).to.equal("true");
 
   el.value = 3;
   expect(el.checkValidity()).to.be.true;
@@ -425,7 +567,10 @@ it('blocks submission while `required` and unrated, and clears the flag once rat
   expect(form.checkValidity()).to.be.true;
 
   const optional = (await fixture(html`<lr-rating></lr-rating>`)) as LyraRating;
-  expect(baseOf(optional).getAttribute('aria-required'), 'stateful ARIA renders "false" too').to.equal('false');
+  expect(
+    optional.getAttribute("aria-required"),
+    'stateful ARIA renders "false" too'
+  ).to.equal("false");
 });
 
 // -- validity custom states -----------------------------------------------
@@ -573,7 +718,7 @@ it('keeps a custom error across a form reset, matching native setCustomValidity 
   // Native `form.reset()` restores a control's value and pristine-ness, but never clears a
   // consumer-set custom error -- only another `setCustomValidity('')` does. This control matches.
   const form = (await fixture(html`
-    <form><lr-rating name="score" value="2"></lr-rating></form>
+    <form><lr-rating name="score" default-value="2"></lr-rating></form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-rating') as LyraRating;
   el.value = 5;
@@ -633,16 +778,25 @@ it('inherits an ancestor fieldset disablement without mutating its own `disabled
   await el.updateComplete;
   expect(el.disabled, 'fieldset state must not mutate the public property').to.be.false;
   expect(el.effectiveDisabled).to.be.true;
-  expect(baseOf(el).getAttribute('aria-disabled')).to.equal('true');
-  expect(baseOf(el).getAttribute('tabindex')).to.equal('-1');
-  expect(getComputedStyle(baseOf(el)).cursor, ':host(:disabled) tracks the fieldset').to.equal('not-allowed');
+  expect(el.getAttribute("aria-disabled")).to.equal("true");
+  expect(el.getAttribute("tabindex")).to.equal("-1");
+  expect(
+    getComputedStyle(baseOf(el)).cursor,
+    ":host(:disabled) tracks the fieldset"
+  ).to.equal("not-allowed");
 
   let delegatedCalls = 0;
-  baseOf(el).click = () => { delegatedCalls += 1; };
-  baseOf(el).focus = () => { delegatedCalls += 1; };
+  el.addEventListener("click", () => {
+    delegatedCalls += 1;
+  });
   el.click();
   el.focus();
-  expect(delegatedCalls, 'fieldset disablement gates host click/focus delegation').to.equal(0);
+  expect(
+    delegatedCalls,
+    "fieldset disablement gates host click activation"
+  ).to.equal(0);
+  expect(document.activeElement === el, "fieldset disablement gates host focus")
+    .to.be.false;
 
   baseOf(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
   expect(el.value, 'a fieldset-disabled rating is not settable').to.equal(2);
@@ -661,28 +815,43 @@ it('restores a numeric value through formStateRestoreCallback', async () => {
   expect(el.value).to.equal(0);
 });
 
-it('separates the live numeric value from the reflected current default', async () => {
+it("accepts max as an attribute input without reflecting property writes", async () => {
+  const el = (await fixture(html`<lr-rating></lr-rating>`)) as LyraRating;
+
+  el.max = 7;
+  await el.updateComplete;
+  expect(el.hasAttribute("max")).to.equal(false);
+  expect(el.getAttribute("aria-valuemax")).to.equal("7");
+
+  el.setAttribute("max", "3");
+  await el.updateComplete;
+  expect(el.max).to.equal(3);
+  expect(el.getAttribute("aria-valuemax")).to.equal("3");
+});
+
+it("separates the live numeric value attribute from the reflected current default", async () => {
   const form = (await fixture(html`
     <form><lr-rating name="score" value="2"></lr-rating></form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-rating') as LyraRating;
   expect(el.value).to.equal(2);
-  expect(el.defaultValue).to.equal(2);
+  expect(el.defaultValue).to.equal(0);
 
   el.value = 4;
-  expect(el.getAttribute('value')).to.equal('2');
-  el.setAttribute('value', '3');
-  expect(el.defaultValue).to.equal(3);
-  expect(el.value, 'attribute mutation cannot overwrite dirty live state').to.equal(4);
+  expect(el.getAttribute("value")).to.equal("2");
+  el.setAttribute("value", "3");
+  await el.updateComplete;
+  expect(el.defaultValue).to.equal(0);
+  expect(el.value, "attribute mutation updates live state").to.equal(3);
 
   form.reset();
-  expect(el.value).to.equal(3);
+  expect(el.value).to.equal(0);
   el.defaultValue = 1;
-  expect(el.getAttribute('value')).to.equal('1');
-  expect(el.value, 'after reset the live value is pristine again').to.equal(1);
+  expect(el.getAttribute("default-value")).to.equal("1");
+  expect(el.value, "after reset the live value is pristine again").to.equal(1);
 });
 
-it('treats a removed value attribute as the zero reset default without overwriting a dirty score', async () => {
+it("treats a removed value attribute as a live zero without changing the reset default", async () => {
   const form = (await fixture(html`
     <form><lr-rating name="score" value="2"></lr-rating></form>
   `)) as HTMLFormElement;
@@ -692,7 +861,7 @@ it('treats a removed value attribute as the zero reset default without overwriti
   el.removeAttribute('value');
   await el.updateComplete;
   expect(el.defaultValue).to.equal(0);
-  expect(el.value, 'a dirty live score is preserved until reset').to.equal(4);
+  expect(el.value, "attribute removal updates the live score").to.equal(0);
 
   form.reset();
   expect(el.value).to.equal(0);
@@ -719,35 +888,70 @@ it('accepts default-value as a reset-default alias without overwriting a dirty l
 
 // -- label ----------------------------------------------------------------
 
-it('names the slider from `label`, letting a host aria-label win over it', async () => {
-  const labelled = (await fixture(html`<lr-rating label="Satisfaction"></lr-rating>`)) as LyraRating;
-  expect(baseOf(labelled).getAttribute('aria-label')).to.equal('Satisfaction');
+it("names the slider from `label`, letting a host aria-label win over it", async () => {
+  const labelled = (await fixture(
+    html`<lr-rating label="Satisfaction"></lr-rating>`
+  )) as LyraRating;
+  expect(labelled.getAttribute("aria-label")).to.equal("Satisfaction");
 
   const both = (await fixture(
     html`<lr-rating label="Satisfaction" aria-label="Overall score"></lr-rating>`,
   )) as LyraRating;
-  expect(baseOf(both).getAttribute('aria-label')).to.equal('Overall score');
+  expect(both.getAttribute("aria-label")).to.equal("Overall score");
+
+  const authoredFallbackText = (await fixture(
+    html`<lr-rating aria-label="Rating"></lr-rating>`
+  )) as LyraRating;
+  authoredFallbackText.strings = { rating: "Localized fallback" };
+  await authoredFallbackText.updateComplete;
+  expect(
+    authoredFallbackText.getAttribute("aria-label"),
+    "the generated-looking text is still authored when no private marker accompanies it"
+  ).to.equal("Rating");
 
   const bare = (await fixture(html`<lr-rating></lr-rating>`)) as LyraRating;
-  expect(baseOf(bare).getAttribute('aria-label'), 'localized default survives').to.equal('Rating');
+  expect(
+    bare.getAttribute("aria-label"),
+    "localized default survives"
+  ).to.equal("Rating");
 });
 
 it('preserves an explicitly empty host aria-label and restores live fallbacks when it is removed', async () => {
   const el = (await fixture(
     html`<lr-rating aria-label="" label="Satisfaction"></lr-rating>`,
   )) as LyraRating;
-  const base = baseOf(el);
-
-  expect(base.hasAttribute('aria-label')).to.be.true;
-  expect(base.getAttribute('aria-label')).to.equal('');
+  expect(el.hasAttribute("aria-label")).to.be.true;
+  expect(el.getAttribute("aria-label")).to.equal("");
 
   el.removeAttribute('aria-label');
   await el.updateComplete;
-  expect(base.getAttribute('aria-label')).to.equal('Satisfaction');
+  expect(el.getAttribute("aria-label")).to.equal("Satisfaction");
 
   el.label = '';
   await el.updateComplete;
-  expect(base.getAttribute('aria-label')).to.equal('Rating');
+  expect(el.getAttribute("aria-label")).to.equal("Rating");
+});
+
+it("restores the managed fallback after an external label is removed and keeps it live", async () => {
+  const host = await fixture<HTMLElement>(html`
+    <div>
+      <label for="managed-rating">External score</label>
+      <lr-rating id="managed-rating"></lr-rating>
+    </div>
+  `);
+  const el = host.querySelector("lr-rating") as LyraRating;
+  const label = host.querySelector("label")!;
+  await el.updateComplete;
+  await Promise.resolve();
+  expect(el.getAttribute("aria-label")).to.equal("External score");
+
+  label.remove();
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(el.getAttribute("aria-label")).to.equal("Rating");
+  el.strings = { rating: "Updated fallback" };
+  await el.updateComplete;
+  expect(el.getAttribute("aria-label")).to.equal("Updated fallback");
 });
 
 // -- getSymbol ------------------------------------------------------------
@@ -792,12 +996,11 @@ it('renders dynamically supplied getSymbol output as inert presentation while re
   expect(presentation.getAttribute('aria-hidden')).to.equal('true');
   expect(getComputedStyle(presentation).pointerEvents).to.equal('none');
 
-  const base = baseOf(el);
-  base.focus();
+  el.focus();
   hostileSymbol.focus();
   expect(
-    el.shadowRoot!.activeElement === base,
-    'a focusable renderer cannot take focus from the rating slider',
+    document.activeElement === el,
+    "a focusable renderer cannot take focus from the rating slider"
   ).to.be.true;
 
   const bounds = hostileSymbol.getBoundingClientRect();
@@ -990,10 +1193,13 @@ it('clamps a hover preview left behind when max shrinks below it', async () => {
 
 it('routes the built-in accessible name through the .strings override', async () => {
   const el = (await fixture(html`<lr-rating></lr-rating>`)) as LyraRating;
-  expect(baseOf(el).getAttribute('aria-label'), 'English fallback with no locale registered').to.equal('Rating');
-  el.strings = { rating: 'Évaluation' };
+  expect(
+    el.getAttribute("aria-label"),
+    "English fallback with no locale registered"
+  ).to.equal("Rating");
+  el.strings = { rating: "Évaluation" };
   await el.updateComplete;
-  expect(baseOf(el).getAttribute('aria-label')).to.equal('Évaluation');
+  expect(el.getAttribute("aria-label")).to.equal("Évaluation");
 });
 
 // -- accessibility --------------------------------------------------------

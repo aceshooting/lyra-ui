@@ -1,10 +1,38 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { hasRealContent } from './a11y.js';
+import { SEED_FIRST_RENDER_STATE, SLOT_PRESENCE_UNRESOLVED } from './lyra-element.js';
 
 type SlotPresenceHost = ReactiveControllerHost &
   Element & {
-    readonly renderRoot?: EventTarget;
+    readonly renderRoot?: EventTarget & ParentNode;
+    readonly hasUpdated?: boolean;
+    [SEED_FIRST_RENDER_STATE]?: (seed: () => void) => void;
+    [SLOT_PRESENCE_UNRESOLVED]?: () => boolean;
   };
+
+/** Realm-neutral slot check: constructor identity is not shared across iframe documents. */
+function isSlotElement(node: Node): node is HTMLSlotElement {
+  return (
+    node.nodeType === 1 &&
+    (node as Element).localName === 'slot' &&
+    typeof (node as Partial<HTMLSlotElement>).assignedNodes === 'function'
+  );
+}
+
+/** Resolves only real assignments through forwarding slots. Native `flatten: true` substitutes an
+ * unassigned nested slot's fallback, but that fallback is component chrome rather than consumer
+ * content. The active-path set also makes malformed/crafted assignment cycles fail closed. */
+function assignedConsumerNodes(slot: HTMLSlotElement, active = new Set<Node>()): Node[] {
+  if (active.has(slot)) return [];
+  active.add(slot);
+  const resolved: Node[] = [];
+  for (const node of slot.assignedNodes()) {
+    if (isSlotElement(node)) resolved.push(...assignedConsumerNodes(node, active));
+    else resolved.push(node);
+  }
+  active.delete(slot);
+  return resolved;
+}
 
 /**
  * Tracks whether each light-DOM slot carries meaningful consumer content.
@@ -22,19 +50,24 @@ type SlotPresenceHost = ReactiveControllerHost &
 export class SlotPresenceController implements ReactiveController {
   readonly #presence = new Map<string, boolean>();
   #listeningRoot?: EventTarget;
+  #reconcileQueued = false;
+  #connected = false;
 
   constructor(private readonly host: SlotPresenceHost) {
     host.addController(this);
-    this.#seedLightDom(false);
   }
 
   /** Whether the named slot has real content. Omit `name` for the default slot. */
   has(name = ''): boolean {
-    return this.#presence.get(name) ?? false;
+    return (this.#presence.get(name) ?? false) ||
+      (this.host[SLOT_PRESENCE_UNRESOLVED]?.() ?? false);
   }
 
   hostConnected(): void {
-    this.#seedLightDom(true);
+    this.#connected = true;
+    const seed = (): void => this.#seedAvailablePresence(true);
+    if (this.host[SEED_FIRST_RENDER_STATE]) this.host[SEED_FIRST_RENDER_STATE](seed);
+    else seed();
     this.#listen();
   }
 
@@ -43,14 +76,18 @@ export class SlotPresenceController implements ReactiveController {
     // adapter that renders without delivering a browser `slotchange` event.
     // This runs before render, so the new map participates in the update already in progress and
     // must not schedule a redundant Lit update from inside the current cycle.
-    this.#seedLightDom(false);
+    const seed = (): void => this.#seedAvailablePresence(false);
+    if (this.host[SEED_FIRST_RENDER_STATE]) this.host[SEED_FIRST_RENDER_STATE](seed);
+    else seed();
   }
 
   hostUpdated(): void {
     this.#listen();
+    this.#queueRenderedSlotReconciliation();
   }
 
   hostDisconnected(): void {
+    this.#connected = false;
     this.#stopListening();
   }
 
@@ -58,8 +95,24 @@ export class SlotPresenceController implements ReactiveController {
     // Slot assignment can move one node between two names, so reseed every light-DOM group instead
     // of trusting only event.target.name. The number of direct children on presence-driven
     // controls is small, and this keeps both sides of a reassignment correct after one event.
-    this.#seedLightDom(true);
+    this.#queueRenderedSlotReconciliation();
   };
+
+  #queueRenderedSlotReconciliation(): void {
+    if (this.#reconcileQueued) return;
+    this.#reconcileQueued = true;
+    // ReactiveElement invokes controller hostUpdated callbacks before its change-in-update check.
+    // A synchronous requestUpdate here therefore warns even though native slot assignment can only
+    // be sampled after render. The next microtask is past that check, and for a slotchange listener
+    // it runs before the waiting test/consumer continuation observes the corrective update promise.
+    queueMicrotask(() => {
+      this.#reconcileQueued = false;
+      if (!this.#connected) return;
+      const seed = (): void => this.#seedRenderedSlots(true);
+      if (this.host[SEED_FIRST_RENDER_STATE]) this.host[SEED_FIRST_RENDER_STATE](seed);
+      else seed();
+    });
+  }
 
   #listen(): void {
     const root = this.host.renderRoot;
@@ -92,9 +145,54 @@ export class SlotPresenceController implements ReactiveController {
     const names = new Set([...this.#presence.keys(), ...groups.keys()]);
     for (const name of names) {
       const present = hasRealContent(groups.get(name) ?? []);
-      if (present === (this.#presence.get(name) ?? false)) continue;
-      this.#presence.set(name, present);
-      if (requestUpdate) this.host.requestUpdate();
+      this.#setPresence(name, present, requestUpdate);
     }
+  }
+
+  #seedRenderedSlots(requestUpdate: boolean): void {
+    const root = this.host.renderRoot;
+    if (!root || typeof root.querySelectorAll !== 'function') {
+      this.#seedLightDom(requestUpdate);
+      return;
+    }
+    const seen = new Set<string>();
+    for (const slot of root.querySelectorAll('slot')) {
+      if (!isSlotElement(slot)) continue;
+      const name = slot.name;
+      seen.add(name);
+      const present = hasRealContent(assignedConsumerNodes(slot));
+      this.#setPresence(name, present, requestUpdate);
+    }
+    for (const name of this.#presence.keys()) {
+      if (!seen.has(name)) this.#setPresence(name, this.#lightDomPresence(name), requestUpdate);
+    }
+  }
+
+  #lightDomPresence(name: string): boolean {
+    if (typeof Node === 'undefined' || !('childNodes' in this.host)) return false;
+    const nodes = Array.from(this.host.childNodes).filter((node) => {
+      const assignedName =
+        node.nodeType === Node.ELEMENT_NODE ? ((node as Element).getAttribute('slot') ?? '') : '';
+      return assignedName === name;
+    });
+    const resolved = nodes.flatMap((node) => {
+      if (isSlotElement(node)) return assignedConsumerNodes(node);
+      return [node];
+    });
+    return hasRealContent(resolved);
+  }
+
+  #seedAvailablePresence(requestUpdate: boolean): void {
+    // Before the first render there are no component-owned slots to resolve. Once a render root
+    // exists, its native assignment is authoritative, including forwarding slots whose direct
+    // light-DOM node is merely plumbing rather than real consumer content.
+    if (this.host.hasUpdated) this.#seedRenderedSlots(requestUpdate);
+    else this.#seedLightDom(requestUpdate);
+  }
+
+  #setPresence(name: string, present: boolean, requestUpdate: boolean): void {
+    if (present === (this.#presence.get(name) ?? false)) return;
+    this.#presence.set(name, present);
+    if (requestUpdate) this.host.requestUpdate();
   }
 }

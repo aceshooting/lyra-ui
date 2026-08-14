@@ -1,5 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
+import type { LyraVideoPlaylistItem } from './video-playlist.js';
 import './video-playlist.js';
 
 const VIDEO_SRC = '/fixtures/sample-video.mp4';
@@ -9,6 +10,11 @@ const POSTER_GREEN =
   'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 960 540%22%3E%3Crect width=%22960%22 height=%22540%22 fill=%22%231b312b%22/%3E%3Ccircle cx=%22480%22 cy=%22270%22 r=%22110%22 fill=%22%2346a57b%22/%3E%3C/svg%3E';
 const POSTER_GOLD =
   'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 960 540%22%3E%3Crect width=%22960%22 height=%22540%22 fill=%22%233a2c17%22/%3E%3Ccircle cx=%22480%22 cy=%22270%22 r=%22110%22 fill=%22%23d79a36%22/%3E%3C/svg%3E';
+const INITIAL_ITEMS: readonly LyraVideoPlaylistItem[] = [
+  { title: 'Getting started with Lyra', poster: POSTER_BLUE },
+  { title: 'Build an accessible conversation', poster: POSTER_GREEN },
+  { title: 'Ship the finished interface', poster: POSTER_GOLD },
+];
 
 const meta: Meta = {
   title: 'Media/Video Playlist',
@@ -46,12 +52,50 @@ export const FullControls: Story = {
   render: () => html`<lr-video-playlist>${videos()}</lr-video-playlist>`,
 };
 
+export const DeterministicFirstRender: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Assign `items` before the server and browser first render to emit deterministic playlist rows before live child metadata is observable. The direct videos take ownership after hydration.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-video-playlist .items=${INITIAL_ITEMS}>${videos()}</lr-video-playlist>
+  `,
+};
+
 export const StandardControls: Story = {
   render: () => html`<lr-video-playlist controls="standard">${videos()}</lr-video-playlist>`,
 };
 
 export const RepeatAll: Story = {
   render: () => html`<lr-video-playlist repeat="all">${videos()}</lr-video-playlist>`,
+};
+
+export const UnavailableItem: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Set the native `inert` property on an `<lr-video>` child to make it unavailable. The playlist skips it and disables its corresponding row; `<lr-video>` intentionally has no `disabled` API.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-video-playlist>
+      <lr-video title="Available introduction" poster=${POSTER_BLUE} preload="none">
+        <source src=${VIDEO_SRC} type="video/mp4">
+      </lr-video>
+      <lr-video title="Unavailable lesson" poster=${POSTER_GREEN} preload="none" inert>
+        <source src=${VIDEO_SRC} type="video/mp4">
+      </lr-video>
+      <lr-video title="Available conclusion" poster=${POSTER_GOLD} preload="none">
+        <source src=${VIDEO_SRC} type="video/mp4">
+      </lr-video>
+    </lr-video-playlist>
+  `,
 };
 
 export const CurrentItemTheme: Story = {

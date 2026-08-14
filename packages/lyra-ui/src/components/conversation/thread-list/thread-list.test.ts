@@ -458,7 +458,7 @@ describe('data mode', () => {
       await el.updateComplete;
       const custom = el.querySelector('#custom-empty')!;
       expect(custom.getBoundingClientRect().height).to.be.greaterThan(0);
-      expect(el.shadowRoot!.querySelector('[part="empty"]')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('[part="empty"]')) == null).to.be.true;
     });
 
     it('still renders the built-in empty state when nothing is slotted', async () => {
@@ -484,7 +484,7 @@ describe('data mode', () => {
       await el.updateComplete;
       // Now empty -- the late-added slotted content must be picked up, not the built-in state.
       expect(custom.getBoundingClientRect().height).to.be.greaterThan(0);
-      expect(el.shadowRoot!.querySelector('[part="empty"]')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('[part="empty"]')) == null).to.be.true;
     });
   });
 
@@ -572,7 +572,7 @@ describe('data mode', () => {
     const row = dataRow(el, 'p1');
     expect(row.querySelector('[slot="meta"]')).to.exist;
     const unpinnedRow = dataRow(el, 't1');
-    expect(unpinnedRow.querySelector('[slot="meta"]')).to.not.exist;
+    expect((unpinnedRow.querySelector('[slot="meta"]')) == null).to.be.true;
   });
 
   describe('renderActions', () => {
@@ -1031,7 +1031,7 @@ it('renders first-class leading, meta, and row-content hooks inside virtualized 
   expect(row.querySelector('[slot="leading"] [data-testid="leading"]')).to.exist;
   expect(row.querySelector('[slot="meta"] [data-testid="meta"]')).to.exist;
   expect(row.querySelector('[slot="content"] [data-testid="content"]')).to.exist;
-  expect(row.shadowRoot!.querySelector('[part="title"]')).to.not.exist;
+  expect((row.shadowRoot!.querySelector('[part="title"]')) == null).to.be.true;
 });
 
 it('makes injected row-content hooks noninteractive inside the selectable option', async () => {
@@ -1164,7 +1164,7 @@ it('leaves rendering unchanged when renderExcerpt is unset', async () => {
   await el.updateComplete;
   await nextFrame();
   const row = dataRows(el)[0];
-  expect(row.querySelector('[slot="excerpt"]')).to.not.exist;
+  expect((row.querySelector('[slot="excerpt"]')) == null).to.be.true;
   await row.updateComplete;
   expect(row.shadowRoot!.querySelector('[part="excerpt"]')!.textContent).to.contain('plain excerpt');
 });

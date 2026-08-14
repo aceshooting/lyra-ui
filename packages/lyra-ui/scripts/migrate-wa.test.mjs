@@ -482,6 +482,642 @@ test('the checked-in inventory is executable and carries its explicit event-pref
   assert.deepEqual(result.warnings, []);
 });
 
+test('imperative construction requiring unassigned inserted defaults is blocked at the tag literal', () => {
+  const checkedContract = buildMigrationContract(checkedInventory);
+  const input = [
+    "const badge = document.createElement('wa-badge');",
+    "const shoelaceBadge = createElement('sl-badge');",
+    '',
+  ].join('\n');
+  const result = migrateText(input, checkedContract, { file: 'imperative.ts' });
+
+  assert.equal(result.content, input);
+  assert.deepEqual(
+    result.warnings.filter((entry) => entry.warningCode === 'IMPERATIVE_DEFAULT_REVIEW')
+      .map(({ upstreamTag, line, column }) => ({ upstreamTag, line, column })),
+    [
+      { upstreamTag: 'wa-badge', line: 1, column: 39 },
+      { upstreamTag: 'sl-badge', line: 2, column: 38 },
+    ],
+  );
+});
+
+test('pure custom-element registry lookups still rewrite tags whose constructors need defaults', () => {
+  const checkedContract = buildMigrationContract(checkedInventory);
+  const input = [
+    "const Badge = customElements.get('wa-badge');",
+    "await customElements.whenDefined('sl-badge');",
+    '',
+  ].join('\n');
+  const result = migrateText(input, checkedContract, { file: 'lookups.ts' });
+
+  assert.equal(
+    result.content,
+    [
+      "const Badge = customElements.get('lr-badge');",
+      "await customElements.whenDefined('lr-badge');",
+      '',
+    ].join('\n'),
+  );
+  assert.deepEqual(result.warnings, []);
+});
+
+test('direct, aliased, destructured, and bound document factories all require default proof', () => {
+  const checkedContract = buildMigrationContract(checkedInventory);
+  const lines = [
+    "const direct = document.createElement('wa-badge');",
+    'const factory = document.createElement;',
+    "const aliased = factory.call(document, 'wa-badge');",
+    'const { createElement: destructuredFactory } = document;',
+    "const destructured = destructuredFactory('sl-badge');",
+    'const boundFactory = document.createElement.bind(document);',
+    "const bound = boundFactory('wa-badge');",
+    "const immediateBound = document.createElement.bind(document)('sl-badge');",
+    'const wrapper = (tag) => document.createElement(tag);',
+    "const wrapped = wrapper('wa-badge');",
+    '',
+  ];
+  const input = lines.join('\n');
+  const result = migrateText(input, checkedContract, { file: 'factory-aliases.ts' });
+  const expectedLocations = [1, 3, 5, 7, 8, 10].map((line) => ({
+    line,
+    column: lines[line - 1].indexOf([5, 8].includes(line) ? 'sl-badge' : 'wa-badge') + 1,
+  }));
+
+  assert.equal(result.content, input);
+  assert.deepEqual(
+    result.warnings.filter((entry) => entry.warningCode === 'IMPERATIVE_DEFAULT_REVIEW')
+      .map(({ line, column }) => ({ line, column })),
+    expectedLocations,
+  );
+});
+
+test('optional, computed, parenthesized, and static-template DOM construction all fail closed', () => {
+  const lines = [
+    "const optionalBoth = document?.createElement?.('wa-widget');",
+    "const optionalCall = document.createElement?.('wa-widget');",
+    "const optionalMember = document?.createElement('wa-widget');",
+    "const computed = document['createElement']('wa-widget');",
+    "const optionalComputed = document?.['createElement']?.('wa-widget');",
+    'const templateComputed = document[`createElement`](`wa-widget`);',
+    "const parenthesized = (document.createElement)('wa-widget');",
+    "const assertedDocument = (document as Document).createElement('wa-widget');",
+    "const genericAssertedDocument = (document as Pick<Document, 'createElement'>).createElement('wa-widget');",
+    "const nonNullDocument = document!.createElement('wa-widget');",
+    'const staticTemplate = document.createElement(`wa-widget`);',
+    "const windowOptional = window?.document?.createElement?.('wa-widget');",
+    '',
+  ];
+  const input = lines.join('\n');
+  const result = migrateText(input, contract, { file: 'factory-syntax.ts' });
+
+  assert.equal(result.content, input);
+  assert.deepEqual(
+    result.warnings
+      .filter((entry) => entry.warningCode === 'IMPERATIVE_DEFAULT_REVIEW')
+      .map(({ upstreamTag, line, column, action }) => ({ upstreamTag, line, column, action })),
+    lines.slice(0, -1).map((lineText, index) => ({
+      upstreamTag: 'wa-widget',
+      line: index + 1,
+      column: lineText.indexOf('wa-widget') + 1,
+      action: 'manual-review',
+    })),
+  );
+});
+
+test('static registry access through templates and TypeScript wrappers remains a lookup', () => {
+  const lines = [
+    "const templateGet = customElements[`get`]('sl-static');",
+    "const optionalTemplateGet = customElements?.[`get`]?.('sl-static');",
+    "const assertedGet = (customElements as CustomElementRegistry).get('sl-static');",
+    "const genericAssertedGet = (customElements as Pick<CustomElementRegistry, 'get'>).get('sl-static');",
+    "const nonNullGet = customElements!.get('sl-static');",
+    "const templateWhenDefined = customElements[`whenDefined`]('sl-static');",
+    "const optionalTemplateWhenDefined = customElements?.[`whenDefined`]?.('sl-static');",
+    "const assertedWhenDefined = (customElements as CustomElementRegistry).whenDefined('sl-static');",
+    "const nonNullWhenDefined = customElements!.whenDefined('sl-static');",
+    '',
+  ];
+  const input = lines.join('\n');
+  const result = migrateText(input, contract, { file: 'registry-syntax.ts' });
+
+  assert.equal(result.content, input.replaceAll('sl-static', 'lr-static'));
+  assert.deepEqual(result.warnings, []);
+  assert.equal(result.changes.filter((entry) => entry.action === 'rewrite-tag').length, 9);
+});
+
+test('TypeScript-wrapped DOM globals still respect lexical shadows', () => {
+  const input = [
+    'function render(document: Document, customElements: CustomElementRegistry) {',
+    "  const a = document[`createElement`]('wa-widget');",
+    "  const b = (document as Document).createElement('wa-widget');",
+    "  const c = document!.createElement('wa-widget');",
+    "  const A = customElements[`get`]('sl-static');",
+    "  const B = (customElements as CustomElementRegistry).get('sl-static');",
+    "  const C = customElements!.whenDefined('sl-static');",
+    '  return [a, b, c, A, B, C];',
+    '}',
+    '',
+  ].join('\n');
+  const result = migrateText(input, contract, { file: 'wrapped-shadows.ts' });
+
+  assert.equal(result.content, input);
+  assert.deepEqual(result.changes, []);
+  assert.deepEqual(result.warnings, []);
+});
+
+test('every shipped insert-if-absent mapping blocks imperative construction', () => {
+  const checkedContract = buildMigrationContract(checkedInventory);
+  const mappings = checkedInventory.mappings.filter((mapping) =>
+    mapping.rewrites.defaults.some((rule) => rule.action === 'insert-if-absent'));
+  assert.ok(mappings.length > 0);
+  const lines = mappings.map(
+    (mapping, index) => `const element${index} = document.createElement('${mapping.upstreamTag}');`,
+  );
+  const input = `${lines.join('\n')}\n`;
+  const result = migrateText(input, checkedContract, { file: 'all-imperative-defaults.ts' });
+
+  assert.equal(result.content, input);
+  assert.deepEqual(
+    result.warnings
+      .filter((entry) => entry.warningCode === 'IMPERATIVE_DEFAULT_REVIEW')
+      .map(({ upstreamTag, line, column, action }) => ({ upstreamTag, line, column, action })),
+    mappings.map((mapping, index) => ({
+      upstreamTag: mapping.upstreamTag,
+      line: index + 1,
+      column: lines[index].indexOf(mapping.upstreamTag) + 1,
+      action: 'manual-review',
+    })),
+  );
+  assert.deepEqual(
+    result.changes.filter((entry) => entry.action === 'rewrite-tag'),
+    [],
+  );
+});
+
+test('destructured rest parameters and generator methods keep DOM-global shadows local', () => {
+  const lines = [
+    'function restArray(...[document]) {',
+    "  return document.createElement('wa-widget');",
+    '}',
+    'function restObject(...{ customElements }) {',
+    "  return customElements.get('sl-static');",
+    '}',
+    'function registryRestArray(...[customElements]) {',
+    "  return customElements.get('sl-static');",
+    '}',
+    'function documentRestObject(...{ document }) {',
+    "  return document.createElement('wa-widget');",
+    '}',
+    'const objectView = {',
+    '  *render(document) {',
+    "    return document.createElement('wa-widget');",
+    '  },',
+    '  async *find(customElements) {',
+    "    return customElements.get('sl-static');",
+    '  },',
+    '  *renderGeneric<T extends Record<string, unknown>>(document: Document) {',
+    "    return document.createElement('wa-widget');",
+    '  },',
+    '};',
+    'class View {',
+    '  *render(document: Document) {',
+    "    return document.createElement('wa-widget');",
+    '  }',
+    '  async *find(customElements: CustomElementRegistry) {',
+    "    return customElements.get('sl-static');",
+    '  }',
+    '  async *findGeneric<T extends Record<string, unknown>>(customElements: CustomElementRegistry) {',
+    "    return customElements.get('sl-static');",
+    '  }',
+    '}',
+    "const globalWidget = document.createElement('wa-widget');",
+    "const GlobalStatic = customElements.get('sl-static');",
+    '',
+  ];
+  const input = lines.join('\n');
+  const result = migrateText(input, contract, { file: 'generator-shadows.ts' });
+
+  assert.equal(
+    result.content,
+    input.replace(
+      "const GlobalStatic = customElements.get('sl-static');",
+      "const GlobalStatic = customElements.get('lr-static');",
+    ),
+  );
+  assert.deepEqual(
+    result.warnings
+      .filter((entry) => entry.warningCode === 'IMPERATIVE_DEFAULT_REVIEW')
+      .map(({ upstreamTag, line, column }) => ({ upstreamTag, line, column })),
+    [{
+      upstreamTag: 'wa-widget',
+      line: lines.indexOf("const globalWidget = document.createElement('wa-widget');") + 1,
+      column: lines.at(-3).indexOf('wa-widget') + 1,
+    }],
+  );
+  assert.equal(result.changes.filter((entry) => entry.action === 'rewrite-tag').length, 1);
+});
+
+test('unconditional immediate attribute and property writes prove inserted defaults unnecessary', () => {
+  const checkedContract = buildMigrationContract(checkedInventory);
+  const input = [
+    'const factory = document.createElement.bind(document);',
+    "const badge = factory('wa-badge');",
+    "badge.setAttribute('appearance', appearance);",
+    "badge.variant = 'neutral';",
+    "const qr = document.createElement('sl-qr-code');",
+    'qr.background = background;',
+    "qr.setAttribute('fill', fill);",
+    '',
+  ].join('\n');
+  const result = migrateText(input, checkedContract, { file: 'proved-defaults.ts' });
+
+  assert.equal(
+    result.content,
+    input.replace("factory('wa-badge')", "factory('lr-badge')")
+      .replace("document.createElement('sl-qr-code')", "document.createElement('lr-qr-code')"),
+  );
+  assert.deepEqual(
+    result.warnings.map((entry) => entry.warningCode),
+    ['OPTIONAL_PEER_REQUIRED'],
+  );
+});
+
+test('partial, conditional, and post-escape default writes remain manual', () => {
+  const checkedContract = buildMigrationContract(checkedInventory);
+  const lines = [
+    "const partial = document.createElement('wa-badge');",
+    "partial.appearance = 'accent';",
+    '',
+    "const conditional = document.createElement('sl-badge');",
+    "if (enabled) conditional.variant = 'primary';",
+    '',
+    "const escaped = document.createElement('sl-badge');",
+    'mount(escaped);',
+    "escaped.variant = 'primary';",
+    '',
+  ];
+  const input = lines.join('\n');
+  const result = migrateText(input, checkedContract, { file: 'unsafe-defaults.ts' });
+
+  assert.equal(result.content, input);
+  assert.deepEqual(
+    result.warnings.filter((entry) => entry.warningCode === 'IMPERATIVE_DEFAULT_REVIEW')
+      .map(({ line, column }) => ({ line, column })),
+    [1, 4, 7].map((line) => ({
+      line,
+      column: lines[line - 1].indexOf(line === 1 ? 'wa-badge' : 'sl-badge') + 1,
+    })),
+  );
+});
+
+test('short aliases, literal examples, and expressions containing alias text do not fool proof', () => {
+  const checkedContract = buildMigrationContract(checkedInventory);
+  const safe = [
+    "const x = document.createElement('wa-badge');",
+    "x.appearance = 'accent';",
+    "x.variant = 'neutral';",
+    '',
+  ].join('\n');
+  const safeResult = migrateText(safe, checkedContract, { file: 'short-alias.ts' });
+  assert.equal(safeResult.content, safe.replace('wa-badge', 'lr-badge'));
+  assert.deepEqual(safeResult.warnings, []);
+
+  const stringExample = [
+    "const example = \"document.createElement('wa-badge')\";",
+    "const template = `document.createElement('sl-badge')`;",
+    "const expression = /document\\.createElement\\('wa-badge'\\)/;",
+    '',
+  ].join('\n');
+  const stringResult = migrateText(stringExample, checkedContract, { file: 'examples.ts' });
+  assert.equal(stringResult.content, stringExample);
+  assert.deepEqual(stringResult.changes, []);
+  assert.deepEqual(stringResult.warnings, []);
+
+  const interpolated = [
+    "const badge = `${document.createElement('wa-badge')}`;",
+    '',
+  ].join('\n');
+  const interpolatedResult = migrateText(interpolated, checkedContract, { file: 'interpolated.ts' });
+  assert.equal(interpolatedResult.content, interpolated);
+  assert.equal(
+    interpolatedResult.warnings.filter(
+      (entry) => entry.warningCode === 'IMPERATIVE_DEFAULT_REVIEW' && entry.line === 1,
+    ).length,
+    1,
+  );
+
+  const escapingAssignment = [
+    "const badge = document.createElement('wa-badge');",
+    "badge.setAttribute('appearance', chooseAppearance(badge));",
+    "badge.variant = 'neutral';",
+    '',
+  ].join('\n');
+  const escapingResult = migrateText(escapingAssignment, checkedContract, { file: 'escaping.ts' });
+  assert.equal(escapingResult.content, escapingAssignment);
+  assert.equal(
+    escapingResult.warnings.filter((entry) => entry.warningCode === 'IMPERATIVE_DEFAULT_REVIEW').length,
+    1,
+  );
+});
+
+test('reassigned and shadowed factory-shaped identifiers are never treated as proven DOM factories', () => {
+  const checkedContract = buildMigrationContract(checkedInventory);
+  const input = [
+    'let reassigned = document.createElement.bind(document);',
+    'reassigned = otherFactory;',
+    "const first = reassigned('wa-badge');",
+    "first.appearance = 'accent';",
+    "first.variant = 'neutral';",
+    '',
+    'const outer = document.createElement.bind(document);',
+    'function render(outer) {',
+    "  const second = outer('sl-badge');",
+    "  second.variant = 'primary';",
+    '}',
+    '',
+    'const document = fakeDocument;',
+    "const third = document.createElement('wa-badge');",
+    "third.appearance = 'accent';",
+    "third.variant = 'neutral';",
+    '',
+  ].join('\n');
+  const result = migrateText(input, checkedContract, { file: 'shadowed.ts' });
+
+  assert.equal(result.content, input);
+  assert.deepEqual(result.changes, []);
+  assert.deepEqual(result.warnings, []);
+});
+
+test('unrelated nested DOM-global parameters do not suppress module-scope construction or lookup', () => {
+  const constructionInput = [
+    'function unrelated(document) { return document; }',
+    "const widget = document.createElement('wa-widget');",
+    '',
+  ].join('\n');
+  const construction = migrateText(constructionInput, contract, {
+    file: 'mixed-document-shadow.ts',
+  });
+
+  assert.equal(construction.content, constructionInput);
+  assert.deepEqual(
+    construction.warnings
+      .filter((entry) => entry.warningCode === 'IMPERATIVE_DEFAULT_REVIEW')
+      .map(({ upstreamTag, line, column }) => ({ upstreamTag, line, column })),
+    [{ upstreamTag: 'wa-widget', line: 2, column: 40 }],
+  );
+
+  const lookupInput = [
+    'function unrelated(customElements) { return customElements; }',
+    "const Widget = customElements.get('wa-widget');",
+    '',
+  ].join('\n');
+  const lookup = migrateText(lookupInput, contract, {
+    file: 'mixed-registry-shadow.ts',
+  });
+
+  assert.equal(lookup.content, lookupInput.replace('wa-widget', 'lr-widget'));
+  assert.deepEqual(lookup.warnings, []);
+
+  const genuinelyShadowed = [
+    'function render(document, customElements) {',
+    "  const widget = document.createElement('wa-widget');",
+    "  const Widget = customElements.get('wa-widget');",
+    '  return [widget, Widget];',
+    '}',
+    '',
+  ].join('\n');
+  const shadowed = migrateText(genuinelyShadowed, contract, {
+    file: 'genuinely-shadowed.ts',
+  });
+  assert.equal(shadowed.content, genuinelyShadowed);
+  assert.deepEqual(shadowed.changes, []);
+  assert.deepEqual(shadowed.warnings, []);
+});
+
+test('block var declarations shadow DOM globals throughout their containing function', () => {
+  const input = [
+    'function render(flag) {',
+    '  if (flag) { var document = fakeDocument; }',
+    "  return document.createElement('sl-static');",
+    '}',
+    'function find(flag) {',
+    '  if (flag) { var customElements = fakeRegistry; }',
+    "  return customElements.get('sl-static');",
+    '}',
+    '',
+  ].join('\n');
+  const result = migrateText(input, contract, { file: 'function-scoped-var.ts' });
+
+  assert.equal(result.content, input);
+  assert.deepEqual(result.changes, []);
+  assert.deepEqual(result.warnings, []);
+});
+
+test('block function declarations conservatively shadow DOM globals for the containing function', () => {
+  const input = [
+    'function render(flag) {',
+    '  if (flag) { function document() {} }',
+    "  return document.createElement('sl-static');",
+    '}',
+    'function find(flag) {',
+    '  if (flag) { function customElements() {} }',
+    "  return customElements.get('sl-static');",
+    '}',
+    '',
+  ].join('\n');
+  const result = migrateText(input, contract, { file: 'annex-b-functions.js' });
+
+  assert.equal(result.content, input);
+  assert.deepEqual(result.changes, []);
+  assert.deepEqual(result.warnings, []);
+});
+
+test('callable default parameters shadow DOM globals in functions, methods, and arrows', () => {
+  const input = [
+    'function render(document = getDocument()) {',
+    "  return document.createElement('sl-static');",
+    '}',
+    'function find(customElements = getRegistry()) {',
+    "  return customElements.get('sl-static');",
+    '}',
+    'class View {',
+    '  render(document = getDocument()) {',
+    "    return document.createElement('sl-static');",
+    '  }',
+    '  find(customElements = getRegistry()) {',
+    "    return customElements.get('sl-static');",
+    '  }',
+    '}',
+    "const renderArrow = (document = getDocument()) => document.createElement('sl-static');",
+    "const findArrow = (customElements = getRegistry()) => customElements.get('sl-static');",
+    "function selfDefault(document = document.createElement('sl-static')) {}",
+    "function registryDefault(customElements = customElements.get('sl-static')) {}",
+    '',
+  ].join('\n');
+  const result = migrateText(input, contract, { file: 'default-parameters.ts' });
+
+  assert.equal(result.content, input);
+  assert.deepEqual(result.changes, []);
+  assert.deepEqual(result.warnings, []);
+});
+
+test('generic and computed callables keep their DOM-global parameters lexically shadowed', () => {
+  const input = [
+    'function render<T>(document = getDocument()) {',
+    "  return document.createElement('sl-static');",
+    '}',
+    'async function find<T extends Record<string, Array<Promise<number>>>>(customElements: CustomElementRegistry) {',
+    "  return customElements.get('sl-static');",
+    '}',
+    'class View {',
+    '  render<T extends Promise<Record<string, Array<number>>>>(document: Document) {',
+    "    return document.createElement('sl-static');",
+    '  }',
+    "  ['find']<T extends Record<string, Array<Promise<number>>>>(customElements: CustomElementRegistry) {",
+    "    return customElements.get('sl-static');",
+    '  }',
+    '}',
+    '',
+  ].join('\n');
+  const result = migrateText(input, contract, { file: 'generic-callables.ts' });
+
+  assert.equal(result.content, input);
+  assert.deepEqual(result.changes, []);
+  assert.deepEqual(result.warnings, []);
+});
+
+test('factory aliases remain inside their lexical declaration scope', () => {
+  const input = [
+    'const globalMake = document.createElement.bind(document);',
+    'function shadowed(globalMake = getFactory()) {',
+    "  return globalMake('sl-static');",
+    '}',
+    "const globalUse = globalMake('sl-static');",
+    'function first() {',
+    '  const make = document.createElement.bind(document);',
+    "  const local = make('sl-static');",
+    '  function nested() {',
+    "    return make('sl-static');",
+    '  }',
+    '  return [local, nested()];',
+    '}',
+    'function sibling() {',
+    "  return make('sl-static');",
+    '}',
+    "const escaped = make('sl-static');",
+    '',
+  ].join('\n');
+  const result = migrateText(input, contract, { file: 'factory-scope.ts' });
+  const expected = input
+    .replace("const globalUse = globalMake('sl-static');", "const globalUse = globalMake('lr-static');")
+    .replace("const local = make('sl-static');", "const local = make('lr-static');")
+    .replace("return make('sl-static');", "return make('lr-static');");
+
+  assert.equal(result.content, expected);
+  assert.deepEqual(result.warnings, []);
+  assert.equal(result.changes.filter((entry) => entry.action === 'rewrite-tag').length, 3);
+});
+
+test('query-selector lookups require an unshadowed document or bare lookup binding', () => {
+  const input = [
+    'function fromDocument(document) {',
+    "  return document.querySelector('sl-static');",
+    '}',
+    'function fromBare(querySelector) {',
+    "  return querySelector('sl-static');",
+    '}',
+    'function fromLocal() {',
+    '  const document = fakeDocument;',
+    "  return document.querySelectorAll('sl-static');",
+    '}',
+    'function fromWindow(window) {',
+    "  return window.document.querySelector('sl-static');",
+    '}',
+    'function fromGlobalThis(globalThis) {',
+    "  return globalThis.document.querySelector('sl-static');",
+    '}',
+    'try {} catch ({ document }) {',
+    "  document.querySelector('sl-static');",
+    '}',
+    'try {} catch (customElements) {',
+    "  customElements.get('sl-static');",
+    '}',
+    '',
+  ].join('\n');
+  const result = migrateText(input, contract, { file: 'shadowed-lookups.ts' });
+
+  assert.equal(result.content, input);
+  assert.deepEqual(result.changes, []);
+  assert.deepEqual(result.warnings, []);
+});
+
+test('imported factory aliases and re-exports preserve the same proof across split files', () => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-migrate-factory-files-v8-'));
+  try {
+    const factory = path.join(scratch, 'factory.ts');
+    const barrel = path.join(scratch, 'barrel.ts');
+    const consumer = path.join(scratch, 'consumer.ts');
+    const registration = path.join(scratch, 'registration.ts');
+    fs.writeFileSync(factory, 'export const makeElement = document.createElement.bind(document);\n');
+    fs.writeFileSync(barrel, "export { makeElement as make } from './factory.js';\n");
+    const safeInput = [
+      "import { make as createWidget } from './barrel.js';",
+      "const widget = createWidget('wa-widget');",
+      "widget.setAttribute('placement', placement);",
+      '',
+    ].join('\n');
+    fs.writeFileSync(consumer, safeInput);
+    fs.writeFileSync(
+      registration,
+      "import '@awesome.me/webawesome/dist/components/widget/widget.js';\n",
+    );
+
+    const safe = migrateFiles({ files: [consumer, barrel, factory, registration], inventory, cwd: scratch });
+    assert.equal(safe.filesChanged, 2);
+    assert.equal(
+      fs.readFileSync(consumer, 'utf8'),
+      safeInput.replace("createWidget('wa-widget')", "createWidget('lr-widget')"),
+    );
+    assert.equal(
+      fs.readFileSync(registration, 'utf8'),
+      "import '@aceshooting/lyra-ui/components/forms/widget/widget.js';\n",
+    );
+    assert.deepEqual(safe.warnings, []);
+
+    const unsafeInput = [
+      "import { make as createWidget } from './barrel.js';",
+      "const widget = createWidget('wa-widget');",
+      'mount(widget);',
+      "widget.setAttribute('placement', placement);",
+      '',
+    ].join('\n');
+    fs.writeFileSync(consumer, unsafeInput);
+    fs.writeFileSync(
+      registration,
+      "import '@awesome.me/webawesome/dist/components/widget/widget.js';\n",
+    );
+
+    const unsafe = migrateFiles({ files: [consumer, barrel, factory, registration], inventory, cwd: scratch });
+    assert.equal(unsafe.filesChanged, 0);
+    assert.equal(fs.readFileSync(consumer, 'utf8'), unsafeInput);
+    assert.equal(
+      unsafe.warnings.filter((entry) => entry.warningCode === 'IMPERATIVE_DEFAULT_REVIEW').length,
+      1,
+    );
+    assert.ok(
+      unsafe.warnings.some(
+        (entry) => entry.warningCode === 'IMPERATIVE_DEFAULT_REVIEW'
+          && entry.file === 'consumer.ts'
+          && entry.line === 2
+          && entry.column === 30,
+      ),
+    );
+  } finally {
+    fs.rmSync(scratch, { recursive: true, force: true });
+  }
+});
+
 test('shipped Page and Video mappings are exact and cannot retain stale no-counterpart exemptions', () => {
   for (const upstreamTag of ['wa-page', 'wa-video']) {
     const mapping = checkedInventory.mappings.find((entry) => entry.upstreamTag === upstreamTag);

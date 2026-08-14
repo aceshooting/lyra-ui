@@ -19,8 +19,8 @@ several Web Awesome **Pro** components plus original extras. Positioning, non-ne
   originally, seeded only from this org's own pre-existing hand-rolled components.
 - **API-mirroring.** Components with a WA counterpart mirror the public surface (attributes,
   slots, events, parts, CSS custom properties) 1:1 under the `lr-` prefix — migration is a
-  mechanical `wa-` → `lr-` rename. Components with no WA equivalent (most of Tier 1–3 and the
-  "bigger own tracks") follow this library's own conventions; there is no docs page to mirror.
+  mechanical `wa-` → `lr-` rename. Components with no WA equivalent follow this library's own
+  conventions; there is no upstream docs page to mirror.
   The `migrate-wa` script (`packages/lyra-ui/scripts/migrate-wa.mjs`, `pnpm run migrate-wa`,
   tested by `test:migrate-wa`) automates the rename in a *consumer* project's source —
   best-effort, not a guaranteed 1:1 API match for every renamed tag.

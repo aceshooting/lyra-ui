@@ -685,7 +685,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     // `effectiveDisabled` already reads true here whenever this is that case; marking `touched`
     // for it was, depending on timing, capable of reentering that same in-flight update for a
     // state flip nothing observable needed -- a disabled control is barred from validation
-    // regardless (fr_asxOgk4UhNB07xevCWwFVQ).
+    // regardless.
     if (!this.effectiveDisabled) this.touched = true;
     // Synchronously, not from `updated()`: `:state(user-invalid)` has to be true the moment focus
     // leaves, the same instant native `:user-invalid` starts matching.

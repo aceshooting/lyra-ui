@@ -95,7 +95,7 @@
   size and ignores `html { font-size }` entirely, while `@container` follows the root's
   *computed* size. Any feature offering a "viewport" vs. "container" breakpoint basis must pick
   its `rem`-resolution path to match — this shipped backwards in three places before being
-  corrected (`4ddf1fbd`).
+  corrected before release.
 - **A `var()` fallback chain is not a live formula across a shadow boundary.** CSS inheritance
   passes a descendant's `:host`-level custom property the ancestor's already-*resolved* value,
   not a formula it re-evaluates per instance — so a per-element override meant to win only when

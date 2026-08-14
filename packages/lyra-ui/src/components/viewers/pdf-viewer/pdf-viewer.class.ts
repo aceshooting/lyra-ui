@@ -409,7 +409,8 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     }
   }
 
-  override firstUpdated(): void {
+  override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     const base = this.shadowRoot?.querySelector('[part="base"]') as HTMLElement | null;
     if (base) this.bindTextSelection(base);
   }

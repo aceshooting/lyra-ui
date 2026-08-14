@@ -89,8 +89,31 @@ it('toggles hiddenTypes and emits lr-visibility-change with the full updated arr
   expect(event2.detail.hiddenTypes).to.deep.equal([]);
 });
 
-it('announces the toggle through the shared light-DOM region and keeps the shadow part inert', async () => {
-  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
+it("wires the Default story to visible hide and restore feedback", async () => {
+  const { Default } = await import("./graph-legend.stories.js");
+  const root = (await fixture(
+    Default.render!({}, null as never)
+  )) as HTMLElement;
+  const legend = root.querySelector<LyraGraphLegend>("lr-graph-legend")!;
+  const feedback = root.querySelector<HTMLElement>(
+    "[data-visibility-feedback]"
+  )!;
+  const first =
+    legend.shadowRoot!.querySelector<HTMLButtonElement>('[part~="item"]')!;
+
+  expect(feedback.textContent?.trim()).to.equal("All types are visible.");
+  first.click();
+  await legend.updateComplete;
+  expect(feedback.textContent?.trim()).to.equal("Hidden types: person");
+  first.click();
+  await legend.updateComplete;
+  expect(feedback.textContent?.trim()).to.equal("All types are visible.");
+});
+
+it("announces the toggle through the shared light-DOM region and keeps the shadow part inert", async () => {
+  const el = (await fixture(
+    html`<lr-graph-legend></lr-graph-legend>`
+  )) as LyraGraphLegend;
   el.types = types;
   await el.updateComplete;
   const button = el.shadowRoot!.querySelectorAll('[part~="item"]')[0] as HTMLButtonElement;

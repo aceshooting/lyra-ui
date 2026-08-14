@@ -265,6 +265,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if ((changed.has('expanded') || changed.has('mode')) && this.expanded && this.mode === 'live') {
       // Opening a live panel -- or a still-expanded panel later becoming
       // `'live'` -- always jumps straight to the newest content and resets

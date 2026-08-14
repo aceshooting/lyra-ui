@@ -113,8 +113,8 @@ describe('codeBlockLineTransformer', () => {
   });
 });
 
-// Regression for the xcomp-lean-full-split-duplication finding: renderCodeBlockPlainCode() used to
-// be a byte-for-byte-duplicated private method on both <lr-code-block> and <lr-code-block-core> --
+// renderCodeBlockPlainCode() replaces a formerly duplicated private method on both
+// <lr-code-block> and <lr-code-block-core>. It is
 // exercised here directly (in isolation from either custom element) so both components' own tests
 // only need to prove they delegate to it, not re-prove its rendering logic.
 describe('renderCodeBlockPlainCode', () => {

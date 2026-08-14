@@ -42,8 +42,8 @@ export const styles = css`
   /* An arrow protrudes past the popup's edge, so the scroll container has to move inwards for it
      -- an overflow: auto popup would clip the arrow away entirely. Scoped to the arrow case so a
      popover without one keeps its previous box model exactly. */
-  :host([arrow]:not([without-arrow])) [part~='popup'] { overflow: visible; }
-  :host([arrow]:not([without-arrow])) [part~='content'] {
+  [part~='popup']:where([data-has-arrow]) { overflow: visible; }
+  [part~='popup']:where([data-has-arrow]) [part~='content'] {
     overflow: auto;
     max-block-size: var(--lr-positioner-available-block-size, var(--lr-size-20rem));
   }
@@ -73,7 +73,7 @@ export const tooltipStyles = css`
   /* A tooltip popup has no inner scroll wrapper to move the overflow onto, so switching it to
      visible for the arrow trades internal scrolling for a visible arrow. Reach for
      <lr-popover> when a floating surface needs both. */
-  :host([arrow]:not([without-arrow])) [part~='popup'] { overflow: visible; }
+  [part~='popup']:where([data-has-arrow]) { overflow: visible; }
   [part~='arrow'] {
     position: absolute;
     inline-size: calc(2 * var(--arrow-size, var(--lr-tooltip-arrow-size, var(--lr-size-0-375rem))));

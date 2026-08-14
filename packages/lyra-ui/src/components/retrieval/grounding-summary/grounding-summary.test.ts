@@ -65,7 +65,7 @@ it('renders claim-level evidence when claims are supplied and allows it to be hi
 
   el.showClaims = false;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('lr-claim-evidence')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('lr-claim-evidence')) == null).to.be.true;
 });
 
 it('exposes the bubbled lr-claim-select contract with the complete claim detail', async () => {
@@ -155,7 +155,7 @@ it('omits the warnings section when there are none, and renders each warning ver
   const el = (await fixture(html`<lr-grounding-summary></lr-grounding-summary>`)) as LyraGroundingSummary;
   el.assessment = { supportedClaims: 1, unsupportedClaims: 0, coverage: 1 };
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="warnings"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="warnings"]')) == null).to.be.true;
 
   el.assessment = ASSESSMENT;
   await el.updateComplete;
@@ -171,7 +171,7 @@ it('omits the evidence section when citations is empty, and renders one lr-citat
   const el = (await fixture(html`<lr-grounding-summary></lr-grounding-summary>`)) as LyraGroundingSummary;
   el.assessment = ASSESSMENT;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="evidence"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="evidence"]')) == null).to.be.true;
 
   el.citations = CITATIONS;
   await el.updateComplete;

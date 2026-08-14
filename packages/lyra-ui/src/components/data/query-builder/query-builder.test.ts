@@ -70,7 +70,7 @@ describe('lr-query-builder', () => {
     const el = (await fixture(html`<lr-query-builder></lr-query-builder>`)) as LyraQueryBuilder;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.include('No fields available.');
-    expect(el.shadowRoot!.querySelector('[part="add-button"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="add-button"]')) == null).to.be.true;
   });
 
   it('renders an empty-conditions message and an Add button when fields exist but value has no conditions', async () => {
@@ -449,10 +449,10 @@ describe('lr-query-builder', () => {
   it('renders no combinator control with 0 or 1 conditions, and one with 2+', async () => {
     const el = (await fixture(html`<lr-query-builder .fields=${FIELDS}></lr-query-builder>`)) as LyraQueryBuilder;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="combinator"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="combinator"]')) == null).to.be.true;
     el.addCondition();
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="combinator"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="combinator"]')) == null).to.be.true;
     el.addCondition();
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="combinator"]')).to.exist;

@@ -295,7 +295,7 @@ it('renders the label part visibly, hidden from the accessibility tree since the
 
 it('omits the label part entirely when label is unset', async () => {
   const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
-  expect(el.shadowRoot!.querySelector('[part="label"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="label"]')) == null).to.be.true;
 });
 
 it('defaults to and reflects the bar variant, rendering a div base', async () => {

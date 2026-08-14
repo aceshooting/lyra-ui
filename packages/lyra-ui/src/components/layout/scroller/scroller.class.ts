@@ -91,7 +91,8 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
     // (a `@query`) isn't resolved yet, so `firstUpdated()` below still does that initial observe.
   }
 
-  override firstUpdated(): void {
+  override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     this.armResizeObserver();
     this.scheduleEdgeUpdate();
   }
@@ -162,6 +163,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has("orientation") || changed.has("controls"))
       this.scheduleEdgeUpdate();
   }

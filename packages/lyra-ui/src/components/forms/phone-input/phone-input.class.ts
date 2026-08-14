@@ -690,7 +690,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
 
   private onBlur = (event: FocusEvent): void => {
     event.stopPropagation();
-    // Regression guard for fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native form control
+    // Regression guard: disabling a focused native form control
     // forces the browser to blur it -- plain platform behavior, not a real user interaction.
     // Unconditionally marking `touched` for it could reenter an in-flight Lit update and trip
     // Lit's dev-mode "scheduled an update after an update completed" warning.

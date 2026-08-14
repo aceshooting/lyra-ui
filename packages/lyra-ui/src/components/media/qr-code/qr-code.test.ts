@@ -92,7 +92,7 @@ describe('lr-qr-code', () => {
     expect((empty) != null).to.equal(true);
     expect(empty!.textContent).to.equal('No data');
     expect((el.shadowRoot!.querySelector('canvas')) == null).to.equal(true);
-    expect(el.shadowRoot!.querySelector('[role="img"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[role="img"]') == null).to.be.true;
     expect(calls).to.equal(0);
   });
 
@@ -206,7 +206,7 @@ describe('lr-qr-code', () => {
     el.value = 'hello';
     await el.updateComplete;
     await aTimeout(20);
-    expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="error"]') == null).to.be.true;
   });
 
   it('restarts generation on reconnect when a pending result was discarded while detached', async () => {
@@ -610,9 +610,9 @@ describe('lr-qr-code', () => {
     expect(refreshCalls).to.equal(1);
   });
 
-  it('warns once and falls back to #000000 for an invalid --lr-qr-code-fill override', async () => {
+  it('warns once and falls back to #000000 for an invalid legacy fill override', async () => {
     const el = (await fixture(
-      html`<lr-qr-code style="--lr-qr-code-fill: not-a-color"></lr-qr-code>`,
+      html`<lr-qr-code fill="not-a-color"></lr-qr-code>`,
     )) as LyraQrCode;
     installFakeLoader(
       el,
@@ -643,6 +643,19 @@ describe('lr-qr-code', () => {
     }
   });
 
+  for (const color of ['#010203', 'rgb(1 2 3)']) {
+    it(`accepts the valid color ${color} when it collides with the first validation sentinel`, async () => {
+      const el = (await fixture(html`<lr-qr-code size="90" .fill=${color}></lr-qr-code>`)) as LyraQrCode;
+      installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(true) })));
+      el.value = 'hello';
+      await waitForPart(el, 'canvas');
+      const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+      const center = Math.round(canvas.width / 2);
+      expect([...canvas.getContext('2d')!.getImageData(center, center, 1, 1).data.slice(0, 3)])
+        .to.deep.equal([1, 2, 3]);
+    });
+  }
+
   it('paints the resolved fill/background colors correctly when both are valid', async () => {
     const el = (await fixture(html`
       <lr-qr-code
@@ -667,6 +680,20 @@ describe('lr-qr-code', () => {
     expect([...bgPixel.slice(0, 3)]).to.deep.equal([255, 255, 255]);
   });
 
+  it('uses standard host color/background-color for canvas paint', async () => {
+    const el = (await fixture(html`
+      <lr-qr-code size="90" style="color: rgb(255, 0, 0); background-color: rgb(0, 255, 0)"></lr-qr-code>
+    `)) as LyraQrCode;
+    installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(true) })));
+    el.value = 'hello';
+    await waitForPart(el, 'canvas');
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const center = Math.round(canvas.width / 2);
+    expect([...ctx.getImageData(center, center, 1, 1).data.slice(0, 3)]).to.deep.equal([255, 0, 0]);
+    expect([...ctx.getImageData(1, 1, 1, 1).data.slice(0, 3)]).to.deep.equal([0, 255, 0]);
+  });
+
   it('supports the mapped fill/background property aliases', async () => {
     const el = (await fixture(html`
       <lr-qr-code size="90" fill="#ff0000" background="#00ff00"></lr-qr-code>
@@ -679,6 +706,8 @@ describe('lr-qr-code', () => {
     const center = Math.round(canvas.width / 2);
     expect([...ctx.getImageData(center, center, 1, 1).data.slice(0, 3)]).to.deep.equal([255, 0, 0]);
     expect([...ctx.getImageData(1, 1, 1, 1).data.slice(0, 3)]).to.deep.equal([0, 255, 0]);
+    expect(getComputedStyle(el).color).to.not.equal('rgb(255, 0, 0)');
+    expect(getComputedStyle(el).backgroundColor).to.not.equal('rgb(0, 255, 0)');
   });
 
   it('safely draws a centered embedded image with background, coverage, and padding', async () => {

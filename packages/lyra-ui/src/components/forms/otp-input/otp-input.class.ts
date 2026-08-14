@@ -568,7 +568,8 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     return super.reportValidity();
   }
 
-  protected override firstUpdated(): void {
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     // Run after Lit has fully closed the first update. Focusing synchronously here relays the
     // native focus event and changes `focused`, which Lit correctly diagnoses as an update that
     // was scheduled from inside the update it just completed.
@@ -576,7 +577,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   }
 
   override willUpdate(changed: PropertyValues<this>): void {
-    super.willUpdate?.(changed);
+    super.willUpdate(changed);
     // A narrower `type`/`case`/`length` must not leave a stale value that the same input could no
     // longer produce.
     if (changed.has('type') || changed.has('case') || changed.has('length') || changed.has('format')) {
@@ -735,7 +736,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   };
   private onBlur = (event: FocusEvent): void => {
     this.focused = false;
-    // fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native control blurs it as plain platform
+    // Disabling a focused native control blurs it as plain platform
     // behaviour (nothing custom-element-specific) — that forced blur is not a real user
     // interaction and must not flip `touched`, which could reenter an in-flight Lit update.
     if (!this.effectiveDisabled) this.touched = true;

@@ -210,7 +210,7 @@ it('normalizes a NaN virtualizeAt to the default (100) instead of silently disab
   expect(Number.isNaN(el.virtualizeAt)).to.be.true;
   el.rows = rows;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('lr-virtual-list')) == null).to.be.true;
   expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(rows.length);
 });
 

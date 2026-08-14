@@ -26,8 +26,8 @@ TS-API-free options instead: `tsc`'s own strict flags, bespoke `check-*.mjs` AST
 doing its own job, not a caller walking its AST.
 
 `check:component-dependencies` (`scripts/check-component-dependencies.mjs`, with a colocated
-`check-component-dependencies.test.mjs` chained beside it) is the newest member and the one whose
-failure mode is least obvious. It parses every `<lr-*>` start tag out of each component's `html` /
+`check-component-dependencies.test.mjs` chained beside it) covers a failure mode that is otherwise
+hard to see. It parses every `<lr-*>` start tag out of each component's `html` /
 `staticHtml` / `svg` templates — plus the `unsafeStatic(tag('x'))` indirection — and proves each one
 resolves to a registration reachable from that component's own registration entry's transitive
 imports (static, `export ... from`, and lazy `import()` alike, so `lr-phone-input`'s deliberate lazy
@@ -44,6 +44,17 @@ test that imports only its own `./<name>.js` and asserts on `[part]` attributes.
 into a class module. The rare genuinely cycle-bound pair is suppressed in the registration entry
 with `policy-allow(component-dependency: lr-menu): <reason>`; the reason is mandatory and a
 suppression that no longer silences anything is itself reported, so the list cannot rot.
+
+`check:composed-child-contracts` (`scripts/check-composed-child-contracts.mjs`, with its own
+colocated self-test) covers the other silent half of composition: a registered child can still
+ignore a misspelled/removed attribute or an expando property that is absent from its public API.
+The checker parses component and Storybook Lit templates with `oxc-parser`, validates static
+attributes plus `.property`/`?attribute` bindings against `custom-elements.json`, follows CEM
+superclass/mixin declarations, and consumes the manifest configuration's exported effective
+`DocumentAnchorTarget` surface for direct and indirect source-only mixin adopters. It fails closed
+if it scans zero templates, tags, or bindings. Its
+self-test uses isolated temporary packages with positive, negative, inherited-member, recursive-
+self, Storybook, and zero-accounting fixtures; it never rewrites the workspace manifest.
 
 Two gates deliberately sit **outside** `contract-policy`, because both read artifacts that a static
 lint run does not produce:
@@ -178,7 +189,7 @@ everything else) had most Node 22 legs finishing in 50-110s, of which roughly ha
 per-job overhead (checkout/install/browser setup) rather than test execution against the 26-file
 `test:platform` suite -- oversharded legs pay that fixed cost repeatedly for little parallelism
 gain. Node 20 uses the pnpm version pinned in `.github/ci-pnpm10.json` (`pnpm@10.34.5`); Node 22
-uses `package.json#packageManager` (`pnpm@11.20.0`). The package's supported engine remains `node
+uses `package.json#packageManager` (`pnpm@11.21.0`). The package's supported engine remains `node
 >=20`; this matrix uses 11 legs total (9 on Node 22, 2 on Node 20), well under the public-repo
 20-job throughput limit, so `max-parallel` no longer needs to chase that cap.
 
@@ -223,7 +234,7 @@ artifact fails the run instead of silently falling back to a clone-generated man
 - `./scripts/ci.sh --platform` adds Firefox and WebKit `test:platform` runs under the active Node
   22/pnpm 11 toolchain. It is useful for browser-engine coverage but is not the two-Node CI matrix.
 - `./scripts/ci.sh --platform-matrix` (or `--all`) runs the primary aggregate and then all four
-  Node 20/22 × Firefox/WebKit legs. Node 20 needs pnpm 10.34.5; Node 22 needs pnpm 11.20.0. The
+  Node 20/22 × Firefox/WebKit legs. Node 20 needs pnpm 10.34.5; Node 22 needs pnpm 11.21.0. The
   `CI_SH_NODE20_BIN`, `CI_SH_NODE22_BIN`, `CI_SH_PNPM20_BIN`, and `CI_SH_PNPM22_BIN` overrides
   accept explicit executable paths. NVM installations are discovered by major version, with the
   newest installed patch selected by version order.
@@ -258,7 +269,7 @@ is a strict subset of this run, so it is not run separately here.
 
 Because it's heavy (three full browser-engine sweeps), it is meant to run before publishing a
 release, not on every commit -- see [AGENTS.md](../../AGENTS.md)'s "Dev commands and gates" section
-and `.claude/commands/publish.md` step 2.
+and the release checklist in `scripts/publish.sh`.
 
 ## Release integrity
 

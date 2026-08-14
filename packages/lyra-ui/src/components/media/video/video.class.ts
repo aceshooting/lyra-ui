@@ -379,7 +379,8 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     }
   }
 
-  override firstUpdated(): void {
+  override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     this.syncSources();
     this.configureVisibilityObserver();
     void this.loadThumbnails();

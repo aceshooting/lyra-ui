@@ -44,7 +44,7 @@ export const Untitled: Story = {
 
 export const WithHeaderActions: Story = {
   render: () => html`
-    <lr-result-card title="run_query" style="max-inline-size:20rem;">
+    <lr-result-card title="run_query" with-actions style="max-inline-size:20rem;">
       <button
         slot="actions"
         type="button"

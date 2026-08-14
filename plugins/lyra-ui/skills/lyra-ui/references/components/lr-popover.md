@@ -26,14 +26,16 @@ A click-triggered, light-dismiss floating surface positioned with the shared Flo
   legitimately be negative to overlap the trigger; a non-finite value falls back to the default.
 - `skidding: number = 0` — offset *along* the anchor's edge, in px (Floating UI's cross-axis
   offset). New in 8.0.0.
-- `for: string = ''` (reflected) — id of an element to position against instead of the slotted
-  trigger, resolved in this element's own root so it works inside a shadow tree where a plain idref
-  could not cross the boundary. The trigger keeps owning the click and the ARIA relationship, so a
-  popover can be anchored to an element it does not contain. A `showAt()` virtual anchor still wins.
+- `for: string = ''` (reflected) — id of an element resolved in this element's own root. It is the
+  positioning source behind a direct `.anchor`; when it resolves to a live HTML element and no
+  trigger is slotted, it also owns click and generated ARIA. A slotted trigger wins interaction/ARIA
+  ownership even when positioning uses `for`, and a `showAt()` virtual anchor wins positioning while
+  suppressing every DOM interaction owner.
   Assigning `null` is the mapped setter-only clearing spelling: it removes the attribute and the
   getter continues to return `''`
-- `anchor: Element | null = null` (property only) — direct anchor, taking priority over `for` and
-  the slotted trigger; a `showAt()` virtual anchor still wins
+- `anchor: Element | null = null` (property only) — positioning-only direct anchor, taking priority
+  over `for` and the interaction owner but never receiving click listeners or generated ARIA; a
+  `showAt()` virtual anchor still wins
 - `arrow: boolean = true` (reflected) — render an arrow pointing at the anchor; the true-default
   converter accepts `arrow="false"`
 - `withoutArrow: boolean = false` (attribute `without-arrow`, reflected) — positive mapped spelling
@@ -53,7 +55,9 @@ A click-triggered, light-dismiss floating surface positioned with the shared Flo
 To preserve the previous Lyra-shaped defaults explicitly, use
 `placement="bottom-start" distance="4" without-arrow`; origin-aware migration emits those tokens.
 
-The slotted trigger receives `aria-haspopup`, `aria-expanded`, and `aria-controls`.
+The slotted trigger receives `aria-haspopup`, `aria-expanded`, and `aria-controls`. With no slotted
+trigger, a live HTML `for` target receives the identical ownership contract. Target insertion,
+removal, replacement and `id` changes are tracked live; author ARIA is restored when ownership moves.
 `aria-controls` targets the public `lr-popover` host (which receives a stable generated `id` when
 the consumer did not supply one), rather than the shadow-private popup, so the relationship
 resolves from a native light-DOM trigger. `lr-button` and `lr-icon-button` additionally reflect
@@ -64,8 +68,8 @@ empty string after that assignment.
 `el.open = true`, including the veto point — and resolves after `lr-after-show`. A no-op or vetoed
 transition returns an already-resolved promise.
 `showAt(rect: { x, y, width?, height?, contextElement? }, options?: { returnFocusTo?:
-HTMLElement })` opens the popover anchored to an arbitrary rectangle instead of the slotted
-`trigger` — for a graph node, a canvas pixel, a chart datum, or any other non-DOM location
+HTMLElement })` opens the popover anchored to an arbitrary rectangle instead of any DOM anchor —
+for a graph node, a canvas pixel, a chart datum, or any other non-DOM location
 (`width`/`height` default to `0`, a point). Escape and light-dismiss return focus to
 `options.returnFocusTo` when supplied, or skip focus-return entirely otherwise, since a virtual
 anchor has no `.focus()`. The virtual anchor has no DOM node of its own for `autoUpdate()` to
@@ -74,17 +78,22 @@ near the virtual point) when one is available to give it something to observe; o
 the anchor point moves on its own (e.g. a graph pan/zoom tick), re-call `showAt()` with fresh
 coordinates to re-anchor — the popover stays open across such a call. A popover that never calls
 `showAt()` behaves exactly as before. Non-finite coordinates or dimensions are a no-op and leave
-the current open/anchor state unchanged.
+the current open/anchor state unchanged. While virtual anchoring is active, no slotted/`for` DOM
+element owns click or generated ARIA.
 `hide(options?: { focusTrigger?: boolean }): Promise<void>` programmatically closes the popover and
 resolves after `lr-after-hide`; pass
 `{ focusTrigger: false }` to opt out of focus restoration. By default, `hide()`, Escape, light
-dismiss, and a bare `el.open = false` all return focus to the slotted trigger, or to a virtual
-anchor's explicit `returnFocusTo`; a virtual anchor with no return target closes without moving
-focus. No-op when already closed.
+dismiss, and a bare `el.open = false` all return focus to the slotted/`for` interaction owner, or to
+a virtual anchor's explicit `returnFocusTo`; a virtual anchor with no return target closes without
+moving focus. No-op when already closed.
 **Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide` — none
 carries a detail, and the two `lr-after-*` events are never cancelable. Neither pair fires for
 markup that renders open from the start, nor when only `placement`/`distance` change on an
 already-open popover.
+
+Removing the sole connected direct anchor or sole interaction anchor from an open popover is
+structural teardown: it force-closes even if an `lr-hide` listener would veto an ordinary close. If
+a live slotted/`for` positioning fallback remains, the popover rebinds to it and stays open instead.
 
 **Breaking in 8.0.0:** `lr-show`/`lr-hide` now fire *before* the state changes and are cancelable —
 `preventDefault()` on `lr-show` leaves the popover closed for the trigger click, `show()` and

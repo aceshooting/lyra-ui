@@ -427,7 +427,7 @@ describe('search', () => {
     expect(el.shadowRoot!.querySelector('[data-active-match]')).to.exist;
     el.clearSearch();
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[data-active-match]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[data-active-match]')) == null).to.be.true;
   });
 
   it('searchPrevious wraps backward, mirroring searchNext', async () => {
@@ -467,7 +467,7 @@ describe('search', () => {
     el.searchNext();
     el.searchPrevious();
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[data-active-match]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[data-active-match]')) == null).to.be.true;
   });
 
   // Regression: this viewer moved `data-active-match` but never scrolled, so on a document taller
@@ -525,7 +525,7 @@ describe('search', () => {
     expect(count).to.equal(0);
     el.clearSearch();
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[data-match]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[data-match]')) == null).to.be.true;
   });
 });
 

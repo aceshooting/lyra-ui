@@ -209,6 +209,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   private readonly categoryIds = new Map<ToolCategoryKey, string>();
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
     }
@@ -231,6 +232,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   // them -- mirrors lr-dialog's/lr-tool-result-dialog's identical
   // ordering rationale.
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('open') && this.open) {
       this.overlay?.focusInitial();
     }

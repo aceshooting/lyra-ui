@@ -77,7 +77,7 @@ it('renders the exact tool-name match, handing it both result and args', async (
   `)) as LyraToolResultView;
 
   expect(base(el).querySelector('.weather')).to.exist;
-  expect(base(el).querySelector('lr-json-viewer')).to.not.exist;
+  expect((base(el).querySelector('lr-json-viewer')) == null).to.be.true;
   expect(seen).to.deep.equal({ result: { tempC: 19 }, args: { location: 'Brussels' } });
 });
 
@@ -107,7 +107,7 @@ it('re-resolves (and re-dispatches) when result changes shape under shape-based 
 
   el.result = { somethingElse: true };
   await el.updateComplete;
-  expect(base(el).querySelector('.search-result')).to.not.exist;
+  expect((base(el).querySelector('.search-result')) == null).to.be.true;
   expect(base(el).querySelector('lr-json-viewer')).to.exist;
 });
 
@@ -122,7 +122,7 @@ it('accepts a custom registry prop instead of dispatching against the module-lev
   `)) as LyraToolResultView;
 
   expect(base(el).querySelector('.custom-registry')).to.exist;
-  expect(base(el).querySelector('.default-registry')).to.not.exist;
+  expect((base(el).querySelector('.default-registry')) == null).to.be.true;
 });
 
 it('emits lr-render-error and falls back when a matched renderer throws synchronously', async () => {
@@ -168,7 +168,7 @@ it('emits lr-render-error and falls back when a candidate matches() predicate th
 
   await el.updateComplete;
   expect(base(el).querySelector('lr-json-viewer')).to.exist;
-  expect(base(el).querySelector('.flaky')).to.not.exist;
+  expect((base(el).querySelector('.flaky')) == null).to.be.true;
 });
 
 it('shows a lr-skeleton while an async load() is pending, then renders its resolved output', async () => {
@@ -245,7 +245,7 @@ it('ignores a stale load() resolution superseded by a newer tool-name before it 
   await el.updateComplete;
 
   expect(base(el).querySelector('.fast'), 'the newer resolution must not be clobbered by the stale one').to.exist;
-  expect(base(el).querySelector('.stale')).to.not.exist;
+  expect((base(el).querySelector('.stale')) == null).to.be.true;
 });
 
 it('does not re-show the loading skeleton for a result-only update once a lazy renderer has already resolved', async () => {
@@ -269,8 +269,8 @@ it('does not re-show the loading skeleton for a result-only update once a lazy r
   el.result = { a: 2 };
   await waitUntil(() => base(el).querySelector('.loaded')?.textContent === '2');
 
-  expect(base(el).querySelector('lr-skeleton'), 'a cached load() must not re-show the loading skeleton').to.not
-    .exist;
+  expect(base(el).querySelector('lr-skeleton') == null, 'a cached load() must not re-show the loading skeleton').to.be
+    .true;
   expect((base(el).querySelector('.loaded')) === (spanBefore), 'the already-rendered DOM subtree must be reused in place, not torn down and rebuilt via a loading round-trip').to.equal(true);
 });
 
@@ -298,7 +298,7 @@ it('fallback="text" renders a plain string result as preformatted text, not lr-j
   const pre = base(el).querySelector('[part="fallback-text"]');
   expect((pre) != null).to.equal(true);
   expect(pre!.textContent).to.equal('line one\nline two');
-  expect(base(el).querySelector('lr-json-viewer')).to.not.exist;
+  expect((base(el).querySelector('lr-json-viewer')) == null).to.be.true;
 });
 
 it('chains the fallback-text font through the shared --lr-font-mono token, honoring a --lr-theme-font-family-mono override', async () => {
@@ -314,7 +314,7 @@ it('fallback="text" still falls back to lr-json-viewer when the result is not a 
     <lr-tool-result-view tool-name="unregistered" fallback="text" .result=${{ ok: true }}></lr-tool-result-view>
   `)) as LyraToolResultView;
   expect(base(el).querySelector('lr-json-viewer')).to.exist;
-  expect(base(el).querySelector('[part="fallback-text"]')).to.not.exist;
+  expect((base(el).querySelector('[part="fallback-text"]')) == null).to.be.true;
 });
 
 it('copyable renders a lr-copy-button alongside the text fallback, wired to the result text', async () => {
@@ -360,7 +360,7 @@ describe('status / context.reportStatus', () => {
     expect(el.status).to.equal('error');
     expect(el.getAttribute('status')).to.equal('error');
     expect(base(el).querySelector('.flaky-result')).to.exist;
-    expect(base(el).querySelector('lr-json-viewer')).to.not.exist;
+    expect((base(el).querySelector('lr-json-viewer')) == null).to.be.true;
   });
 
   it('resets status back to "success" on the next resolve when the newly-matched renderer stays quiet', async () => {

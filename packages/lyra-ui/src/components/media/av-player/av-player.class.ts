@@ -31,6 +31,7 @@ import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAUL
 
 
 export type AvKind = 'audio' | 'video';
+export type LyraAvPreload = 'none' | 'metadata' | 'auto';
 
 /** One synced transcript entry. `end` is exclusive; an omitted `end` extends to the next cue (or
  *  forever, for the last one). */
@@ -277,7 +278,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   @property() poster = '';
   @property({ type: Boolean }) loop = false;
   @property({ type: Boolean }) muted = false;
-  @property() preload: 'none' | 'metadata' | 'auto' = 'metadata';
+  @property() preload: LyraAvPreload = 'metadata';
   private _playbackRate = 1;
   /** Playback-rate multiplier, reflected to the native media element. Clamped to
    *  `[MIN_PLAYBACK_RATE, MAX_PLAYBACK_RATE]` -- a non-finite or wildly out-of-range assignment
@@ -446,7 +447,8 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     if (this.waveformDirty) this.drawWaveform();
   }
 
-  override firstUpdated(): void {
+  override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     this.drawWaveform();
   }
 

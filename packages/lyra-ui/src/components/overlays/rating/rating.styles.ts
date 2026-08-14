@@ -12,12 +12,12 @@ export const styles = css`
        whose size IS the control. */
     --lr-rating-size: var(--symbol-size, var(--lr-font-size-xl));
   }
-  :host([size='2xs']) { --lr-rating-size: var(--symbol-size, var(--lr-font-size-sm)); }
-  :host([size='xs']) { --lr-rating-size: var(--symbol-size, var(--lr-font-size-m)); }
-  :host([size='s']), :host([size='small']) { --lr-rating-size: var(--symbol-size, var(--lr-font-size-lg)); }
-  :host([size='m']), :host([size='medium']) { --lr-rating-size: var(--symbol-size, var(--lr-font-size-xl)); }
-  :host([size='l']), :host([size='large']) { --lr-rating-size: var(--symbol-size, var(--lr-font-size-2xl)); }
-  :host([size='xl']) { --lr-rating-size: var(--symbol-size, var(--lr-font-size-3xl)); }
+  :host([data-effective-size='2xs']) { --lr-rating-size: var(--symbol-size, var(--lr-font-size-sm)); }
+  :host([data-effective-size='xs']) { --lr-rating-size: var(--symbol-size, var(--lr-font-size-m)); }
+  :host([data-effective-size='s']) { --lr-rating-size: var(--symbol-size, var(--lr-font-size-lg)); }
+  :host([data-effective-size='m']) { --lr-rating-size: var(--symbol-size, var(--lr-font-size-xl)); }
+  :host([data-effective-size='l']) { --lr-rating-size: var(--symbol-size, var(--lr-font-size-2xl)); }
+  :host([data-effective-size='xl']) { --lr-rating-size: var(--symbol-size, var(--lr-font-size-3xl)); }
   /* justify-content pairs with the min-inline-size hit-area floor below: a low-max rating (a
      single star, say) is narrower than that floor, and the default justify-content
      (normal => flex-start) would push the stars against the leading edge of an otherwise
@@ -29,7 +29,7 @@ export const styles = css`
      [disabled] because only the former also tracks an ancestor <fieldset disabled>, which
      formDisabledCallback() honours but never writes to the host's own attribute. */
   :host(:not(:disabled):not([readonly])) [part~='base'] { cursor: pointer; }
-  [part~='base']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
+  :host(:focus-visible) [part~='base'] { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   /* Gives mouse users the same 'this is interactive' cue the :focus-visible outline above already
      gives keyboard users -- mirrors lr-checkbox's/lr-radio's [part~='base']:hover pattern, gated via
      :host(:not(:disabled):not([readonly])) (matching the pointer-cursor rule above -- a readonly

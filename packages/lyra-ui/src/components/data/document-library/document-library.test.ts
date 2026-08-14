@@ -245,7 +245,7 @@ it("does not render the tag filter combobox when no document declares a tag", as
   const el = await fixture(
     html`<lr-document-library .documents=${untagged}></lr-document-library>`
   );
-  expect(el.shadowRoot!.querySelector("lr-combobox")).to.not.exist;
+  expect((el.shadowRoot!.querySelector("lr-combobox")) == null).to.be.true;
 });
 
 it("prunes a self-managed tag filter when its tag disappears so results remain clearable", async () => {
@@ -432,7 +432,7 @@ it('"Clear selection" empties selectedIds and emits lr-selection-change with an 
   expect((event as CustomEvent).detail).to.deep.equal({ ids: [] });
   expect(el.selectedIds).to.deep.equal([]);
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="selection-bar"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="selection-bar"]')) == null).to.be.true;
 });
 
 it("prunes a selected id that no longer exists in documents, without firing lr-selection-change", async () => {

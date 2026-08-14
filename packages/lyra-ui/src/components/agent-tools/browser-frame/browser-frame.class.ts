@@ -211,6 +211,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
     // The status shown at mount is context, not a user-triggered change. Later lifecycle
     // transitions are infrequent and useful, so announce each one as its own light-DOM addition.
     if (this.hasUpdated && !this.suppressNextStatusAnnouncement && changed.has('status')) {
@@ -219,6 +220,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
   }
 
   protected override updated(_changed: PropertyValues<this>): void {
+    super.updated(_changed);
     this.suppressNextStatusAnnouncement = false;
   }
 

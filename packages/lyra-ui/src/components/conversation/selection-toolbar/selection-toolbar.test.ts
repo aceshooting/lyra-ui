@@ -191,7 +191,7 @@ it('keeps an otherwise-fitting RTL edge toolbar in one row before collision shif
 
 it('starts positioning when text becomes nonempty while open', async () => {
   const el = (await fixture(html` <lr-selection-toolbar open></lr-selection-toolbar> `)) as LyraSelectionToolbar;
-  expect(el.shadowRoot!.querySelector('[part="toolbar"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="toolbar"]')) == null).to.be.true;
 
   el.text = 'selected';
   await el.updateComplete;

@@ -193,7 +193,7 @@ describe('lr-email-viewer', () => {
   it('falls back to plain text', async () => {
     const { el, restore } = await loaded(TEXT_EML);
     try {
-      expect(el.shadowRoot!.querySelector('[part="body-html"]')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('[part="body-html"]')) == null).to.be.true;
       expect(el.shadowRoot!.querySelector('[part="body-text"]')!.textContent).to.contain('See you at noon.');
     } finally { restore(); }
   });
@@ -274,8 +274,8 @@ describe('lr-email-viewer', () => {
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
         'This viewer needs the optional "dompurify" package installed to render safely.',
       );
-      expect(el.shadowRoot!.querySelector('[part="body-html"]')).to.not.exist;
-      expect(el.shadowRoot!.querySelector('[part="body-text"]')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('[part="body-html"]')) == null).to.be.true;
+      expect((el.shadowRoot!.querySelector('[part="body-text"]')) == null).to.be.true;
     } finally { restore(); }
   });
 
@@ -303,7 +303,7 @@ describe('lr-email-viewer', () => {
       const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer src="https://example.test/message.eml"></lr-email-viewer>`);
       await waitUntil(() => el.shadowRoot!.querySelector('[part="body"]') !== null);
       expect(el.shadowRoot!.querySelector('[part="body-text"]')!.textContent).to.contain('See you at noon.');
-      expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('[part="error"]')) == null).to.be.true;
     } finally { restore(); }
   });
 
@@ -376,7 +376,7 @@ describe('lr-email-viewer', () => {
       el.src = 'https://example.test/fresh.eml';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="body"]') !== null);
       expect(signals[0]?.aborted, 'the stale request should have been aborted').to.be.true;
-      expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('[part="error"]')) == null).to.be.true;
       expect(renderErrorCount).to.equal(0);
     } finally {
       window.fetch = original;
@@ -683,7 +683,7 @@ describe('lr-email-viewer', () => {
       const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>`);
       try {
         await waitUntil(() => el.shadowRoot!.querySelector('[part="body-text"]') !== null);
-        expect(el.shadowRoot!.querySelector('[part="quote-toggle"]')).to.not.exist;
+        expect((el.shadowRoot!.querySelector('[part="quote-toggle"]')) == null).to.be.true;
       } finally {
         restore();
       }
@@ -915,7 +915,7 @@ describe('lr-email-viewer', () => {
     });
 
     it('memoizes folded HTML across unrelated re-renders and only re-parses when the fold state actually changes', async () => {
-      // Regression coverage for the redundant-reparse finding: `foldHtmlQuotes()` used to run a
+      // `foldHtmlQuotes()` used to run a
       // fresh `DOMParser().parseFromString()` + `QUOTE_SELECTOR` walk on every render while
       // `fold-quotes` is on, including renders triggered by an unrelated property write. Counting
       // real `DOMParser` construction/parse calls (the same instrumentation style used by "parses
@@ -999,7 +999,7 @@ describe('lr-email-viewer', () => {
     it('body rendering is byte-identical with fold-quotes off (the default)', async () => {
       const { el, restore } = await loaded(SAMPLE_EML);
       try {
-        expect(el.shadowRoot!.querySelector('[part="quote-toggle"]')).to.not.exist;
+        expect((el.shadowRoot!.querySelector('[part="quote-toggle"]')) == null).to.be.true;
         expect(el.shadowRoot!.querySelector('[part="body-html"] strong')!.textContent).to.equal('up 12%');
       } finally {
         restore();

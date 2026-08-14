@@ -53,7 +53,7 @@ export const NarrowAllocation: Story = {
     style="--lr-command-palette-max-inline-size: 320px;"
     .open=${context.viewMode !== 'docs'}
     .commands=${[
-      { id: 'open', label: 'Open File', description: '/Users/alexandra-morrison/Projects/lyra-ui-workspace/very-long-nested-directory-path/index.ts', shortcut: '⌘O' },
+      { id: 'open', label: 'Open File', description: '/workspace/example-project/very-long-nested-directory-path/index.ts', shortcut: '⌘O' },
       { id: 'save', label: 'Save', group: 'File' },
     ]}
   ></lr-command-palette>`,

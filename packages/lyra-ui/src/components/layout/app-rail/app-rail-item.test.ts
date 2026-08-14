@@ -256,7 +256,7 @@ describe("tooltip", () => {
     expect(flyout!.textContent!.trim()).to.equal("Dashboard");
     base.dispatchEvent(new FocusEvent("blur", { bubbles: true }));
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="tooltip"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="tooltip"]')) == null).to.be.true;
   });
 
   it("does not show a flyout when tooltip is unset (the default)", async () => {
@@ -266,7 +266,7 @@ describe("tooltip", () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     base.dispatchEvent(new FocusEvent("focus", { bubbles: true }));
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="tooltip"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="tooltip"]')) == null).to.be.true;
   });
 
   it("does not show a flyout when tooltip is set but icon-only is not active (label is already visible)", async () => {
@@ -276,7 +276,7 @@ describe("tooltip", () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     base.dispatchEvent(new FocusEvent("focus", { bubbles: true }));
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="tooltip"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="tooltip"]')) == null).to.be.true;
   });
 
   it("dismisses a visible flyout when tooltip is revoked", async () => {

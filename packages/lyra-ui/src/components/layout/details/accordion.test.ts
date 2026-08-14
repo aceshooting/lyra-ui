@@ -789,7 +789,7 @@ describe('<lr-accordion-item>', () => {
 
     item.headingLevel = 'none';
     await item.updateComplete;
-    expect(item.shadowRoot!.querySelector('[part~="heading"]')).to.equal(null);
+    expect((item.shadowRoot!.querySelector('[part~="heading"]')) === (null)).to.equal(true);
   });
 
   it('forwards a host aria-label to the trigger by presence and restores content naming when removed', async () => {

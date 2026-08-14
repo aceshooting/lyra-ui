@@ -72,7 +72,7 @@ function sha256(buffer) {
 // Determinism controls. Before these existed the harness's only settling step was a
 // `networkidle` + fixed 250ms wait, which let three independent noise sources move pixels
 // between two runs of *identical* code -- the reason baseline refreshes kept re-blessing a
-// dozen-plus PNGs on sub-1% byte churn (e.g. commit 12d00029, 24 files):
+// dozen-plus PNGs on sub-1% byte churn:
 //   1. in-flight CSS animations/transitions -- handled per-screenshot by Playwright's
 //      `animations: 'disabled'` (fast-forwards finite ones to their final frame, cancels
 //      infinite ones) plus a context-level `reducedMotion: 'reduce'` for the JS-driven

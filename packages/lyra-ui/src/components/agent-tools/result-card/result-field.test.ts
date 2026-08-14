@@ -25,7 +25,7 @@ it('renders the label (with trailing colon) and the plain value prop', async () 
 
 it('renders no label part when label is unset', async () => {
   const el = (await fixture(html`<lr-result-field value="200 OK"></lr-result-field>`)) as LyraResultField;
-  expect(el.shadowRoot!.querySelector('[part="label"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="label"]')) == null).to.be.true;
 });
 
 it('renders nothing in the value part when neither value nor slotted content is present', async () => {

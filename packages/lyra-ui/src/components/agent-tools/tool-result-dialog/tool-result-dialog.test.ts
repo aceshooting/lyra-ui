@@ -114,7 +114,7 @@ it('omits the duration part entirely when duration-ms is unset', async () => {
   const el = (await fixture(
     html`<lr-tool-result-dialog tool-name="run_python"></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
-  expect(el.shadowRoot!.querySelector('[part="duration"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="duration"]')) == null).to.be.true;
 });
 
 it('formats sub-second durations in milliseconds and second-plus durations in seconds', async () => {
@@ -153,7 +153,7 @@ it('omits non-finite durations', async () => {
   el.durationMs = Number.NaN;
   await el.updateComplete;
 
-  expect(el.shadowRoot!.querySelector('[part="duration"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="duration"]')) == null).to.be.true;
 });
 
 it('clamps a negative duration to 0 instead of rendering a nonsensical negative duration', async () => {

@@ -298,6 +298,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   private readonly progressTextId = nextId('tour-progress-text');
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     // Normalizes a direct `activeIndex` assignment (property or `active-index` attribute) that
     // bypasses `goToStep()`'s own `clampIndex()` -- e.g. two-way-binding an external store, or a
     // non-numeric `active-index` attribute (NaN via the `type: Number` converter). Setting the
@@ -336,6 +337,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   // Runs after render so the manager can resolve the (possibly just-swapped, per keyed()) panel,
   // and so activateStep() can query the freshly-rendered popover/spotlight/mask elements.
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     const activationChanged = changed.has('open') || changed.has('activeIndex') || changed.has('steps');
     const geometryChanged =
       changed.has('placement') ||
@@ -406,7 +408,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
   /** Opens the tour at `index` (default `0`), clamped to `[0, steps.length - 1]`. Equivalent to
    *  `this.activeIndex = index; this.open = true;` plus the `lr-tour-start` event. */
-  start(index = 0): void {
+  start(index: number = 0): void {
     if (this.steps.length === 0) return;
     this.activeIndex = this.clampIndex(index);
     this.open = true;

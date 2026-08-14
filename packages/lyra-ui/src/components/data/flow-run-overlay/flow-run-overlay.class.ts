@@ -149,6 +149,7 @@ export class LyraFlowRunOverlay extends LyraElement {
   // is already waiting on, with no extra cycle and no dev-mode "scheduled an update after an
   // update completed" warning.
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (this.hasUpdated && changed.has('for')) this.rebindCanvas();
     if (changed.has('decorations')) {
       this.announceTransitions(changed.get('decorations') as FlowRunDecorations | undefined);
@@ -156,6 +157,7 @@ export class LyraFlowRunOverlay extends LyraElement {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('decorations')) {
       this.applyDecorations();
     }

@@ -20,7 +20,7 @@ describe('lr-document-compare', () => {
       expect((diff) != null).to.equal(true);
       expect(diff.oldText).to.equal('a\nb');
       expect(diff.newText).to.equal('a\nc');
-      expect(el.shadowRoot!.querySelector('[part="panes"]')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('[part="panes"]')) == null).to.be.true;
     });
 
     it('treats a missing oldVersion/newVersion as empty diff text rather than throwing', async () => {
@@ -95,7 +95,7 @@ describe('lr-document-compare', () => {
       expect(previewOld.src).to.equal('https://example.test/a.png');
       expect(previewNew.filename).to.equal('Final');
       expect(previewNew.src).to.equal('https://example.test/b.png');
-      expect(el.shadowRoot!.querySelector('lr-diff-view')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('lr-diff-view')) == null).to.be.true;
     });
 
     it('labels each pane from version.name, falling back to version.version, then a localized default', async () => {
@@ -114,7 +114,7 @@ describe('lr-document-compare', () => {
       const el = (await fixture(html`<lr-document-compare view="side-by-side"></lr-document-compare>`)) as LyraDocumentCompare;
       await el.updateComplete;
       const paneOld = el.shadowRoot!.querySelector('[part="pane-old"]')!;
-      expect(paneOld.querySelector('lr-document-preview')).to.not.exist;
+      expect((paneOld.querySelector('lr-document-preview')) == null).to.be.true;
       expect(paneOld.querySelector('[part="pane-empty"]')).to.exist;
     });
 

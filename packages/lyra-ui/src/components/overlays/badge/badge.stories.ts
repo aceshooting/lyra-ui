@@ -75,7 +75,7 @@ export const UpstreamWriteAliases: StoryObj = {
     docs: {
       description: {
         story:
-          '`primary` normalizes to the canonical `brand` variant. `small`, `medium`, and `large` normalize to `s`, `m`, and `l`; `lr-tag` also maps `text` to its neutral plain treatment.',
+          '`primary`, `small`, `medium`, and `large` remain the reflected/read-back values a migrated app authored while resolving to the same visual treatments as `brand`, `s`, `m`, and `l`. `lr-tag` likewise preserves `text` and renders its neutral plain treatment. The badge host owns `role="status"`; the tag deliberately does not inherit it.',
       },
     },
   },

@@ -304,11 +304,13 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
   }
 
-  override firstUpdated(): void {
+  override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     this.announceRegionEl = this.renderRoot.querySelector<HTMLElement>('[part="announcer"]') ?? undefined;
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('content')) {
       const previousSearch = this.searchState();
       this.cancelPendingAnnouncement();

@@ -107,6 +107,27 @@ export const GenericDownloadFallback: Story = {
   `,
 };
 
+export const ShellOwnedDownloadAction: Story = {
+  name: 'Unsupported format — composing shell owns download',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A composing shell can set the property-only `suppressDownload` control when it already renders the document download action and needs the fallback to avoid duplicating it.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-document-preview
+      style="max-width: 24rem;"
+      src="https://example.com/files/quarterly-report.pdf"
+      mime-type="application/pdf"
+      filename="quarterly-report.pdf"
+      .suppressDownload=${true}
+    ></lr-document-preview>
+  `,
+};
+
 export const UnsupportedSlotEscapeHatch: Story = {
   name: 'unsupported slot — custom PDF viewer stand-in',
   parameters: {

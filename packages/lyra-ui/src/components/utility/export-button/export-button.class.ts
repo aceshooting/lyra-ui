@@ -210,7 +210,8 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     }
   };
 
-  protected override firstUpdated(): void {
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     // Single delegated listener catches Escape/Arrow/Home/End from the
     // trigger button or any menu-item inside this shadow root.
     this.renderRoot.addEventListener('keydown', this.onKeyDown as EventListener);

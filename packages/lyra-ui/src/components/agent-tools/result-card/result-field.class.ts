@@ -1,3 +1,4 @@
+import type { PropertyValues } from 'lit';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -47,23 +48,20 @@ export class LyraResultField extends LyraElement {
 
   @state() private hasValueSlot = false;
 
-  protected override willUpdate(): void {
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
-      this.hasValueSlot = hasRealContent(Array.from(this.childNodes));
+      this.seedFirstRenderState(() => {
+        this.hasValueSlot = hasRealContent(Array.from(this.childNodes));
+      });
     }
   }
 
-  override firstUpdated(): void {
-    // Fallback reconciliation against the fully-resolved slot assignment,
-    // the same belt-and-suspenders pass lr-source-card's hasFullSlot and
-    // lr-empty's hasIcon/hasActions take -- a no-op in the common case
-    // since willUpdate already seeded the correct value above.
-    const slot = this.shadowRoot!.querySelector('slot') as HTMLSlotElement;
-    this.hasValueSlot = hasRealContent(slot.assignedNodes({ flatten: true }));
-  }
-
   private onSlotChange = (e: Event): void => {
-    this.hasValueSlot = hasRealContent((e.target as HTMLSlotElement).assignedNodes({ flatten: true }));
+    // Do not flatten here: when no light-DOM node is assigned, the flattened list contains this
+    // slot's own `value` fallback. Treating that fallback as assigned content would alternately
+    // remove and restore itself on every update.
+    this.hasValueSlot = hasRealContent((e.target as HTMLSlotElement).assignedNodes());
   };
 
   override render(): TemplateResult {
@@ -73,8 +71,8 @@ export class LyraResultField extends LyraElement {
         ${hasLabel
           ? html`<span part="label">${this.localize('resultFieldLabel', undefined, { label: this.label })}</span>`
           : nothing}
-        <span part="value"
-          >${this.hasValueSlot ? nothing : this.value}<slot @slotchange=${this.onSlotChange}></slot
+        <span part="value"><slot @slotchange=${this.onSlotChange}
+          >${this.hasValueSlot ? nothing : this.value}</slot
         ></span>
       </div>
     `;

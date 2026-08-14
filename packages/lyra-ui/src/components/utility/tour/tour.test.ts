@@ -133,9 +133,9 @@ describe('lr-tour', () => {
     )) as HTMLDivElement;
     const tour = el.querySelector('lr-tour') as LyraTour;
     expect(tour.open).to.be.false;
-    expect(tour.shadowRoot!.querySelector('[part="backdrop"]')).to.not.exist;
-    expect(tour.shadowRoot!.querySelector('[part="spotlight"]')).to.not.exist;
-    expect(tour.shadowRoot!.querySelector('[part="popover"]')).to.not.exist;
+    expect((tour.shadowRoot!.querySelector('[part="backdrop"]')) == null).to.be.true;
+    expect((tour.shadowRoot!.querySelector('[part="spotlight"]')) == null).to.be.true;
+    expect((tour.shadowRoot!.querySelector('[part="popover"]')) == null).to.be.true;
   });
 
   it('start() opens at the given index (default 0), sets open, and fires lr-tour-start', async () => {
@@ -925,7 +925,7 @@ describe('lr-tour', () => {
     const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
     expect((popover) != null).to.equal(true);
     expect(popover.hasAttribute('data-unanchored')).to.be.true;
-    expect(el.shadowRoot!.querySelector('[part="backdrop"] .cutout')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="backdrop"] .cutout')) == null).to.be.true;
   });
 
   it('showProgress=false hides the progress wrapper; the default renders "Step X of Y" text that tracks activeIndex', async () => {
@@ -945,7 +945,7 @@ describe('lr-tour', () => {
 
     tour.showProgress = false;
     await tour.updateComplete;
-    expect(tour.shadowRoot!.querySelector('[part="progress"]')).to.not.exist;
+    expect((tour.shadowRoot!.querySelector('[part="progress"]')) == null).to.be.true;
   });
 
   it('formats both progress numbers with the effective locale', async () => {
@@ -995,7 +995,7 @@ describe('lr-tour', () => {
 
     tour.next();
     await tour.updateComplete;
-    expect(tour.shadowRoot!.querySelector('[part="previous-button"]'), 'hidePrevious removes the control entirely').to.not.exist;
+    expect((tour.shadowRoot!.querySelector('[part="previous-button"]')) == null, 'hidePrevious removes the control entirely').to.be.true;
 
     tour.next();
     await tour.updateComplete;
@@ -1346,7 +1346,7 @@ describe('lr-tour', () => {
   it('wraps the internal previous-button/skip-button hover rule in :where() so a consumer ::part(...):hover override wins without !important', async () => {
     // Regression test: an unwrapped [part='previous-button']:hover:not(:disabled) selector has
     // specificity (0,3,0), which beats a consumer's ::part(previous-button):hover at (0,1,1) --
-    // matches the established remediation lr-pagination/lr-attachment-trigger already use.
+    // matches the low-specificity pattern lr-pagination/lr-attachment-trigger already use.
     const el = (await fixture(
       html`<div>
         <lr-tour .steps=${makeSteps(2)} open></lr-tour>

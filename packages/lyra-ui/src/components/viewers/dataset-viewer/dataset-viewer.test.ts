@@ -399,7 +399,7 @@ describe('lr-dataset-viewer', () => {
       try {
         el.src = 'https://example.test/big.tsv';
         await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
-        expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
+        expect((el.shadowRoot!.querySelector('[part="error"]')) == null).to.be.true;
         expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-rowcount')).to.equal('5001');
       } finally {
         restore();

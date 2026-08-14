@@ -13,7 +13,7 @@ it('defaults to empty suggestions, wrap false, and renders nothing when empty', 
   const el = (await fixture(html`<lr-suggestion-chips></lr-suggestion-chips>`)) as LyraSuggestionChips;
   expect(el.suggestions).to.deep.equal([]);
   expect(el.wrap).to.be.false;
-  expect(el.shadowRoot!.querySelector('[part="base"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="base"]')) == null).to.be.true;
 });
 
 it('renders one chip per suggestion inside a scroller when not wrap', async () => {
@@ -29,7 +29,7 @@ it('renders chips in a plain wrapping row (no scroller) when wrap is set', async
   const el = (await fixture(
     html`<lr-suggestion-chips wrap .suggestions=${suggestions}></lr-suggestion-chips>`,
   )) as LyraSuggestionChips;
-  expect(el.shadowRoot!.querySelector('lr-scroller')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('lr-scroller')) == null).to.be.true;
   expect(el.shadowRoot!.querySelectorAll('[part~="chip"]').length).to.equal(3);
 });
 
@@ -38,7 +38,7 @@ it('renders the optional detail line only when set', async () => {
     html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,
   )) as LyraSuggestionChips;
   const chips = [...el.shadowRoot!.querySelectorAll('[part~="chip"]')];
-  expect(chips[0].querySelector('[part="chip-detail"]')).to.not.exist;
+  expect((chips[0].querySelector('[part="chip-detail"]')) == null).to.be.true;
   expect(chips[1].querySelector('[part="chip-detail"]')!.textContent).to.equal(
     'Related to the last stack trace',
   );

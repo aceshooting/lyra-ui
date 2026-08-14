@@ -437,9 +437,9 @@ it('immediately collapses a reused expanded branch when a same-id data refresh d
   await el.updateComplete;
 
   const [branchAfter, visible] = [...el.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
-  expect(branchAfter).to.equal(branch);
+  expect((branchAfter) === (branch)).to.equal(true);
   expect(branchAfter.expanded).to.be.false;
-  expect(branchAfter.shadowRoot!.querySelector('[part="group"]')).to.be.null;
+  expect((branchAfter.shadowRoot!.querySelector('[part="group"]')) === null).to.be.true;
   expect((visible as unknown as HTMLElement).tabIndex).to.equal(0);
   expect(
     [...el.querySelectorAll<HTMLElement>('lr-tree-item')].filter((node) => node.tabIndex === 0),
@@ -504,7 +504,7 @@ it('expandAll() routes a lazy node through the same lazy-load path expand() uses
   await el.expandAll();
   const request = await requested;
 
-  expect(request.detail.item).to.equal(lazy);
+  expect((request.detail.item) === (lazy)).to.equal(true);
   expect(lazy.loading, 'expandAll() must trigger beginLazyLoad() exactly like a click-driven expand() does').to.be
     .true;
   expect(lazy.expanded, 'a lazy node must not report expanded until its children actually arrive').to.be.false;
@@ -545,7 +545,7 @@ it('preserves per-node expanded state when data is reassigned a new array with t
   await el.updateComplete;
 
   const rootAfter = el.querySelector('lr-tree-item') as any;
-  expect(rootAfter).to.equal(root, 'the same node instance should be reused, not recreated');
+  expect((rootAfter) === (root)).to.equal(true, 'the same node instance should be reused, not recreated');
   expect(rootAfter.expanded).to.be.true;
 });
 

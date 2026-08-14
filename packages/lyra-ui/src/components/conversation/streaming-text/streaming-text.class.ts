@@ -214,6 +214,7 @@ export class LyraStreamingText extends LyraElement {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('coalesceMs')) {
       this.coalescer.throttleMs = this.safeCoalesceMs;
     }

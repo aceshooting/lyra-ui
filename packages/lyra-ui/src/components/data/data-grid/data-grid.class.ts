@@ -631,6 +631,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   }
 
   protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
     if (changed.has("dataSource") && this.dataSource)
       this.scheduleServerRequest(false);
     const requestRelevant =

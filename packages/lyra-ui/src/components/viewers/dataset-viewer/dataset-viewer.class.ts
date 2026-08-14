@@ -31,7 +31,7 @@ type OwnedAnimationFrameWait = {
 };
 const MAX_SEARCH_MATCHES = 1_000;
 
-export interface LyraDatasetViewerEventMap extends LyraAnchorTargetEventMap {
+export interface LyraDatasetViewerEventMap extends Omit<LyraAnchorTargetEventMap, 'lr-text-select'> {
   'lr-render-error': CustomEvent<{ error: unknown }>;
   /** Fired whenever the search query, match count, or active match index changes, from
    *  `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. */

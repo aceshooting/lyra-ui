@@ -1,4 +1,5 @@
 import {
+  composedParentElement,
   isAccessibilitySubtreeExcluded,
   isAccessibilityVisibilityHidden,
 } from './accessibility-visibility.js';
@@ -35,17 +36,71 @@ function renderedChildNodes(element: Element): Node[] {
  * The returned value intentionally preserves source whitespace. Announcement producers can apply
  * their own normalization and context punctuation after combining multiple roots.
  */
-export function composedAccessibilityText(node: Node, inheritedTextVisible = true): string {
+const MAX_ACCESSIBILITY_TEXT_NODES = 10_000;
+
+type AccessibilityTextContext = {
+  labelReferenceRoots: Set<Document | ShadowRoot>;
+  remaining: number;
+  referencedElements: Set<Element>;
+  visited: Set<Node>;
+};
+
+export type ComposedAccessibilityTextResult = {
+  labelReferenceRoots: ReadonlySet<Document | ShadowRoot>;
+  text: string;
+  referencedElements: ReadonlySet<Element>;
+};
+
+function hasExcludedComposedAncestor(element: Element): boolean {
+  let current: Element | null = element;
+  while (current) {
+    if (isAccessibilitySubtreeExcluded(current)) return true;
+    current = composedParentElement(current);
+  }
+  return false;
+}
+
+function addLabelReferenceRoot(context: AccessibilityTextContext, node: Node): void {
+  const root = node.getRootNode();
+  if (root.nodeType === 9 || (root.nodeType === 11 && 'host' in root)) {
+    context.labelReferenceRoots.add(root as Document | ShadowRoot);
+  }
+}
+
+function labelledByElements(element: Element, context: AccessibilityTextContext): Element[] {
+  const reflected = (element as Element & { ariaLabelledByElements?: readonly Element[] | null })
+    .ariaLabelledByElements;
+  if (reflected?.length) {
+    for (const reference of reflected) addLabelReferenceRoot(context, reference);
+    return [...reflected];
+  }
+  const ids = element.getAttribute('aria-labelledby')?.trim().split(/\s+/).filter(Boolean) ?? [];
+  const root = element.getRootNode() as Document | ShadowRoot;
+  // Enroll the identity root even while every id is unresolved. Insertion, replacement, removal,
+  // or an id-only transfer can then trigger a fresh bounded traversal without requiring the
+  // referencing element itself to mutate.
+  if (ids.length > 0) addLabelReferenceRoot(context, element);
+  return ids.flatMap((id) => root.getElementById?.(id) ?? []);
+}
+
+function accessibilityText(
+  node: Node,
+  inheritedTextVisible: boolean,
+  context: AccessibilityTextContext,
+  referenced = false,
+): string {
+  if (context.remaining-- <= 0 || context.visited.has(node)) return '';
+  context.visited.add(node);
   if (node.nodeType === 3) return inheritedTextVisible ? node.textContent ?? '' : '';
   if (node.nodeType === 11) {
     return Array.from(node.childNodes, (child) =>
-      composedAccessibilityText(child, inheritedTextVisible)).join(' ');
+      accessibilityText(child, inheritedTextVisible, context, referenced)).join(' ');
   }
   if (node.nodeType !== 1) return '';
 
   const element = node as Element;
   if (
-    isAccessibilitySubtreeExcluded(element) ||
+    (!referenced && hasExcludedComposedAncestor(element)) ||
     NON_CONTENT_ELEMENTS.has(element.localName)
   ) {
     return '';
@@ -53,7 +108,17 @@ export function composedAccessibilityText(node: Node, inheritedTextVisible = tru
 
   // Computed visibility already includes inheritance. A descendant can explicitly restore
   // visibility, so this value replaces rather than combines with inheritedTextVisible.
-  const ownTextVisible = !isAccessibilityVisibilityHidden(element);
+  // A hidden subtree explicitly reached through aria-labelledby still participates in the
+  // accessible-name traversal. Keep that referenced state for the complete subtree rather than
+  // applying ordinary rendered-text visibility to its descendants.
+  const ownTextVisible = referenced || !isAccessibilityVisibilityHidden(element);
+  const labelledBy = ownTextVisible ? labelledByElements(element, context) : [];
+  if (labelledBy.length > 0) {
+    for (const label of labelledBy) context.referencedElements.add(label);
+    return labelledBy
+      .map((label) => accessibilityText(label, true, context, true))
+      .join(' ');
+  }
   const label = ownTextVisible ? element.getAttribute('aria-label')?.trim() : '';
   if (label) return label;
 
@@ -63,6 +128,27 @@ export function composedAccessibilityText(node: Node, inheritedTextVisible = tru
   }
 
   return renderedChildNodes(element)
-    .map((child) => composedAccessibilityText(child, ownTextVisible))
+    .map((child) => accessibilityText(child, ownTextVisible, context, referenced))
     .join(' ');
+}
+
+export function composedAccessibilityTextResult(
+  node: Node,
+  inheritedTextVisible = true,
+): ComposedAccessibilityTextResult {
+  const context: AccessibilityTextContext = {
+    labelReferenceRoots: new Set<Document | ShadowRoot>(),
+    remaining: MAX_ACCESSIBILITY_TEXT_NODES,
+    referencedElements: new Set<Element>(),
+    visited: new Set<Node>(),
+  };
+  return {
+    labelReferenceRoots: context.labelReferenceRoots,
+    text: accessibilityText(node, inheritedTextVisible, context),
+    referencedElements: context.referencedElements,
+  };
+}
+
+export function composedAccessibilityText(node: Node, inheritedTextVisible = true): string {
+  return composedAccessibilityTextResult(node, inheritedTextVisible).text;
 }

@@ -1033,7 +1033,7 @@ API details.
 | `<lr-schema-viewer>` | — (extra) | Read-only, recursively expandable JSON Schema browser for tool inputs, structured outputs, and protocol payloads |
 | `<lr-tool-timeline>` | — (extra) | Chronological list of an agent run's tool/function calls, each rendered through `lr-tool-call-chip` (name/status/duration) and `lr-tool-result-view` (args/result), with per-entry retry counts, sensitive-field redaction, and a shared `lr-tool-approval-dialog` for entries gated behind human approval |
 | `<lr-memory-panel>` | — (extra) | Agent working-memory surface — short-term context and long-term memories, each item's confidence and optional grounding provenance via `lr-provenance-panel`, with add/remove/forget actions gated behind an `lr-confirm-bar` confirmation step |
-| `<lr-policy-summary>` | — (extra) | Read-only list of guardrail, permission, privacy, and tool-policy decisions (`allow`/`deny`/`needs-review`), each with an always-visible, accessible explanation never conveyed by color alone; composes `lr-badge` and `lr-callout`, with `lr-details` for optional richer detail |
+| `<lr-policy-summary>` | — (extra) | Read-only list of guardrail, permission, privacy, and tool-policy decisions (`allow`/`deny`/`needs-review`), each with an always-visible, accessible explanation never conveyed by color alone; composes `lr-badge`, with `lr-details` for optional richer detail |
 | `<lr-approval-queue>` | — (extra) | Keyboard-accessible pending human-approval list composing `lr-tool-approval-dialog`; forwards namespaced selection, decision, and close events without owning persistence |
 
 **Dashboards & orchestration**

@@ -30,14 +30,14 @@ describe('lr-avatar', () => {
   it('renders initials by default', async () => {
     const el = (await fixture(html`<lr-avatar initials="AB"></lr-avatar>`)) as LyraAvatar;
     expect(el.shadowRoot!.querySelector('[part="initials"]')!.textContent).to.equal('AB');
-    expect(el.shadowRoot!.querySelector('[part="image"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="image"]')) == null).to.be.true;
   });
 
   it('does not render an image for an unsafe URL in `image`', async () => {
     const el = (await fixture(
       html`<lr-avatar image="javascript:alert(1)" initials="AB"></lr-avatar>`,
     )) as LyraAvatar;
-    expect(el.shadowRoot!.querySelector('[part="image"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="image"]')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="initials"]')!.textContent).to.equal('AB');
   });
 
@@ -48,7 +48,7 @@ describe('lr-avatar', () => {
     expect(icon.hidden).to.be.false;
     const slot = icon.querySelector('slot') as HTMLSlotElement;
     expect(slot.assignedNodes({ flatten: true }).map((node) => node.textContent).join('')).to.contain('🤖');
-    expect(el.shadowRoot!.querySelector('[part="initials"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="initials"]')) == null).to.be.true;
   });
 
   it('keeps interactive default and icon-slot glyphs out of focus and the accessibility tree', async () => {
@@ -91,7 +91,7 @@ describe('lr-avatar', () => {
     let image = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;
     image.dispatchEvent(new Event('error'));
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="image"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="image"]')) == null).to.be.true;
 
     el.image = sourceB;
     await el.updateComplete;
@@ -119,7 +119,7 @@ describe('lr-avatar', () => {
     const img = el.shadowRoot!.querySelector('img') as HTMLImageElement;
     img.dispatchEvent(new Event('error'));
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="image"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="image"]')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="initials"]')!.textContent).to.equal('AB');
   });
 
@@ -129,7 +129,7 @@ describe('lr-avatar', () => {
     )) as LyraAvatar;
     (el.shadowRoot!.querySelector('img') as HTMLImageElement).dispatchEvent(new Event('error'));
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="image"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="image"]')) == null).to.be.true;
 
     el.image = TEST_IMAGE_SRC_REPLACEMENT;
     await el.updateComplete;
@@ -184,8 +184,8 @@ describe('lr-avatar', () => {
     )) as LyraAvatar;
     const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
     expect(icon.hasAttribute('hidden')).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="initials"]')).to.not.exist;
-    expect(el.shadowRoot!.querySelector('[part="image"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="initials"]')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part="image"]')) == null).to.be.true;
   });
 
   it('prefers slotted content over a set src (slotted > src > initials)', async () => {
@@ -200,8 +200,8 @@ describe('lr-avatar', () => {
     await el.updateComplete;
     const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
     expect(icon.hasAttribute('hidden')).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="image"]')).to.not.exist;
-    expect(el.shadowRoot!.querySelector('[part="initials"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="image"]')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part="initials"]')) == null).to.be.true;
   });
 
   it('collapses the icon part when no default-slot content is provided', async () => {
@@ -221,7 +221,7 @@ describe('lr-avatar', () => {
     await slotChange;
     await el.updateComplete;
     expect(icon.hasAttribute('hidden')).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="initials"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="initials"]')) == null).to.be.true;
   });
 
   it('recognizes a default-slot element created in its adopted iframe realm', async () => {

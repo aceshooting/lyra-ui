@@ -10,7 +10,7 @@ This file is a short index. The primary documentation lives on the sites linked 
 ## Where to go
 
 - **[Live component docs (Storybook)](https://aceshooting.github.io/lyra-ui/)** — every component
-  with a live, editable example, source code, and full API reference (props, events, slots, CSS
+  with a live, interactive example, source code, and full API reference (props, events, slots, CSS
   parts/custom properties).
 - **[www.lyra-ui.com](https://www.lyra-ui.com/)** — project website.
 - **[Package README](../packages/lyra-ui/README.md)** — install instructions, quick start,
@@ -48,4 +48,3 @@ This file is a short index. The primary documentation lives on the sites linked 
 `docs/` holds this index, public policy/RFC material, and `docs/agents/` — the detailed contributor
 reference behind [AGENTS.md](../AGENTS.md); it does not duplicate the Storybook site or the package
 README.
-`docs/superpowers/` (gitignored) is internal planning scratch space, not published documentation.

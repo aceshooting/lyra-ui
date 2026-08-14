@@ -235,6 +235,7 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('resource')) {
       if (this.hasUpdated && !this.suppressNextResourceAnnouncement) {
         const wasAvailable = this.resourceAvailable(changed.get('resource') as McpAppResource | null | undefined);
@@ -259,6 +260,7 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
   }
 
   protected override updated(_changed: PropertyValues<this>): void {
+    super.updated(_changed);
     this.suppressNextResourceAnnouncement = false;
   }
 

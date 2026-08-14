@@ -29,10 +29,10 @@ it('reflects abbreviate to an attribute so a host can style off it', async () =>
 
 it('renders nothing when no segment is set', async () => {
   const el = (await fixture(html`<lr-usage-badge></lr-usage-badge>`)) as LyraUsageBadge;
-  expect(el.shadowRoot!.querySelector('[part="tokens-in"]')).to.not.exist;
-  expect(el.shadowRoot!.querySelector('[part="tokens-out"]')).to.not.exist;
-  expect(el.shadowRoot!.querySelector('[part="cost"]')).to.not.exist;
-  expect(el.shadowRoot!.querySelector('[part="latency"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="tokens-in"]')) == null).to.be.true;
+  expect((el.shadowRoot!.querySelector('[part="tokens-out"]')) == null).to.be.true;
+  expect((el.shadowRoot!.querySelector('[part="cost"]')) == null).to.be.true;
+  expect((el.shadowRoot!.querySelector('[part="latency"]')) == null).to.be.true;
   expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).hasAttribute('tabindex')).to.be.false;
 });
 
@@ -41,9 +41,9 @@ it('renders only the segments that are set, each independently optional', async 
     html`<lr-usage-badge tokens-in="1204" cost-text="$0.012"></lr-usage-badge>`,
   )) as LyraUsageBadge;
   expect(el.shadowRoot!.querySelector('[part="tokens-in"]')!.textContent!.trim()).to.equal('1,204 in');
-  expect(el.shadowRoot!.querySelector('[part="tokens-out"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="tokens-out"]')) == null).to.be.true;
   expect(el.shadowRoot!.querySelector('[part="cost"]')!.textContent!.trim()).to.equal('$0.012');
-  expect(el.shadowRoot!.querySelector('[part="latency"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="latency"]')) == null).to.be.true;
 });
 
 it('formats latency-ms with the shared duration algorithm', async () => {
@@ -64,7 +64,7 @@ it('uses the effective locale when formatting the built-in duration', async () =
 it('omits the latency segment for a non-numeric latency-ms, and clamps a negative one to "0ms" instead of a negative reading', async () => {
   const nonFinite = (await fixture(html`<lr-usage-badge latency-ms="not-a-number"></lr-usage-badge>`)) as LyraUsageBadge;
   expect(Number.isNaN(nonFinite.latencyMs)).to.be.true;
-  expect(nonFinite.shadowRoot!.querySelector('[part="latency"]')).to.not.exist;
+  expect((nonFinite.shadowRoot!.querySelector('[part="latency"]')) == null).to.be.true;
 
   const negative = (await fixture(html`<lr-usage-badge latency-ms="-50"></lr-usage-badge>`)) as LyraUsageBadge;
   expect(negative.shadowRoot!.querySelector('[part="latency"]')!.textContent!.trim()).to.equal('0ms');
@@ -260,7 +260,7 @@ describe('tooltip breakdown', () => {
     el.latencyMs = undefined;
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).hasAttribute('tabindex')).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="tooltip"]')).to.be.null;
+    expect((el.shadowRoot!.querySelector('[part="tooltip"]')) === null).to.be.true;
 
     el.latencyMs = 100;
     await el.updateComplete;
@@ -280,7 +280,7 @@ describe('tooltip breakdown', () => {
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).hasAttribute('tabindex')).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="tooltip"]')).to.be.null;
+    expect((el.shadowRoot!.querySelector('[part="tooltip"]')) === null).to.be.true;
   });
 });
 

@@ -84,7 +84,7 @@ it('finalizing an entry (same id, interim flips to unset) moves it from the inte
   const log = el.shadowRoot!.querySelector('[part="log"]')!;
   expect(log.querySelectorAll('[part~="entry"]').length).to.equal(1);
   expect(log.querySelector('[part="text"]')!.textContent).to.equal('final text');
-  expect(el.shadowRoot!.querySelector('[part="interim-area"]')).to.be.null;
+  expect((el.shadowRoot!.querySelector('[part="interim-area"]')) === null).to.be.true;
 });
 
 it('a same-id text update replaces the row in place rather than duplicating it', async () => {
@@ -124,7 +124,7 @@ describe('timestamps', () => {
     const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
     el.entries = [{ id: '1', text: 'hi', timestamp: 1700000000000 }];
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="timestamp"]')).to.be.null;
+    expect((el.shadowRoot!.querySelector('[part="timestamp"]')) === null).to.be.true;
 
     el.showTimestamps = true;
     el.formatTimestamp = (ms) => `t=${ms}`;
@@ -199,7 +199,7 @@ describe('follow / stick-to-bottom contract', () => {
     await el.updateComplete;
     expect(el.follow).to.be.true;
     expect(followChanges).to.deep.equal([false, true]);
-    expect(el.shadowRoot!.querySelector('[part="jump-button"]')).to.be.null;
+    expect((el.shadowRoot!.querySelector('[part="jump-button"]')) === null).to.be.true;
   });
 
   it('gives jump-button a hover state', () => {

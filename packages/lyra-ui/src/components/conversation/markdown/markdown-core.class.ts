@@ -459,7 +459,8 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
    *  part of `LyraAnchorTarget`'s public surface -- see `anchor-target.ts`'s class doc), so it's
    *  reached the same way that module's own tests do: through a cast, without declaring a no-op
    *  passthrough override just to satisfy the type checker. */
-  protected override firstUpdated(): void {
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     const contentRoot = this.renderRoot.querySelector('[part="content"]');
     if (!contentRoot) return;
     (this as unknown as { bindTextSelection(root: Element): void }).bindTextSelection(contentRoot);

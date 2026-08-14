@@ -3,8 +3,12 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     position: fixed;
+    inset-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));
+    inset-block-end: max(var(--lr-space-l), var(--lr-safe-area-bottom));
+    inset-inline-start: max(var(--lr-space-l), var(--lr-safe-area-inline-start));
+    inset-inline-end: max(var(--lr-space-l), var(--lr-safe-area-inline-end));
     z-index: var(--lr-layer-toast);
-    display: block;
+    display: grid;
     --lr-toast-gap: var(--gap, var(--lr-space-s));
     --lr-toast-width: var(--width, var(--lr-size-28rem));
     pointer-events: none;
@@ -13,43 +17,27 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     gap: var(--lr-toast-gap);
-    inline-size: var(--lr-toast-width);
-    max-inline-size: calc(
-      100vw - (var(--lr-space-l) * 2) - var(--lr-safe-area-inline-start) -
-        var(--lr-safe-area-inline-end)
-    );
+    inline-size: min(var(--lr-toast-width), 100%);
+    max-inline-size: 100%;
   }
   ::slotted(*) {
     pointer-events: auto;
   }
 
+  :host([placement^='top']) [part='stack'] {
+    align-self: start;
+  }
   :host([placement^='bottom']) [part='stack'] {
+    align-self: end;
     flex-direction: column-reverse;
   }
-  :host([placement='top-start']) {
-    inset-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));
-    inset-inline-start: max(var(--lr-space-l), var(--lr-safe-area-inline-start));
+  :host([placement$='start']) [part='stack'] {
+    justify-self: start;
   }
-  :host([placement='top-end']) {
-    inset-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));
-    inset-inline-end: max(var(--lr-space-l), var(--lr-safe-area-inline-end));
+  :host([placement$='center']) [part='stack'] {
+    justify-self: center;
   }
-  :host([placement='top-center']) {
-    inset-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));
-    inset-inline: 0;
-    margin-inline: auto;
-  }
-  :host([placement='bottom-start']) {
-    inset-block-end: max(var(--lr-space-l), var(--lr-safe-area-bottom));
-    inset-inline-start: max(var(--lr-space-l), var(--lr-safe-area-inline-start));
-  }
-  :host([placement='bottom-end']) {
-    inset-block-end: max(var(--lr-space-l), var(--lr-safe-area-bottom));
-    inset-inline-end: max(var(--lr-space-l), var(--lr-safe-area-inline-end));
-  }
-  :host([placement='bottom-center']) {
-    inset-block-end: max(var(--lr-space-l), var(--lr-safe-area-bottom));
-    inset-inline: 0;
-    margin-inline: auto;
+  :host([placement$='end']) [part='stack'] {
+    justify-self: end;
   }
 `;

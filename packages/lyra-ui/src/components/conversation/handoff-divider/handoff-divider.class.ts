@@ -1,3 +1,4 @@
+import type { PropertyValues } from 'lit';
 import { html, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -58,13 +59,15 @@ export class LyraHandoffDivider extends LyraElement {
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
-  protected override willUpdate(): void {
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasAvatarSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'avatar');
     }
   }
 
-  override firstUpdated(): void {
+  override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     this.liveRegion?.announce(this.getAttribute('aria-label') || this.computedLabel, { force: true });
   }
 

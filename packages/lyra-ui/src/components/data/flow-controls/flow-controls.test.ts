@@ -167,7 +167,7 @@ describe('--lr-flow-controls-lock-active-color', () => {
 
 it('hide-lock omits the lock button entirely', async () => {
   const el = (await fixture(html`<lr-flow-controls hide-lock></lr-flow-controls>`)) as LyraFlowControls;
-  expect(el.shadowRoot!.querySelector('[part="lock"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="lock"]')) == null).to.be.true;
 });
 
 it('the default slot appends extra host buttons to the cluster', async () => {

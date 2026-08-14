@@ -264,7 +264,7 @@ it('keeps loading opt-in and exposes the visible text through getTextLabel()', a
   expect(el.loading).to.equal(false);
   expect(el.hasAttribute('loading')).to.equal(false);
   expect(el.getAttribute('aria-disabled')).to.equal('false');
-  expect(el.shadowRoot!.querySelector('[part~="spinner"]')).to.equal(null);
+  expect((el.shadowRoot!.querySelector('[part~="spinner"]')) === (null)).to.equal(true);
   expect(el.getTextLabel()).to.equal('Rename');
 });
 
@@ -520,7 +520,7 @@ it('renders a checkmark glyph only when type="checkbox" and checked', async () =
   const unchecked = (await fixture(
     html`<lr-menu-item type="checkbox" value="wrap">Wrap text</lr-menu-item>`,
   )) as LyraMenuItem;
-  expect(unchecked.shadowRoot!.querySelector('[part="checkmark"]')).to.not.exist;
+  expect((unchecked.shadowRoot!.querySelector('[part="checkmark"]')) == null).to.be.true;
 
   const checked = (await fixture(
     html`<lr-menu-item type="checkbox" checked value="wrap">Wrap text</lr-menu-item>`,
@@ -532,7 +532,7 @@ it('type="normal" (default, omitted) is completely unaffected -- same role, no a
   const el = await fixtureInMenu(html`<lr-menu-item value="rename">Rename</lr-menu-item>`);
   expect(el.getAttribute('role')).to.equal('menuitem');
   expect(el.hasAttribute('aria-checked')).to.be.false;
-  expect(el.shadowRoot!.querySelector('[part="checkmark"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="checkmark"]')) == null).to.be.true;
 
   let changeFired = false;
   let selectFired = false;
@@ -925,7 +925,7 @@ describe('submenu parent', () => {
     expect(el.hasSubmenu).to.equal(false);
     expect(el.hasAttribute('aria-haspopup')).to.equal(false);
     expect(el.hasAttribute('aria-expanded')).to.equal(false);
-    expect(el.shadowRoot!.querySelector('[part="submenu-icon"]')).to.equal(null);
+    expect((el.shadowRoot!.querySelector('[part="submenu-icon"]')) === (null)).to.equal(true);
   });
 
   it('renders the submenu chevron part only for a submenu parent', async () => {

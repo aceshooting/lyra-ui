@@ -172,7 +172,7 @@ describe('lr-knowledge-base', () => {
 
     el.hideCreate = true;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="create-button"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="create-button"]')) == null).to.be.true;
   });
 
   it('renders the aggregate summary with correct counts, and omits it via hideSummary or an empty sources list', async () => {
@@ -185,12 +185,12 @@ describe('lr-knowledge-base', () => {
 
     el.hideSummary = true;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="summary"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="summary"]')) == null).to.be.true;
 
     el.hideSummary = false;
     el.sources = [];
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="summary"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="summary"]')) == null).to.be.true;
   });
 
   it('activating "Sync now" on a row emits lr-source-sync with that row\'s sourceId', async () => {

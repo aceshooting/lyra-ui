@@ -26,6 +26,26 @@ export const LyraIconButtonTrigger: Story = {
   `,
 };
 
+export const ExternalOwner: Story = {
+  name: 'Interaction ownership and external positioning',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A slotted trigger wins interaction and `aria-describedby` ownership. With no slotted trigger, a live HTML `for` target owns both, as shown here. Direct `.anchor` is positioning-only, while `showAt()` has no DOM interaction/ARIA owner.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; gap: 1rem; align-items: center;">
+      <button id="tooltip-external-owner">Hover or focus this external owner</button>
+      <lr-tooltip for="tooltip-external-owner" show-delay="0">
+        The <code>for</code> target owns interaction and the description because no trigger is slotted.
+      </lr-tooltip>
+    </div>
+  `,
+};
+
 export const ShoelaceSlotShape: Story = {
   name: 'Default trigger + content slot',
   parameters: {
@@ -74,7 +94,7 @@ export const ActionableContent: Story = {
     },
   },
   render: (_args, context) => html`
-    <lr-tooltip .open=${context.viewMode !== 'docs'} manual show-delay="0" accessible-label="Helpful actions">
+    <lr-tooltip .open=${context.viewMode !== 'docs'} manual show-delay="0" aria-label="Helpful actions">
       <button slot="trigger">Hover or focus</button>
       <a href="#tooltip-action-target">Learn more</a>
     </lr-tooltip>
@@ -85,7 +105,7 @@ export const ActionableContent: Story = {
 function onSurfaceClick(e: MouseEvent): void {
   const surface = e.currentTarget as HTMLElement;
   const tooltip = surface.parentElement!.querySelector('lr-tooltip') as LyraTooltip;
-  // showAt() anchors to an arbitrary point instead of a slotted trigger -- exactly the contract a
+  // showAt() anchors to an arbitrary point with no DOM interaction owner -- exactly the contract a
   // canvas/SVG surface like lr-graph composes with for hover detail (see llms-full.txt).
   tooltip.showAt({ x: e.clientX, y: e.clientY });
 }
@@ -96,7 +116,7 @@ export const VirtualAnchor: Story = {
     docs: {
       description: {
         story:
-          'Instead of a slotted `trigger`, `showAt({ x, y })` anchors the tooltip to an arbitrary rectangle -- here, the point clicked inside the surface below. There is no hover/blur to close it since there is no real trigger, so it stays open until Escape or an explicit `open = false`; another click reanchors it and keeps it open.',
+          'Instead of a DOM anchor, `showAt({ x, y })` anchors the tooltip to an arbitrary rectangle -- here, the point clicked inside the surface below. The virtual anchor wins positioning and has no DOM interaction/ARIA owner. There is no hover/blur to close it, so it stays open until Escape or an explicit `open = false`; another click reanchors it and keeps it open.',
       },
     },
   },

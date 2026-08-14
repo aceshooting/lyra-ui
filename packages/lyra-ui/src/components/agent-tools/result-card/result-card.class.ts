@@ -1,3 +1,4 @@
+import type { PropertyValues } from 'lit';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -74,6 +75,12 @@ export class LyraResultCard extends StripHostTitleAttribute(LyraResultCardBase) 
    *  and gaps intact when both are set. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
+  /** Explicit SSR presence hint for an `actions` slot. Browser upgrades also detect assignment
+   * automatically, so ordinary client-authored markup does not need it. Server renderers cannot
+   * inspect light DOM while rendering a custom element; set this when actions must be visible in
+   * the no-JS response. */
+  @property({ type: Boolean, attribute: 'with-actions', reflect: true }) withActions = false;
+
   /** Visual chrome, in the library's shared container-frame vocabulary (the same `frame` property
    *  `<lr-agent-run>` carries). `'card'` (the default) keeps the bordered, filled box. `'plain'`
    *  removes the border, background, and corner radius, so a card nested inside a host container
@@ -88,9 +95,12 @@ export class LyraResultCard extends StripHostTitleAttribute(LyraResultCardBase) 
   // whether the header row itself has anything to show.
   @state() private hasActionsSlot = false;
 
-  protected override willUpdate(): void {
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
-      this.hasActionsSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
+      this.seedFirstRenderState(() => {
+        this.hasActionsSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
+      });
     }
   }
 
@@ -100,12 +110,13 @@ export class LyraResultCard extends StripHostTitleAttribute(LyraResultCardBase) 
 
   override render(): TemplateResult {
     const hasTitle = this.title.length > 0;
-    const hasHeader = hasTitle || this.hasActionsSlot;
+    const hasActions = this.withActions || this.hasActionsSlot;
+    const hasHeader = hasTitle || hasActions;
     return html`
       <div part="base">
         <div part="header" ?hidden=${!hasHeader}>
           ${hasTitle ? html`<span part="title" title=${this.title}>${this.title}</span>` : nothing}
-          <div part="actions" ?hidden=${!this.hasActionsSlot}>
+          <div part="actions" ?hidden=${!hasActions}>
             <slot name="actions" @slotchange=${this.onActionsSlotChange}></slot>
           </div>
         </div>

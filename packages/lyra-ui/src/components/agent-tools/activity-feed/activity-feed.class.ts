@@ -18,9 +18,6 @@ import { LYRA_DEFAULT_activityFeedCompletedStep, LYRA_DEFAULT_activityFeedComple
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-/** Retained name for the shared semantic vocabulary an entry's `variant` is drawn from. */
-export type ActivityEntryTone = LyraVariant;
-
 export interface ActivityEntry {
   id: string;
   text: string;
@@ -266,6 +263,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if ((changed.has('expanded') || changed.has('mode')) && this.expanded && this.mode === 'live') {
       // Resetting to "anchored" on expand/live-transition, in willUpdate (not updated) so this
       // stays part of the SAME update pass rather than scheduling a second one -- identical
@@ -275,6 +273,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     const wasMounting = this.isMounting;
     this.isMounting = false;
 

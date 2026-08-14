@@ -348,7 +348,7 @@ describe("lr-code-block-core", () => {
     );
     el.language = "";
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector(".shiki")).to.not.exist;
+    expect((el.shadowRoot!.querySelector(".shiki")) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="code"]')!.textContent).to.equal(
       '{"a":1}'
     );
@@ -370,7 +370,7 @@ describe("lr-code-block-core", () => {
     el.language = "python";
     el.code = "print(1)";
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector(".shiki")).to.not.exist;
+    expect((el.shadowRoot!.querySelector(".shiki")) == null).to.be.true;
     expect(
       el.shadowRoot!.querySelector('[part="code"]')!.textContent
     ).to.include("print(1)");
@@ -402,7 +402,7 @@ describe("lr-code-block-core", () => {
     type Internals = { highlightedHtml: string | null };
     const internals = el as unknown as Internals;
     expect(internals.highlightedHtml).to.equal(null);
-    expect(el.shadowRoot!.querySelector(".shiki")).to.not.exist;
+    expect((el.shadowRoot!.querySelector(".shiki")) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="code"]')!.textContent).to.equal(
       '{"a":2}'
     );
@@ -1130,7 +1130,7 @@ describe("copy button", () => {
         filename="x.ts"
       ></lr-code-block-core>`
     )) as LyraCodeBlockCore;
-    expect(el.shadowRoot!.querySelector('[part="copy-button"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="copy-button"]')) == null).to.be.true;
   });
 });
 
@@ -1139,7 +1139,7 @@ describe("collapsible / collapsed", () => {
     const el = (await fixture(
       html`<lr-code-block-core .code=${"x"}></lr-code-block-core>`
     )) as LyraCodeBlockCore;
-    expect(el.shadowRoot!.querySelector('[part="toggle"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="toggle"]')) == null).to.be.true;
     expect(
       (el.shadowRoot!.querySelector('[part="body"]') as HTMLElement).hidden
     ).to.be.false;
@@ -1200,7 +1200,7 @@ describe("header content", () => {
         .code=${"x"}
       ></lr-code-block-core>`
     )) as LyraCodeBlockCore;
-    expect(el.shadowRoot!.querySelector('[part="header"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="header"]')) == null).to.be.true;
   });
 
   it("applies max-height as a CSS custom property on the body", async () => {

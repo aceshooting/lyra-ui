@@ -196,17 +196,152 @@ it('publishes the visible custom state exactly while the stack contains a toast 
   expect(region.matches(':state(visible)')).to.equal(false);
 });
 
-it('keeps every logical placement clear of rendered safe-area insets in LTR and RTL', async () => {
-  const placements = [
-    'top-start',
-    'top-center',
-    'top-end',
-    'bottom-start',
-    'bottom-center',
-    'bottom-end',
-  ] as const;
-  for (const direction of ['ltr', 'rtl'] as const) {
-    for (const placement of placements) {
+const toastPlacements = [
+  "top-start",
+  "top-center",
+  "top-end",
+  "bottom-start",
+  "bottom-center",
+  "bottom-end",
+] as const;
+
+async function toastPlacementFixture(
+  inlineSize: 319 | 320,
+  direction: "ltr" | "rtl",
+  toastWidth: number
+): Promise<HTMLElement> {
+  return fixture(html`
+    <div
+      style="
+        position: relative;
+        inline-size: ${inlineSize}px;
+        block-size: 211px;
+        transform: translateZ(0);
+      "
+    >
+      ${toastPlacements.map(
+        (placement) => html`
+          <lr-toast
+            dir=${direction}
+            placement=${placement}
+            style="
+              --lr-space-l: 7px;
+              --lr-safe-area-top: 17px;
+              --lr-safe-area-bottom: 29px;
+              --lr-safe-area-inline-start: 41px;
+              --lr-safe-area-inline-end: 73px;
+              --lr-toast-width: ${toastWidth}px;
+            "
+          >
+            <span
+              style="display: block; inline-size: 100%; block-size: 20px"
+            ></span>
+          </lr-toast>
+        `
+      )}
+    </div>
+  `);
+}
+
+it("positions every logical placement inside an asymmetric safe-area rectangle at 319px and 320px", async () => {
+  const toastWidth = 96;
+  for (const inlineSize of [319, 320] as const) {
+    for (const direction of ["ltr", "rtl"] as const) {
+      const wrapper = await toastPlacementFixture(
+        inlineSize,
+        direction,
+        toastWidth
+      );
+      const wrapperRect = wrapper.getBoundingClientRect();
+      const safeLeft = wrapperRect.left + (direction === "ltr" ? 41 : 73);
+      const safeRight = wrapperRect.right - (direction === "ltr" ? 73 : 41);
+      const safeCenter = (safeLeft + safeRight) / 2;
+
+      for (const placement of toastPlacements) {
+        const region = wrapper.querySelector<LyraToast>(
+          `lr-toast[placement="${placement}"]`
+        )!;
+        const stack =
+          region.shadowRoot!.querySelector<HTMLElement>('[part="stack"]')!;
+        const stackRect = stack.getBoundingClientRect();
+        const message = `${inlineSize}px ${direction} ${placement}`;
+
+        expect(stackRect.width, `${message} width`).to.be.closeTo(
+          toastWidth,
+          0.75
+        );
+        if (placement.startsWith("top")) {
+          expect(stackRect.top, `${message} block start`).to.be.closeTo(
+            wrapperRect.top + 17,
+            0.75
+          );
+        } else {
+          expect(stackRect.bottom, `${message} block end`).to.be.closeTo(
+            wrapperRect.bottom - 29,
+            0.75
+          );
+        }
+
+        if (placement.endsWith("start")) {
+          const actualStart =
+            direction === "ltr" ? stackRect.left : stackRect.right;
+          const expectedStart = direction === "ltr" ? safeLeft : safeRight;
+          expect(actualStart, `${message} inline start`).to.be.closeTo(
+            expectedStart,
+            0.75
+          );
+        } else if (placement.endsWith("end")) {
+          const actualEnd =
+            direction === "ltr" ? stackRect.right : stackRect.left;
+          const expectedEnd = direction === "ltr" ? safeRight : safeLeft;
+          expect(actualEnd, `${message} inline end`).to.be.closeTo(
+            expectedEnd,
+            0.75
+          );
+        } else {
+          expect(
+            (stackRect.left + stackRect.right) / 2,
+            `${message} inline center`
+          ).to.be.closeTo(safeCenter, 0.75);
+        }
+      }
+    }
+  }
+});
+
+it("caps every placement to the usable safe-area width instead of the physical viewport", async () => {
+  for (const inlineSize of [319, 320] as const) {
+    for (const direction of ["ltr", "rtl"] as const) {
+      const wrapper = await toastPlacementFixture(inlineSize, direction, 2000);
+      const wrapperRect = wrapper.getBoundingClientRect();
+      const safeLeft = wrapperRect.left + (direction === "ltr" ? 41 : 73);
+      const safeRight = wrapperRect.right - (direction === "ltr" ? 73 : 41);
+
+      for (const placement of toastPlacements) {
+        const region = wrapper.querySelector<LyraToast>(
+          `lr-toast[placement="${placement}"]`
+        )!;
+        const stack =
+          region.shadowRoot!.querySelector<HTMLElement>('[part="stack"]')!;
+        const stackRect = stack.getBoundingClientRect();
+        const message = `${inlineSize}px ${direction} ${placement}`;
+
+        expect(stackRect.left, `${message} physical left`).to.be.closeTo(
+          safeLeft,
+          0.75
+        );
+        expect(stackRect.right, `${message} physical right`).to.be.closeTo(
+          safeRight,
+          0.75
+        );
+      }
+    }
+  }
+});
+
+it("resolves every placement inset from the logical safe-area tokens", async () => {
+  for (const direction of ["ltr", "rtl"] as const) {
+    for (const placement of toastPlacements) {
       const region = (await fixture(html`
         <lr-toast
           dir=${direction}
@@ -222,8 +357,6 @@ it('keeps every logical placement clear of rendered safe-area insets in LTR and 
         ></lr-toast>
       `)) as LyraToast;
       const placementStyle = getComputedStyle(region);
-      const stack = region.shadowRoot!.querySelector<HTMLElement>('[part="stack"]')!;
-      const stackStyle = getComputedStyle(stack);
 
       if (placement.startsWith('top')) {
         expect(placementStyle.insetBlockStart, `${direction} ${placement} block start`).to.equal('101px');
@@ -235,10 +368,6 @@ it('keeps every logical placement clear of rendered safe-area insets in LTR and 
       } else if (placement.endsWith('end')) {
         expect(placementStyle.insetInlineEnd, `${direction} ${placement} inline end`).to.equal('109px');
       }
-      expect(
-        Number.parseFloat(stackStyle.maxInlineSize),
-        `${direction} ${placement} stack max inline size`,
-      ).to.equal(window.innerWidth - 22 - 107 - 109);
     }
   }
 });

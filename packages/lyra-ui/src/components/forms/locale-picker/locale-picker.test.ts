@@ -144,10 +144,10 @@ it('click()/focus()/blur() forward to the internal trigger', async () => {
   expect(el.shadowRoot!.activeElement === null).to.be.true;
 });
 
-// -- Spec obligation 1 (registry export) is covered by localization.test.ts;
+// -- Registry export behavior is covered by localization.test.ts;
 //    obligations below map to this component's own contract. --------------
 
-// Obligation 3: locales unset -> matches getRegisteredLyraLocales(), live-updates.
+// An unset locales catalog matches getRegisteredLyraLocales() and updates live.
 it('with locales unset, the offered list matches getRegisteredLyraLocales and updates live when a new locale registers', async () => {
   const el = (await fixture(html`<lr-locale-picker></lr-locale-picker>`)) as LyraLocalePicker;
   el.open = true;
@@ -162,7 +162,7 @@ it('with locales unset, the offered list matches getRegisteredLyraLocales and up
   expect(rows(el).length).to.equal(after.length);
 });
 
-// Obligation 4: an explicit `locales` catalog overrides auto-discovery entirely, in both forms.
+// An explicit `locales` catalog overrides auto-discovery entirely, in both forms.
 it('locales set as a plain string[] overrides the auto-discovered list', async () => {
   const el = (await fixture(
     html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`,
@@ -187,7 +187,7 @@ it('locales set as {tag,label}[] overrides the auto-discovered list and honors a
   expect(rows(el)[1].textContent).to.contain(localeNativeName('de'));
 });
 
-// Obligation 5: flag/native-name/tag per row; showFlags=false omits the flag element entirely.
+// Each row includes its flag, native name, and tag; showFlags=false omits the flag entirely.
 it('shows a flag, native name, and tag per row when showFlags is on (the default)', async () => {
   const el = (await fixture(
     html`<lr-locale-picker .locales=${['fr']}></lr-locale-picker>`,
@@ -303,7 +303,7 @@ it('showFlags=false omits the trigger flag too, not just the row flags', async (
   expect(trigger(el).querySelectorAll('lr-flag').length).to.equal(0);
 });
 
-// Obligation 6: selecting a row commits value, fires lr-change, and applies setLyraLocale().
+// Selecting a row commits value, fires lr-change, and applies setLyraLocale().
 it('selecting a row updates value, fires lr-change with {value, previousValue}, and calls setLyraLocale', async () => {
   setLyraLocale('en');
   const el = (await fixture(
@@ -340,7 +340,7 @@ it('reports the picked locale writing direction in lr-change detail', async () =
   setLyraLocale('en');
 });
 
-// Obligation 7: preventDefault() updates value but leaves the active locale untouched.
+// preventDefault() updates value but leaves the active locale untouched.
 it('event.preventDefault() on lr-change updates value but leaves the active locale untouched', async () => {
   setLyraLocale('en');
   const el = (await fixture(
@@ -356,7 +356,7 @@ it('event.preventDefault() on lr-change updates value but leaves the active loca
   expect(getLyraLocale()).to.equal('en');
 });
 
-// Obligation 8: value unset previews effectiveLocale, but required stays invalid until a real commit.
+// An unset value previews effectiveLocale, but required stays invalid until a real commit.
 it('with value unset, the trigger previews effectiveLocale but required stays invalid until a real commit', async () => {
   // Pin the page-level locale explicitly -- effectiveLocale falls back to it, and other tests in
   // this file call setLyraLocale(), so this test does not rely on running after them in order.
@@ -384,7 +384,7 @@ it('the default English required-validation message is localized via this.locali
   expect(el.validationMessage).to.equal('Please choose a language.');
 });
 
-// Obligation 9: keyboard nav.
+// Keyboard navigation.
 it('navigates with ArrowDown/ArrowUp and commits the active row with Enter', async () => {
   const el = (await fixture(
     html`<lr-locale-picker .locales=${['fr', 'de', 'it']}></lr-locale-picker>`,
@@ -473,7 +473,7 @@ it('Escape closes the listbox without changing value', async () => {
   expect(el.value).to.equal('fr');
 });
 
-// Obligation 10: axe, closed and open.
+// Accessibility checks in closed and open states.
 it('is accessible', async () => {
   const el = (await fixture(
     html`<lr-locale-picker label="Language" .locales=${['fr', 'de']}></lr-locale-picker>`,
@@ -496,7 +496,7 @@ it('is accessible while open', async () => {
   await expect(el).to.be.accessible();
 });
 
-// Obligation 11: RTL fixture -- logical layout, no accidental Left/Right remap.
+// RTL fixture: logical layout with no accidental Left/Right remap.
 it('mirrors row text-align via logical properties under dir="rtl", with no Left/Right remap added', async () => {
   const wrapper = await fixture<HTMLDivElement>(html`
     <div dir="rtl" lang="fa-IR"><lr-locale-picker .locales=${['fa-IR', 'he-IL']}></lr-locale-picker></div>
@@ -566,7 +566,7 @@ it('accepts the Web Awesome size spellings, rendering small/medium/large as s/m/
   }
 });
 
-// Obligation 12: unset-regression.
+// Unset-property behavior.
 it('unset (only locales, or nothing) renders deterministically with no other new property touched', async () => {
   const el = (await fixture(html`<lr-locale-picker></lr-locale-picker>`)) as LyraLocalePicker;
   expect(el.value).to.equal('');
@@ -578,7 +578,7 @@ it('unset (only locales, or nothing) renders deterministically with no other new
   expect((trigger(el)) != null).to.equal(true);
 });
 
-// -- Coverage backfill: attribute parsing, ElementInternals fallback/passthrough,
+// -- Attribute parsing, ElementInternals fallback/passthrough,
 //    setter edge cases, form-state restoration, type-ahead edge cases, keyboard
 //    edge cases, and aria/describedby wiring. -------------------------------
 
@@ -1108,7 +1108,7 @@ describe('touched state', () => {
     expect((el as unknown as { touched: boolean }).touched, 'touched after a real blur').to.be.true;
   });
 
-  // Regression coverage for fr_asxOgk4UhNB07xevCWwFVQ: a focused native control's own `disabled`
+  // Regression coverage: a focused native control's own `disabled`
   // state becoming true force-blurs it as a platform reaction, not a user interaction -- that
   // blur must not mark the field touched.
   it('does not mark touched from a blur caused by the trigger itself becoming disabled', async () => {

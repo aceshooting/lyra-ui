@@ -461,6 +461,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('disabled') && this.disabled) this.hasCurrent = false;
     this.syncOptionState();
     // `selected` is deliberately excluded -- the parent combobox/select

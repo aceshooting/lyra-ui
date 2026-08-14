@@ -26,10 +26,16 @@ forwarded). Lyra additionally provides `autoAdvance: boolean = true` (attribute 
 `auto-advance="false"` disables completion-driven navigation) and `repeat: 'none' | 'one' | 'all' =
 'none'`. Keeping `autoAdvance` true preserves the mirrored behavior in which an ended video starts
 the next one. `repeat="one"` restarts the current video; `repeat="all"` wraps the final video to the
-first.
+first. `items: readonly LyraVideoPlaylistItem[] = []` (attribute: false) is deterministic
+first-render row metadata with `{ title, poster?, duration?, unavailable? }`, indexed to the direct
+video children. Assign the same value before the server and browser first render. Seeded rows stay
+visible but disabled while live children are unavailable; after hydration, each child's live
+title/poster/duration and native `inert` state become authoritative in a corrective update that
+reuses the server-rendered row nodes. Once live children have been observed, later removal does not
+make stale seed rows reappear.
 
 **Methods:** `goTo(index)` selects a finite integer direct-child index; invalid, fractional, and
-disabled indexes are inert. Calling it for the current index still emits `lr-video-change`, matching
+inert-child indexes are no-ops. Calling it for the current index still emits `lr-video-change`, matching
 the mirrored contract. `next()` and `previous()` select the next or previous enabled child when one
 exists. `focus(options?)`, `blur()`, and `click()` forward to the playlist row that currently owns
 the roving tab stop (falling back to the first enabled row), which is otherwise unreachable from
@@ -62,19 +68,20 @@ the current child. Removing or reordering duplicate-metadata children is identit
 disconnecting pauses/unloads every child before a later reconnect creates one fresh listener
 generation.
 
-The playlist buttons use one roving tab stop, skip disabled children, support Up/Down, Home/End, and
+The playlist buttons use one roving tab stop, skip inert children, support Up/Down, Home/End, and
 mirrored Left/Right navigation, and expose the selected item with `aria-current`. At narrow
 allocations the sidebar moves below the video through a container query; long titles ellipsize
 without widening the host.
 
-**A child marked `inert` is excluded exactly as a `disabled` one is:** it never becomes the active
-video, `next()`/`previous()`/`goTo()` and auto-advance step past it, and its playlist row renders
-`disabled` so the roving `tabindex` can never strand focus on it — an inert element refuses focus,
-which would leave `focus()` a silent no-op and kill the next arrow press. Only the child's **own**
-`inert` counts: a playlist inerted wholesale by an open modal keeps playing. The attribute is
-watched live, so marking the *current* video inert moves the selection to the nearest enabled child
-(emitting `lr-video-change`) and hands the roving focus to the row that replaced it, instead of
-leaving a stale tab stop on a row that can no longer take focus.
+**A child marked `inert` is unavailable:** it never becomes the active video,
+`next()`/`previous()`/`goTo()` and auto-advance step past it, and its playlist row renders `disabled`
+so the roving `tabindex` can never strand focus on it — an inert element refuses focus, which would
+leave `focus()` a silent no-op and kill the next arrow press. `<lr-video>` has no `disabled`
+property; use the platform `inert` state exclusively. Only the child's **own** `inert` counts: a
+playlist inerted wholesale by an open modal keeps playing. The attribute is watched live, so
+marking the *current* video inert moves the selection to the nearest enabled child (emitting
+`lr-video-change`) and hands the roving focus to the row that replaced it, instead of leaving a
+stale tab stop on a row that can no longer take focus.
 
 ```html
 <lr-video-playlist controls="full" repeat="all">

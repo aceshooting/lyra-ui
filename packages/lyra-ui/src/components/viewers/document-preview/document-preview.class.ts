@@ -275,6 +275,10 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
    *  not unexpectedly grow a focusable zoom-chrome viewport; an inspection surface opts in. */
   @property({ type: Boolean, reflect: true }) zoomable = false;
 
+  /** Omits the generic fallback's download action when a composing shell owns that action.
+   * Property-only: this is a composition control rather than author-facing markup state. */
+  @property({ attribute: false }) suppressDownload = false;
+
   /** Display-only region highlights over the image-format preview (see the class doc's format-
    *  dispatch scope -- text/generic formats never render these). */
   @property({ attribute: false }) highlights: LyraHighlight[] = [];
@@ -283,8 +287,6 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
 
   @state() private hasUnsupportedSlot = false;
   @state() private textFetch: TextFetchState = IDLE_TEXT_FETCH;
-  /** Suppresses the generic fallback action when a composing shell owns the same download action. */
-  @state() private suppressDownload = false;
 
   // Bumped on every fetchText() call so a stale in-flight fetch (superseded
   // by a newer src/mime-type/status before it settles) can detect it's no

@@ -105,7 +105,7 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
   @property({ reflect: true }) countdown: AlertCountdown;
 
   /** Milliseconds before automatic dismissal; `Infinity` disables automatic dismissal. */
-  @property({ type: Number }) duration = Infinity;
+  @property({ type: Number }) duration: number = Infinity;
 
   /** Semantic alert tone. */
   @property({ reflect: true }) variant: AlertVariant = 'primary';
@@ -176,11 +176,13 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
     super.disconnectedCallback();
   }
 
-  override firstUpdated(): void {
+  override firstUpdated(changed: PropertyValues<this>): void {
+    super.firstUpdated(changed);
     if (this.open) this.restartAutoHide();
   }
 
   protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
     if (
       this.open &&
       !changed.has('open') &&
@@ -191,7 +193,7 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
   }
 
   /** Show the alert and resolve after show motion and `lr-after-show` complete. */
-  async show() {
+  async show(): Promise<void> {
     // A method call is an operation, even during the element's first update. Defer until that
     // baseline render exists so it runs the lifecycle instead of being mistaken for silent
     // initial declarative state.
@@ -201,7 +203,7 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
   }
 
   /** Hide the alert and resolve after hide motion and `lr-after-hide` complete. */
-  async hide() {
+  async hide(): Promise<void> {
     if (!this.hasUpdated) await this.updateComplete;
     if (this.open) this.open = false;
     await this.transitionPromise;
@@ -212,7 +214,7 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
    * resolves after the alert hides and is removed, or after a lasting external disconnect; the
    * same instance can be toasted again later.
    */
-  toast() {
+  toast(): Promise<void> {
     if (this.toastPromise) return this.toastPromise;
 
     let resolveCompletion!: () => void;

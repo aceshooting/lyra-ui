@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
@@ -135,10 +135,11 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     this.visibilityObserverDocument = ownerDocument;
   }
 
-  protected override willUpdate(): void {
-    if (!this.hasUpdated) {
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
+    if (!this.hasUpdated) this.seedFirstRenderState(() => {
       this.childCount = this.children.length;
-    }
+    });
     // max-visible/children can change out from under an already-expanded
     // group (e.g. the consumer raises max-visible past the current count) —
     // silently resync rather than leaving `expanded` stuck true with nothing
@@ -149,7 +150,8 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     if (this.expanded && !this.hasOverflow) this.expanded = false;
   }
 
-  override firstUpdated(): void {
+  override firstUpdated(changed: PropertyValues<this>): void {
+    super.firstUpdated(changed);
     // Fallback reconciliation for slot-forwarding / engines that don't fire
     // `slotchange` for content present at parse time — same idiom as
     // `<lr-source-list>`'s identical `firstUpdated`. This can't move to
@@ -161,10 +163,13 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     // corrected count, so there's nothing left for an explicit call here to
     // do.
     const slot = this.shadowRoot!.querySelector('slot') as HTMLSlotElement;
-    this.childCount = slot.assignedElements({ flatten: true }).length;
+    this.updateBrowserDerivedState(() => {
+      this.childCount = slot.assignedElements({ flatten: true }).length;
+    });
   }
 
-  protected override updated(): void {
+  protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
     this.syncChildVisibility();
   }
 
@@ -284,7 +289,11 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   }
 
   private onSlotChange = (e: Event): void => {
-    this.childCount = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length;
+    const slot = e.target as HTMLSlotElement;
+    this.updateBrowserDerivedState(() => {
+      if (!this.isConnected) return;
+      this.childCount = slot.assignedElements({ flatten: true }).length;
+    });
   };
 
   private onToggleOverflow = (): void => {

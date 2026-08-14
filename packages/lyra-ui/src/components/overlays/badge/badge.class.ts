@@ -11,10 +11,10 @@ import {
 import { variants } from '../../../internal/variants.styles.js';
 import { styles } from './badge.styles.js';
 
-/** The library's one semantic-tone vocabulary. */
-export type BadgeVariant = LyraVariant;
-/** The library's one size ladder. */
-export type BadgeSize = LyraSizeStep;
+/** The library's semantic-tone vocabulary plus Shoelace's spelling for the brand tone. */
+export type BadgeVariant = LyraVariant | 'primary';
+/** The library's one size ladder, including both upstream long-form spellings. */
+export type BadgeSize = LyraSize;
 /** Visual treatment of a labelled surface: how much of the variant palette is spent on fill,
  *  border, and text. The library's one `appearance` vocabulary. */
 export type BadgeAppearance = LyraAppearance;
@@ -32,6 +32,9 @@ export type BadgeAttention = 'none' | 'pulse' | 'bounce';
  * status to signal reads as plain rather than grey-tinted.
  * `pill` switches the rounded rectangle for fully-rounded ends, and `attention` adds an opt-in,
  * reduced-motion-aware animation for a badge that has to be noticed.
+ * The light-DOM host owns the one `role="status"` semantic surface so its projected label remains
+ * directly exposed. `<lr-tag>` inherits the visual implementation but explicitly opts out of that
+ * role because tag content is not a live status.
  *
  * @customElement lr-badge
  * @slot - Badge content.
@@ -91,37 +94,23 @@ export type BadgeAttention = 'none' | 'pulse' | 'bounce';
  * @status stable
  * @since 4.0.0
  */
-export class LyraBadge<Events = LyraEventMap> extends LyraElement<Events> {
+export class LyraBadge<
+  Events = LyraEventMap,
+  Variant extends BadgeVariant | 'text' = BadgeVariant,
+> extends LyraElement<Events> {
   static override styles = [LyraElement.styles, variants, styles];
 
-  private _variant: BadgeVariant = 'neutral';
-  /** Semantic palette. The Shoelace `primary` write spelling normalizes to Lyra's `brand`. */
-  @property({ reflect: true })
-  get variant(): BadgeVariant {
-    return this._variant;
-  }
-  set variant(value: BadgeVariant | 'primary') {
-    const old = this._variant;
-    const next = value === 'primary' ? 'brand' : value;
-    this._variant = ['neutral', 'brand', 'success', 'warning', 'danger'].includes(next)
-      ? next as BadgeVariant
-      : 'neutral';
-    this.requestUpdate('variant', old);
+  static override get observedAttributes(): string[] {
+    return [...new Set([...super.observedAttributes, 'role'])];
   }
 
+  /** Semantic palette. Every valid upstream spelling remains observable verbatim; rendering uses
+   * the private canonical value instead of rewriting the public property or reflected attribute. */
+  @property({ reflect: true }) variant: Variant = 'neutral' as Variant;
+
   /** Visual density, matching `<lr-chip>`'s `2xs`–`xl` size scale. `m` preserves the original
-   *  badge dimensions. The upstream `small`/`medium`/`large` write spellings normalize to the
-   *  canonical `s`/`m`/`l` reads. */
-  private _size: BadgeSize = 'm';
-  @property({ reflect: true })
-  get size(): BadgeSize {
-    return this._size;
-  }
-  set size(value: LyraSize) {
-    const old = this._size;
-    this._size = normalizeSize(value ?? 'm');
-    this.requestUpdate('size', old);
-  }
+   * badge dimensions. Valid `small`/`medium`/`large` values round-trip exactly. */
+  @property({ reflect: true }) size: BadgeSize = 'm';
 
   /** How much of the `variant` palette is spent on fill, border, and text. The default
    *  (`filled-outlined`: quiet tint, loud border, loud text) reproduces the badge's original
@@ -144,26 +133,70 @@ export class LyraBadge<Events = LyraEventMap> extends LyraElement<Events> {
   @state() private hasStartSlot = false;
   @state() private hasEndSlot = false;
 
-  protected override willUpdate(changed: PropertyValues): void {
-    super.willUpdate(changed);
-    // Seed from the light-DOM children synchronously before the very first render so declarative
-    // start/end content doesn't flash hidden for one frame waiting on `slotchange`.
-    if (!this.hasUpdated) {
-      this.hasStartSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'start');
-      this.hasEndSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'end');
+  /** One semantic owner for badges. Subclasses whose content is not a status opt out here. */
+  protected get semanticRole(): 'status' | null {
+    return 'status';
+  }
+
+  protected get effectiveVariant(): LyraVariant {
+    const value = this.variant as string;
+    if (value === 'primary') return 'brand';
+    return ['neutral', 'brand', 'success', 'warning', 'danger'].includes(value)
+      ? value as LyraVariant
+      : 'neutral';
+  }
+
+  protected get effectiveSize(): LyraSizeStep {
+    const value = this.size as string;
+    if (!['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large'].includes(value)) return 'm';
+    return normalizeSize(value as LyraSize);
+  }
+
+  override attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
+    super.attributeChangedCallback(name, oldValue, value);
+    if (name === 'role' && this.semanticRole && value !== this.semanticRole) {
+      this.setAttribute('role', this.semanticRole);
     }
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.semanticRole) this.setAttribute('role', this.semanticRole);
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (this.semanticRole) this.setAttribute('role', this.semanticRole);
+    this.setAttribute('data-effective-variant', this.effectiveVariant);
+    this.setAttribute('data-effective-size', this.effectiveSize);
+    // Seed from the light-DOM children synchronously before the very first render so declarative
+    // start/end content doesn't flash hidden for one frame waiting on `slotchange`.
+    if (!this.hasUpdated) this.seedFirstRenderState(() => {
+      this.hasStartSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'start');
+      this.hasEndSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'end');
+    });
+  }
+
   private onStartSlotChange = (e: Event): void => {
-    this.hasStartSlot = (e.target as HTMLSlotElement).assignedNodes({ flatten: true }).some(
-      (node) => node.nodeType === Node.ELEMENT_NODE || (node.textContent ?? '').trim().length > 0,
-    );
+    const slot = e.target as HTMLSlotElement;
+    const update = (): void => {
+      if (!this.isConnected) return;
+      this.hasStartSlot = slot.assignedNodes({ flatten: true }).some(
+        (node) => node.nodeType === Node.ELEMENT_NODE || (node.textContent ?? '').trim().length > 0,
+      );
+    };
+    this.updateBrowserDerivedState(update);
   };
 
   private onEndSlotChange = (e: Event): void => {
-    this.hasEndSlot = (e.target as HTMLSlotElement).assignedNodes({ flatten: true }).some(
-      (node) => node.nodeType === Node.ELEMENT_NODE || (node.textContent ?? '').trim().length > 0,
-    );
+    const slot = e.target as HTMLSlotElement;
+    const update = (): void => {
+      if (!this.isConnected) return;
+      this.hasEndSlot = slot.assignedNodes({ flatten: true }).some(
+        (node) => node.nodeType === Node.ELEMENT_NODE || (node.textContent ?? '').trim().length > 0,
+      );
+    };
+    this.updateBrowserDerivedState(update);
   };
 
   /** Extension point for a subclass rendering its own trailing control inside `[part~='base']` --
@@ -174,11 +207,11 @@ export class LyraBadge<Events = LyraEventMap> extends LyraElement<Events> {
 
   override render(): TemplateResult {
     return html`<span part="base badge">
-      <span part="start" ?hidden=${!this.hasStartSlot}>
+      <span part="start" ?hidden=${!this.renderSlotPresence(this.hasStartSlot)}>
         <slot name="start" @slotchange=${this.onStartSlotChange}></slot>
       </span>
       <span part="content"><slot></slot></span>
-      <span part="end" ?hidden=${!this.hasEndSlot}>
+      <span part="end" ?hidden=${!this.renderSlotPresence(this.hasEndSlot)}>
         <slot name="end" @slotchange=${this.onEndSlotChange}></slot>
       </span>
       ${this.renderTrailing()}

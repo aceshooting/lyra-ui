@@ -181,7 +181,7 @@ it('isolates caller text and formatted timestamps from an inherited RTL directio
 describe('timestamp', () => {
   it('renders no [part="timestamp"] when unset', async () => {
     const el = (await fixture(html`<lr-conversation-item title="A"></lr-conversation-item>`)) as LyraConversationItem;
-    expect(el.shadowRoot!.querySelector('[part="timestamp"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="timestamp"]')) == null).to.be.true;
   });
 
   it('normalizes a Date and an ISO string to the same rendered datetime attribute', async () => {
@@ -203,7 +203,7 @@ describe('timestamp', () => {
     const el = (await fixture(
       html`<lr-conversation-item title="A" .timestamp=${'not a date'}></lr-conversation-item>`,
     )) as LyraConversationItem;
-    expect(el.shadowRoot!.querySelector('[part="timestamp"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="timestamp"]')) == null).to.be.true;
   });
 
   it('uses the default absolute-time formatter, overridable via formatTimestamp', async () => {
@@ -347,7 +347,7 @@ describe('inline rename', () => {
     const notEditable = (await fixture(
       html`<lr-conversation-item title="A" .editable=${false}></lr-conversation-item>`,
     )) as LyraConversationItem;
-    expect(notEditable.shadowRoot!.querySelector('[part="rename-button"]')).to.not.exist;
+    expect((notEditable.shadowRoot!.querySelector('[part="rename-button"]')) == null).to.be.true;
   });
 
   it('honors a plain editable="false" attribute (not just a .editable=${false} property binding)', async () => {
@@ -370,7 +370,7 @@ describe('inline rename', () => {
     btn.click();
     await el.updateComplete;
 
-    expect(el.shadowRoot!.querySelector('[part="title"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="title"]')) == null).to.be.true;
     const input = el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement;
     expect((input) != null).to.equal(true);
     expect(input.value).to.equal('Old name');
@@ -418,7 +418,7 @@ describe('inline rename', () => {
     const el = (await fixture(
       html`<lr-conversation-item title="A" .editable=${false}></lr-conversation-item>`,
     )) as LyraConversationItem;
-    expect(el.shadowRoot!.querySelector('[part="title-input"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="title-input"]')) == null).to.be.true;
   });
 
   it('cancels an in-progress rename (discarding the draft) when editable flips to false', async () => {
@@ -436,11 +436,11 @@ describe('inline rename', () => {
     await el.updateComplete;
 
     expect(renameFired, 'flipping editable false must not commit the draft').to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="title-input"]'), 'input must be unmounted').to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="title-input"]')) == null, 'input must be unmounted').to.be.true;
     expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent).to.equal('Old name');
     // The now-editable=false row must also not silently expose a rename
     // button that could reopen a fresh edit.
-    expect(el.shadowRoot!.querySelector('[part="rename-button"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="rename-button"]')) == null).to.be.true;
   });
 
   it('does not fire lr-select when the rename button is clicked', async () => {
@@ -465,7 +465,7 @@ describe('inline rename', () => {
     const ev = await oneEvent(el, 'lr-rename');
     expect(ev.detail).to.deep.equal({ title: 'New name' });
     expect(el.title, 'controlled component -- the title prop itself is never mutated').to.equal('Old name');
-    expect(el.shadowRoot!.querySelector('[part="title-input"]'), 'editing ends on commit').to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="title-input"]')) == null, 'editing ends on commit').to.be.true;
   });
 
   it('blur while editing commits, same as Enter', async () => {
@@ -495,7 +495,7 @@ describe('inline rename', () => {
     await el.updateComplete;
 
     expect(renameFired).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="title-input"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="title-input"]')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent).to.equal('Old name');
 
     // Re-opening the editor afterward must reseed from the (unchanged)
@@ -518,7 +518,7 @@ describe('inline rename', () => {
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     await el.updateComplete;
     expect(fired).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="title-input"]'), 'still ends the edit').to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="title-input"]')) == null, 'still ends the edit').to.be.true;
   });
 
   it('does not fire lr-rename when the committed title is unchanged', async () => {

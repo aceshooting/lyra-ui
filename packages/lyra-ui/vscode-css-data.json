@@ -75,7 +75,7 @@
       "name": "--arrow-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dropdown>`** (default: `var(--lr-overlay-arrow-size,var(--lr-size-0-375rem))`) — Arrow half-width inherited from the popover surface.\n\n**`<lr-popover>`, `<lr-tooltip>`** (default: `var(--lr-overlay-arrow-size,var(--lr-size-0-375rem))`) — Half-width of the arrow square.\n\n**`<lr-popup>`** (default: `var(--lr-popup-arrow-size,var(--lr-size-0-375rem))`) — Half-width of the arrow square. `--lr-popup-arrow-size` remains a compatibility alias."
+        "value": "**`<lr-dropdown>`** (default: `var(--lr-overlay-arrow-size,var(--lr-size-0-375rem))`) — Arrow half-width inherited from the popover surface.\n\n**`<lr-popover>`** (default: `var(--lr-overlay-arrow-size,var(--lr-size-0-375rem))`) — Half-width of the arrow square.\n\n**`<lr-popup>`** (default: `var(--lr-popup-arrow-size,var(--lr-size-0-375rem))`) — Half-width of the arrow square. `--lr-popup-arrow-size` remains a compatibility alias.\n\n**`<lr-tooltip>`** (default: `var(--lr-tooltip-arrow-size,var(--lr-size-0-375rem))`) — Half-width of the arrow square."
       }
     },
     {
@@ -208,7 +208,7 @@
       "name": "--border-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-radius)`) — Dataset element corner radius.\n\n**`<lr-card>`, `<lr-skeleton>`** (default: `var(--lr-radius)`) — Shoelace-compatible corner radius.\n\n**`<lr-data-grid>`** (default: `var(--lr-radius)`) — Outer and control corner radius."
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-radius)`) — Dataset element corner radius.\n\n**`<lr-card>`** (default: `var(--lr-radius)`) — Shoelace-compatible corner radius.\n\n**`<lr-data-grid>`** (default: `var(--lr-radius)`) — Outer and control corner radius.\n\n**`<lr-skeleton>`** (default: `var(--lr-skeleton-border-radius)`) — Shoelace-compatible corner radius."
       }
     },
     {
@@ -649,7 +649,7 @@
       "name": "--hide-duration",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`** (default: `var(--lr-duration-base)`) — Compatibility alias for `--lr-accordion-item-hide-duration`.\n\n**`<lr-combobox>`** (default: `var(--lr-transition-fast)`) — Listbox exit-transition duration.\n\n**`<lr-date-input>`** (default: `var(--lr-transition-fast)`) — Popup exit-transition duration.\n\n**`<lr-details>`** (default: `var(--lr-duration-base)`) — Collapse-icon transition duration.\n\n**`<lr-dialog>`** — Mapped closing animation duration.\n\n**`<lr-drawer>`** — Closing slide duration.\n\n**`<lr-dropdown>`, `<lr-popover>`** (default: `var(--lr-transition-fast)`) — Closing transition duration.\n\n**`<lr-popup>`** (default: `var(--lr-duration-fast)`) — Deactivation transition duration.\n\n**`<lr-select>`** (default: `var(--lr-transition-fast)`) — Listbox exit-transition timing.\n\n**`<lr-time-input>`** (default: `var(--lr-duration-fast)`) — Picker closing duration.\n\n**`<lr-toast-item>`** — Mapped alias for `--lr-toast-hide-duration`.\n\n**`<lr-tree-item>`** (default: `var(--lr-duration-base)`) — Collapse motion duration."
+        "value": "**`<lr-accordion-item>`** (default: `var(--lr-duration-base)`) — Compatibility alias for `--lr-accordion-item-hide-duration`.\n\n**`<lr-combobox>`** (default: `var(--lr-transition-fast)`) — Listbox exit-transition duration.\n\n**`<lr-date-input>`** (default: `var(--lr-transition-fast)`) — Popup exit-transition duration.\n\n**`<lr-details>`** (default: `var(--lr-duration-base)`) — Collapse-icon transition duration.\n\n**`<lr-dialog>`** — Mapped closing animation duration.\n\n**`<lr-drawer>`** — Closing slide duration.\n\n**`<lr-dropdown>`** (default: `var(--lr-transition-fast)`) — Closing transition duration.\n\n**`<lr-popover>`** (default: `var(--lr-duration-fast)`) — Closing transition duration.\n\n**`<lr-popup>`** (default: `var(--lr-duration-fast)`) — Deactivation transition duration.\n\n**`<lr-select>`** (default: `var(--lr-transition-fast)`) — Listbox exit-transition timing.\n\n**`<lr-time-input>`** (default: `var(--lr-duration-fast)`) — Picker closing duration.\n\n**`<lr-toast-item>`** — Mapped alias for `--lr-toast-hide-duration`.\n\n**`<lr-tree-item>`** (default: `var(--lr-duration-base)`) — Collapse motion duration."
       }
     },
     {
@@ -698,7 +698,7 @@
       "name": "--indicator-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-progress-bar>`, `<lr-progress-ring>`, `<lr-spinner>`** (default: `var(--lr-progress-indicator-color)`) — Upstream-compatible indicator color.\n\n**`<lr-tab-group>`** — Upstream alias for the active indicator color."
+        "value": "**`<lr-progress-bar>`** (default: `var(--lr-progress-indicator-color)`) — Upstream-compatible indicator color.\n\n**`<lr-progress-ring>`** (default: `var(--lr-progress-ring-indicator-color)`) — Upstream-compatible indicator color.\n\n**`<lr-spinner>`** (default: `var(--lr-color-brand)`) — Upstream-compatible indicator color.\n\n**`<lr-tab-group>`** — Upstream alias for the active indicator color."
       }
     },
     {
@@ -4590,14 +4590,14 @@
       "name": "--lr-file-input-accept-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-file-input>`** (default: `color-mix(in srgb, var(--lr-color-success) 8%, transparent)`) — Background of `[part=\"base\"][data-drag-state=\"accept\"]`."
+        "value": "**`<lr-file-input>`** (default: `color-mix(in srgb, var(--lr-color-success) 8%, transparent)`) — Background of `[part~=\"base\"][data-drag-state=\"accept\"]`."
       }
     },
     {
       "name": "--lr-file-input-accept-border-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-file-input>`** (default: `var(--lr-color-success)`) — Border color of `[part=\"base\"][data-drag-state=\"accept\"]`."
+        "value": "**`<lr-file-input>`** (default: `var(--lr-color-success)`) — Border color of `[part~=\"base\"][data-drag-state=\"accept\"]`."
       }
     },
     {
@@ -4618,7 +4618,7 @@
       "name": "--lr-file-input-compact-padding",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-file-input>`** (default: `var(--lr-space-s)`) — `[part=\"base\"]` padding while `compact`."
+        "value": "**`<lr-file-input>`** (default: `var(--lr-space-s)`) — `[part~=\"base\"]` padding while `compact`."
       }
     },
     {
@@ -4646,7 +4646,7 @@
       "name": "--lr-file-input-dropzone-padding",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-file-input>`** (default: `var(--lr-space-l)`) — Padding inside `[part=\"base\"]` and the stacked dropzone content. Retuned per `size` tier; `compact` overrides it."
+        "value": "**`<lr-file-input>`** (default: `var(--lr-space-l)`) — Padding inside `[part~=\"base\"]` and the stacked dropzone content. Retuned per `size` tier; `compact` overrides it."
       }
     },
     {
@@ -4667,21 +4667,21 @@
       "name": "--lr-file-input-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-file-input>`** (default: `var(--lr-radius)`) — Corner radius of `[part=\"base\"]`."
+        "value": "**`<lr-file-input>`** (default: `var(--lr-radius)`) — Corner radius of `[part~=\"base\"]`."
       }
     },
     {
       "name": "--lr-file-input-reject-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-file-input>`** (default: `color-mix(in srgb, var(--lr-color-danger) 8%, transparent)`) — Background of `[part=\"base\"][data-drag-state=\"reject\"]`."
+        "value": "**`<lr-file-input>`** (default: `color-mix(in srgb, var(--lr-color-danger) 8%, transparent)`) — Background of `[part~=\"base\"][data-drag-state=\"reject\"]`."
       }
     },
     {
       "name": "--lr-file-input-reject-border-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-file-input>`** (default: `var(--lr-color-danger)`) — Border color of `[part=\"base\"][data-drag-state=\"reject\"]`."
+        "value": "**`<lr-file-input>`** (default: `var(--lr-color-danger)`) — Border color of `[part~=\"base\"][data-drag-state=\"reject\"]`."
       }
     },
     {
@@ -5164,63 +5164,56 @@
       "name": "--lr-graph-cat-1",
       "description": {
         "kind": "markdown",
-        "value": "**Shared design token** — Canonical shared component token for graph cat 1. Reads `--lr-theme-graph-cat-1`."
-      }
-    },
-    {
-      "name": "--lr-graph-cat-1..8",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-graph>`** — Ordered categorical fallback palette for a typed node with no `GraphNodeType.color`, assigned by the type's index in `nodeTypes` (wraps every 8 entries). Declared centrally in `specialist-tokens.styles.ts` so `<lr-graph>` and any future `<lr-graph-legend>`-style component resolve the identical default."
+        "value": "**`<lr-graph>`** (default: `var(--lr-theme-graph-cat-1,#8250df)`) — First categorical fallback color for typed nodes.\n\n**Shared design token** — Canonical shared component token for graph cat 1. Reads `--lr-theme-graph-cat-1`."
       }
     },
     {
       "name": "--lr-graph-cat-2",
       "description": {
         "kind": "markdown",
-        "value": "**Shared design token** — Canonical shared component token for graph cat 2. Reads `--lr-theme-graph-cat-2`."
+        "value": "**`<lr-graph>`** (default: `var(--lr-theme-graph-cat-2,#bf3989)`) — Second categorical fallback color for typed nodes.\n\n**Shared design token** — Canonical shared component token for graph cat 2. Reads `--lr-theme-graph-cat-2`."
       }
     },
     {
       "name": "--lr-graph-cat-3",
       "description": {
         "kind": "markdown",
-        "value": "**Shared design token** — Canonical shared component token for graph cat 3. Reads `--lr-theme-graph-cat-3`."
+        "value": "**`<lr-graph>`** (default: `var(--lr-theme-graph-cat-3,#0a7d91)`) — Third categorical fallback color for typed nodes.\n\n**Shared design token** — Canonical shared component token for graph cat 3. Reads `--lr-theme-graph-cat-3`."
       }
     },
     {
       "name": "--lr-graph-cat-4",
       "description": {
         "kind": "markdown",
-        "value": "**Shared design token** — Canonical shared component token for graph cat 4. Reads `--lr-theme-graph-cat-4`."
+        "value": "**`<lr-graph>`** (default: `var(--lr-theme-graph-cat-4,#57606a)`) — Fourth categorical fallback color for typed nodes.\n\n**Shared design token** — Canonical shared component token for graph cat 4. Reads `--lr-theme-graph-cat-4`."
       }
     },
     {
       "name": "--lr-graph-cat-5",
       "description": {
         "kind": "markdown",
-        "value": "**Shared design token** — Canonical shared component token for graph cat 5. Reads `--lr-theme-graph-cat-5`."
+        "value": "**`<lr-graph>`** (default: `var(--lr-theme-graph-cat-5,#b083f5)`) — Fifth categorical fallback color for typed nodes.\n\n**Shared design token** — Canonical shared component token for graph cat 5. Reads `--lr-theme-graph-cat-5`."
       }
     },
     {
       "name": "--lr-graph-cat-6",
       "description": {
         "kind": "markdown",
-        "value": "**Shared design token** — Canonical shared component token for graph cat 6. Reads `--lr-theme-graph-cat-6`."
+        "value": "**`<lr-graph>`** (default: `var(--lr-theme-graph-cat-6,#f470b8)`) — Sixth categorical fallback color for typed nodes.\n\n**Shared design token** — Canonical shared component token for graph cat 6. Reads `--lr-theme-graph-cat-6`."
       }
     },
     {
       "name": "--lr-graph-cat-7",
       "description": {
         "kind": "markdown",
-        "value": "**Shared design token** — Canonical shared component token for graph cat 7. Reads `--lr-theme-graph-cat-7`."
+        "value": "**`<lr-graph>`** (default: `var(--lr-theme-graph-cat-7,#52d6e8)`) — Seventh categorical fallback color for typed nodes.\n\n**Shared design token** — Canonical shared component token for graph cat 7. Reads `--lr-theme-graph-cat-7`."
       }
     },
     {
       "name": "--lr-graph-cat-8",
       "description": {
         "kind": "markdown",
-        "value": "**Shared design token** — Canonical shared component token for graph cat 8. Reads `--lr-theme-graph-cat-8`."
+        "value": "**`<lr-graph>`** (default: `var(--lr-theme-graph-cat-8,#c9d1d9)`) — Eighth categorical fallback color for typed nodes; the palette wraps for later `nodeTypes` entries.\n\n**Shared design token** — Canonical shared component token for graph cat 8. Reads `--lr-theme-graph-cat-8`."
       }
     },
     {
@@ -7412,6 +7405,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-prompt-studio>`** (default: `color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) — Selected version hover background."
+      }
+    },
+    {
+      "name": "--lr-provenance-panel-entity-justify",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-provenance-panel>`** (default: `flex-start`) — Main-axis packing of the entity-chip row. `center` centers every line, the wrapped final one included."
       }
     },
     {
@@ -9939,6 +9939,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-suggestion-chips>`** (default: `var(--lr-color-brand)`) — Border color of a hovered chip."
+      }
+    },
+    {
+      "name": "--lr-suggestion-chips-justify",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-suggestion-chips>`** (default: `flex-start`) — Main-axis packing of the chip row. `center` centers every line, the wrapped final one included — what `::part(base)` alone cannot do."
       }
     },
     {
@@ -13067,7 +13074,7 @@
       "name": "--lr-toast-width",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-toast>`** (default: `var(--lr-size-28rem)`) — Inline size of the stack, capped by the viewport minus the placement insets."
+        "value": "**`<lr-toast>`** (default: `var(--lr-size-28rem)`) — Inline size of the stack, capped by the usable logical safe-area rectangle."
       }
     },
     {
@@ -14369,7 +14376,7 @@
       "name": "--show-duration",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`** (default: `var(--lr-duration-base)`) — Compatibility alias for `--lr-accordion-item-show-duration`.\n\n**`<lr-combobox>`** (default: `var(--lr-transition-fast)`) — Listbox enter-transition duration.\n\n**`<lr-date-input>`** (default: `var(--lr-transition-fast)`) — Popup enter-transition duration.\n\n**`<lr-details>`** (default: `var(--lr-duration-base)`) — Expand-icon transition duration.\n\n**`<lr-dialog>`** — Mapped opening animation duration.\n\n**`<lr-drawer>`** — Opening slide duration.\n\n**`<lr-dropdown>`, `<lr-popover>`** (default: `var(--lr-transition-fast)`) — Opening transition duration.\n\n**`<lr-popup>`** (default: `var(--lr-duration-fast)`) — Activation transition duration.\n\n**`<lr-select>`** (default: `var(--lr-transition-fast)`) — Listbox enter-transition timing.\n\n**`<lr-time-input>`** (default: `var(--lr-duration-fast)`) — Picker opening duration.\n\n**`<lr-toast-item>`** — Mapped alias for `--lr-toast-show-duration`.\n\n**`<lr-tree-item>`** (default: `var(--lr-duration-base)`) — Expansion motion duration."
+        "value": "**`<lr-accordion-item>`** (default: `var(--lr-duration-base)`) — Compatibility alias for `--lr-accordion-item-show-duration`.\n\n**`<lr-combobox>`** (default: `var(--lr-transition-fast)`) — Listbox enter-transition duration.\n\n**`<lr-date-input>`** (default: `var(--lr-transition-fast)`) — Popup enter-transition duration.\n\n**`<lr-details>`** (default: `var(--lr-duration-base)`) — Expand-icon transition duration.\n\n**`<lr-dialog>`** — Mapped opening animation duration.\n\n**`<lr-drawer>`** — Opening slide duration.\n\n**`<lr-dropdown>`** (default: `var(--lr-transition-fast)`) — Opening transition duration.\n\n**`<lr-popover>`** (default: `var(--lr-duration-fast)`) — Opening transition duration.\n\n**`<lr-popup>`** (default: `var(--lr-duration-fast)`) — Activation transition duration.\n\n**`<lr-select>`** (default: `var(--lr-transition-fast)`) — Listbox enter-transition timing.\n\n**`<lr-time-input>`** (default: `var(--lr-duration-fast)`) — Picker opening duration.\n\n**`<lr-toast-item>`** — Mapped alias for `--lr-toast-show-duration`.\n\n**`<lr-tree-item>`** (default: `var(--lr-duration-base)`) — Expansion motion duration."
       }
     },
     {
@@ -14537,7 +14544,7 @@
       "name": "--track-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-progress-bar>`, `<lr-progress-ring>`, `<lr-spinner>`** (default: `var(--lr-progress-track-color)`) — Upstream-compatible track color.\n\n**`<lr-tab-group>`** — Upstream track color."
+        "value": "**`<lr-progress-bar>`** (default: `var(--lr-progress-track-color)`) — Upstream-compatible track color.\n\n**`<lr-progress-ring>`** (default: `var(--lr-progress-ring-track-color)`) — Upstream-compatible track color.\n\n**`<lr-spinner>`** (default: `var(--lr-color-brand-quiet)`) — Upstream-compatible track color.\n\n**`<lr-tab-group>`** — Upstream track color."
       }
     },
     {
@@ -14572,7 +14579,7 @@
       "name": "--track-width",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-progress-ring>`, `<lr-spinner>`** (default: `var(--lr-progress-ring-track-width)`) — Upstream-compatible track width.\n\n**`<lr-tab-group>`** — Upstream track width."
+        "value": "**`<lr-progress-ring>`** (default: `var(--lr-progress-ring-track-width)`) — Upstream-compatible track width.\n\n**`<lr-spinner>`** (default: `var(--lr-spinner-track-width)`) — Upstream-compatible track width.\n\n**`<lr-tab-group>`** — Upstream track width."
       }
     },
     {

@@ -39,7 +39,7 @@ function parseCellRef(ref: string): { row: number; col: number } | null {
 /**
  * Parses an A1-notation cell or cell-range reference, tolerating an optional `Sheet name!` prefix
  * (quoted with single quotes when the name contains a space), `$` absolute markers, and lowercase
- * column letters. Whole-row (`3:7`) and whole-column (`A:A`) references are unsupported this round
+ * column letters. Whole-row (`3:7`) and whole-column (`A:A`) references are currently unsupported
  * and return `null` -- a bare `parseCellRef()` failure on either half of the range means neither
  * looks like a real single-cell reference.
  */

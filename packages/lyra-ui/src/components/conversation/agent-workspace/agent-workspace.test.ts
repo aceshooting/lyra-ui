@@ -115,6 +115,22 @@ it('composes transcript and agent details from controlled data', async () => {
   expect(el.shadowRoot!.querySelector('[part="details"]')).to.exist;
 });
 
+it('forwards caller-supplied retrieval failure text through the child errorText contract', async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`
+    <lr-agent-workspace retrieval-error="Retrieval service unavailable"></lr-agent-workspace>
+  `);
+  const results = el.shadowRoot!.querySelector('lr-retrieval-results') as HTMLElement & {
+    errorText: string;
+    updateComplete: Promise<unknown>;
+  };
+  await results.updateComplete;
+
+  expect(results.errorText).to.equal('Retrieval service unavailable');
+  expect(results.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal(
+    'Retrieval service unavailable',
+  );
+});
+
 it('forwards lr-cancel from the built-in agent run carrying that run\'s own object detail', async () => {
   const el = await fixture<LyraAgentWorkspace>(html`<lr-agent-workspace .run=${run}></lr-agent-workspace>`);
   await el.updateComplete;
@@ -233,7 +249,7 @@ it('showComposer=false suppresses only the built-in fallback and keeps a custom 
       <div slot="composer" id="custom-composer">Custom composer</div>
     </lr-agent-workspace>
   `);
-  expect(el.shadowRoot!.querySelector('lr-chat-composer')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('lr-chat-composer')) == null).to.be.true;
   expect((el.shadowRoot!.querySelector('[part="composer"]') as HTMLElement).hidden).to.be.false;
   expect(el.querySelector('#custom-composer')).to.exist;
 });

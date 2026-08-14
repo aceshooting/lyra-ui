@@ -3,6 +3,7 @@ import './video-playlist.js';
 import type {
   LyraVideoPlaylist,
   LyraVideoPlaylistChangeDetail,
+  LyraVideoPlaylistItem,
 } from './video-playlist.js';
 import type { LyraVideo } from '../video/video.js';
 
@@ -76,6 +77,49 @@ function press(target: HTMLElement, key: string): KeyboardEvent {
 }
 
 describe('lr-video-playlist public contract', () => {
+  it('renders deterministic item metadata while no live video children are observable', async () => {
+    const seededItems: readonly LyraVideoPlaylistItem[] = [
+      {
+        title: 'Server-rendered introduction',
+        poster: 'https://example.test/introduction.jpg',
+        duration: 125,
+      },
+      { title: 'Server-rendered unavailable lesson', unavailable: true },
+    ];
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist .items=${seededItems}></lr-video-playlist>
+    `);
+
+    const buttons = items(el);
+    expect(buttons.map((button) => button.textContent!.replace(/\s+/gu, ' ').trim())).to.deep.equal([
+      'Server-rendered introduction 2:05',
+      'Server-rendered unavailable lesson',
+    ]);
+    expect(buttons.map((button) => button.disabled)).to.deep.equal([true, true]);
+    expect(buttons.map((button) => button.tabIndex)).to.deep.equal([-1, -1]);
+    expect(buttons[0]!.getAttribute('aria-current')).to.equal('true');
+    expect(
+      buttons[0]!.querySelector<HTMLImageElement>('[part="playlist-thumbnail"] img')?.src,
+    ).to.equal('https://example.test/introduction.jpg');
+  });
+
+  it('adopts direct video metadata instead of stale item seeds on a browser-only first render', async () => {
+    const seededItems: readonly LyraVideoPlaylistItem[] = [
+      { title: 'Stale server title', duration: 1 },
+    ];
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist .items=${seededItems}>
+        <lr-video title="Live child title"></lr-video>
+      </lr-video-playlist>
+    `);
+
+    expect(items(el).length).to.equal(1);
+    expect(items(el)[0]!.textContent).to.contain('Live child title');
+    expect(items(el)[0]!.textContent).not.to.contain('Stale server title');
+    expect(items(el)[0]!.disabled).to.be.false;
+    expect(items(el)[0]!.tabIndex).to.equal(0);
+  });
+
   it('matches documented defaults, reflection, forwarding, slot, and CSS parts', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist>
@@ -162,10 +206,10 @@ describe('lr-video-playlist public contract', () => {
     expect(getComputedStyle(themedCurrent).backgroundColor).to.equal('rgb(26, 27, 28)');
   });
 
-  it('uses only direct video children and skips disabled videos for activation and roving focus', async () => {
+  it('uses only direct video children and skips inert videos for activation and roving focus', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist>
-        <lr-video title="Unavailable" disabled></lr-video>
+        <lr-video title="Unavailable" inert></lr-video>
         <div><lr-video title="Nested"></lr-video></div>
         <lr-video title="Available"></lr-video>
       </lr-video-playlist>
@@ -181,6 +225,22 @@ describe('lr-video-playlist public contract', () => {
     expect(direct[1]!.hidden).to.be.false;
     expect(nested.hidden).to.be.false;
     expect(nested.controls).to.equal('standard');
+  });
+
+  it('does not invent an availability contract from an undeclared child disabled attribute', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist>
+        <lr-video title="First" disabled></lr-video>
+        <lr-video title="Second"></lr-video>
+      </lr-video-playlist>
+    `);
+    await settle(el);
+    const [first, second] = childVideos(el);
+
+    expect(first!.hidden).to.be.false;
+    expect(second!.hidden).to.be.true;
+    expect(items(el)[0]!.disabled).to.be.false;
+    expect(items(el)[0]!.tabIndex).to.equal(0);
   });
 
   it('emits the exact composed change detail with fresh inert metadata snapshots', async () => {
@@ -331,7 +391,7 @@ describe('lr-video-playlist public contract', () => {
     // An attribute change (not a childList change) so only the mutation observer's own
     // reconcile pass runs -- a slotchange from removing the node instead would fire a second,
     // independent reconcile that races the deferred retry this test targets.
-    a!.setAttribute('disabled', '');
+    a!.inert = true;
     await settle(el);
 
     expect(bPlayback.playCalls).to.equal(1);
@@ -621,7 +681,7 @@ describe('lr-video-playlist public contract', () => {
     el.goTo(0);
   });
 
-  it('falls back to an earlier enabled video when the one nearest the end is disabled', async () => {
+  it('falls back to an earlier enabled video when the one nearest the end becomes inert', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist>
         <lr-video title="A"></lr-video><lr-video title="B"></lr-video><lr-video title="C"></lr-video>
@@ -630,21 +690,21 @@ describe('lr-video-playlist public contract', () => {
     await settle(el);
     el.goTo(2);
     await settle(el);
-    childVideos(el)[2]!.setAttribute('disabled', '');
+    childVideos(el)[2]!.inert = true;
     await settle(el);
     expect(childVideos(el)[1]!.hidden).to.be.false;
     expect(childVideos(el)[2]!.hidden).to.be.true;
   });
 
-  it('clears the active video when every remaining item becomes disabled at once', async () => {
+  it('clears the active video when every remaining item becomes inert at once', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist><lr-video title="A"></lr-video><lr-video title="B"></lr-video></lr-video-playlist>
     `);
     await settle(el);
     el.goTo(1);
     await settle(el);
-    childVideos(el)[0]!.setAttribute('disabled', '');
-    childVideos(el)[1]!.setAttribute('disabled', '');
+    childVideos(el)[0]!.inert = true;
+    childVideos(el)[1]!.inert = true;
     await settle(el);
     expect(items(el).every((button) => button.getAttribute('aria-current') === 'false')).to.be.true;
     expect(childVideos(el)[0]!.hidden).to.be.true;
@@ -677,8 +737,8 @@ describe('lr-video-playlist public contract', () => {
     await settle(el);
     const buttons = items(el);
     buttons[0]!.focus();
-    childVideos(el)[0]!.setAttribute('disabled', '');
-    // The rendered row has not caught up with the just-set attribute yet -- but `moveRoving`
+    childVideos(el)[0]!.inert = true;
+    // The rendered row has not caught up with the just-set property yet -- but `moveRoving`
     // looks the pressed row up against the *live* enabled set, finds it already missing, and
     // returns before ever calling `focusItem`, so focus stays exactly where it was.
     expect(buttons[0]!.disabled, 'the row has not re-rendered yet').to.be.false;
@@ -706,7 +766,7 @@ describe('lr-video-playlist public contract', () => {
   it('ignores a keydown dispatched directly on a disabled playlist row', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist>
-        <lr-video title="One"></lr-video><lr-video title="Two" disabled></lr-video><lr-video title="Three"></lr-video>
+        <lr-video title="One"></lr-video><lr-video title="Two" inert></lr-video><lr-video title="Three"></lr-video>
       </lr-video-playlist>
     `);
     await settle(el);
@@ -729,10 +789,10 @@ describe('lr-video-playlist public contract', () => {
     expect(items(el)[1]!.tabIndex).to.equal(0);
   });
 
-  it('previous() finds the nearest earlier enabled video, skipping a disabled one', async () => {
+  it('previous() finds the nearest earlier enabled video, skipping an inert one', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist>
-        <lr-video title="A"></lr-video><lr-video title="B" disabled></lr-video><lr-video title="C"></lr-video>
+        <lr-video title="A"></lr-video><lr-video title="B" inert></lr-video><lr-video title="C"></lr-video>
       </lr-video-playlist>
     `);
     await settle(el);
@@ -864,7 +924,7 @@ describe('lr-video-playlist public contract', () => {
       expect(iframeRow instanceof frameWindow.HTMLElement).to.be.true;
       expect(el.shadowRoot!.activeElement === iframeRow).to.be.true;
 
-      first!.setAttribute('disabled', '');
+      first!.inert = true;
       await settle(el);
 
       expect(

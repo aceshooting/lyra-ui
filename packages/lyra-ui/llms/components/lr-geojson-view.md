@@ -51,6 +51,9 @@ text, independent of whether the optional map peer is available.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
   DOMRect[] }`) — fired after a selection ends inside the serialized metadata.
 
+`lr-highlight-activate` is not part of this registry bridge's event contract: serialized-metadata
+highlights are passive and cannot be activated.
+
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base` (the root container with explicit `aria-busy="true"|"false"`), `status` (the

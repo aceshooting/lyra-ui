@@ -122,7 +122,12 @@
     { "id": "feedback-callout--appearances", "profile": "standard" },
     { "id": "overlay-dropdown--default", "profile": "standard" },
     { "id": "overlay-popover--default", "profile": "standard" },
-    { "id": "overlay-tooltip--default", "profile": "standard" },
+    {
+      "id": "overlay-tooltip--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The corrected true-default arrow is now visible instead of being clipped by an attribute-only selector; the current capture awaits human visual review."
+    },
     {
       "id": "overlays-popup--with-arrow",
       "profile": "standard",
@@ -382,7 +387,7 @@
     "reviewedAt": null,
     "knownLimitations": [
       "The historical 249 light/dark/RTL baselines and current evidence captures have not received human visual review.",
-      "Four forced-colors/narrow captures and 75 changed light/dark/RTL captures remain ephemeral evidence and are not approved baseline updates.",
+      "Four forced-colors/narrow captures and 78 changed light/dark/RTL captures remain ephemeral evidence and are not approved baseline updates.",
       "Chromium forced-colors emulation is targeted browser evidence, not a manual Windows High Contrast or assistive-technology review.",
       "The matrix is a risk-weighted sample and does not provide a baseline for every component or state."
     ]

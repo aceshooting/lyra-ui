@@ -62,11 +62,30 @@ export function resolveOverlayAnchor(
   },
 ): Element | VirtualAnchor | null {
   if (sources.virtualAnchor) return sources.virtualAnchor;
-  if (sources.anchor) return sources.anchor;
+  if (sources.anchor?.isConnected) return sources.anchor;
   if (sources.for) {
     const root = host.getRootNode() as Document | ShadowRoot;
     const target = root.getElementById?.(sources.for) ?? null;
     if (target) return target;
   }
-  return sources.trigger ?? null;
+  return sources.trigger?.isConnected ? sources.trigger : null;
+}
+
+/** Watches structural and `id`-identity changes in the host's current root. Callers compare their
+ * resolved anchor before doing any work, so unrelated mutations remain a cheap no-op. */
+export function observeOverlayAnchorIdentity(host: Node, callback: () => void): () => void {
+  const root = host.getRootNode() as Document | ShadowRoot;
+  const ownerDocument = root.nodeType === 9
+    ? root as Document
+    : (root as ShadowRoot).ownerDocument;
+  const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
+  if (!MutationObserverCtor) return () => undefined;
+  const observer = new MutationObserverCtor(callback);
+  observer.observe(root, {
+    attributes: true,
+    attributeFilter: ['id'],
+    childList: true,
+    subtree: true,
+  });
+  return () => observer.disconnect();
 }

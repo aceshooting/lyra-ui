@@ -754,7 +754,7 @@ it('--lr-empty-compact-font-size overrides the compact heading font size', async
   expect(getComputedStyle(heading).fontSize).to.equal('20px');
 });
 
-it('leaves the compact heading font size at its inherited default when --lr-empty-compact-font-size is unset (D1: no fallback, so an unset token must not shrink today\'s rendering)', async () => {
+it('leaves the compact heading font size inherited when the token is unset, so it does not shrink existing rendering', async () => {
   const normal = (await fixture(
     html`<lr-empty heading="Nothing here"></lr-empty>`,
   )) as LyraEmpty;

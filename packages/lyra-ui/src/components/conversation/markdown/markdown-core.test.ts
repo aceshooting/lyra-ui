@@ -200,7 +200,7 @@ describe('languages (build-lean shiki, no full-bundle fallback)', () => {
     el.content = '```ts\nconst x = 1;\n```';
     await el.updateComplete;
     await aTimeout(500);
-    expect(el.shadowRoot!.querySelector('[part="code-block"] span')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="code-block"] span')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="code-block"] code')!.textContent).to.equal('const x = 1;\n');
   });
 
@@ -213,7 +213,7 @@ describe('languages (build-lean shiki, no full-bundle fallback)', () => {
     el.content = '```typescript\nconst x = 1;\n```';
     await el.updateComplete;
     await aTimeout(300);
-    expect(el.shadowRoot!.querySelector('[part="code-block"] span')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="code-block"] span')) == null).to.be.true;
   });
 
   it('does not highlight when highlightCode is false', async () => {
@@ -223,7 +223,7 @@ describe('languages (build-lean shiki, no full-bundle fallback)', () => {
     el.content = '```ts\nconst x = 1;\n```';
     await el.updateComplete;
     await aTimeout(500);
-    expect(el.shadowRoot!.querySelector('[part="code-block"] span')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="code-block"] span')) == null).to.be.true;
   });
 
   it('is accessible once highlighted via languages', async function () {
@@ -441,7 +441,7 @@ describe('heading anchors / scrollToAnchor (unaffected by the shiki split)', () 
 
   it('applyAnchor/computeSelectionAnchor no-op when the content root is not yet in the DOM', async () => {
     const el = fixtureSync(html`<lr-markdown-core content=${'# Title'}></lr-markdown-core>`) as LyraMarkdownCore;
-    expect(el.shadowRoot!.querySelector('[part="content"]')).to.equal(null);
+    expect((el.shadowRoot!.querySelector('[part="content"]')) === (null)).to.equal(true);
     type Internals = {
       applyAnchor(anchor: LyraAnchor): Promise<boolean>;
       computeSelectionAnchor(range: Range): unknown;
@@ -555,7 +555,7 @@ describe('math (KaTeX, unaffected by the shiki split)', () => {
     const text = el.shadowRoot!.querySelector('[part="content"]')!.textContent!;
     expect(text).to.contain('$x$');
     expect(text).to.contain('$$y$$');
-    expect(el.shadowRoot!.querySelector('[part="math"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="math"]')) == null).to.be.true;
     expect(fired, 'a throwing (but installed) peer is not "confirmed missing" -- no error event').to.be.false;
   });
 });
@@ -781,7 +781,7 @@ describe('paragraph/list/inline-code/image parts', () => {
     await waitUntil(() => el.shadowRoot!.querySelector('[part="code-block"]') !== null);
     const code = el.shadowRoot!.querySelector('[part="code-block"] code')!;
     expect(code.textContent).to.equal('<div>indented</div>\n');
-    expect(el.shadowRoot!.querySelector('[part="code-block"] div')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="code-block"] div')) == null).to.be.true;
   });
 
   it('renders an <img> from source markdown with part="img"', async () => {
@@ -824,7 +824,7 @@ describe('paragraph/list/inline-code/image parts', () => {
     const ths = el.shadowRoot!.querySelectorAll('[part="table"] th');
     expect(ths[0].getAttribute('align')).to.equal('left');
     expect(ths[1].getAttribute('align')).to.equal('right');
-    expect(el.shadowRoot!.querySelector('[part="table"] tbody')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="table"] tbody')) == null).to.be.true;
   });
 });
 
@@ -907,7 +907,7 @@ describe('fine-grained highlighter build failure (languages, no default fallback
       console.warn = originalWarn;
     }
     expect(warnings.map((w) => String(w[0])).join('\n')).to.include('failed to build a fine-grained shiki highlighter');
-    expect(el.shadowRoot!.querySelector('[part="code-block"] span')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="code-block"] span')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="code-block"] code')!.textContent).to.equal('hello\n');
   });
 });
@@ -1168,7 +1168,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     const el = fixtureSync(html`<lr-markdown-core></lr-markdown-core>`) as LyraMarkdownCore;
     // Precondition: fixtureSync() connects but does not await the first Lit update, so the
     // [part="content"] wrapper hasn't been rendered into the shadow root yet.
-    expect(el.shadowRoot!.querySelector('[part="content"]')).to.equal(null);
+    expect((el.shadowRoot!.querySelector('[part="content"]')) === (null)).to.equal(true);
     (el as unknown as { repaintHighlights(): void }).repaintHighlights();
     // No throw -- repaintHighlights() must bail out cleanly with nothing to paint into yet.
   });

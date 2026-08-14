@@ -938,6 +938,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   };
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     const collectionChanged =
       changed.has('mode') ||
       changed.has('rowLabels') ||
@@ -1119,6 +1120,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (
       [
         'values',

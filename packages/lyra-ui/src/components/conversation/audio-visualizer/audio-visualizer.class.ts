@@ -369,6 +369,7 @@ export class LyraAudioVisualizer extends LyraElement {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (['state', 'variant', 'barCount', 'gain', 'level', 'stream'].some((key) => changed.has(key))) {
       this.scheduleDraw();
     }

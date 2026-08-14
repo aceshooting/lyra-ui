@@ -118,7 +118,7 @@ it('forwards a live host aria-label to the linked stat anchor and restores natur
 
 it('hides the trend pill when trend is NaN, shows it with direction otherwise', async () => {
   const el = (await fixture(html`<lr-stat label="x" value="1"></lr-stat>`)) as LyraStat;
-  expect(el.shadowRoot!.querySelector('[part="trend"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="trend"]')) == null).to.be.true;
 
   el.trend = -12.5;
   await el.updateComplete;
@@ -133,7 +133,7 @@ it('hides the trend pill again after the trend attribute is removed', async () =
 
   el.removeAttribute('trend');
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="trend"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="trend"]')) == null).to.be.true;
 });
 
 it('is accessible', async () => {
@@ -147,7 +147,7 @@ it('preserves NaN/null as the deliberate "no trend" sentinel, but normalizes Inf
   el.trend = NaN;
   expect(el.trend).to.satisfy(Number.isNaN); // still the hidden sentinel, not coerced to 0
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="trend"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="trend"]')) == null).to.be.true;
 
   el.trend = Infinity;
   expect(el.trend).to.equal(0); // normalized to a flat, finite trend instead of "Infinity%"

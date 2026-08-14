@@ -287,7 +287,7 @@ it('does not render a disabled-reason paragraph for an enabled row', async () =>
     html`<lr-tool-select-dialog .tools=${TOOLS}></lr-tool-select-dialog>`,
   )) as LyraToolSelectDialog;
   const row = checkboxFor(el, 'web_search').closest('[part="tool-row"]') as HTMLElement;
-  expect(row.querySelector('[part="tool-disabled-reason"]')).to.not.exist;
+  expect((row.querySelector('[part="tool-disabled-reason"]')) == null).to.be.true;
 });
 
 it('folds the disabled reason into the checkbox itself, so it contributes to its accessible name/content instead of going unannounced', async () => {
@@ -497,7 +497,7 @@ describe('useDefaults', () => {
     )) as LyraToolSelectDialog;
     expect(el.useDefaults).to.be.false;
     expect(checkboxFor(el, 'web_search').disabled).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="defaults-hint"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="defaults-hint"]')) == null).to.be.true;
   });
 
   it('disables every non-individually-disabled row and shows a hint while true', async () => {

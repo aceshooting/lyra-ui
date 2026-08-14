@@ -9,10 +9,9 @@
  * decided to proceed.
  *
  * The consumer-visible symptom is not a failed assertion. The reads live in `willUpdate()` and in
- * keydown handlers, so the throw surfaces as an *unhandled rejection* -- one downstream suite
- * reported 120 of them in a single run, all the same stack, from an `<lr-segmented>` re-rendering
- * after its items changed. The tests still pass; the runner just exits non-zero, and the failure
- * points at library internals rather than anything the consumer wrote.
+ * keydown handlers, so the throw surfaces as an *unhandled rejection* on each affected re-render.
+ * Assertions can still pass while the runner exits non-zero, and the failure points at library
+ * internals rather than anything the consumer wrote.
  *
  * Returning `null` is the honest answer in every case this catches: a DOM that cannot say what is
  * focused is indistinguishable, for our purposes, from one where nothing is. Every call site

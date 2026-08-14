@@ -30,6 +30,7 @@ import {
   readTypeAliases,
   webTypesValue,
 } from './editor-type-values.mjs';
+import { cssPropertyDescription } from './editor-css-descriptions.mjs';
 import { mergeDesignTokenEditorProperties } from './design-token-editor.mjs';
 import { expandManifestInheritance } from './manifest-compact.mjs';
 
@@ -219,31 +220,11 @@ for (const declaration of customElements) {
     propertiesByName.get(prop.name).push({
       tag: declaration.tagName,
       description: prop.description,
-      default: prop.default,
+      ...(Object.hasOwn(prop, 'default') ? { default: prop.default } : {}),
     });
   }
 }
 mergeDesignTokenEditorProperties(propertiesByName, designTokenInput);
-
-function cssPropertyDescription(entries) {
-  const byText = new Map();
-  for (const entry of entries) {
-    const key = entry.description ?? '';
-    if (!byText.has(key)) byText.set(key, { contexts: [], tags: [], default: entry.default });
-    if (entry.context) byText.get(key).contexts.push(entry.context);
-    if (entry.tag) byText.get(key).tags.push(entry.tag);
-  }
-  return [...byText.entries()]
-    .map(([description, { contexts, tags, default: def }]) => {
-      const subjects = [
-        ...new Set(contexts),
-        ...tags.map((tag) => `\`<${tag}>\``),
-      ].join(', ');
-      const defaultSuffix = def !== undefined ? ` (default: \`${def}\`)` : '';
-      return `**${subjects}**${defaultSuffix} — ${description}`;
-    })
-    .join('\n\n');
-}
 
 // Computed once, reused by both css.customData (markdown-wrapped) and web-types (plain string).
 const cssProperties = [...propertiesByName.entries()]
@@ -300,4 +281,3 @@ writeFileSync(webTypesPath, `${JSON.stringify(webTypes, null, 2)}\n`);
 console.log(
   `Wrote ${customElements.length} tags to vscode-html-data.json, ${cssData.properties.length} custom properties to vscode-css-data.json, and both to web-types.json`,
 );
-

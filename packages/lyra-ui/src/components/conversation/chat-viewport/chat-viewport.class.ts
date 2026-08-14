@@ -201,7 +201,8 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     this.scrollbarDragActive = false;
   }
 
-  override firstUpdated(): void {
+  override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     this.armObservers();
   }
 

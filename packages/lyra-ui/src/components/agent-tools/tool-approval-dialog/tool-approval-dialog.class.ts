@@ -239,6 +239,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   private readonly errorId = nextId('tool-approval-dialog-error');
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (
       this.hasUpdated &&
       !this.suppressNextErrorAnnouncement &&
@@ -281,6 +282,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   // have already landed in the DOM before the focus calls below can rely on
   // them -- mirrors lr-dialog's identical ordering rationale.
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     this.suppressNextErrorAnnouncement = false;
     if (changed.has('open') && this.open) {
       this.overlay?.focusInitial();

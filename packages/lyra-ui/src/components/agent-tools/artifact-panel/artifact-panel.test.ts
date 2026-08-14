@@ -13,7 +13,7 @@ describe('lr-artifact-panel', () => {
   it('renders the view toggle only once the code slot is populated', async () => {
     const noCode = (await fixture(html`<lr-artifact-panel></lr-artifact-panel>`)) as LyraArtifactPanel;
     await noCode.updateComplete;
-    expect(noCode.shadowRoot!.querySelector('[part="view-toggle"]')).to.not.exist;
+    expect((noCode.shadowRoot!.querySelector('[part="view-toggle"]')) == null).to.be.true;
 
     const withCode = (await fixture(html`
       <lr-artifact-panel><pre slot="code">code</pre></lr-artifact-panel>
@@ -51,7 +51,7 @@ describe('lr-artifact-panel', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     await el.updateComplete;
     expect(el.view).to.equal('preview');
-    expect(el.shadowRoot!.querySelector('[part="view-toggle"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="view-toggle"]')) == null).to.be.true;
     expect((el.shadowRoot!.querySelector('slot:not([name])') as HTMLElement).style.display).to.equal('');
   });
 
@@ -165,7 +165,7 @@ describe('lr-artifact-panel', () => {
       <lr-artifact-panel .versions=${[{ id: 'v1' }, { id: 'v2' }]}></lr-artifact-panel>
     `)) as LyraArtifactPanel;
     await latestEl.updateComplete;
-    expect(latestEl.shadowRoot!.querySelector('[part="restore-button"]')).to.not.exist;
+    expect((latestEl.shadowRoot!.querySelector('[part="restore-button"]')) == null).to.be.true;
   });
 
   it('sets aria-busy on the body while streaming and shows a reduced-motion-safe indicator', async () => {
@@ -179,7 +179,7 @@ describe('lr-artifact-panel', () => {
   it('copy button hidden while copyText is empty, emits lr-copy with it when set', async () => {
     const empty = (await fixture(html`<lr-artifact-panel></lr-artifact-panel>`)) as LyraArtifactPanel;
     await empty.updateComplete;
-    expect(empty.shadowRoot!.querySelector('[part="copy-button"]')).to.not.exist;
+    expect((empty.shadowRoot!.querySelector('[part="copy-button"]')) == null).to.be.true;
 
     const el = (await fixture(
       html`<lr-artifact-panel copy-text="hello"></lr-artifact-panel>`,

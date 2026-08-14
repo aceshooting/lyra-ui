@@ -60,7 +60,7 @@ it('falls back to the documented default of 8 for a non-numeric max-members', as
   // All 3 members shown (well under the default cap of 8), and no overflow chip -- unlike
   // slice(0, NaN)'s coincidental (and undocumented) "0 members" behavior.
   expect(el.shadowRoot!.querySelectorAll('[part="member"]').length).to.equal(3);
-  expect(el.shadowRoot!.querySelector('[part="overflow"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="overflow"]')) == null).to.be.true;
 });
 
 it('emits lr-entity-activate when a member chip is activated', async () => {
@@ -101,7 +101,7 @@ it('renders only title + member count + drill button in compact mode -- no summa
   el.community = community;
   el.members = members;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="summary"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="summary"]')) == null).to.be.true;
   expect(el.shadowRoot!.querySelectorAll('[part="member"]').length).to.equal(0);
   expect(el.shadowRoot!.querySelector('[part="title"]')).to.exist;
   expect(el.shadowRoot!.querySelector('[part="member-count"]')).to.exist;

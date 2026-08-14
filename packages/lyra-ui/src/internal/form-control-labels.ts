@@ -34,6 +34,37 @@ export interface ExternalLabelActivationHost {
   [EXTERNAL_LABEL_ACTIVATION](): ExternalLabelActivation;
 }
 
+/** Internal transactions used when the form control host itself owns the role and focus.
+ *
+ * Most controls put their semantic owner in shadow DOM, where the label bridge can distinguish an
+ * authored host `aria-label` from the internal target it manages. Host-owned controls cannot make
+ * that distinction from the attribute alone: their generated fallback, an external-label bridge
+ * name, and an authored override all occupy the same attribute. This protocol lets the component
+ * identify authored input and lets bridge writes pass through the component's own observation
+ * guard. It also makes release an explicit transaction, so a component can stop protecting the
+ * external name even when an author replaced the attribute before release ran.
+ */
+export type ExternalLabelHostSemanticOperation =
+  | { readonly type: 'has-authored-name' }
+  | { readonly type: 'apply'; readonly name: string }
+  | {
+      readonly type: 'release';
+      readonly appliedName: string;
+      readonly hadPrevious: boolean;
+      readonly previous: string | null;
+    };
+
+/** Opt-in protocol for a form control whose host owns its role, name, and focus. */
+export const EXTERNAL_LABEL_HOST_SEMANTICS = Symbol('lr-external-label-host-semantics');
+
+/** A host-owned semantic control participating in the guarded label-name protocol. */
+export interface ExternalLabelHostSemanticOwner {
+  /** @internal */
+  [EXTERNAL_LABEL_HOST_SEMANTICS](
+    operation: ExternalLabelHostSemanticOperation,
+  ): boolean | void;
+}
+
 /**
  * The `ElementInternals` each form-associated control attached, keyed by the control.
  *
@@ -375,6 +406,7 @@ export class ExternalLabelController implements ReactiveController {
 
   /** The element that owns the control's role — where the external name belongs. */
   private resolveNameTarget(focusTarget: HTMLElement | null): HTMLElement | null {
+    if (this.hostSemanticOwner) return this.host;
     const root = this.ownRoot;
     if (!root) return focusTarget;
 
@@ -428,7 +460,21 @@ export class ExternalLabelController implements ReactiveController {
   }
 
   private resolveFocusTarget(): HTMLElement | null {
+    if (this.hostSemanticOwner) return this.host;
     return collectFocusableElements(this.host)[0] ?? null;
+  }
+
+  /** Host-owned semantic controls opt in with a symbol so the protocol cannot accidentally become
+   * a reflected/public component member. */
+  private get hostSemanticOwner(): ExternalLabelHostSemanticOwner | null {
+    const candidate = this.host as Partial<ExternalLabelHostSemanticOwner>;
+    return typeof candidate[EXTERNAL_LABEL_HOST_SEMANTICS] === 'function'
+      ? (candidate as ExternalLabelHostSemanticOwner)
+      : null;
+  }
+
+  private hostHasAuthoredName(owner: ExternalLabelHostSemanticOwner): boolean {
+    return owner[EXTERNAL_LABEL_HOST_SEMANTICS]({ type: 'has-authored-name' }) === true;
   }
 
   /** How a label click reaches this control. */
@@ -446,7 +492,11 @@ export class ExternalLabelController implements ReactiveController {
 
   /** Applies (or withdraws) the external name on the current role owner. */
   private apply(): void {
-    if (this.host.hasAttribute('aria-label')) {
+    const hostOwner = this.hostSemanticOwner;
+    if (
+      (hostOwner && this.hostHasAuthoredName(hostOwner)) ||
+      (!hostOwner && this.host.hasAttribute('aria-label'))
+    ) {
       // Host `aria-label` wins over any computed internal name; the component's own forwarding
       // already puts it on the target, so the bridge must not compete with it.
       this.release();
@@ -481,7 +531,11 @@ export class ExternalLabelController implements ReactiveController {
         previous: target.getAttribute('aria-label'),
       };
     }
-    if (target.getAttribute('aria-label') !== name) target.setAttribute('aria-label', name);
+    if (target === this.host && hostOwner) {
+      hostOwner[EXTERNAL_LABEL_HOST_SEMANTICS]({ type: 'apply', name });
+    } else if (target.getAttribute('aria-label') !== name) {
+      target.setAttribute('aria-label', name);
+    }
     this.applied.name = name;
   }
 
@@ -497,6 +551,16 @@ export class ExternalLabelController implements ReactiveController {
     this.applied = undefined;
     if (!applied) return;
     const { target, name, had, previous } = applied;
+    const hostOwner = target === this.host ? this.hostSemanticOwner : null;
+    if (hostOwner) {
+      hostOwner[EXTERNAL_LABEL_HOST_SEMANTICS]({
+        type: 'release',
+        appliedName: name,
+        hadPrevious: had,
+        previous,
+      });
+      return;
+    }
     if (target.getAttribute('aria-label') !== name) return;
     if (had) target.setAttribute('aria-label', previous ?? '');
     else target.removeAttribute('aria-label');

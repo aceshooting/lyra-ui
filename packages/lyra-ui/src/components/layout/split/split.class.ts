@@ -1,5 +1,5 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
-import { property, state, query } from "lit/decorators.js";
+import { property, query } from "lit/decorators.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import {
   activateOverlay,
@@ -366,7 +366,10 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     panelCount: number
   ) => string;
 
-  @state() private panelCount = 0;
+  /** Internal hydration seed reflected into declarative output so a property-driven server render
+   * and the browser's first reuse pass agree before assigned children can be observed. */
+  @property({ type: Number, attribute: "data-lr-panel-count", reflect: true })
+  private panelCount = 0;
   private sizesReconciledForMembership = false;
   private _collapseState: SplitCollapseState = "wide";
   // Whether ResizeObserver-driven measurement is currently ignored because a
@@ -425,7 +428,9 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     // observer's own first callback still supersedes this approximation as soon as it fires.
     const hostWidth = this.getBoundingClientRect().width;
     if (hostWidth > 0) this.measuredInlineSize = hostWidth;
-    this.panelCount = this.children.length;
+    this.seedFirstRenderState(() => {
+      this.panelCount = this.children.length;
+    });
     // Initialization waits for the first willUpdate() so property bindings committed later in
     // this same connection turn (notably defaultSizes/storageKey) participate in the
     // initialization-only precedence chain. Reconnects keep the already-live layout and only
@@ -466,7 +471,8 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     this.resetCollapseObserver();
   }
 
-  protected override firstUpdated(): void {
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     if (this.responsiveObservationEnabled) this.armCollapseObserver();
   }
 
@@ -486,6 +492,14 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  documented exception instead (mirrors virtual-list.ts's
    *  `attachContainerListeners()`). */
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (!this.ownerDocument && this.panelCount === 0) {
+      this.panelCount = Math.max(
+        this.sizes.length,
+        this.defaultSizes.length,
+        this.panelConstraints.length,
+      );
+    }
     if (!this.initializedSizes) {
       this.initializeSizes();
       this.initializedSizes = true;
@@ -735,7 +749,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   }
 
   /** Resolves `defaultSizes` to a percent-space array for `initializeSizes()`, or `null` when it is
-   *  empty/unusable. Per D2: a **pure-number** array keeps today's exact strict behavior -- it is
+   *  empty/unusable. A **pure-number** array keeps strict behavior -- it is
    *  passed straight to `validInitialSizes()` with no normalization, so `[30, 60]` is still rejected.
    *  Only when at least one entry is a CSS length string are lengths resolved against the measured
    *  container (numbers as percent-of-container, `%` as-is, `px`/`rem`/`em` via `resolveCssLength`)
@@ -1430,6 +1444,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   };
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (
       changed.has("collapse") ||
       changed.has("orientationBreakpoint") ||

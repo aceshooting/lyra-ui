@@ -57,6 +57,9 @@ is recorded in `llms/shared.md` and does not set a precedent.
 - `lr-sequence-strip`: `orientation` removed — a single-member union that nothing read or styled.
 - `lr-split-panel`: `SplitPanelSnapFunctionOptions` / `SplitPanelSnapFunctionParams` removed; both
   aliased `SnapFunctionParams`.
+- Compatibility type aliases `ActivityEntryTone`, `ConfirmBarTone`, and `ChipTone` removed; use
+  `LyraVariant`, `ConfirmBarVariant`, and `ChipVariant` respectively. The corresponding public
+  properties already use `variant`, so these aliases duplicated the canonical type vocabulary.
 - Ten orphaned localization keys removed — they shipped translated into all ten locales while no
   component rendered them: `trendIncreased`/`trendDecreased`/`trendGoodSuffix`/`trendBadSuffix` (use
   `statTrend*`), `subagentPanelCancel` (use `subagentPanelCancelRun`), plus

@@ -370,12 +370,14 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     if (generation !== this.loadGeneration || !this.isConnected) return;
     // Preserve the server/client loading branch through the first update. A cached optional peer
     // can otherwise settle during upgrade and skip both the observable loading state and Lit's
-    // declarative-shadow-DOM hydration boundary.
+    // declarative-shadow-DOM hydration boundary. The shared browser-state seam holds the ensuing
+    // branch change until first-hydration observers have seen the claimed server nodes.
     try {
       await this.updateComplete;
     } catch {
       return;
     }
+    await new Promise<void>((resolve) => this.updateBrowserDerivedState(resolve));
     if (generation !== this.loadGeneration || !this.isConnected) return;
     this.loading = false;
     if (!boxMod) {

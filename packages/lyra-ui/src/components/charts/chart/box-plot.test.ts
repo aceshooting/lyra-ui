@@ -75,7 +75,7 @@ it('shows a loading skeleton and aria-busy while chart.js/the boxplot plugin loa
   await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
 
   expect(el.getAttribute('aria-busy')).to.equal('false');
-  expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('lr-skeleton')) == null).to.be.true;
   expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
   const sink = assertiveSink();
   expect(sink !== null, 'a connected box plot must acquire its sink before a peer failure').to.be

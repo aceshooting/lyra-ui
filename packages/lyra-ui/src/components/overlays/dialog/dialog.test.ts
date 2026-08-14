@@ -13,7 +13,7 @@ it('includes safe-area insets in the fixed dialog frame', () => {
 });
 
 it('never schedules a post-update reschedule when a dialog autofocuses a control that a sibling render then disables', async () => {
-  // Regression test for fr_asxOgk4UhNB07xevCWwFVQ. Original report: opening a real <lr-dialog>
+  // Regression test: opening a real <lr-dialog>
   // whose content includes a disabled+required <lr-input> (e.g. a username field locked once a
   // record exists) logs a dev-mode-only Lit warning -- "Element lr-input scheduled an update ...
   // after an update completed" (https://lit.dev/msg/change-in-update).
@@ -462,7 +462,7 @@ it('prefers a slotted heading over the label prop, using aria-label (not aria-la
   expect(panel.getAttribute('aria-label')).to.equal('Real heading');
   expect(panel.hasAttribute('aria-labelledby')).to.be.false;
   // The label prop's own sr-only element must not be rendered once a heading wins.
-  expect(el.shadowRoot!.querySelector('[part="label"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="label"]')) == null).to.be.true;
 });
 
 it('re-detects a heading added after the initial render via slotchange', async () => {
@@ -480,7 +480,7 @@ it('re-detects a heading added after the initial render via slotchange', async (
   panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
   expect(panel.getAttribute('aria-label')).to.equal('Added later');
   expect(panel.hasAttribute('aria-labelledby')).to.be.false;
-  expect(el.shadowRoot!.querySelector('[part="label"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="label"]')) == null).to.be.true;
 });
 
 it('keeps the dialog name synchronized when an already-slotted heading text node changes', async () => {
@@ -554,7 +554,7 @@ it('renders a visible header with the heading text and uses it for aria-labelled
   expect(panel.hasAttribute('aria-label')).to.be.false;
   // Only one element should ever claim aria-labelledby -- the sr-only label
   // element must not also render once `heading` wins.
-  expect(el.shadowRoot!.querySelector('[part="label"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="label"]')) == null).to.be.true;
 });
 
 it('a slotted heading still wins over `heading` when both are present', async () => {
@@ -566,7 +566,7 @@ it('a slotted heading still wins over `heading` when both are present', async ()
 
   expect(panel.getAttribute('aria-label')).to.equal('Real heading');
   expect(panel.hasAttribute('aria-labelledby')).to.be.false;
-  expect(el.shadowRoot!.querySelector('[part~="heading"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part~="heading"]')) == null).to.be.true;
 });
 
 it('a consumer-slotted heading keeps working completely unchanged when `heading` is left unset', async () => {
@@ -576,7 +576,7 @@ it('a consumer-slotted heading keeps working completely unchanged when `heading`
 
   expect(panel.getAttribute('aria-label')).to.equal('Real heading');
   expect(panel.hasAttribute('aria-labelledby')).to.be.false;
-  expect(el.shadowRoot!.querySelector('[part="header"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="header"]')) == null).to.be.true;
 });
 
 describe('aria-label host attribute (ARIA-name forwarding)', () => {
@@ -590,7 +590,7 @@ describe('aria-label host attribute (ARIA-name forwarding)', () => {
     expect(panel.getAttribute('aria-label')).to.equal('Custom name');
     expect(panel.hasAttribute('aria-labelledby')).to.be.false;
     // The label prop's own sr-only element must not render once aria-label wins.
-    expect(el.shadowRoot!.querySelector('[part="label"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="label"]')) == null).to.be.true;
   });
 
   it('wins over the heading prop for naming without suppressing its visible header chrome', async () => {
@@ -688,7 +688,7 @@ it('renders a header row containing just the close button when no visible title 
   await el.updateComplete;
   const header = el.shadowRoot!.querySelector('[part="header"]');
   expect((header) != null).to.equal(true);
-  expect(header!.querySelector('[part~="heading"]')).to.not.exist;
+  expect((header!.querySelector('[part~="heading"]')) == null).to.be.true;
   expect(header!.querySelector('[part~="close-button"]')).to.exist;
 });
 
@@ -1422,13 +1422,13 @@ describe('mapped dialog compatibility', () => {
     const noHeader = (await fixture(
       html`<lr-dialog open label="Title" no-header>Body</lr-dialog>`,
     )) as LyraDialog;
-    expect(noHeader.shadowRoot!.querySelector('[part="header"]')).to.equal(null);
+    expect((noHeader.shadowRoot!.querySelector('[part="header"]')) === (null)).to.equal(true);
 
     const noClose = (await fixture(
       html`<lr-dialog open label="Title" closable="false">Body</lr-dialog>`,
     )) as LyraDialog;
     expect(noClose.closable).to.equal(false);
-    expect(noClose.shadowRoot!.querySelector('[part~="close-button"]')).to.equal(null);
+    expect((noClose.shadowRoot!.querySelector('[part~="close-button"]')) === (null)).to.equal(true);
     expect(noClose.shadowRoot!.querySelector('[part="header"]')).to.exist;
   });
 

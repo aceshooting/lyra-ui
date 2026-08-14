@@ -99,7 +99,7 @@ it('emits one cancelable lr-invalid alias when a validity check fails', async ()
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
-  expect(aliases[0].target).to.equal(el);
+  expect((aliases[0].target) === (el)).to.equal(true);
   expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
   expect(aliases[0].cancelable).to.be.true;
 });
@@ -824,7 +824,7 @@ it('emits one native change when a fixed-cell keyboard edit settles on blur', as
   el.blur();
 
   expect(changes).to.have.lengthOf(1);
-  expect(changes[0].target).to.equal(el);
+  expect((changes[0].target) === (el)).to.equal(true);
   expect(changes[0].bubbles && changes[0].composed).to.equal(true);
   expect(changes[0].cancelable).to.equal(false);
 });
@@ -1331,7 +1331,7 @@ it('relays exactly one host-target native non-cancelable change event', async ()
 
   expect(events).to.have.lengthOf(1);
   expect(events[0] instanceof Event).to.be.true;
-  expect(events[0].target).to.equal(el);
+  expect((events[0].target) === (el)).to.equal(true);
   expect(events[0].bubbles && events[0].composed).to.be.true;
   expect(events[0].cancelable).to.be.false;
 });
@@ -1538,7 +1538,7 @@ it('relays one native focus/blur pair and one prefixed alias pair from the real 
 });
 
 it('does not mark touched from a blur caused by the control itself becoming disabled', async () => {
-  // fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native control blurs it as plain platform
+  // Disabling a focused native control blurs it as plain platform
   // behaviour, not a real user interaction — that forced blur must not flip `touched`.
   const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code" length="4"></lr-otp-input>`);
   controlOf(el).focus();

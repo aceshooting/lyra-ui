@@ -134,7 +134,7 @@ it('draws no edges, only node rects', async () => {
   const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
   await minimap.updateComplete;
   expect(minimap.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(2);
-  expect(minimap.shadowRoot!.querySelector('[part="map"] line, [part="map"] path')).to.not.exist;
+  expect((minimap.shadowRoot!.querySelector('[part="map"] line, [part="map"] path')) == null).to.be.true;
 });
 
 it('node rects inherit decoration status tones', async () => {
@@ -476,8 +476,8 @@ it('cannot pan the canvas through minimap keyboard controls while locked', async
 // asserting only `wrapper.viewport` stays put would pass even if the minimap never checked
 // `locked` itself, because the canvas's own guard would still absorb the call. These tests stub
 // out that canvas-side guard (so the calls would visibly go through if made) to prove the minimap
-// itself never makes the call while paired with a locked canvas -- the actual contract this task
-// is about (`FlowCanvasLike` callers must not rely solely on the far end being well-behaved).
+// itself never makes the call while paired with a locked canvas: `FlowCanvasLike` callers must not
+// rely solely on the far end being well-behaved.
 function stubUnguardedCanvasMethods(wrapper: LyraFlowCanvas): { setViewportCalls: number; zoomInCalls: number; zoomOutCalls: number } {
   const calls = { setViewportCalls: 0, zoomInCalls: 0, zoomOutCalls: 0 };
   (wrapper as unknown as { setViewport: LyraFlowCanvas['setViewport'] }).setViewport = () => {

@@ -219,6 +219,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
    *  and to the internal `<lr-virtual-list>` (which scrolls the matching row into view). */
   @property({ attribute: 'active-id' }) activeId = '';
 
+  /** Marks retrieval as pending, selecting the initial spinner or load-more progress state. */
   @property({ type: Boolean, reflect: true }) loading = false;
 
   /** While virtualized, forwarded to the internal `<lr-virtual-list>` so scrolling near the bottom

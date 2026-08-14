@@ -59,7 +59,8 @@ activeIndex }`. `lr-render-error` — `detail: { error }`, fetching or parsing f
 parse error or exceeding the node cap. `lr-anchor-result` — non-cancelable; `detail: { found:
 boolean }`, fired after an `anchor` assignment or a `scrollToAnchor()` call is applied.
 `lr-highlight-activate` — non-cancelable; `detail: { id }`, fired when a highlight's
-`[part='highlight-action']` button is activated by click or Enter/Space.
+`[part='highlight-action']` button is activated by click or Enter/Space. `lr-text-select` is not
+part of this structural tree viewer's event contract because it installs no selection binding.
 
 **CSS parts:** `base`, `toolbar` (the whole-document copy button row, only when `copyable`),
 `copy-button` (the whole-document one, or a per-node one), `tree`, `node` (`data-active` while it's

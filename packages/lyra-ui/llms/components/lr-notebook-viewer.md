@@ -38,7 +38,10 @@ collapsed behind a toggle; `0` disables collapsing. `maxHeight: string = ''` (at
 `max-height`) — once set, the notebook scrolls internally past this height; invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. `anchorKinds: readonly
 LyraAnchorKind[] = ['node-path', 'fragment']` (this viewer's supported `LyraAnchor.kind` values for
-the shared anchor-target contract).
+the shared anchor-target contract). The inherited carrier fields `highlights: LyraHighlight[] = []`
+(property only) and `activeHighlightId: string | null = null` (attribute `active-highlight-id`) are
+available for structural anchor-target compatibility, but this viewer does not paint them; use
+`anchor: LyraAnchor | string | null = null` or `scrollToAnchor()` for notebook-cell navigation.
 
 **Methods:** `search(query)` resolves the match count over cell sources and text outputs — a
 matching cell counts as one match (empty/whitespace query behaves like `clearSearch()`);
@@ -55,9 +58,9 @@ and validated (`language` from `metadata.language_info.name`/`kernelspec.languag
 non-cancelable; `detail: { found: boolean }`, fired after an `anchor` assignment or a
 `scrollToAnchor()` call is applied.
 
-Migration note: the previously declared `lr-highlight-activate` event was never emitted by
-`lr-notebook-viewer` and has been removed from its class/EventMap contract. Use `anchor` plus
-`lr-anchor-result` for notebook cell navigation outcomes.
+Neither `lr-highlight-activate` nor `lr-text-select` is part of `lr-notebook-viewer`'s event
+contract: notebook host highlights are not painted and no selection binding is installed. Use
+`anchor` plus `lr-anchor-result` for notebook cell navigation outcomes.
 
 **CSS parts:** `base` (the root scroll container), `cell` (`data-cell-type="code|markdown|raw"`,
 `data-active`), `cell-active` (added alongside `cell` on the cell currently targeted by an anchor

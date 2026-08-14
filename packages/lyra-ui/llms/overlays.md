@@ -81,8 +81,10 @@ so the default close button never wins merely because it appears first in shadow
   cross-axis counterpart to `distance`.
 - `for` (string, reflected) anchors the popup to an element it does not contain, by id. The id is
   resolved in the overlay's **own root**, so it works inside a shadow tree where a plain idref could
-  not cross the boundary. The slotted `trigger` keeps owning the interaction and the ARIA
-  relationship either way.
+  not cross the boundary. On popover/tooltip, a slotted trigger wins interaction and ARIA ownership;
+  only when no trigger is slotted does a live HTML `for` target own both. Direct `.anchor` is always
+  positioning-only. A `showAt()` virtual anchor wins positioning and has no DOM interaction/ARIA
+  owner while active.
 
 ---
 
@@ -96,12 +98,15 @@ One per page recommended — the region.
 
 **Properties:**
 - `placement: ToastPlacement = 'top-end'` (reflected) — one of `'top-start'|'top-center'|'top-end'|
-  'bottom-start'|'bottom-center'|'bottom-end'`
+  'bottom-start'|'bottom-center'|'bottom-end'`. Every placement resolves inside one logical usable
+  rectangle whose four edges are the greater of `--lr-space-l` and the matching safe-area token.
+  Start/end follow direction, center placements use that rectangle's midpoint even when the inline
+  safe-area insets are asymmetric, and an oversized stack is capped to its usable inline size.
 
 **Methods:** `async create(message: string, options?: ToastCreateOptions): Promise<LyraToastItem>` —
 `ToastCreateOptions = { variant?, duration?, size?, withIcon? }`. Its `size` accepts the canonical
-`2xs`/`xs`/`s`/`m`/`l`/`xl` values plus `small`/`medium`/`large`; the created item's getter
-normalizes the long aliases to `s`/`m`/`l`.
+`2xs`/`xs`/`s`/`m`/`l`/`xl` values plus `small`/`medium`/`large`; either spelling is preserved by
+the created item's getter and reflected attribute.
 
 **Events:** none.
 
@@ -126,16 +131,19 @@ A single notification.
 
 **Properties:**
 - `duration: number = 5000` (ms; `Infinity` or `<= 0` disables auto-dismiss)
-- `size: '2xs'|'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — drives both `--lr-toast-padding` and the
-  toast's own font-size via `:host([size=...])`, from a compact `2xs` up to a roomier `xl`;
-  setters also accept `small`/`medium`/`large` and normalize reads to `s`/`m`/`l`)
+- `size: '2xs'|'xs'|'s'|'m'|'l'|'xl'|'small'|'medium'|'large' = 'm'` (reflected — drives both `--lr-toast-padding` and the
+  toast's own font-size through a private effective-size mapping, from a compact `2xs` up to a roomier `xl`;
+  valid property and attribute writes round-trip without changing spelling)
 - `variant: 'brand'|'success'|'warning'|'danger'|'neutral' = 'neutral'` (reflected)
 - `withIcon: boolean = false` (attribute `with-icon`)
 
 **Methods:** `async hide(): Promise<void>` — plays the hide animation, then removes itself from the
 DOM.
 
-**Events:** `lr-show`, `lr-after-show`, `lr-hide`, `lr-after-hide`
+**Events:** `lr-show`, `lr-after-show`, `lr-hide`, `lr-after-hide`. `lr-hide` is the cancelable
+pre-hide veto point. Vetoing an auto-dismiss expiry leaves the item visible and restarts the full
+current normalized `duration`; repeated vetoes retry at that same interval. Vetoing a manual
+`hide()` leaves any active countdown at its current elapsed position.
 
 **Slots:** default (message), `icon`
 
@@ -180,7 +188,9 @@ on `pointerleave`/`focusout`, with real elapsed-time bookkeeping (WCAG 2.2.1 tim
 hover and focus are tracked as independent pause reasons, so releasing only one (e.g. the pointer
 leaves while focus remains, or vice versa) keeps the timer paused until *neither* holds it anymore.
 A `duration` change while the timer is actively counting down reschedules it immediately against
-the new value instead of waiting for the next pause/resume cycle.
+the new value instead of waiting for the next pause/resume cycle. A vetoed timer expiry restarts
+that full normalized value; if hover/focus or a disconnect begins during the veto event, the retry
+stays paused and starts from the full value only after the item resumes/reconnects.
 
 ### `toast()`
 
@@ -198,7 +208,7 @@ toast({ message: 'Deleted', variant: 'danger', action: { label: 'Undo', onClick:
 `ToastOptions = ToastCreateOptions & { message: string; placement?: ToastPlacement; action?: { label: string; onClick: (item: LyraToastItem) => void } }`,
 and `ToastHandle = { item: Promise<LyraToastItem>; dismiss: () => void }`. Because it extends
 `ToastCreateOptions`, the helper accepts the same long `small`/`medium`/`large` size aliases and
-normalizes the created item identically. It lazily mounts (and
+preserves them on the created item identically. It lazily mounts (and
 re-mounts if removed) **one singleton `<lr-toast>` region per distinct `placement`** on
 `document.body` — a `toast()` call targeting one placement never relocates toasts already showing
 at another, since `placement` is a per-call option rather than a single global region's setting.
@@ -401,9 +411,10 @@ controls, rendered before the built-in close button), `footer` — all inherited
 `header-actions`; `close-button close-button__base`; `body`; `footer`. Names grouped together are
 aliases on the same functional node.
 
-**Themeable custom properties:** mapped `--size` controls the active axis. Inherited `--width`
-remains visible in the shared dialog surface, but drawer sizing deliberately shadows it with
-`--size`. The other mapped/inherited aliases are `--backdrop-filter`, `--spacing`, `--header-spacing`, `--body-spacing`,
+**Themeable custom properties:** mapped `--size` controls the active axis. For start/end drawers,
+the inherited `--width` and `--lr-dialog-width` remain compatibility fallbacks when neither
+`--size` nor `--lr-drawer-width` is set, and `--lr-dialog-max-width` remains an effective cap.
+The other mapped/inherited aliases are `--backdrop-filter`, `--spacing`, `--header-spacing`, `--body-spacing`,
 `--footer-spacing`, `--show-duration`, and `--hide-duration`. Lyra compatibility tokens remain:
 `--lr-drawer-width` (default `--lr-size-24rem`; used by
 `placement="start"|"end"`, capped at `100%`), `--lr-drawer-height` (default `--lr-size-24rem`;
@@ -414,8 +425,8 @@ explicitly flipped under `:dir(rtl)` since `translateX` is physical. Override to
 the slide). It also inherits every `<lr-dialog>` token — `--lr-dialog-overlay-color`,
 `--lr-dialog-backdrop-filter`, `--lr-dialog-width`, `--lr-dialog-max-width`, `--lr-dialog-spacing`,
 `--lr-dialog-spacing-block`, `--lr-dialog-panel-duration` and `--lr-dialog-backdrop-duration` —
-since `LyraDrawer` extends `LyraDialog`. The drawer's own width/height tokens take precedence for
-its panel, and only the animation *name* is overridden, so `--lr-dialog-panel-duration` retunes the
+since `LyraDrawer` extends `LyraDialog`. The drawer's own size/width/height tokens take precedence
+for its panel, and only the animation *name* is overridden, so `--lr-dialog-panel-duration` retunes the
 slide too and the reduced-motion flattening of the shared `--lr-duration-*` tokens still reaches it.
 
 ```html
@@ -749,12 +760,13 @@ level. `<lr-badge>`/`<lr-tag>` made the identical shape change, with the identic
   scale for typography, padding, gap, and icon size; `m` preserves the original chip dimensions
 - `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected) —
   **renamed from `tone` in 8.0.0, with no alias** (see above). `<lr-badge>`, `<lr-callout>` and
-  `<lr-toast-item>` all already spelled it `variant`. The exported `ChipTone` *type* name is kept
-  alongside `ChipVariant`, so an existing `import type { ChipTone }` keeps resolving to the same five
-  values. It tints the whole surface using the loud-color-on-quiet-tint convention: background is the
+  `<lr-toast-item>` all already spelled it `variant`. It tints the whole surface using the
+  loud-color-on-quiet-tint convention: background is the
   variant's quiet fill, text/icon its loud fill, both read from the shared semantic grid. `neutral`
   deliberately opts out of that grid and falls back to a plain bordered-surface look.
 - `removable: boolean = false` (reflected — shows the remove (×) button)
+- `disabled: boolean = false` (reflected) — disables the active native toggle/remove control,
+  blocks focus and activation, and suppresses selection/removal requests without mutating state
 - `pill: boolean = false` (reflected) — **new in 8.0.0.** Fully-rounded ends instead of the default
   rounded rectangle; the same property `<lr-badge>`/`<lr-tag>` carry. Since it defaults to `false`,
   `pill="false"` is not a way to switch it off — remove the attribute, or assign `.pill = false`.
@@ -782,7 +794,8 @@ Enter/Space with the proposed next state when toggle mode is active and `removab
 Calling `preventDefault()` keeps the current `selected` state unchanged)
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the active internal control
-(toggle or remove button); a passive chip's `click()` retains ordinary host behavior.
+(toggle or remove button); a disabled control refuses focus/click, and a passive chip's `click()`
+retains ordinary host behavior.
 
 **Slots:** default (the chip's label content; inert in toggle mode, so move links/buttons outside a
 toggleable chip), `icon` (optional leading icon or status dot; nothing reserved for it — no extra
@@ -1017,15 +1030,19 @@ focus return on top of it, use `lr-popover` instead.
 
 **Anchoring**, in precedence order: legacy `virtualAnchor` (an arbitrary rect — a canvas hit, chart
 datum, or selection range), mapped `anchor` (an `Element`, same-root id string, or Floating UI
-virtual element), `for` (a same-root id), then the first element assigned to the `anchor` slot.
+virtual element), `for` (a same-root id), then the first element assigned to the `anchor` slot. A
+disconnected element or dangling id falls through to the next source. Id insertion, removal,
+replacement and transfer, plus direct and forwarded slot changes, are tracked live.
 
 **Properties:**
-- `active: boolean = false` (reflected) — whether the popup renders and positions. Nothing else
-  changes when it flips.
+- `active: boolean = false` (reflected) — requests positioning and paint. It remains the caller's
+  intent when an anchor is temporarily unavailable; the popup and optional hover bridge stay
+  hidden and non-interactive until the currently resolved anchor has completed placement.
 - `anchor: Element | string | VirtualAnchor | null = null`, `for: string = ''` (reflected), and
   `virtualAnchor` (property only) — the non-slot anchors, in the precedence order above. For a
   plain virtual rect, omitted `width`/`height` default to zero, negative dimensions clamp to zero,
-  and any non-finite coordinate or dimension makes that rect inert so it cannot corrupt layout.
+  and any non-finite coordinate or dimension makes that highest-priority rect inert so it cannot
+  corrupt layout or paint stale popup chrome.
 - `placement: Placement = 'top'` (reflected) — the full Floating UI vocabulary, mirrored
   under RTL. The shared positioner's physical coordinates remain authoritative in either
   direction, so RTL never stretches a fixed-width popup against an opposite logical inset.
@@ -1077,7 +1094,8 @@ would disconnect positioning, animation, and the documented CSS parts. Read it t
 the live internal node.
 
 **Methods:** `reposition()` — recompute now. Rarely needed, since the popup already tracks scroll,
-resize and layout change; useful after moving a virtual anchor imperatively.
+resize, layout and live DOM-anchor identity changes; useful after moving a virtual anchor
+imperatively.
 
 **Events:** `lr-reposition` — `detail: { placement }`, the placement actually used after `flip`.
 
@@ -1119,14 +1137,16 @@ A click-triggered, light-dismiss floating surface positioned with the shared Flo
   legitimately be negative to overlap the trigger; a non-finite value falls back to the default.
 - `skidding: number = 0` — offset *along* the anchor's edge, in px (Floating UI's cross-axis
   offset). New in 8.0.0.
-- `for: string = ''` (reflected) — id of an element to position against instead of the slotted
-  trigger, resolved in this element's own root so it works inside a shadow tree where a plain idref
-  could not cross the boundary. The trigger keeps owning the click and the ARIA relationship, so a
-  popover can be anchored to an element it does not contain. A `showAt()` virtual anchor still wins.
+- `for: string = ''` (reflected) — id of an element resolved in this element's own root. It is the
+  positioning source behind a direct `.anchor`; when it resolves to a live HTML element and no
+  trigger is slotted, it also owns click and generated ARIA. A slotted trigger wins interaction/ARIA
+  ownership even when positioning uses `for`, and a `showAt()` virtual anchor wins positioning while
+  suppressing every DOM interaction owner.
   Assigning `null` is the mapped setter-only clearing spelling: it removes the attribute and the
   getter continues to return `''`
-- `anchor: Element | null = null` (property only) — direct anchor, taking priority over `for` and
-  the slotted trigger; a `showAt()` virtual anchor still wins
+- `anchor: Element | null = null` (property only) — positioning-only direct anchor, taking priority
+  over `for` and the interaction owner but never receiving click listeners or generated ARIA; a
+  `showAt()` virtual anchor still wins
 - `arrow: boolean = true` (reflected) — render an arrow pointing at the anchor; the true-default
   converter accepts `arrow="false"`
 - `withoutArrow: boolean = false` (attribute `without-arrow`, reflected) — positive mapped spelling
@@ -1146,7 +1166,9 @@ A click-triggered, light-dismiss floating surface positioned with the shared Flo
 To preserve the previous Lyra-shaped defaults explicitly, use
 `placement="bottom-start" distance="4" without-arrow`; origin-aware migration emits those tokens.
 
-The slotted trigger receives `aria-haspopup`, `aria-expanded`, and `aria-controls`.
+The slotted trigger receives `aria-haspopup`, `aria-expanded`, and `aria-controls`. With no slotted
+trigger, a live HTML `for` target receives the identical ownership contract. Target insertion,
+removal, replacement and `id` changes are tracked live; author ARIA is restored when ownership moves.
 `aria-controls` targets the public `lr-popover` host (which receives a stable generated `id` when
 the consumer did not supply one), rather than the shadow-private popup, so the relationship
 resolves from a native light-DOM trigger. `lr-button` and `lr-icon-button` additionally reflect
@@ -1157,8 +1179,8 @@ empty string after that assignment.
 `el.open = true`, including the veto point — and resolves after `lr-after-show`. A no-op or vetoed
 transition returns an already-resolved promise.
 `showAt(rect: { x, y, width?, height?, contextElement? }, options?: { returnFocusTo?:
-HTMLElement })` opens the popover anchored to an arbitrary rectangle instead of the slotted
-`trigger` — for a graph node, a canvas pixel, a chart datum, or any other non-DOM location
+HTMLElement })` opens the popover anchored to an arbitrary rectangle instead of any DOM anchor —
+for a graph node, a canvas pixel, a chart datum, or any other non-DOM location
 (`width`/`height` default to `0`, a point). Escape and light-dismiss return focus to
 `options.returnFocusTo` when supplied, or skip focus-return entirely otherwise, since a virtual
 anchor has no `.focus()`. The virtual anchor has no DOM node of its own for `autoUpdate()` to
@@ -1167,17 +1189,22 @@ near the virtual point) when one is available to give it something to observe; o
 the anchor point moves on its own (e.g. a graph pan/zoom tick), re-call `showAt()` with fresh
 coordinates to re-anchor — the popover stays open across such a call. A popover that never calls
 `showAt()` behaves exactly as before. Non-finite coordinates or dimensions are a no-op and leave
-the current open/anchor state unchanged.
+the current open/anchor state unchanged. While virtual anchoring is active, no slotted/`for` DOM
+element owns click or generated ARIA.
 `hide(options?: { focusTrigger?: boolean }): Promise<void>` programmatically closes the popover and
 resolves after `lr-after-hide`; pass
 `{ focusTrigger: false }` to opt out of focus restoration. By default, `hide()`, Escape, light
-dismiss, and a bare `el.open = false` all return focus to the slotted trigger, or to a virtual
-anchor's explicit `returnFocusTo`; a virtual anchor with no return target closes without moving
-focus. No-op when already closed.
+dismiss, and a bare `el.open = false` all return focus to the slotted/`for` interaction owner, or to
+a virtual anchor's explicit `returnFocusTo`; a virtual anchor with no return target closes without
+moving focus. No-op when already closed.
 **Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide` — none
 carries a detail, and the two `lr-after-*` events are never cancelable. Neither pair fires for
 markup that renders open from the start, nor when only `placement`/`distance` change on an
 already-open popover.
+
+Removing the sole connected direct anchor or sole interaction anchor from an open popover is
+structural teardown: it force-closes even if an `lr-hide` listener would veto an ordinary close. If
+a live slotted/`for` positioning fallback remains, the popover rebinds to it and stays open instead.
 
 **Breaking in 8.0.0:** `lr-show`/`lr-hide` now fire *before* the state changes and are cancelable —
 `preventDefault()` on `lr-show` leaves the popover closed for the trigger click, `show()` and
@@ -1252,12 +1279,13 @@ interactions open it is configurable as of 8.0.0; by default it is still hover a
 - `distance: number = 8` — anchor-offset distance in px; identical semantics to
   `<lr-popover>.distance` (both wrap the same `place()`/`offset()` middleware)
 - `skidding: number = 0` — offset along the anchor's edge, in px. New in 8.0.0.
-- `for: string = ''` (reflected) — id of an element in this tooltip's own root to position against
-  instead of the slotted trigger; the trigger keeps owning the interaction listeners and
-  `aria-describedby`. New in 8.0.0. Assigning `null` clears the attribute to the canonical `''`
-  read value; the getter itself remains non-nullable
-- `anchor: Element | null = null` (property only) — direct anchor, taking priority over `for` and
-  the active trigger
+- `for: string = ''` (reflected) — id of an element in this tooltip's own root. It positions behind
+  a direct `.anchor`; when it resolves to a live HTML element and no trigger is slotted, it also owns
+  the configured interaction listeners and `aria-describedby`. A slotted trigger wins interaction
+  and ARIA ownership. Assigning `null` clears the attribute to the canonical `''` read value; the
+  getter itself remains non-nullable
+- `anchor: Element | null = null` (property only) — positioning-only direct anchor, taking priority
+  over `for` and the active interaction owner without receiving listeners or generated ARIA
 - `disabled: boolean = false` (reflected) — prevents both interaction and programmatic opening;
   setting it while open closes the tooltip
 - `hoist: boolean = false` (reflected) — switches the mapped absolute positioning default to fixed
@@ -1280,12 +1308,12 @@ origin-aware migration emits those tokens.
   `lr-after-hide`
 - `showAt(rect: { x, y, width?, height?, contextElement? }, options?: { returnFocusTo?: HTMLElement })`
   — same virtual-anchor contract as `lr-popover.showAt()` above (anchors to an arbitrary rectangle
-  instead of the slotted `trigger`, `width`/`height` default to `0`, `contextElement` gives
+  instead of any DOM anchor, `width`/`height` default to `0`, `contextElement` gives
   `autoUpdate()` something to observe, Escape returns focus to `options.returnFocusTo` or skips
   focus-return, re-call with fresh coordinates to re-anchor a moving point). Opens immediately,
   bypassing `show-delay`/`trigger`/`manual` (all are interaction-debounce concerns for a slotted
-  trigger, not a deliberate programmatic call); close it with `hide()` or `open = false`. Non-finite
-  coordinates or dimensions are a no-op.
+  trigger, not a deliberate programmatic call); while active it removes every DOM interaction/ARIA
+  owner. Close it with `hide()` or `open = false`. Non-finite coordinates or dimensions are a no-op.
 
 **Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide` — the
 same four-event contract, timing and veto semantics `<lr-popover>` documents above, and all four are
@@ -1335,6 +1363,11 @@ whose explicit element-reference assignment intentionally leaves that control's 
 including a control's own internal hint/error text — are merged while open and restored when the
 tooltip closes, the trigger is replaced, or the tooltip disconnects.
 
+With no slotted trigger, a live HTML `for` target receives those same interactions and description;
+target insertion, removal, replacement and `id` changes are tracked without requiring reinsertion.
+Removing the sole connected direct or interaction anchor force-closes despite an `lr-hide` veto,
+while a live slotted/`for` positioning fallback is rebound and keeps the tooltip open.
+
 Plain content keeps `role="tooltip"`. If actionable content appears anywhere in the assigned
 default-slot subtree — including inside a nested custom element's open shadow root — the popup
 promotes to a named `role="dialog"` and remains open while pointer or focus is within it. Escape
@@ -1344,6 +1377,9 @@ external descendant text/actionability changes, and relevant composed-ancestor v
 update both the hidden description proxy and popup role; when a forwarding slot becomes genuinely
 unassigned, its own fallback content is restored. This classification also runs while the popup is
 closed, without treating the popup's internal closed-state visibility as consumer-hidden content.
+Image alternatives and `aria-labelledby` references contribute their accessible text; referenced
+targets outside the tooltip subtree are observed too, so a sibling label's live text mutation
+updates the proxy. Reference traversal is bounded and cycle-safe.
 While open, rootless custom-element content receives a bounded initialization grace period for an
 upgrade or newly attached open shadow root; later observable content mutations start a fresh
 grace period. This catches normal lazy initialization without scheduling perpetual animation-frame
@@ -1563,7 +1599,9 @@ Upstream aliases are `--size`, `--track-width`, `--track-color`, `--indicator-wi
 ## `lr-badge` and `lr-tag`
 
 Compact status labels. `LyraTag` extends `LyraBadge`, so the two share one visual contract; `lr-tag`
-adds tag semantics and an optional remove affordance.
+adds tag semantics and an optional remove affordance. The `lr-badge` light-DOM host is the single
+`role="status"` owner of its projected label. `lr-tag` deliberately opts out of that inherited
+status role, including during SSR/hydration, because a removable keyword is not a live status.
 
 **Visual break in 8.0.0 — a badge is no longer a pill by default.** Both components used to render
 fully-rounded ends unconditionally. `--lr-badge-radius` now defaults to `var(--lr-radius)` (a rounded
@@ -1572,15 +1610,15 @@ its corner radius only if you add `pill`, or set `--lr-badge-radius: var(--lr-ra
 the app level.
 
 **Properties** (all are declared by `lr-badge` and inherited by `lr-tag`; `lr-tag` adds the
-`variant="text"` write alias plus `withRemove` / `removable`):
-- `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected) — the
-  semantic palette. Both components accept the upstream `primary` setter/attribute alias and
-  normalize it to the canonical `brand` read value. `lr-tag` additionally accepts `text`, renders
-  the neutral plain treatment, and reads back the canonical `neutral` variant.
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — the same visual-density scale
+`variant="text"` spelling plus `withRemove` / `removable`):
+- `variant: 'neutral' | 'brand' | 'primary' | 'success' | 'warning' | 'danger' = 'neutral'`
+  (reflected) — the semantic palette. `primary` renders through the same brand palette while
+  remaining `primary` on property reads, selectors, serialization and reflection. `lr-tag`
+  additionally accepts and preserves `text`, rendering the neutral plain treatment.
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected) — the same visual-density scale
   `<lr-chip>` uses, for typography/padding/minimum block size; `m` preserves the original badge
-  dimensions. The setters also accept `small` / `medium` / `large` and normalize reads to
-  `s` / `m` / `l`.
+  dimensions. Both short and long upstream spellings round-trip verbatim while resolving to the
+  same private effective size for rendering.
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'filled-outlined'`
   (reflected) — **new in 8.0.0.** The second visual axis: `variant` picks the palette, `appearance`
   decides how much of it lands on the fill, the border and the text. `filled-outlined` (the default)
@@ -1602,16 +1640,18 @@ the app level.
   8.0.0.** Renders the remove affordance. `lr-badge` never renders one, even if the attribute is
   present on the markup.
 - `removable: boolean = false` (attribute `removable`) — **`lr-tag` only.** Shoelace-compatible
-  alias for `withRemove`; reading or assigning either property reaches the same state.
+  alias for `withRemove`; reading either property reports the shared state. Either authored
+  attribute keeps removal enabled until both are absent. Assigning `false` through either property
+  clears both attributes, while assigning `true` reflects that property's own spelling.
 
-**Events:** `lr-remove` — cancelable, no detail, bubbles and composes. Emitted by `lr-tag` only (a
+**Events:** `lr-remove` — noncancelable, no detail, bubbles and composes. Emitted by `lr-tag` only (a
 badge emits nothing at all) when the remove button is activated by click or by Enter/Space while
 focused; it is a real native `<button>`, so both come for free. Only rendered, and therefore only
 fired, while `withRemove` / `removable` is set, and the event's `target` is the tag itself.
 
-Unlike `<lr-chip>` — a deliberately controlled component that only ever *announces* a remove request
-— a removable `lr-tag` removes **itself** from the DOM on activation. `lr-remove` is the veto point
-for that: call `preventDefault()` to keep the tag mounted and own the removal from your own state.
+Like `<lr-chip>`, a removable `lr-tag` is controlled: activation only announces the request. The
+tag remains connected even if a listener calls `preventDefault()` (the event is not cancelable),
+and the consumer removes it by updating the collection that rendered it.
 
 **Slots:** default (the label), `start` (content before the label, typically an icon) and `end`
 (content after it) — both new in 8.0.0. Each wrapper collapses entirely (`display: none`, so no
@@ -1651,7 +1691,7 @@ palette.
 
 *Density and shape:* `--lr-badge-font-size` (default `var(--lr-font-size-sm)`),
 `--lr-badge-padding-inline` (default `var(--lr-space-s)`) and `--lr-badge-min-height` (default
-`var(--lr-size-1-25rem)`) — the trio each `:host([size])` rule rewrites to that step's font size,
+`var(--lr-size-1-25rem)`) — the trio each private effective-size rule rewrites to that step's font size,
 inline padding and minimum block size; the `m` defaults above exactly reproduce the pre-`size` fixed
 badge treatment. `--lr-badge-gap` (default `var(--lr-space-2xs)`, new in 8.0.0) is the space between
 the `start` slot, the label and the `end` slot — it collapses on its own when a wrapper is empty,
@@ -1700,7 +1740,7 @@ the remove button's `:hover` fill).
   import '@aceshooting/lyra-ui/components/overlays/badge/tag.js';
 
   document.querySelector('lr-tag').addEventListener('lr-remove', (e) => {
-    e.preventDefault(); // keep it mounted; drive removal from your own state instead
+    e.target.remove(); // in an app, update the backing collection instead
   });
 </script>
 ```
@@ -1861,25 +1901,30 @@ It is form-associated through `ElementInternals` directly rather than through th
 `FormAssociated` mixin, because its `value` is a number and the mixin's contract assumes a plain
 string — routing through it would force every consumer into string round-tripping for what is
 natively a numeric score. The submitted entry is the clamped value stringified (`"0"` while
-unrated), and `required` reports `valueMissing` until a rating above zero is set. As on a native
-`<input>`, the `value` *content attribute* is the reset default that `form.reset()` restores, while
-the `value` IDL property is the live score and is deliberately not reflected. The mapped
-`default-value` attribute is accepted as a compatibility spelling for that same reset default.
+unrated), and `required` reports `valueMissing` until a rating above zero is set. The `value`
+content attribute and IDL property both control the live score. `defaultValue` and its
+`default-value` attribute independently own the reset target that `form.reset()` restores.
 
-**Properties:** live, non-reflecting `value: number = 0`; reflected
-`defaultValue: number = 0` (attribute `value`, the current reset default; `default-value` is an
-accepted compatibility alias); `customError: string |
+**Properties:** live `value: number = 0` (attribute `value`);
+`defaultValue: number = 0` (attribute `default-value`, the current reset target); `customError: string |
 null` (attribute `custom-error`); `max: number = 5`; `precision: number = 1`;
 `readonly: boolean = false` (reflected), `disabled`, `required`, `name`,
-`size: '2xs'|'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — rewrites `--lr-rating-size` from a type ramp
+`size: '2xs'|'xs'|'s'|'m'|'l'|'xl'|'small'|'medium'|'large' = 'm'` (reflected — rewrites `--lr-rating-size` from a type ramp
 rather than the shared control ladder, since a rating has no control frame to size; the `m` default
-reproduces the treatment this component had before `size` existed; setters also accept
-`small`/`medium`/`large` and normalize reads to `s`/`m`/`l`), plus two separate naming knobs:
-`accessibleLabel: string = ''` (attribute **`aria-label`**) and `label: string = ''` (attribute
+reproduces the treatment this component had before `size` existed; valid long-form spellings
+round-trip unchanged), plus two separate naming knobs:
+`accessibleLabel: string = ''` (property) and `label: string = ''` (attribute
 `label`). An authored host `aria-label` wins by attribute presence, including an explicitly empty
-value; otherwise `accessibleLabel`, `label`, then the localized name provide the fallback. Neither
-is visible label text, since a rating is a bare row of symbols with no field frame of its own; wrap
-the element in your own layout for a labelled field, exactly as `<lr-slider>` does.
+value. Without one, a non-empty external `<label for>` names the host; `accessibleLabel`, `label`,
+then the localized name are the fallback order when no external label supplies text. Clicking an
+associated external label focuses the host-owned slider without changing its value. Neither
+property is visible label text, since a rating is a bare row of symbols with no field frame of its
+own; wrap the element in your own layout for a labelled field, exactly as `<lr-slider>` does.
+
+The host is the one focusable `role="slider"` owner and carries `tabindex`, its accessible name,
+`aria-valuemin`/`aria-valuemax`/`aria-valuenow`/`aria-valuetext`, and explicit true/false disabled,
+readonly and required states. The shadow star row is `aria-hidden` presentation only, so custom
+host ARIA never creates a competing second slider.
 
 Assigning `null` to `name` is accepted for mapped source compatibility; it removes the attribute and
 clears to the canonical `''` read value rather than creating a nullable state.
@@ -1909,13 +1954,14 @@ Left unset, the built-in star outline/solid pair is unchanged.
   `pointerleave` **and** on `pointercancel` (a touch drag taken over by scrolling, palm rejection),
   so an interrupted gesture never leaves the preview frozen. A disconnect or a disablement drops the
   preview silently, with no `end` phase — that teardown wasn't user-driven.
-- `focus` / `blur` — re-dispatched from the internal rating control as bubbling, composed host
-  events, because the native ones do not cross the shadow boundary.
-- `lr-focus` / `lr-blur` — prefixed compatibility aliases (no detail), each fired immediately after
-  its unprefixed counterpart.
+- `focus` / `blur` — the host-owned slider's ordinary native focus transitions. Like native focus
+  events, they do not bubble; listen on the rating itself (or use capture on an ancestor).
+- `lr-focus` / `lr-blur` — bubbling, composed prefixed compatibility aliases (no detail), each
+  fired from the corresponding native host transition.
 - `lr-invalid` — no detail; fired when a validity check finds the rating invalid.
 
-**Methods:** `focus()`, `blur()` and `click()` forward to the internal rating control.
+**Methods:** `focus()`, `blur()` and `click()` operate on the host-owned slider and are gated while
+disabled.
 `getForm()` returns the browser-resolved owning form. `checkValidity()` and `reportValidity()`
 behave as on a native form control — `reportValidity()`
 additionally shows the browser's validation UI, and counts as interaction, so a failed submit is
@@ -1929,9 +1975,9 @@ unrated stays `valueMissing`. Like a native control, the custom error survives e
 recomputation in between (each `value`/`max`/`required` change re-runs validation) and a
 `form.reset()`; `setCustomValidity('')` or `resetValidity()` clears it.
 
-**Reset and state restore.** A live `value` write marks the rating dirty, so later
-`defaultValue`/`value`-attribute/`default-value`-attribute mutations update the reset target without
-overwriting the live score. `form.reset()` restores that current default, drops any
+**Reset and state restore.** A live `value` or `value`-attribute write updates the current score;
+later `defaultValue`/`default-value` mutations update the reset target without overwriting that
+live score. `form.reset()` restores the current default, drops any
 in-flight hover preview, and returns the control to pristine, so the `user-valid`/`user-invalid`
 states stop matching even though a required-and-unrated control is still `invalid`. Browser session
 restore (`formStateRestoreCallback`) reinstates the previously submitted numeric value; a
@@ -1941,8 +1987,8 @@ non-string restored state falls back to `0` rather than producing NaN geometry.
 `lr-rating:state(user-invalid)` is the one to paint red. Plain `invalid` matches a pristine
 `required` rating that has never been set.
 
-**CSS parts:** `base` (compatibility name for the slider-like control; use `rating`),
-`rating` (the `role="slider"` control; it is the same node as `base`), `star` (each rendered symbol), `star-fill` (the
+**CSS parts:** `base` (compatibility name for the presentational symbol row; use `rating`),
+`rating` (the presentational symbol row; it is the same node as `base`), `star` (each rendered symbol), `star-fill` (the
 filled overlay inside each symbol, clipped to that symbol's filled fraction — 0%, a partial
 percentage under a fractional `precision`, or 100%).
 
@@ -1960,8 +2006,9 @@ feeds the active `size` step, while `--symbol-spacing` remains the fallback for
 
 Pointer selection resolves the position within the clicked star and snaps upward to `precision`
 (with the physical fraction mirrored under RTL), so half/quarter-star precision applies to pointer
-input as well as keyboard/value updates. The semantic slider's base keeps a 40×40px minimum
-activation area even for the degenerate `max=0`/`max=1` cases; larger ratings naturally grow wider.
+input as well as keyboard/value updates. The host-owned slider's presentational symbol row keeps a
+40×40px minimum activation area even for the degenerate `max=0`/`max=1` cases; larger ratings
+naturally grow wider.
 
 ```html
 <lr-rating

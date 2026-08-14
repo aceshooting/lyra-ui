@@ -225,6 +225,7 @@ export class LyraFlowMinimap extends LyraElement {
   // Runs from `willUpdate()`, not `updated()`, so `snapshot`'s reset lands in the render this same
   // cycle produces instead of synchronously scheduling a second cycle from within `updated()`.
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     // Ahead of render(), so the geometry it computes stays pure. Both lengths are live theme
     // values, so they are re-read per update rather than cached once: a theme switch, a token a
     // consumer set on any ancestor, and a root font-size change all have to reach the floor.

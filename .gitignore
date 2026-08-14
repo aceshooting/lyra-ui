@@ -1,10 +1,8 @@
 node_modules/
 dist/
-custom-elements.json
+/custom-elements.json
 coverage/
 .DS_Store
-.playwright-mcp/
-.claude/
 
 *storybook.log
 storybook-static
@@ -19,7 +17,3 @@ storybook-static
 # points, produced only so Codecov bundle analysis has a real bundle to report on
 # (scripts/codecov-bundle.mjs). Regenerated from dist/ on every run.
 .codecov-bundle/
-
-# Internal planning/working docs (specs, plans, feature requests) -- never staged. The rest of
-# docs/ (e.g. docs/index.md) IS committed and is real, public documentation.
-docs/superpowers/

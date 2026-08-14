@@ -458,6 +458,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (
       (changed.has("currentSlide") ||
         changed.has("index") ||
@@ -470,6 +471,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     const shouldAnnounceActivePage =
       this.announcementsArmed &&
       (this.manualPending || changed.has("slidesPerPage"));

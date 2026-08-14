@@ -24,9 +24,6 @@ export type ConfirmBarDecision = 'approved' | 'denied' | null;
  *  the two can never drift apart. */
 export type ConfirmBarVariant = Extract<LyraVariant, 'neutral' | 'danger'>;
 
-/** Retained name for the union above. */
-export type ConfirmBarTone = ConfirmBarVariant;
-
 export interface LyraConfirmBarEventMap {
   'lr-approve': CustomEvent<{ args: unknown }>;
   'lr-deny': CustomEvent<undefined>;

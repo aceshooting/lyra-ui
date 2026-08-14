@@ -45,7 +45,7 @@ export class LyraSkeleton extends LyraElement {
   static override styles = [LyraElement.styles, styles, srOnly];
 
   @property({ reflect: true }) variant: SkeletonVariant = 'text';
-  @property({ reflect: true }) effect: SkeletonEffect = 'none';
+  @property() effect: SkeletonEffect = 'none';
   @property() width?: string;
   @property() height?: string;
 
@@ -57,7 +57,8 @@ export class LyraSkeleton extends LyraElement {
    *  description of what is actually loading (e.g. "Loading chart"). */
   @property() label = 'Loading…';
 
-  protected override willUpdate(): void {
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (this.announce) {
       this.setAttribute('role', 'status');
     } else {
@@ -66,6 +67,7 @@ export class LyraSkeleton extends LyraElement {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('width') || changed.has('height')) {
       if (this.width) {
         this.style.setProperty('--lr-skeleton-w', this.width);
@@ -82,7 +84,7 @@ export class LyraSkeleton extends LyraElement {
 
   override render(): TemplateResult {
     const label = this.localize('loading', this.label === 'Loading…' ? undefined : this.label);
-    return html`<span part="base indicator"
+    return html`<span part="base indicator" data-effect=${this.effect}
       >${this.announce ? html`<span class="sr-only">${label}</span>` : ''}</span
     >`;
   }

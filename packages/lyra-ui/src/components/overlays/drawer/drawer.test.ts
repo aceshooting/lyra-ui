@@ -415,4 +415,102 @@ describe('contained drawer compatibility', () => {
     const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
     expect(getComputedStyle(panel).inlineSize).to.equal('320px');
   });
+
+  it("keeps inherited dialog width hooks effective for side drawers", async () => {
+    const el = (await fixture(html`
+      <lr-drawer
+        contained
+        open
+        label="Filters"
+        style="--lr-dialog-width: 200px; --lr-dialog-max-width: 220px"
+        ><p>Body</p></lr-drawer
+      >
+    `)) as LyraDrawer;
+    const panel = el.shadowRoot!.querySelector(
+      '[part~="panel"]'
+    ) as HTMLElement;
+
+    expect(getComputedStyle(panel).inlineSize).to.equal("200px");
+    el.style.setProperty("--lr-dialog-width", "300px");
+    expect(panel.getBoundingClientRect().width).to.equal(220);
+  });
+
+  it("preserves focused drawer content when an open modal becomes contained", async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <button id="opener">Open</button>
+        <lr-drawer
+          label="Filters"
+          style="--show-duration: 0ms; --hide-duration: 0ms"
+        >
+          <button id="inside">Inside</button>
+        </lr-drawer>
+      </div>
+    `);
+    const opener = wrapper.querySelector<HTMLButtonElement>("#opener")!;
+    const inside = wrapper.querySelector<HTMLButtonElement>("#inside")!;
+    const el = wrapper.querySelector<LyraDrawer>("lr-drawer")!;
+    opener.focus();
+    await el.show();
+    inside.focus();
+
+    el.contained = true;
+    await el.updateComplete;
+
+    expect(document.activeElement?.id).to.equal("inside");
+    await el.hide();
+  });
+
+  it("preserves focused drawer content when an open contained drawer becomes modal", async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <button id="opener">Open</button>
+        <lr-drawer
+          contained
+          open
+          label="Filters"
+          style="--show-duration: 0ms; --hide-duration: 0ms"
+        >
+          <button id="inside">Inside</button>
+        </lr-drawer>
+      </div>
+    `);
+    const inside = wrapper.querySelector<HTMLButtonElement>("#inside")!;
+    const el = wrapper.querySelector<LyraDrawer>("lr-drawer")!;
+    inside.focus();
+
+    el.contained = false;
+    await el.updateComplete;
+
+    expect(document.activeElement?.id).to.equal("inside");
+    await el.hide();
+  });
+
+  it("does not restore the opener during a mode change when the focused target was removed", async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <button id="opener">Open</button>
+        <lr-drawer
+          label="Filters"
+          style="--show-duration: 0ms; --hide-duration: 0ms"
+        >
+          <button id="inside">Inside</button>
+        </lr-drawer>
+      </div>
+    `);
+    const opener = wrapper.querySelector<HTMLButtonElement>("#opener")!;
+    const inside = wrapper.querySelector<HTMLButtonElement>("#inside")!;
+    const el = wrapper.querySelector<LyraDrawer>("lr-drawer")!;
+    opener.focus();
+    await el.show();
+    inside.focus();
+    inside.remove();
+
+    el.contained = true;
+    await el.updateComplete;
+
+    expect(el.open).to.equal(true);
+    expect(document.activeElement?.id).to.not.equal("opener");
+    await el.hide();
+  });
 });

@@ -29,7 +29,7 @@ it('emits one cancelable lr-invalid alias when a validity check fails', async ()
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
-  expect(aliases[0].target).to.equal(el);
+  expect((aliases[0].target) === (el)).to.equal(true);
   expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
   expect(aliases[0].cancelable).to.be.true;
   // Nothing cancelled it, so the browser's own validation UI stays enabled.
@@ -1217,7 +1217,7 @@ it('marks touched from a real user blur of the trigger', async () => {
   expect((el as unknown as { touched: boolean }).touched, 'a real blur marks touched').to.be.true;
 });
 
-// See fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native form control (input/select/
+// Disabling a focused native form control (input/select/
 // textarea/button) is plain platform behavior that forces a blur -- nothing to do with custom
 // elements specifically. That forced blur is not a real user interaction and must not mark the
 // field touched, since (depending on exact timing) it could reenter an in-flight Lit update and
@@ -1525,7 +1525,7 @@ describe('single-option auto-commit (autoCommitSingleOption)', () => {
     expect(btn.hasAttribute('aria-expanded')).to.be.false;
     expect(btn.hasAttribute('aria-controls')).to.be.false;
     expect(btn.hasAttribute('aria-activedescendant')).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="expand-icon"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="expand-icon"]')) == null).to.be.true;
   });
 
   it('commits the sole option on click without ever opening the listbox', async () => {
@@ -1636,7 +1636,7 @@ describe('SingleOption / SingleEnabledAmongDisabled stories actually set auto-co
     const btn = trigger(el);
     expect(el.autoCommitSingleOption).to.be.true;
     expect(btn.getAttribute('role')).to.equal('button');
-    expect(el.shadowRoot!.querySelector('[part="expand-icon"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="expand-icon"]')) == null).to.be.true;
   });
 
   it('SingleEnabledAmongDisabled renders the plain-button auto-commit trigger its doc comment describes', async () => {
@@ -1645,7 +1645,7 @@ describe('SingleOption / SingleEnabledAmongDisabled stories actually set auto-co
     const btn = trigger(el);
     expect(el.autoCommitSingleOption).to.be.true;
     expect(btn.getAttribute('role')).to.equal('button');
-    expect(el.shadowRoot!.querySelector('[part="expand-icon"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="expand-icon"]')) == null).to.be.true;
   });
 });
 
@@ -2074,11 +2074,13 @@ describe('start/end adornment slots', () => {
 
   it('reveals the wrapper when an adornment is slotted in after first render', async () => {
     const el = (await fixture(basic())) as LyraSelect;
+    const startSlot = el.shadowRoot!.querySelector('slot[name="start"]') as HTMLSlotElement;
+    const changed = oneEvent(startSlot, 'slotchange');
     const glyph = document.createElement('span');
     glyph.slot = 'start';
     glyph.textContent = '⌕';
     el.append(glyph);
-    await el.updateComplete;
+    await changed;
     await el.updateComplete;
     expect(part(el, 'start').hasAttribute('hidden')).to.be.false;
   });
@@ -3021,7 +3023,7 @@ describe('getTag', () => {
     const custom = [...el.shadowRoot!.querySelectorAll('.custom')] as HTMLElement[];
     expect(custom.map((node) => node.textContent)).to.deep.equal(['APPLE', 'BANANA']);
     expect(custom.map((node) => node.dataset['index'])).to.deep.equal(['0', '1']);
-    expect(el.shadowRoot!.querySelector('[part="tag-label"]')).to.equal(null);
+    expect((el.shadowRoot!.querySelector('[part="tag-label"]')) === (null)).to.equal(true);
   });
 
   it('renders a returned string as text, never as markup', async () => {
@@ -3574,7 +3576,7 @@ describe('lr-select mapped Select parity surface', () => {
     await el.updateComplete;
     const remove = el.shadowRoot!.querySelector('[part~="tag__remove-button"]') as HTMLButtonElement;
     expect((remove) != null).to.equal(true);
-    expect(remove.closest('button[part~="trigger"]')).to.equal(null);
+    expect((remove.closest('button[part~="trigger"]')) === (null)).to.equal(true);
     expect(el.shadowRoot!.querySelector('[part~="tag__base"]')).to.exist;
     expect(el.shadowRoot!.querySelector('[part~="tag__content"]')).to.exist;
     remove.click();

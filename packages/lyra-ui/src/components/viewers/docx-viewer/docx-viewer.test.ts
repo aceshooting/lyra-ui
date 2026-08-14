@@ -132,7 +132,7 @@ describe('lr-docx-viewer', () => {
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
         'This viewer needs the optional "dompurify" package installed to render safely.',
       );
-      expect(el.shadowRoot!.querySelector('[part="content"]')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('[part="content"]')) == null).to.be.true;
     } finally {
       restore();
     }
@@ -318,7 +318,7 @@ describe('lr-docx-viewer', () => {
       el.src = 'https://example.test/fresh.docx';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
       expect(signals[0]?.aborted, 'the stale request should have been aborted').to.be.true;
-      expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('[part="error"]')) == null).to.be.true;
       expect(renderErrorCount).to.equal(0);
     } finally {
       window.fetch = original;
@@ -367,8 +367,8 @@ describe('lr-docx-viewer', () => {
         DOMPurify: { sanitize: (value: string) => value },
       });
       await aTimeout(20);
-      expect(el.shadowRoot!.querySelector('[part="content"]')).to.not.exist;
-      expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('[part="content"]')) == null).to.be.true;
+      expect((el.shadowRoot!.querySelector('[part="error"]')) == null).to.be.true;
     } finally {
       restore();
     }
@@ -394,7 +394,7 @@ describe('lr-docx-viewer', () => {
       el.remove();
       resolveConvert({ value: '<p>Too late</p>', messages: [] });
       await aTimeout(20);
-      expect(el.shadowRoot!.querySelector('[part="content"]')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('[part="content"]')) == null).to.be.true;
     } finally {
       restore();
     }
@@ -839,7 +839,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
       }];
       el.src = 'https://example.test/report.docx';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="spinner"]') !== null);
-      expect(el.shadowRoot!.querySelector('[part="highlight-action"]')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('[part="highlight-action"]')) == null).to.be.true;
       await waitUntil(() => finishConversion !== undefined);
       finishConversion!({ value: '<p>Ada wrote the first program.</p>', messages: [] });
       await waitUntil(
@@ -1523,7 +1523,7 @@ describe('search', () => {
 
       expect(await el.searchNext()).to.be.true;
       expect(el.shadowRoot!.querySelectorAll('[part~="search-match"]').length).to.equal(0);
-      expect(el.shadowRoot!.querySelector('mark[part~="search-match-active"]')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('mark[part~="search-match-active"]')) == null).to.be.true;
     } finally {
       restore();
     }

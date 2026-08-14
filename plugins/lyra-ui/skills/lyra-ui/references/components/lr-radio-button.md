@@ -32,9 +32,16 @@ Standalone button chrome is allocation-safe too: unbroken labels wrap, and start
 prefix/suffix) adornments are each capped and truncate rather than widening the containing panel.
 The exact-320px story shows that behavior in LTR and RTL.
 
-**Properties and methods:** the same functional surface as `lr-radio` — `checked`, `defaultChecked`,
-`customError`, `disabled`, `name`, `required`, `value`, `size`, `pill`; `click()`, `focus()`, `blur()`,
-`setCustomValidity()`. The inherited `appearance` remains `'default' | 'button'`; this tag already
+**Properties and methods:** exactly the same functional surface as `lr-radio`. Its writable fields
+are `appearance`, `checked`, `defaultChecked`, `customError`, `disabled`, `name`, `required`, `value`,
+`size`, and `pill`. Its effective form/validity state is also inherited: read-only
+`effectiveDisabled`, `effectiveRequired`, `form`, `labels`, `validity`, `validationMessage`, and
+`willValidate`. The delegated methods are `click()`, `focus()`, `blur()`, `getForm()`,
+`checkValidity()`, `reportValidity()`, `setCustomValidity()`, and `resetValidity()`; form reset,
+disabled-fieldset, and state-restoration callbacks remain the browser-owned FACE integration behind
+those public operations. Its inherited strongly typed `addEventListener()` and
+`removeEventListener()` overloads cover the radio event map listed below while retaining the
+standard DOM string overloads. The inherited `appearance` remains `'default' | 'button'`; this tag already
 renders button chrome in either state, so the property adds no second visual mode. `size` is where this
 chrome differs most visibly: the shared ladder drives the button's height (floored at `1.5rem`),
 inline padding and font size, so a `size="small"` radio button sits at the same height as a

@@ -514,14 +514,23 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       this.scheduleCompanionNotify();
       return false;
     }
-    return true;
+    return super.shouldUpdate(changed);
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('nodes')) {
       this.cancelModelBoundGestures();
       this.pruneNodeCaches();
-      this.syncDefaultCards();
+      // Lit's server element model intentionally has no owner document or real light-DOM
+      // collection. The shadow template below can still serialize the complete model (node
+      // wrappers, slots, edges and semantics); default light-DOM cards are a browser enhancement
+      // reconciled after upgrade. Keeping that mutation out of SSR also avoids manufacturing
+      // light-DOM nodes that the server response could not hydrate in place.
+      if (this.ownerDocument) {
+        if (this.hasUpdated) this.syncDefaultCards();
+        else this.seedFirstRenderState(() => this.syncDefaultCards());
+      }
     }
     if (changed.has('locked') && this.locked) {
       this.cancelActiveGestures();
@@ -551,6 +560,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('edges')) this.rebuildIncidentEdgesIndex();
     if (changed.has('nodes') || changed.has('edges')) {
       this.runAutoLayoutIfNeeded();

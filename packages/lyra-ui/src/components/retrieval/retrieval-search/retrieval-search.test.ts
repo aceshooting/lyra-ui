@@ -207,7 +207,7 @@ describe('loading / cancellation', () => {
 describe('active filters/scope chips', () => {
   it('renders no chip-group when there are no filters and no scope', async () => {
     const el = (await fixture(html`<lr-retrieval-search></lr-retrieval-search>`)) as LyraRetrievalSearch;
-    expect(el.shadowRoot!.querySelector('[part="filters"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="filters"]')) == null).to.be.true;
   });
 
   it('renders removable chips for scope entries and filter entries', async () => {
@@ -340,8 +340,8 @@ describe('loading / error / empty status region', () => {
 
     expect(spinner != null).to.be.true;
     expect(spinnerLabel()).to.equal('Knowledge search');
-    expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
-    expect(el.shadowRoot!.querySelector('[part="empty"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="error"]')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part="empty"]')) == null).to.be.true;
 
     el.setAttribute('aria-label', 'Loading support knowledge');
     await el.updateComplete;
@@ -387,8 +387,8 @@ describe('loading / error / empty status region', () => {
       html`<lr-retrieval-search loading error-text="stale error" empty></lr-retrieval-search>`,
     )) as LyraRetrievalSearch;
     expect(el.shadowRoot!.querySelector('[part="spinner"]')).to.exist;
-    expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
-    expect(el.shadowRoot!.querySelector('[part="empty"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="error"]')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part="empty"]')) == null).to.be.true;
   });
 
   it('prioritizes error over empty', async () => {
@@ -396,7 +396,7 @@ describe('loading / error / empty status region', () => {
       html`<lr-retrieval-search error-text="failed" empty></lr-retrieval-search>`,
     )) as LyraRetrievalSearch;
     expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
-    expect(el.shadowRoot!.querySelector('[part="empty"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="empty"]')) == null).to.be.true;
   });
 });
 

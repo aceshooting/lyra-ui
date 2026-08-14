@@ -36,7 +36,7 @@ it('ignores a plain role="..." attribute entirely (it is not the attribute this 
 
 it('normalizes a Date, an ISO string, and an invalid string for timestamp', async () => {
   const el = (await fixture(html`<lr-chat-message>hi</lr-chat-message>`)) as LyraChatMessage;
-  expect(el.shadowRoot!.querySelector('[part="timestamp"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="timestamp"]')) == null).to.be.true;
 
   const date = new Date('2024-03-01T10:30:00Z');
   el.timestamp = date;
@@ -52,8 +52,8 @@ it('normalizes a Date, an ISO string, and an invalid string for timestamp', asyn
 
   el.timestamp = 'not a date';
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="timestamp"]'), 'invalid input renders nothing, like unset').to.not
-    .exist;
+  expect(el.shadowRoot!.querySelector('[part="timestamp"]') == null, 'invalid input renders nothing, like unset').to.be
+    .true;
 });
 
 it('uses the default hour:minute formatter, overridable via formatTimestamp', async () => {
@@ -84,7 +84,7 @@ it('formats the default timestamp with the effective locale', async () => {
 
 it('does not render the collapse button unless collapsible, and hides the body only while collapsed', async () => {
   const el = (await fixture(html`<lr-chat-message>hi</lr-chat-message>`)) as LyraChatMessage;
-  expect(el.shadowRoot!.querySelector('[part="collapse-button"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="collapse-button"]')) == null).to.be.true;
   expect((el.shadowRoot!.querySelector('[part="body"]') as HTMLElement).hasAttribute('hidden')).to.be.false;
 
   el.collapsible = true;
@@ -117,7 +117,7 @@ it('toggles collapsed and emits lr-collapse-toggle with the new value on collaps
 
 it('only renders the built-in retry button when status="failed", and it emits lr-retry', async () => {
   const el = (await fixture(html`<lr-chat-message status="sent">hi</lr-chat-message>`)) as LyraChatMessage;
-  expect(el.shadowRoot!.querySelector('[part="retry-button"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="retry-button"]')) == null).to.be.true;
 
   el.status = 'failed';
   await el.updateComplete;
@@ -149,8 +149,10 @@ it('keeps focus inside the message when a lr-retry listener flips status away fr
   button.click();
   await el.updateComplete;
 
-  expect(el.shadowRoot!.querySelector('[part="retry-button"]'), 'the retry button is gone once status flips').to.not
-    .exist;
+  expect(
+    el.shadowRoot!.querySelector('[part="retry-button"]') == null,
+    'the retry button is gone once status flips'
+  ).to.be.true;
   expect((el.shadowRoot!.activeElement) !== null, 'focus must not have silently reverted to <body>').to.equal(true);
   expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="bubble"]'))).to.equal(true);
 });
@@ -180,7 +182,7 @@ it('shows visible status text (not color alone) for sending/streaming/failed, an
 
   el.status = 'sent';
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="status-text"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="status-text"]')) == null).to.be.true;
 });
 
 it('does not announce whatever status a message happens to mount with', async () => {
@@ -605,11 +607,15 @@ describe('failure slot', () => {
     `)) as LyraChatMessage;
 
     // Built-in failed UI is suppressed -- there is exactly one failure presentation, the consumer's.
-    expect(el.shadowRoot!.querySelector('[part="status-text"]'), 'built-in status text is suppressed').to.not.exist;
-    expect(el.shadowRoot!.querySelector('[part="status-indicator"]'), 'built-in status dot is suppressed').to.not
-      .exist;
-    expect(el.shadowRoot!.querySelector('[part="retry-button"]'), 'built-in retry button is suppressed').to.not
-      .exist;
+    expect((el.shadowRoot!.querySelector('[part="status-text"]')) == null, 'built-in status text is suppressed').to.be.true;
+    expect(
+      el.shadowRoot!.querySelector('[part="status-indicator"]') == null,
+      'built-in status dot is suppressed'
+    ).to.be.true;
+    expect(
+      el.shadowRoot!.querySelector('[part="retry-button"]') == null,
+      'built-in retry button is suppressed'
+    ).to.be.true;
 
     const slot = el.shadowRoot!.querySelector('slot[name="failure"]') as HTMLSlotElement;
     const assigned = slot.assignedElements({ flatten: true });
@@ -648,15 +654,15 @@ describe('failure slot', () => {
 
     el.status = 'sent';
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('slot[name="failure"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('slot[name="failure"]')) == null).to.be.true;
   });
 
   it('detects pre-existing failure-slot content on first paint when mounting directly into status="failed", not just via slotchange', async () => {
     const el = (await fixture(html`
       <lr-chat-message status="failed"><div slot="failure" role="alert">Send failed</div>hi</lr-chat-message>
     `)) as LyraChatMessage;
-    expect(el.shadowRoot!.querySelector('[part="status-text"]')).to.not.exist;
-    expect(el.shadowRoot!.querySelector('[part="retry-button"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="status-text"]')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part="retry-button"]')) == null).to.be.true;
     const slot = el.shadowRoot!.querySelector('slot[name="failure"]') as HTMLSlotElement;
     expect(slot.assignedElements({ flatten: true })).to.have.lengthOf(1);
   });
@@ -669,8 +675,8 @@ describe('failure slot', () => {
     el.status = 'failed';
     await el.updateComplete;
 
-    expect(el.shadowRoot!.querySelector('[part="status-text"]')).to.not.exist;
-    expect(el.shadowRoot!.querySelector('[part="retry-button"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="status-text"]')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part="retry-button"]')) == null).to.be.true;
     const slot = el.shadowRoot!.querySelector('slot[name="failure"]') as HTMLSlotElement;
     expect(slot.assignedElements({ flatten: true })).to.have.lengthOf(1);
   });
@@ -679,7 +685,7 @@ describe('failure slot', () => {
     const el = (await fixture(html`
       <lr-chat-message status="failed"><div slot="failure" role="alert">Send failed</div>hi</lr-chat-message>
     `)) as LyraChatMessage;
-    expect(el.shadowRoot!.querySelector('[part="status-text"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="status-text"]')) == null).to.be.true;
 
     const failureContent = el.querySelector('[slot="failure"]')!;
     el.removeChild(failureContent);
@@ -746,8 +752,7 @@ describe('failure slot', () => {
     button.click();
     await el.updateComplete;
 
-    expect(el.shadowRoot!.querySelector('slot[name="failure"]'), 'the failure slot is gone once status flips').to
-      .not.exist;
+    expect((el.shadowRoot!.querySelector('slot[name="failure"]')) == null, 'the failure slot is gone once status flips').to.be.true;
     expect((document.activeElement) !== (document.body), 'focus must not have silently reverted to <body>').to.equal(true);
     expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="bubble"]'))).to.equal(true);
   });

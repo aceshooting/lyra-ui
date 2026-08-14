@@ -541,7 +541,8 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.childObserverDocument = undefined;
   }
 
-  protected override firstUpdated(): void {
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     // Capture phase: a native `blur` does not bubble, but it is composed, so a capture listener
     // on the group still observes one fired deep inside an owned `<lr-checkbox>`'s shadow tree, as
     // well as the `blur` that checkbox's own `onBlur` relays from its host (bubbles + composed).

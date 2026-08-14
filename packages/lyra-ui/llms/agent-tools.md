@@ -1127,6 +1127,11 @@ A small bordered card shell. Purely visual, with no state of its own beyond slot
   `<lr-tool-result-view>`'s own chrome) doesn't double it. Plain controls only the chrome; compact
   padding and gaps still apply when both are set. The exported alias `ResultCardAppearance` is
   retained as a name for the same union.
+- `withActions: boolean = false` (attribute `with-actions`, reflected) — explicit first-render
+  presence hint for the `actions` slot. Client-only markup normally does not need it because the
+  component detects assigned actions during upgrade; set it before both server and browser first
+  render when an actions-only header must be present in the no-JavaScript response and reused by
+  hydration.
 
 **Events:** none.
 
@@ -1559,8 +1564,8 @@ text: string; icon?: string; timestamp?: Date | string; variant?: LyraVariant }`
 `icon` is a literal glyph hint (e.g. an emoji), the same convention `lr-tool-call-chip.icon` uses; a
 small variant dot renders in its place when omitted. `LyraVariant = 'neutral' | 'brand' | 'success'
 | 'warning' | 'danger'` is the library-wide semantic vocabulary, so an entry is toned with the same
-five values as every other `variant` in the library; the exported alias `ActivityEntryTone` is
-retained as a name for it. An invalid `timestamp` string is treated as unset. `mode: 'live' | 'post-hoc' =
+five values as every other `variant` in the library. An invalid `timestamp` string is treated as
+unset. `mode: 'live' | 'post-hoc' =
 'live'` (reflected), `follow: boolean = true` (reflected), `expanded: boolean = false` (reflected),
 `label: string = 'Activity'`, `showTimestamps: boolean = false` (attribute `show-timestamps`),
 `formatTimestamp?: (date: Date) => string` (attribute: false), `renderText?: (entry: ActivityEntry)
@@ -1715,8 +1720,7 @@ component on activation and host-writable (an externally-resolved decision rende
 emits nothing). `variant: ConfirmBarVariant = 'neutral'` (reflected) — `'neutral' | 'danger'`, a
 genuine two-member subset of the library-wide `LyraVariant` vocabulary (spelled as an `Extract` of
 it, so the two can never drift): a confirmation is either routine or destructive, and
-`brand`/`success`/`warning` have no meaning for a proposal awaiting a yes/no. The exported alias
-`ConfirmBarTone` is retained as a name for the same union. `compact: boolean = false`
+`brand`/`success`/`warning` have no meaning for a proposal awaiting a yes/no. `compact: boolean = false`
 (reflected) — collapses the bar from a stacked `display: block` card into a single tightly-padded
 inline row, for a confirmation that has to live inside an existing container: a table cell, a card's
 action row, a toolbar. The host becomes `inline-flex`, and the narrow-allocation `@container`
@@ -2077,7 +2081,11 @@ segment's embedded `lr-citation-badge`), `lr-citation-open` (`detail: { sourceId
 number; href?: string }`, the "full preview" signal), `lr-copy` (`detail: { text: string }`, from the
 embedded `lr-copy-button`), `lr-export` (`detail: { format: string }`, from the embedded
 `lr-export-button`), `lr-export-complete` (`detail: { format: string }`, after a non-cancelled export
-finishes).
+finishes), `lr-error` (the embedded clipboard write failed), `lr-copy-error` (`detail: { text:
+string; reason: string }`, the detailed compatibility event for that clipboard failure),
+`lr-export-error` (`detail: { format: ExportFormat; error: unknown }`, the embedded export could not
+complete), and the cancelable `lr-show` / `lr-hide` lifecycle events from the embedded export-format
+menu. These composed child events surface unchanged; the inspector does not emit duplicate copies.
 
 **CSS parts:** `base`, `toolbar`,
 `segments`, `segment`, `segment-header`, `segment-label`, `segment-text`, `segment-tokens`,
@@ -2217,8 +2225,9 @@ detail?: string }`, with `PolicyDecisionCategory = 'guardrail' | 'permission' | 
 and `PolicyDecisionState = 'allow' | 'deny' | 'needs-review'` (all three exported here). `label` is
 host-supplied data rendered as-is, never localized (a rule name, or a tool name for `category:
 'tool'`). `explanation` is an **always-visible** plain-text reason — `state` is never conveyed by
-color alone; it tones the badge and callout as `allow` → success, `deny` → danger, `needs-review` →
-warning. `detail` is optional richer evidence (matched rule text, policy id) revealed through
+color alone; it tones the badge as `allow` → success, `deny` → danger, `needs-review` → warning,
+while the always-visible explanation remains plain text. `detail` is optional richer evidence
+(matched rule text, policy id) revealed through
 progressive disclosure. Controlled and never mutated — pass a new array to update it.
 
 **Events:** none. Read-only and display-only: this component never mutates a decision and offers no

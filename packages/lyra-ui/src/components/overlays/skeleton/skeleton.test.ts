@@ -63,16 +63,20 @@ it('reflects variant onto the host attribute and gives each variant a distinct b
   expect(rectRadius).to.not.equal(circleRadius);
 });
 
-it('reflects effect onto the host attribute', async () => {
-  const pulse = (await fixture(html`<lr-skeleton effect="pulse"></lr-skeleton>`)) as LyraSkeleton;
-  expect(pulse.getAttribute('effect')).to.equal('pulse');
+it('accepts the effect attribute without reflecting property writes', async () => {
+  const el = (await fixture(html`<lr-skeleton></lr-skeleton>`)) as LyraSkeleton;
+  const indicator = el.shadowRoot!.querySelector('[part~="indicator"]')!;
 
-  const sheen = (await fixture(html`<lr-skeleton effect="sheen"></lr-skeleton>`)) as LyraSkeleton;
-  expect(sheen.getAttribute('effect')).to.equal('sheen');
+  el.effect = 'pulse';
+  await el.updateComplete;
+  expect(el.hasAttribute('effect')).to.equal(false);
+  expect(indicator.getAttribute('data-effect')).to.equal('pulse');
+  expect(getComputedStyle(indicator).animationName).to.equal('lr-skeleton-pulse');
 
-  const none = (await fixture(html`<lr-skeleton effect="none"></lr-skeleton>`)) as LyraSkeleton;
-  expect(none.getAttribute('effect')).to.equal('none');
-  expect(getComputedStyle(none.shadowRoot!.querySelector('[part~="indicator"]')!).animationName).to.equal('none');
+  el.setAttribute('effect', 'none');
+  await el.updateComplete;
+  expect(el.effect).to.equal('none');
+  expect(getComputedStyle(indicator).animationName).to.equal('none');
 });
 
 it('gives pulse and sheen distinct rendered animations, disabled under reduced motion', async () => {
@@ -196,7 +200,7 @@ it('can render as an unannounced decorative placeholder', async () => {
   )) as LyraSkeleton;
 
   expect(el.hasAttribute('role')).to.equal(false);
-  expect(el.shadowRoot!.querySelector('.sr-only')).to.equal(null);
+  expect((el.shadowRoot!.querySelector('.sr-only')) === (null)).to.equal(true);
 });
 
 it('announce="false" (plain HTML attribute) also renders as an unannounced decorative placeholder', async () => {
@@ -204,7 +208,7 @@ it('announce="false" (plain HTML attribute) also renders as an unannounced decor
 
   expect(el.announce).to.be.false;
   expect(el.hasAttribute('role')).to.equal(false);
-  expect(el.shadowRoot!.querySelector('.sr-only')).to.equal(null);
+  expect((el.shadowRoot!.querySelector('.sr-only')) === (null)).to.equal(true);
 });
 
 it('removes status semantics when announce is disabled after rendering', async () => {
@@ -215,7 +219,7 @@ it('removes status semantics when announce is disabled after rendering', async (
   await el.updateComplete;
 
   expect(el.hasAttribute('role')).to.equal(false);
-  expect(el.shadowRoot!.querySelector('.sr-only')).to.equal(null);
+  expect((el.shadowRoot!.querySelector('.sr-only')) === (null)).to.equal(true);
 });
 
 it('is accessible', async () => {

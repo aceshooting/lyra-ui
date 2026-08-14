@@ -150,6 +150,7 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('trace') || changed.has('internalPatterns')) {
       this.groups = parseStackTrace(this.trace, this.internalPatterns);
       this.expandedInternalRuns = new Set();

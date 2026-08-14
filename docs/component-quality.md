@@ -39,7 +39,7 @@ complete enrolled set. Axe is not assistive-technology testing.
 ## Known limitations
 
 - The historical 249 light/dark/RTL baselines and current evidence captures have not received human visual review.
-- Four forced-colors/narrow captures and 75 changed light/dark/RTL captures remain ephemeral evidence and are not approved baseline updates.
+- Four forced-colors/narrow captures and 78 changed light/dark/RTL captures remain ephemeral evidence and are not approved baseline updates.
 - Chromium forced-colors emulation is targeted browser evidence, not a manual Windows High Contrast or assistive-technology review.
 - The matrix is a risk-weighted sample and does not provide a baseline for every component or state.
 - No assistive technology pairing has been manually verified.
@@ -305,8 +305,8 @@ complete enrolled set. Axe is not assistive-technology testing.
 | [`lr-time-range`](component-integration.md#lr-time-range) | stable | automated | source signal | source signal | source signal | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
 | [`lr-timeline`](component-integration.md#lr-timeline) | stable | automated | not recorded | not recorded | source signal | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
 | [`lr-timeline-item`](component-integration.md#lr-timeline-item) | stable | automated | not recorded | not recorded | source signal | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
-| [`lr-toast`](component-integration.md#lr-toast) | stable | automated | not recorded | source signal | source signal | not recorded | configured CI | render-and-hydrate | pending human | N/A | source signal | not enrolled | not verified |
-| [`lr-toast-item`](component-integration.md#lr-toast-item) | stable | automated | not recorded | source signal | source signal | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | source signal | not enrolled | not verified |
+| [`lr-toast`](component-integration.md#lr-toast) | stable | automated | not recorded | source signal | source signal | source signal | configured CI | render-and-hydrate | pending human | N/A | source signal | not enrolled | not verified |
+| [`lr-toast-item`](component-integration.md#lr-toast-item) | stable | automated | not recorded | source signal | source signal | source signal | configured CI | render-and-hydrate | not enrolled | N/A | source signal | not enrolled | not verified |
 | [`lr-token-input`](component-integration.md#lr-token-input) | stable | automated | source signal | source signal | N/A | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
 | [`lr-tool-approval-dialog`](component-integration.md#lr-tool-approval-dialog) | stable | automated | source signal | not recorded | N/A | not recorded | configured CI | render-and-hydrate | pending human | N/A | N/A | not enrolled | not verified |
 | [`lr-tool-call-chip`](component-integration.md#lr-tool-call-chip) | stable | automated | source signal | not recorded | source signal | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |

@@ -14,8 +14,7 @@
 // in docs/agents/coding-conventions.md. `check-llms-freshness.mjs` (via scripts/llms-gaps.mjs) only
 // asserts that a member *name* is mentioned somewhere in a component's section; it does not (and
 // structurally cannot, without duplicating this scan) know whether the import path shown alongside
-// that name is the root barrel or a subpath. This gate would have caught all 5 root-barrel-import
-// instances found and fixed across llms/*.md in the review that preceded it.
+// that name is the root barrel or a subpath. This gate checks that distinction across llms/*.md.
 // Deliberately narrow, mirroring check-part-reachability.mjs's stance: a false positive costs a
 // contributor a confusing failure, so this only fires on an exact, unambiguous match.
 //   * Only the exact `@aceshooting/lyra-ui` specifier is flagged -- never a subpath like
@@ -133,4 +132,3 @@ const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPat
 if (isMain) run();
 
 export { run };
-

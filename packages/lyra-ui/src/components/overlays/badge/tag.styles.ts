@@ -13,10 +13,9 @@ export const styles = css`
     --lr-tag-remove-hover-background: color-mix(in srgb, currentColor 16%, transparent);
   }
 
-  /* Shoelace's variant="text" is a surface treatment rather than a semantic palette. The
-     write-side adapter keeps Lyra's canonical neutral variant read while this private marker
-     applies the equivalent plain surface without mutating an explicitly chosen appearance. */
-  :host([data-upstream-text-variant]) {
+  /* Shoelace's variant="text" is a surface treatment rather than a semantic palette. The public
+     token remains verbatim while the badge base derives neutral as its private tone. */
+  :host([variant='text']) {
     --lr-badge-fill: transparent;
     --lr-badge-stroke: transparent;
     --lr-badge-text: var(--lr-badge-ink);

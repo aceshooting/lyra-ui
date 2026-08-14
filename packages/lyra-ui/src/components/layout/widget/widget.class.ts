@@ -230,6 +230,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   private persistReady = false;
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasActionsSlot = Array.from(this.children).some(
         (el) => el.getAttribute("slot") === "actions"

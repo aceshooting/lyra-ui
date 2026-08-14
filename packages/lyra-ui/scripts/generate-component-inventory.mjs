@@ -2182,6 +2182,45 @@ const reviewedTypeEquivalence = (memberKind, member, upstream, target) => ({
   target,
 });
 
+const reviewedAttributePropertyEquivalence = (attribute, upstream, target) => ({
+  attribute,
+  upstream,
+  target,
+});
+
+const reviewedReflectionEquivalence = (memberKind, member, upstream, target) => ({
+  memberKind,
+  member,
+  upstream,
+  target,
+});
+
+// Catalog tuples use `null` for an absent manifest default. The generated normalization records
+// presence separately so an explicitly authored `default: null` can never collapse into absence.
+const reviewedCssDefaultEquivalence = (member, upstream, target) => ({
+  member,
+  upstreamHasDefault: upstream !== null,
+  ...(upstream !== null ? { upstream } : {}),
+  targetHasDefault: target !== null,
+  ...(target !== null ? { target } : {}),
+});
+
+const reviewedDeprecationEquivalence = (
+  section,
+  member,
+  upstreamDeprecated,
+  upstreamReplacement,
+  targetDeprecated,
+  targetReplacement,
+) => ({
+  section,
+  member,
+  upstreamDeprecated,
+  upstreamReplacement,
+  targetDeprecated,
+  targetReplacement,
+});
+
 const reviewedMethodParameterTypeEquivalence = (method, parameter, upstream, target) => ({
   method,
   parameter,
@@ -2234,7 +2273,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
       'attribute',
       ['variant'],
       "'primary' | 'success' | 'neutral' | 'warning' | 'danger'",
-      "BadgeVariant | 'primary'",
+      'BadgeVariant',
     ]],
   ],
   [
@@ -2359,12 +2398,15 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
   ],
   [
     'sl-tag',
-    [[
-      'attribute',
-      ['variant'],
-      "'primary' | 'success' | 'neutral' | 'warning' | 'danger' | 'text'",
-      "BadgeVariant | 'primary' | 'text'",
-    ]],
+    [
+      ['attribute', ['size'], "'small' | 'medium' | 'large'", 'BadgeSize'],
+      [
+        'attribute',
+        ['variant'],
+        "'primary' | 'success' | 'neutral' | 'warning' | 'danger' | 'text'",
+        'TagVariant',
+      ],
+    ],
   ],
   [
     'sl-textarea',
@@ -2398,7 +2440,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
         'attribute',
         ['variant'],
         "'brand' | 'neutral' | 'success' | 'warning' | 'danger'",
-        "BadgeVariant | 'primary'",
+        'BadgeVariant',
       ],
     ],
   ],
@@ -2713,7 +2755,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
       'attribute',
       ['size'],
       "'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large'",
-      "LyraRatingSize | 'small' | 'medium' | 'large'",
+      'LyraRatingSize',
     ]],
   ],
   ['wa-skeleton', [['attribute', ['effect'], "'pulse' | 'sheen' | 'none'", 'SkeletonEffect']]],
@@ -2748,13 +2790,13 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
         'attribute',
         ['size'],
         "'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large'",
-        "BadgeSize | 'small' | 'medium' | 'large'",
+        'BadgeSize',
       ],
       [
         'attribute',
         ['variant'],
         "'brand' | 'neutral' | 'success' | 'warning' | 'danger'",
-        "BadgeVariant | 'primary' | 'text'",
+        'TagVariant',
       ],
     ],
   ],
@@ -2799,7 +2841,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
         'attribute',
         ['size'],
         "'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large'",
-        "ToastSize | 'small' | 'medium' | 'large'",
+        'ToastSize',
       ],
       ['attribute', ['variant'], "'brand' | 'success' | 'warning' | 'danger' | 'neutral'", 'ToastVariant'],
     ],
@@ -3290,6 +3332,584 @@ function reviewedTypeEquivalences(upstreamTag) {
   );
 }
 
+// Attribute ownership is observable independently from the member names themselves. The casing
+// pairs are analyzer spellings for the same platform IDL member; the live/default pairs preserve
+// each form control's already-tested reset authority. Keeping every tag/member triple explicit
+// makes a future analyzer or runtime change invalidate the review instead of broadening a rule.
+const REVIEWED_ATTRIBUTE_PROPERTY_EQUIVALENCE_GROUPS = new Map([
+  ['sl-checkbox', [['checked', 'checked', 'defaultChecked']]],
+  ['sl-color-picker', [['value', 'value', 'defaultValue']]],
+  ['sl-input', [
+    ['enterkeyhint', 'enterkeyhint', 'enterKeyHint'],
+    ['inputmode', 'inputmode', 'inputMode'],
+    ['value', 'value', 'defaultValue'],
+  ]],
+  ['sl-radio-group', [['value', 'value', 'defaultValue']]],
+  ['sl-range', [['value', 'value', 'defaultValue']]],
+  ['sl-select', [['value', 'defaultValue', 'value']]],
+  ['sl-switch', [['checked', 'checked', 'defaultChecked']]],
+  ['sl-textarea', [
+    ['enterkeyhint', 'enterkeyhint', 'enterKeyHint'],
+    ['inputmode', 'inputmode', 'inputMode'],
+    ['value', 'value', 'defaultValue'],
+  ]],
+  ...['wa-combobox', 'wa-input', 'wa-number-input', 'wa-textarea'].map((tag) => [tag, [
+    ['enterkeyhint', 'enterkeyhint', 'enterKeyHint'],
+    ['inputmode', 'inputmode', 'inputMode'],
+  ]]),
+]);
+
+// Reflection differences are serialized-DOM differences even when the target only adds a mirror.
+// These entries are the exact reviewed compatibility set; popup, rating-max, and Shoelace
+// skeleton-effect mismatches were fixed at runtime and therefore do not appear.
+const REVIEWED_REFLECTION_EQUIVALENCE_GROUPS = new Map([
+  ['sl-button', [['attribute', ['href', 'name', 'value'], false, true]]],
+  ['sl-checkbox', [
+    ['attribute', ['name', 'value'], false, true],
+    ['property', ['defaultChecked'], false, true],
+  ]],
+  ['sl-color-picker', [
+    ['attribute', ['hoist', 'name', 'no-format-toggle', 'value'], false, true],
+    ['property', ['defaultValue'], false, true],
+  ]],
+  ['sl-copy-button', [['attribute', ['hoist', 'tooltip-placement'], false, true]]],
+  ['sl-dropdown', [['attribute', ['hoist'], false, true]]],
+  ['sl-include', [['attribute', ['mode', 'src'], false, true]]],
+  ['sl-input', [
+    ['attribute', ['clearable', 'name', 'password-toggle', 'value'], false, true],
+    ['property', ['defaultValue'], false, true],
+  ]],
+  ['sl-menu-item', [['attribute', ['type'], false, true]]],
+  ['sl-radio', [['attribute', ['value'], false, true]]],
+  ['sl-radio-button', [['attribute', ['value'], false, true]]],
+  ['sl-radio-group', [
+    ['attribute', ['name'], false, true],
+    ['property', ['defaultValue'], false, true],
+  ]],
+  ['sl-range', [
+    ['attribute', ['name', 'value'], false, true],
+    ['property', ['defaultValue'], false, true],
+  ]],
+  ['sl-select', [['attribute', ['hoist', 'name'], false, true]]],
+  ['sl-split-panel', [['attribute', ['primary'], false, true]]],
+  ['sl-switch', [
+    ['attribute', ['name', 'value'], false, true],
+    ['property', ['defaultChecked'], false, true],
+  ]],
+  ['sl-tab-group', [['attribute', ['activation', 'fixed-scroll-controls', 'no-scroll-controls', 'placement'], false, true]]],
+  ['sl-tag', [['attribute', ['removable'], false, true]]],
+  ['sl-textarea', [
+    ['attribute', ['name', 'resize', 'value'], false, true],
+    ['property', ['defaultValue'], false, true],
+  ]],
+  ['sl-tooltip', [['attribute', ['hoist', 'placement'], false, true]]],
+  ['wa-button', [
+    ['attribute', ['disabled'], false, true],
+    ['property', ['required'], false, true],
+  ]],
+  ['wa-checkbox', [
+    ['attribute', ['disabled'], false, true],
+    ['property', ['form'], false, true],
+  ]],
+  ['wa-color-picker', [
+    ['attribute', ['disabled'], false, true],
+    ['property', ['form'], false, true],
+  ]],
+  ['wa-combobox', [['attribute', ['disabled'], false, true]]],
+  ['wa-date-input', [
+    ['attribute', ['disabled'], false, true],
+    ['property', ['form'], false, true],
+  ]],
+  ['wa-dialog', [['attribute', ['with-footer'], false, true]]],
+  ['wa-drawer', [['attribute', ['with-footer'], false, true]]],
+  ['wa-dropdown-item', [['attribute', ['checked'], false, true]]],
+  ['wa-file-input', [
+    ['attribute', ['disabled'], false, true],
+    ['property', ['dragging'], false, true],
+  ]],
+  ['wa-include', [['attribute', ['mode', 'src'], false, true]]],
+  ['wa-input', [
+    ['attribute', ['disabled', 'password-toggle'], false, true],
+    ['property', ['form'], false, true],
+  ]],
+  ['wa-known-date', [
+    ['attribute', ['disabled'], false, true],
+    ['property', ['form'], false, true],
+  ]],
+  ['wa-number-input', [
+    ['attribute', ['disabled'], false, true],
+    ['property', ['form'], false, true],
+  ]],
+  ['wa-option', [['attribute', ['disabled'], false, true]]],
+  ['wa-otp-input', [
+    ['attribute', ['disabled'], false, true],
+    ['property', ['form'], false, true],
+  ]],
+  ['wa-pagination', [['attribute', ['hide-single-page', 'with-edges', 'with-summary', 'without-nav'], false, true]]],
+  ['wa-popover', [['attribute', ['for', 'placement'], false, true]]],
+  ['wa-radio', [
+    ['attribute', ['disabled'], false, true],
+    ['property', ['required'], false, true],
+  ]],
+  ['wa-radio-group', [['property', ['form'], false, true]]],
+  ['wa-rating', [['attribute', ['disabled'], false, true]]],
+  ['wa-select', [
+    ['attribute', ['disabled', 'with-clear'], false, true],
+    ['property', ['form'], false, true],
+  ]],
+  ['wa-skeleton', [['attribute', ['effect'], true, false]]],
+  ['wa-slider', [
+    ['attribute', ['disabled'], false, true],
+    ['property', ['form', 'required'], false, true],
+  ]],
+  ['wa-split-panel', [['attribute', ['primary', 'snap'], false, true]]],
+  ['wa-switch', [
+    ['attribute', ['disabled'], false, true],
+    ['property', ['form'], false, true],
+  ]],
+  ['wa-tab-group', [['attribute', ['activation', 'placement', 'without-scroll-controls'], false, true]]],
+  ['wa-tag', [['attribute', ['with-remove'], false, true]]],
+  ['wa-textarea', [
+    ['attribute', ['disabled'], false, true],
+    ['property', ['form'], false, true],
+  ]],
+  ['wa-time-input', [
+    ['attribute', ['disabled', 'step'], false, true],
+    ['property', ['form'], false, true],
+  ]],
+  ['wa-tooltip', [['attribute', ['for', 'placement'], false, true]]],
+]);
+
+// Token names cannot be prefix-rewritten mechanically. These exact pairs record the reviewed
+// Lyra token/fallback that supplies the same hook; `null` means the runtime stylesheet owns the
+// effective fallback while the target manifest deliberately does not claim a literal default.
+const REVIEWED_CSS_DEFAULT_EQUIVALENCE_GROUPS = new Map([
+  ['sl-popup', [
+    ['--arrow-color', 'var(--sl-color-neutral-0)', 'var(--lr-color-surface-raised)'],
+    ['--arrow-size', '6px', 'var(--lr-popup-arrow-size,var(--lr-size-0-375rem))'],
+  ]],
+  ['sl-tree', [
+    ['--indent-guide-color', 'var(--sl-color-neutral-200)', 'var(--lr-color-border)'],
+    ['--indent-size', 'var(--sl-spacing-medium)', 'var(--lr-space-l)'],
+  ]],
+  ['wa-accordion-item', [
+    ['--easing', 'var(--wa-transition-easing)', null],
+    ['--hide-duration', 'var(--wa-transition-normal)', 'var(--lr-duration-base)'],
+    ['--show-duration', 'var(--wa-transition-normal)', 'var(--lr-duration-base)'],
+    ['--spacing', 'var(--wa-space-m)', null],
+  ]],
+  ['wa-card', [['--spacing', 'var(--wa-space-l)', 'var(--lr-space-m)']]],
+  ['wa-carousel', [['--slide-gap', 'var(--wa-space-m)', 'var(--lr-space-m)']]],
+  ['wa-checkbox-group', [['--gap', '0.5em', 'var(--lr-checkbox-group-option-gap)']]],
+  ['wa-details', [
+    ['--hide-duration', 'var(--wa-transition-normal)', 'var(--lr-duration-base)'],
+    ['--show-duration', 'var(--wa-transition-normal)', 'var(--lr-duration-base)'],
+  ]],
+  ['wa-dialog', [
+    ['--backdrop-filter', 'none', 'var(--lr-dialog-backdrop-filter,none)'],
+    ['--hide-duration', 'var(--wa-transition-normal)', null],
+    ['--show-duration', 'var(--wa-transition-normal)', null],
+  ]],
+  ['wa-drawer', [
+    ['--backdrop-filter', 'none', 'var(--lr-dialog-backdrop-filter,none)'],
+    ['--hide-duration', 'var(--wa-transition-normal)', null],
+    ['--show-duration', 'var(--wa-transition-normal)', null],
+  ]],
+  ['wa-icon', [
+    ['--animation-delay', 0, '0s'],
+    ['--animation-duration', '1s', 'var(--lr-duration-icon)'],
+  ]],
+  ['wa-otp-input', [
+    ['--segment-border-radius', 'var(--wa-form-control-border-radius)', 'var(--lr-form-control-radius,var(--lr-radius))'],
+    ['--segment-gap', 'var(--wa-space-xs)', 'var(--lr-space-xs)'],
+  ]],
+  ['wa-page', [
+    ['--aside-width', 'auto', null],
+    ['--banner-height', '0px', null],
+    ['--header-height', '0px', null],
+    ['--main-width', '1fr', null],
+    ['--menu-width', 'auto', null],
+    ['--subheader-height', '0px', null],
+  ]],
+  ['wa-popover', [
+    ['--arrow-size', '0.375rem', 'var(--lr-overlay-arrow-size,var(--lr-size-0-375rem))'],
+    ['--hide-duration', 'var(--wa-transition-fast)', 'var(--lr-duration-fast)'],
+    ['--max-width', '25rem', 'var(--lr-overlay-max-inline-size,var(--lr-size-20rem))'],
+    ['--show-duration', 'var(--wa-transition-fast)', 'var(--lr-duration-fast)'],
+  ]],
+  ['wa-popup', [
+    ['--arrow-color', 'black', 'var(--lr-color-surface-raised)'],
+    ['--arrow-size', '6px', 'var(--lr-popup-arrow-size,var(--lr-size-0-375rem))'],
+    ['--hide-duration', 'var(--wa-transition-fast)', 'var(--lr-duration-fast)'],
+    ['--show-duration', 'var(--wa-transition-fast)', 'var(--lr-duration-fast)'],
+  ]],
+  ['wa-progress-bar', [
+    ['--indicator-color', 'var(--wa-color-brand-fill-loud)', 'var(--lr-progress-indicator-color)'],
+    ['--track-color', 'var(--wa-color-neutral-fill-normal)', 'var(--lr-progress-track-color)'],
+    ['--track-height', '1rem', 'var(--lr-progress-track-height)'],
+  ]],
+  ['wa-scroller', [
+    ['--shadow-color', 'var(--wa-color-surface-default)', 'var(--lr-color-surface)'],
+    ['--shadow-size', '2rem', 'var(--lr-size-2rem)'],
+  ]],
+  ['wa-select', [
+    ['--hide-duration', 'var(--wa-transition-fast)', 'var(--lr-transition-fast)'],
+    ['--show-duration', 'var(--wa-transition-fast)', 'var(--lr-transition-fast)'],
+    ['--tag-max-size', '10ch', 'var(--lr-size-12rem)'],
+  ]],
+  ['wa-slider', [
+    ['--marker-height', '0.1875em', null],
+    ['--marker-width', '0.1875em', null],
+    ['--thumb-height', '1.25em', null],
+    ['--thumb-width', '1.25em', null],
+    ['--track-size', '0.75em', null],
+  ]],
+  ['wa-time-input', [
+    ['--hide-duration', 'var(--wa-transition-fast)', 'var(--lr-duration-fast)'],
+    ['--show-duration', 'var(--wa-transition-fast)', 'var(--lr-duration-fast)'],
+  ]],
+  ['wa-toast', [
+    ['--gap', 'var(--wa-space-s)', null],
+    ['--width', '28rem', null],
+  ]],
+  ['wa-toast-item', [
+    ['--hide-duration', 'var(--wa-transition-normal)', null],
+    ['--show-duration', 'var(--wa-transition-normal)', null],
+  ]],
+  ['wa-tree', [
+    ['--indent-guide-color', 'var(--wa-color-surface-border)', 'var(--lr-color-border)'],
+    ['--indent-size', 'var(--wa-space-m)', 'var(--lr-space-l)'],
+  ]],
+  ['wa-tree-item', [
+    ['--hide-duration', 'var(--wa-transition-normal)', 'var(--lr-duration-base)'],
+    ['--show-duration', 'var(--wa-transition-normal)', 'var(--lr-duration-base)'],
+  ]],
+]);
+
+// Some pinned upstream manifests expose a CSS custom property without recording its effective
+// default, while Lyra deliberately publishes the fallback in CEM/editor data. Presence is still
+// observable metadata, so every target-only default is reviewed here by exact tag, member, and
+// value instead of being treated as a generally additive difference.
+const CHART_TARGET_CSS_DEFAULT_ADDITIONS = [
+  ...Array.from({ length: 6 }, (_, index) => [
+    `--border-color-${index + 1}`,
+    `var(--lr-color-chart-${index + 1})`,
+  ]),
+  ['--border-radius', 'var(--lr-radius)'],
+  ['--border-width', 'var(--lr-border-width-thin)'],
+  ...Array.from({ length: 6 }, (_, index) => [
+    `--fill-color-${index + 1}`,
+    `var(--lr-color-chart-${index + 1})`,
+  ]),
+  ['--grid-border-width', 'var(--lr-border-width-thin)'],
+  ['--grid-color', 'var(--lr-chart-grid-color)'],
+  ['--line-border-width', 'var(--lr-border-width-medium)'],
+  ['--point-radius', 'var(--lr-space-2xs)'],
+];
+
+const REVIEWED_TARGET_CSS_DEFAULT_ADDITION_GROUPS = [
+  [
+    ['sl-avatar', 'wa-avatar'],
+    [['--size', 'var(--lr-avatar-size)']],
+  ],
+  [
+    ['sl-card'],
+    [
+      ['--border-color', 'var(--lr-color-border)'],
+      ['--border-radius', 'var(--lr-radius)'],
+      ['--border-width', 'var(--lr-border-width-thin)'],
+      ['--padding', 'var(--spacing,var(--lr-space-m))'],
+    ],
+  ],
+  [['sl-carousel'], [['--slide-gap', 'var(--lr-space-m)']]],
+  [
+    ['sl-copy-button'],
+    [
+      ['--error-color', 'var(--lr-color-danger)'],
+      ['--success-color', 'var(--lr-color-success)'],
+    ],
+  ],
+  [
+    ['sl-dialog'],
+    [['--width', 'var(--lr-dialog-width,auto)']],
+  ],
+  [
+    ['wa-dialog'],
+    [
+      ['--spacing', 'var(--lr-dialog-spacing,var(--lr-space-l))'],
+      ['--width', 'var(--lr-dialog-width,auto)'],
+    ],
+  ],
+  [
+    ['sl-divider', 'wa-divider'],
+    [
+      ['--color', 'var(--lr-color-border)'],
+      ['--spacing', 0],
+      ['--width', 'var(--lr-border-width-thin)'],
+    ],
+  ],
+  [
+    ['sl-image-comparer', 'wa-comparison'],
+    [
+      ['--divider-width', 'var(--lr-size-1px)'],
+      ['--handle-size', 'var(--lr-icon-button-size)'],
+    ],
+  ],
+  [
+    ['sl-progress-bar'],
+    [
+      ['--height', 'var(--lr-progress-track-height)'],
+      ['--indicator-color', 'var(--lr-progress-indicator-color)'],
+      ['--label-color', 'var(--lr-progress-label-color)'],
+      ['--track-color', 'var(--lr-progress-track-color)'],
+    ],
+  ],
+  [
+    ['sl-progress-ring', 'wa-progress-ring'],
+    [
+      ['--indicator-color', 'var(--lr-progress-ring-indicator-color)'],
+      ['--indicator-transition-duration', 'var(--lr-progress-ring-indicator-transition-duration)'],
+      ['--indicator-width', 'var(--lr-progress-ring-indicator-width)'],
+      ['--size', 'var(--lr-progress-ring-size)'],
+      ['--track-color', 'var(--lr-progress-ring-track-color)'],
+      ['--track-width', 'var(--lr-progress-ring-track-width)'],
+    ],
+  ],
+  [
+    ['sl-rating', 'wa-rating'],
+    [
+      ['--symbol-color-active', 'var(--lr-rating-fill,var(--lr-color-warning))'],
+      ['--symbol-color', 'var(--lr-rating-empty-color,var(--lr-color-border))'],
+      ['--symbol-spacing', 'var(--lr-space-xs)'],
+    ],
+  ],
+  [
+    ['sl-skeleton'],
+    [['--border-radius', 'var(--lr-skeleton-border-radius)']],
+  ],
+  [
+    ['sl-skeleton', 'wa-skeleton'],
+    [
+      ['--color', 'var(--lr-skeleton-color)'],
+      ['--sheen-color', 'var(--lr-skeleton-sheen-color)'],
+    ],
+  ],
+  [
+    ['sl-spinner', 'wa-spinner'],
+    [
+      ['--indicator-color', 'var(--lr-color-brand)'],
+      ['--speed', 'var(--lr-spinner-duration)'],
+      ['--track-color', 'var(--lr-color-brand-quiet)'],
+      ['--track-width', 'var(--lr-spinner-track-width)'],
+    ],
+  ],
+  [
+    ['sl-switch', 'wa-switch'],
+    [
+      ['--height', 'var(--lr-switch-track-block-size)'],
+      ['--thumb-size', 'calc(var(--height, var(--lr-switch-track-block-size)) - (var(--lr-switch-thumb-offset) * 2))'],
+      ['--width', 'var(--lr-switch-track-inline-size)'],
+    ],
+  ],
+  [['sl-tab-panel', 'wa-tab-panel'], [['--padding', 0]]],
+  [
+    ['sl-tooltip'],
+    [
+      ['--hide-delay', '0ms'],
+      ['--show-delay', '150ms'],
+    ],
+  ],
+  [
+    ['sl-tooltip', 'wa-tooltip'],
+    [['--max-width', 'var(--lr-tooltip-max-inline-size,var(--lr-size-20rem))']],
+  ],
+  [['wa-badge'], [['--pulse-color', 'var(--lr-badge-pulse-color)']]],
+  [
+    [...CHART_REVIEW_EVIDENCE.keys()],
+    CHART_TARGET_CSS_DEFAULT_ADDITIONS,
+  ],
+  [
+    ['wa-checkbox'],
+    [
+      ['--checked-icon-color', 'currentColor'],
+      ['--checked-icon-scale', 1],
+    ],
+  ],
+  [
+    ['wa-combobox'],
+    [
+      ['--hide-duration', 'var(--lr-transition-fast)'],
+      ['--show-duration', 'var(--lr-transition-fast)'],
+      ['--tag-max-size', 'var(--lr-size-5rem)'],
+    ],
+  ],
+  [
+    ['wa-data-grid'],
+    [
+      ['--accent-color', 'var(--lr-color-brand)'],
+      ['--background-color', 'var(--lr-color-surface)'],
+      ['--border-color', 'var(--lr-color-border)'],
+      ['--border-radius', 'var(--lr-radius)'],
+      ['--border-width', 'var(--lr-border-width-thin)'],
+      ['--cell-padding', 'var(--lr-space-m)'],
+      ['--focus-ring', 'var(--lr-focus-ring-width) solid var(--lr-focus-ring-color)'],
+      ['--header-background', 'var(--lr-color-surface-raised)'],
+      ['--header-row-height', 'var(--lr-size-3-5rem)'],
+      ['--header-text-color', 'var(--lr-color-text)'],
+      ['--indent-size', 'var(--lr-size-1-25rem)'],
+      ['--max-height', 'var(--lr-size-30rem)'],
+      ['--row-height', 'var(--lr-size-3-5rem)'],
+      ['--selected-background', 'var(--lr-color-brand-quiet)'],
+      ['--stripe-background', 'var(--lr-color-surface-raised)'],
+      ['--text-color', 'var(--lr-color-text)'],
+      ['--transition-duration', 'var(--lr-duration-fast)'],
+    ],
+  ],
+  [
+    ['wa-date-input', 'wa-dropdown'],
+    [
+      ['--hide-duration', 'var(--lr-transition-fast)'],
+      ['--show-duration', 'var(--lr-transition-fast)'],
+    ],
+  ],
+  [['wa-drawer'], [['--spacing', 'var(--lr-dialog-spacing,var(--lr-space-l))']]],
+  [
+    ['wa-icon'],
+    [
+      ['--animation-timing', 'var(--lr-easing-emphasized)'],
+      ['--beat-fade-opacity', 0.4],
+      ['--beat-fade-scale', 1.25],
+      ['--beat-scale', 1.25],
+      ['--bounce-anticipation', 0],
+      ['--bounce-height', 'calc(var(--lr-size-0-5em)*-1)'],
+      ['--bounce-jump-scale-x', 0.95],
+      ['--bounce-jump-scale-y', 1.05],
+      ['--bounce-land-scale-x', 1.08],
+      ['--bounce-land-scale-y', 0.92],
+      ['--bounce-rebound', 'calc(var(--lr-size-1em)*-0.1)'],
+      ['--bounce-start-scale-x', 1],
+      ['--bounce-start-scale-y', 1],
+      ['--buzz-distance', 'calc(var(--lr-size-1em)*0.12)'],
+      ['--fade-opacity', 0.4],
+      ['--flip-angle', '180deg'],
+      ['--flip-anticipation-scale', 0.9],
+      ['--flip-overshoot', '0deg'],
+      ['--flip-x', 0],
+      ['--flip-y', 1],
+      ['--flip-z', 0],
+      ['--float-drift', 0],
+      ['--float-height', 'calc(var(--lr-size-0-5em)*-1)'],
+      ['--float-squash-x', 1.04],
+      ['--float-squash-y', 0.96],
+      ['--float-stretch-x', 0.96],
+      ['--float-stretch-y', 1.04],
+      ['--float-tilt', '4deg'],
+      ['--jello-scale-x', 1.18],
+      ['--jello-scale-y', 0.82],
+      ['--swing-angle', '15deg'],
+      ['--wag-angle', '12deg'],
+    ],
+  ],
+  [['wa-option'], [['--current-text-color', 'var(--lr-color-text)']]],
+  [['wa-popup'], [['--popup-border-width', 'var(--lr-border-width-thin)']]],
+  [
+    ['wa-radio'],
+    [
+      ['--checked-icon-color', 'var(--lr-radio-checked-dot-color)'],
+      ['--checked-icon-scale', 1],
+    ],
+  ],
+  [
+    ['wa-random-content'],
+    [
+      ['--animation-duration', '300ms'],
+      ['--animation-easing', 'ease'],
+      ['--animation-translate', 'var(--lr-size-0-5em)'],
+    ],
+  ],
+  [
+    ['wa-sparkline'],
+    [
+      ['--fill-color', 'var(--lr-color-brand-quiet)'],
+      ['--line-color', 'var(--lr-color-brand)'],
+      ['--line-width', 'var(--lr-border-width-medium)'],
+    ],
+  ],
+  [
+    ['wa-video'],
+    [
+      ['--controls-background', 'var(--lr-color-overlay-strong)'],
+      ['--controls-color', 'var(--lr-color-text)'],
+      ['--poster-play-button-background', 'var(--lr-color-surface-overlay)'],
+    ],
+  ],
+];
+
+const REVIEWED_TARGET_CSS_DEFAULT_ADDITIONS = new Map();
+for (const [tags, defaults] of REVIEWED_TARGET_CSS_DEFAULT_ADDITION_GROUPS) {
+  for (const tag of tags) {
+    REVIEWED_TARGET_CSS_DEFAULT_ADDITIONS.set(tag, [
+      ...(REVIEWED_TARGET_CSS_DEFAULT_ADDITIONS.get(tag) ?? []),
+      ...defaults,
+    ]);
+  }
+}
+
+// The target-side records added for file-input and QR are centralized component-metadata policy.
+// Other upstream-only compatibility notices remain explicit comparison reviews until the target
+// adopts the same removal policy; generic "part named after the component" prose intentionally
+// has no guessed replacement. Shoelace does not deprecate QR aliases, so its target additions are
+// recorded separately from Web Awesome. Web Awesome's generic "part named after the component"
+// prose intentionally does not guess a replacement, so the QR base-part replacement remains an
+// exact reviewed equivalence even though both sides describe the same migration.
+const REVIEWED_DEPRECATION_EQUIVALENCE_GROUPS = new Map([
+  ['sl-qr-code', [
+    ['attributes', ['background'], false, null, true, 'background'],
+    ['attributes', ['fill'], false, null, true, 'color'],
+    ['parts', ['base'], false, null, true, 'qr-code'],
+    ['properties', ['background'], false, null, true, 'background'],
+    ['properties', ['fill'], false, null, true, 'color'],
+  ]],
+  ['wa-qr-code', [
+    ['parts', ['base'], true, null, true, 'qr-code'],
+  ]],
+  ...[
+    'wa-accordion-item',
+    'wa-badge',
+    'wa-breadcrumb',
+    'wa-button',
+    'wa-button-group',
+    'wa-carousel',
+    'wa-checkbox',
+    'wa-color-picker',
+    'wa-comparison',
+    'wa-details',
+    'wa-dropdown',
+    'wa-known-date',
+    'wa-page',
+    'wa-pagination',
+    'wa-progress-bar',
+    'wa-progress-ring',
+    'wa-rating',
+    'wa-spinner',
+    'wa-switch',
+    'wa-tab',
+    'wa-tab-group',
+    'wa-tab-panel',
+    'wa-tag',
+    'wa-tooltip',
+    'wa-tree',
+    'wa-tree-item',
+  ].map((tag) => [tag, [['parts', ['base'], true, null, false, null]]]),
+  ...['wa-input', 'wa-number-input', 'wa-textarea', 'wa-time-input'].map((tag) => [tag, [
+    ['parts', ['base'], true, null, false, null],
+    ['parts', ['label'], true, 'form-control-label', false, null],
+  ]]),
+  ...['wa-combobox', 'wa-select']
+    .map((tag) => [tag, [['parts', ['label'], true, 'form-control-label', false, null]]]),
+  ['wa-video', [['parts', ['base'], true, 'video-wrapper', false, null]]],
+]);
+
 const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
   [
     'sl-button',
@@ -3542,7 +4162,50 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
 export function reviewedMappingNormalizations(upstreamTag) {
   const normalizations = normalizedNormalizations(REVIEWED_MAPPING_NORMALIZATIONS.get(upstreamTag));
   normalizations.typeEquivalences.push(...reviewedTypeEquivalences(upstreamTag));
+  normalizations.attributePropertyEquivalences.push(
+    ...(REVIEWED_ATTRIBUTE_PROPERTY_EQUIVALENCE_GROUPS.get(upstreamTag) ?? [])
+      .map(([attribute, upstream, target]) =>
+        reviewedAttributePropertyEquivalence(attribute, upstream, target)),
+  );
+  normalizations.reflectionEquivalences.push(
+    ...(REVIEWED_REFLECTION_EQUIVALENCE_GROUPS.get(upstreamTag) ?? [])
+      .flatMap(([memberKind, members, upstream, target]) =>
+        members.map((member) => reviewedReflectionEquivalence(memberKind, member, upstream, target))),
+  );
+  normalizations.cssDefaultEquivalences.push(
+    ...(REVIEWED_CSS_DEFAULT_EQUIVALENCE_GROUPS.get(upstreamTag) ?? [])
+      .map(([member, upstream, target]) => reviewedCssDefaultEquivalence(member, upstream, target)),
+    ...(REVIEWED_TARGET_CSS_DEFAULT_ADDITIONS.get(upstreamTag) ?? [])
+      .map(([member, target]) => reviewedCssDefaultEquivalence(member, null, target)),
+  );
+  normalizations.deprecationEquivalences.push(
+    ...(REVIEWED_DEPRECATION_EQUIVALENCE_GROUPS.get(upstreamTag) ?? [])
+      .flatMap(([
+        section,
+        members,
+        upstreamDeprecated,
+        upstreamReplacement,
+        targetDeprecated,
+        targetReplacement,
+      ]) => members.map((member) => reviewedDeprecationEquivalence(
+        section,
+        member,
+        upstreamDeprecated,
+        upstreamReplacement,
+        targetDeprecated,
+        targetReplacement,
+      ))),
+  );
   return normalizations;
+}
+
+function hasReviewedMappingNormalizations(upstreamTag) {
+  return REVIEWED_MAPPING_NORMALIZATIONS.has(upstreamTag) ||
+    REVIEWED_ATTRIBUTE_PROPERTY_EQUIVALENCE_GROUPS.has(upstreamTag) ||
+    REVIEWED_REFLECTION_EQUIVALENCE_GROUPS.has(upstreamTag) ||
+    REVIEWED_CSS_DEFAULT_EQUIVALENCE_GROUPS.has(upstreamTag) ||
+    REVIEWED_TARGET_CSS_DEFAULT_ADDITIONS.has(upstreamTag) ||
+    REVIEWED_DEPRECATION_EQUIVALENCE_GROUPS.has(upstreamTag);
 }
 
 function prefixEventRewrites(component, target, upstream) {
@@ -3580,7 +4243,7 @@ function mappingDecisions({ fixture, readme, components, upstreams, existing }) 
               events: prefixEventRewrites(component, target, upstream),
               defaults: REVIEWED_DEFAULT_REWRITES.get(upstreamTag) ?? [],
             });
-      const reviewedNormalizations = REVIEWED_MAPPING_NORMALIZATIONS.has(upstreamTag)
+      const reviewedNormalizations = hasReviewedMappingNormalizations(upstreamTag)
         ? reviewedMappingNormalizations(upstreamTag)
         : null;
       const normalizations = reviewedNormalizations ?? normalizedNormalizations(existingDecision?.normalizations);

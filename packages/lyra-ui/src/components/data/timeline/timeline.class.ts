@@ -98,7 +98,8 @@ export class LyraTimeline extends LyraElement {
     return slot.assignedElements({ flatten: true }).filter((element) => element.localName === tag('timeline-item')).length;
   }
 
-  override firstUpdated(): void {
+  override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     // Fallback reconciliation for slot-forwarding / engines that don't fire `slotchange` for content
     // present at parse time.
     const slot = this.shadowRoot!.querySelector('slot') as HTMLSlotElement;

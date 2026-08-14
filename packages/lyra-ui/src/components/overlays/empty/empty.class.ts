@@ -1,11 +1,12 @@
 import { html, type PropertyValues, type TemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property } from 'lit/decorators.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import {
   isAccessibilityVisible,
 } from '../../../internal/accessibility-visibility.js';
 import { composedAccessibilityText } from '../../../internal/announcement-text.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { styles } from './empty.styles.js';
 
 /**
@@ -63,10 +64,7 @@ export class LyraEmpty extends LyraElement {
   // `[part='icon']:empty` never matches because the part always contains a
   // `<slot>` element (CSS `:empty` only ignores text/comment nodes). Track
   // real slot assignment in JS instead and key the CSS off these instead.
-  @state() private hasIcon = false;
-  @state() private hasActions = false;
-  @state() private hasHeadingSlot = false;
-  @state() private hasDescriptionSlot = false;
+  private readonly slotPresence = new SlotPresenceController(this);
   private contentObserver?: MutationObserver;
   private announcementSink?: AnnouncementSink;
   private announcementsArmed = false;
@@ -87,7 +85,7 @@ export class LyraEmpty extends LyraElement {
     if (MutationObserverCtor) {
       this.contentObserver = new MutationObserverCtor(() => {
         this.observeAnnouncementContent();
-        this.announceCurrentContent();
+        this.scheduleAnnouncement();
       });
       this.observeAnnouncementContent();
     }
@@ -113,25 +111,6 @@ export class LyraEmpty extends LyraElement {
     super.disconnectedCallback();
   }
 
-  protected override willUpdate(changed: PropertyValues): void {
-    super.willUpdate(changed);
-    // Set from light-DOM children before the first render so the initial
-    // paint is already correct — setting `hasIcon`/`hasActions` from
-    // `firstUpdated` (after the update completes) would schedule a second,
-    // wasted update (Lit's dev-mode "change-in-update" warning).
-    if (!this.hasUpdated) {
-      // An explicit `slot=""` still assigns to the default slot per the HTML
-      // slot algorithm, so check the attribute's value rather than its mere
-      // presence.
-      this.hasIcon = Array.from(this.children).some((el) => !el.getAttribute('slot'));
-      this.hasActions = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
-      this.hasHeadingSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'heading');
-      this.hasDescriptionSlot = Array.from(this.children).some(
-        (el) => el.getAttribute('slot') === 'description',
-      );
-    }
-  }
-
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (
@@ -142,65 +121,35 @@ export class LyraEmpty extends LyraElement {
     }
   }
 
-  override firstUpdated(): void {
-    // Fallback reconciliation against the fully-resolved slot assignment
-    // (handles slot-forwarding — where `this.children` in `willUpdate` above
-    // are forwarding `<slot>` elements rather than the real projected
-    // content, e.g. a wrapper component's own default slot re-slotted into
-    // ours — and any browser where `slotchange` doesn't fire for content
-    // present at parse/upgrade time). This corrects the `hidden` attribute
-    // on the wrapper elements directly rather than through
-    // `hasIcon`/`hasActions`, so this one-shot correction doesn't need to
-    // schedule and wait out a second Lit render pass; the reactive state is
-    // left as `willUpdate` set it and continues to drive only the ongoing
-    // `slotchange` path below.
-    this.reconcileSlotHidden(
-      this.shadowRoot!.querySelector('slot:not([name])') as HTMLSlotElement,
-      this.shadowRoot!.querySelector('[part="icon"]') as HTMLElement,
-    );
-    this.reconcileSlotHidden(
-      this.shadowRoot!.querySelector('slot[name="actions"]') as HTMLSlotElement,
-      this.shadowRoot!.querySelector('[part="actions"]') as HTMLElement,
-    );
-    // Same fallback reconciliation as icon/actions above, but the heading and
-    // description parts also fall back to the `heading`/`description`
-    // attribute when nothing is slotted, so a forwarded-but-empty slot must
-    // not collapse the part while that attribute still has text to show.
-    this.reconcileSlotHidden(
-      this.shadowRoot!.querySelector('slot[name="heading"]') as HTMLSlotElement,
-      this.shadowRoot!.querySelector('[part="heading"]') as HTMLElement,
-      this.heading.length > 0,
-    );
-    this.reconcileSlotHidden(
-      this.shadowRoot!.querySelector('slot[name="description"]') as HTMLSlotElement,
-      this.shadowRoot!.querySelector('[part="description"]') as HTMLElement,
-      this.description.length > 0,
-    );
+  override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
+    // Resolve forwarding slots against their flattened assignment. During hydration this direct
+    // wrapper correction waits until the server-equivalent first update has been observed.
+    this.updateBrowserDerivedState(() => {
+      this.reconcileSlotHidden(
+        this.shadowRoot!.querySelector('slot:not([name])') as HTMLSlotElement,
+        this.shadowRoot!.querySelector('[part="icon"]') as HTMLElement,
+      );
+      this.reconcileSlotHidden(
+        this.shadowRoot!.querySelector('slot[name="actions"]') as HTMLSlotElement,
+        this.shadowRoot!.querySelector('[part="actions"]') as HTMLElement,
+      );
+      this.reconcileSlotHidden(
+        this.shadowRoot!.querySelector('slot[name="heading"]') as HTMLSlotElement,
+        this.shadowRoot!.querySelector('[part="heading"]') as HTMLElement,
+        this.heading.length > 0,
+      );
+      this.reconcileSlotHidden(
+        this.shadowRoot!.querySelector('slot[name="description"]') as HTMLSlotElement,
+        this.shadowRoot!.querySelector('[part="description"]') as HTMLElement,
+        this.description.length > 0,
+      );
+    });
   }
 
   private reconcileSlotHidden(slot: HTMLSlotElement, wrapper: HTMLElement, hasFallbackContent = false): void {
     wrapper.toggleAttribute('hidden', !hasFallbackContent && slot.assignedElements({ flatten: true }).length === 0);
   }
-
-  private onIconSlotChange = (e: Event): void => {
-    const slot = e.target as HTMLSlotElement;
-    this.hasIcon = slot.assignedElements({ flatten: true }).length > 0;
-  };
-
-  private onActionsSlotChange = (e: Event): void => {
-    const slot = e.target as HTMLSlotElement;
-    this.hasActions = slot.assignedElements({ flatten: true }).length > 0;
-  };
-
-  private onHeadingSlotChange = (e: Event): void => {
-    const slot = e.target as HTMLSlotElement;
-    this.hasHeadingSlot = slot.assignedElements({ flatten: true }).length > 0;
-  };
-
-  private onDescriptionSlotChange = (e: Event): void => {
-    const slot = e.target as HTMLSlotElement;
-    this.hasDescriptionSlot = slot.assignedElements({ flatten: true }).length > 0;
-  };
 
   private announcementObservationOptions(): MutationObserverInit {
     return {
@@ -240,8 +189,27 @@ export class LyraEmpty extends LyraElement {
     const slot = event.target as HTMLSlotElement;
     if (!this.announcementForwardingSlots().includes(slot)) return;
     this.observeAnnouncementContent();
-    this.announceCurrentContent();
+    this.scheduleAnnouncement();
   };
+
+  /** Light-DOM mutation delivery precedes the slotchange/Lit update that unhides the corresponding
+   * heading or description wrapper. Reconcile those two wrappers from the already-current native
+   * slot assignment before extracting text, so the observer's coalesced mutation batch produces
+   * one complete announcement instead of an intermediate heading-only entry. */
+  private scheduleAnnouncement(): void {
+    if (!this.announcementsArmed) return;
+    const headingSlot = this.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="heading"]');
+    const headingWrapper = this.shadowRoot?.querySelector<HTMLElement>('[part="heading"]');
+    if (headingSlot && headingWrapper) {
+      this.reconcileSlotHidden(headingSlot, headingWrapper, this.heading.length > 0);
+    }
+    const descriptionSlot = this.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="description"]');
+    const descriptionWrapper = this.shadowRoot?.querySelector<HTMLElement>('[part="description"]');
+    if (descriptionSlot && descriptionWrapper) {
+      this.reconcileSlotHidden(descriptionSlot, descriptionWrapper, this.description.length > 0);
+    }
+    this.announceCurrentContent();
+  }
 
   private slotContent(name?: string): { assigned: boolean; text: string } {
     const selector = name ? `slot[name="${name}"]` : 'slot:not([name])';
@@ -275,19 +243,19 @@ export class LyraEmpty extends LyraElement {
   }
 
   override render(): TemplateResult {
-    const hasHeading = this.hasHeadingSlot || this.heading.length > 0;
-    const hasDescription = this.hasDescriptionSlot || this.description.length > 0;
+    const hasHeading = this.slotPresence.has('heading') || this.heading.length > 0;
+    const hasDescription = this.slotPresence.has('description') || this.description.length > 0;
     return html`
       <div part="base">
-        <div part="icon" ?hidden=${!this.hasIcon}><slot @slotchange=${this.onIconSlotChange}></slot></div>
+        <div part="icon" ?hidden=${!this.slotPresence.has()}><slot></slot></div>
         <p part="heading" ?hidden=${!hasHeading}>
-          <slot name="heading" @slotchange=${this.onHeadingSlotChange}>${this.heading}</slot>
+          <slot name="heading">${this.heading}</slot>
         </p>
         <p part="description" ?hidden=${!hasDescription}>
-          <slot name="description" @slotchange=${this.onDescriptionSlotChange}>${this.description}</slot>
+          <slot name="description">${this.description}</slot>
         </p>
-        <div part="actions" ?hidden=${!this.hasActions}>
-          <slot name="actions" @slotchange=${this.onActionsSlotChange}></slot>
+        <div part="actions" ?hidden=${!this.slotPresence.has('actions')}>
+          <slot name="actions"></slot>
         </div>
       </div>
     `;

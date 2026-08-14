@@ -23,7 +23,8 @@ type MixedConstructor<Base extends PublicConstructor<object>, Added> = Base & (
   new (...args: ConstructorParameters<Base>) => InstanceType<Base> & Added
 );
 
-export interface LyraTextViewerTargetEventMap extends LyraAnchorTargetEventMap {
+export interface LyraTextViewerTargetEventMap
+  extends Omit<LyraAnchorTargetEventMap, 'lr-highlight-activate'> {
   'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
 }
 

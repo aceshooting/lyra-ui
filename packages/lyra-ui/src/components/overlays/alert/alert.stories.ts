@@ -7,6 +7,13 @@ const meta: Meta = {
   title: 'Feedback/Alert',
   component: 'lr-alert',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      source: {
+        type: 'code',
+      },
+    },
+  },
 };
 
 export default meta;

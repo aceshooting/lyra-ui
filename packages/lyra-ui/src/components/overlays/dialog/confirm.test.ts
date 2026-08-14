@@ -24,7 +24,7 @@ it('resolves true and removes the dialog when the confirm button is clicked', as
   footerButtons(dialog)[1].click(); // [cancel, confirm]
 
   expect(await promise).to.be.true;
-  expect(document.querySelector('lr-dialog')).to.not.exist;
+  expect((document.querySelector('lr-dialog')) == null).to.be.true;
 });
 
 it('resolves false and removes the dialog when the cancel button is clicked', async () => {
@@ -34,7 +34,7 @@ it('resolves false and removes the dialog when the cancel button is clicked', as
   footerButtons(dialog)[0].click();
 
   expect(await promise).to.be.false;
-  expect(document.querySelector('lr-dialog')).to.not.exist;
+  expect((document.querySelector('lr-dialog')) == null).to.be.true;
 });
 
 it('resolves false and removes the dialog on Escape', async () => {
@@ -44,7 +44,7 @@ it('resolves false and removes the dialog on Escape', async () => {
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 
   expect(await promise).to.be.false;
-  expect(document.querySelector('lr-dialog')).to.not.exist;
+  expect((document.querySelector('lr-dialog')) == null).to.be.true;
 });
 
 it('resolves false and removes the dialog on a backdrop click', async () => {
@@ -55,7 +55,7 @@ it('resolves false and removes the dialog on a backdrop click', async () => {
   (dialog.shadowRoot!.querySelector('[part~="backdrop"]') as HTMLElement).click();
 
   expect(await promise).to.be.false;
-  expect(document.querySelector('lr-dialog')).to.not.exist;
+  expect((document.querySelector('lr-dialog')) == null).to.be.true;
 });
 
 it('defaults cancelLabel to "Cancel" and confirmLabel to "Confirm"', async () => {

@@ -41,6 +41,8 @@ rather than a phantom success.
 `lr-search-change` (`detail: { query, matchCount, activeIndex }`) from search, navigation, and
 clear; `lr-text-select` (`detail: { text, anchor, rects }`) for a selection contained within one
 entry path; and `lr-anchor-result` (`detail: { found }`) after anchor resolution.
+`lr-highlight-activate` is not part of this viewer's event contract: archive entry-path highlights
+are passive and cannot be activated.
 
 **CSS parts:** `base`, `body`, `entry`, `entry-icon`, `entry-name`, `entry-name-dir`, `entry-size`,
 `highlight` (the `<mark>` fallback for a painted entry-path quote), `spinner`, and `error`. A

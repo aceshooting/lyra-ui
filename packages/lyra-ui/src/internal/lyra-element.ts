@@ -51,6 +51,15 @@ export type LyraEmittedEvent<Events, K extends keyof Events & string> = [Events[
   ? CustomEvent<Detail>
   : CustomEvent<unknown>;
 
+/**
+ * Internal controller seam for browser-derived state that must not change a hydrating element's
+ * first render. A symbol keeps the hook out of the component API while allowing shared reactive
+ * controllers to use the same hydration decision as their host.
+ */
+export const SEED_FIRST_RENDER_STATE = Symbol('lr-seed-first-render-state');
+/** Internal query used by slot-presence controllers while SSR light DOM is unknowable. */
+export const SLOT_PRESENCE_UNRESOLVED = Symbol('lr-slot-presence-unresolved');
+
 const REACTIVE_HOST_ATTRIBUTES = ['aria-label', 'aria-describedby', 'lang', 'dir'] as const;
 const DIRECTION_HOST_ATTRIBUTES = ['class', 'style'] as const;
 const INHERITED_CONTEXT_ATTRIBUTES = ['locale', 'lang', 'dir', 'class', 'style'] as const;
@@ -119,6 +128,8 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
    *  first update of an element whose shadow DOM a server already rendered. See
    *  {@link seedFirstRenderState}. */
   private hydratingServerShadow?: boolean;
+  /** Browser-only first-render reads coalesced behind one completed hydration update. */
+  private deferredFirstRenderSeeds?: Set<() => void>;
 
   constructor() {
     super();
@@ -222,8 +233,8 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
    * independently of Lit's update batching, so an unconditional `requestUpdate()` here could land
    * inside another in-flight update's `updated()`/`hostUpdated()` window purely because of a
    * direction-irrelevant style write on some unrelated ancestor — Lit's dev-mode "scheduled an
-   * update after an update completed" warning, for a re-render that was never actually warranted
-   * (fr_asxOgk4UhNB07xevCWwFVQ). Comparing the freshly resolved direction/locale against the last
+   * update after an update completed" warning, for a re-render that was never actually warranted.
+   * Comparing the freshly resolved direction/locale against the last
    * observed pair keeps the feature intact while dropping every spurious trigger.
    */
   private observeInheritedContext(): void {
@@ -332,21 +343,62 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
    */
   protected seedFirstRenderState(seed: () => void): void {
     if (this.hasUpdated) return;
+    this[SEED_FIRST_RENDER_STATE](seed);
+  }
+
+  /** @internal */
+  [SEED_FIRST_RENDER_STATE](seed: () => void): void {
     if (!this.hydratingServerShadow) {
       seed();
       return;
     }
+    const pending = (this.deferredFirstRenderSeeds ??= new Set());
+    pending.add(seed);
+    if (pending.size > 1) return;
     void this.updateComplete.then(
       () => {
-        this.hydratingServerShadow = false;
-        seed();
+        // Let every observer of the completed hydration update inspect the server-equivalent
+        // first render before any browser-only correction schedules Lit's next one. A task (not
+        // another promise reaction) is intentional: the SSR hydration client may register its
+        // first-update observer only after custom-element definition resolves.
+        setTimeout(() => {
+          this.hydratingServerShadow = false;
+          const seeds = this.deferredFirstRenderSeeds;
+          this.deferredFirstRenderSeeds = undefined;
+          for (const deferred of seeds ?? []) deferred();
+          // Presence-driven renderers deliberately expose their slot wrappers while the server's
+          // light-DOM answer is unresolved. Even an actually empty slot therefore needs one
+          // corrective render after hydration to collapse that progressive fallback.
+          this.requestUpdate();
+        }, 0);
       },
       () => {
         // A first update that threw is not a hydration this element can still correct; drop the
         // flag so a later update seeds normally instead of deferring forever.
         this.hydratingServerShadow = false;
+        this.deferredFirstRenderSeeds = undefined;
       },
     );
+  }
+
+  /**
+   * Applies browser-derived state immediately, except during a server-shadow hydration's first
+   * update. Unlike {@link seedFirstRenderState}, this remains active after the initial mount and
+   * is therefore suitable for `slotchange` and observer callbacks that can arrive while Lit is
+   * completing hydration.
+   */
+  protected updateBrowserDerivedState(update: () => void): void {
+    this[SEED_FIRST_RENDER_STATE](update);
+  }
+
+  /** Keeps authored slot content visible in SSR/no-JS output until a browser can resolve it. */
+  protected renderSlotPresence(present: boolean): boolean {
+    return present || this[SLOT_PRESENCE_UNRESOLVED]();
+  }
+
+  /** @internal */
+  [SLOT_PRESENCE_UNRESOLVED](): boolean {
+    return typeof Node === 'undefined' || this.hydratingServerShadow === true;
   }
 
   /** Starts a component-owned cancellable load and aborts the previous one. */

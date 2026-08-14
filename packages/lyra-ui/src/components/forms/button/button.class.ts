@@ -838,7 +838,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     const href = this.download ? safeDownloadHref(this.href) : safeLinkHref(this.href);
     if (href) {
       const disabled = this.effectiveDisabled || this.loading;
-      // Per decision D8: a disabled link button omits `href` entirely. An anchor with no `href` is
+      // A disabled link button omits `href` entirely. An anchor with no `href` is
       // not focusable or activatable, so the button genuinely cannot navigate -- unlike a bare
       // `aria-disabled` on a still-navigable `<a href>`. `@click`/submit-reset are deliberately
       // absent: native navigation is the anchor's own activation (mirrors `lr-card`).

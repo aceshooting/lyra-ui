@@ -88,7 +88,7 @@ describe('registry dispatch', () => {
     el.mimeType = 'application/json';
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('#json-output')).to.exist;
-    expect(el.shadowRoot!.querySelector('#pdf-output')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('#pdf-output')) == null).to.be.true;
   });
 
   it('renders ordinary visible error text without a shadow-root live region', async () => {
@@ -279,7 +279,7 @@ describe('dialog wiring', () => {
     const el = (await fixture(html`
       <lr-document-viewer open name="dangerous.html" src="javascript:alert(1)"></lr-document-viewer>
     `)) as LyraDocumentViewer;
-    expect(el.shadowRoot!.querySelector('[part="download-link"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="download-link"]')) == null).to.be.true;
   });
 
   // `mailto:` is safe to *navigate* to but names no retrievable bytes, so pairing it with this
@@ -507,6 +507,6 @@ describe('anchor/highlights/alt widening', () => {
       fired = true;
     });
     await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(fired).to.be.false; // no anchor was ever set -- zero behavior change from before this task
+    expect(fired).to.be.false; // no anchor was ever set, so the event contract remains inactive
   });
 });

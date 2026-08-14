@@ -292,7 +292,7 @@ it('toggles data-invalid once touched and invalid', async () => {
   expect(el.hasAttribute('data-invalid')).to.be.true;
 });
 
-// Regression test for fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native form control forces
+// Regression test: disabling a focused native form control forces
 // the browser to blur it outright -- plain native HTML behavior, nothing to do with custom
 // elements -- and that forced blur is not a real user interaction. Marking `touched` for it could
 // (depending on exact timing) reenter an in-flight Lit update and trip Lit's dev-mode "scheduled

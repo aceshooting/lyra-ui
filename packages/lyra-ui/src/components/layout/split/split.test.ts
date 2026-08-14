@@ -977,7 +977,7 @@ it("still accepts a pure-number defaultSizes array unchanged (unset-regression)"
   expect(el.sizes).to.deep.equal([30, 70]);
 });
 
-it("rejects a pure-number defaultSizes array that does not sum to 100, exactly as today (D2 regression)", async () => {
+it('rejects a pure-number defaultSizes array that does not sum to 100 without normalizing it', async () => {
   const el = await fixture<LyraSplit>(html`
     <lr-split
       style="display: block; inline-size: 500px;"
@@ -1736,7 +1736,7 @@ it("composes two adjacent concurrent drags correctly when each pointer fires mul
   // pointers start, then EACH fires two moves, interleaved, so pointer 1's
   // own second move writes to the shared panel1 in between pointer 2's two
   // moves -- exactly the sequence that contaminates pointer 2's `appliedDelta`
-  // under the buggy "absolute since drag-start" formula (round 1's fix),
+  // under the buggy "absolute since drag-start" formula,
   // even though a single-move-per-pointer test never observes it.
   pointerDown(dividers[0], 1, 100);
   pointerDown(dividers[1], 2, 300);

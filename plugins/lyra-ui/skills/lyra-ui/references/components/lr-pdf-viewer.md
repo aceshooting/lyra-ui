@@ -34,7 +34,10 @@ CSS length that, once set, overrides `--lr-pdf-viewer-height` — the block size
  page list — declaratively, writing it inline on `[part="base"]`; invalid CSS `max-height` values,
  declaration breaks, and `url()` are ignored. `anchorKinds: readonly LyraAnchorKind[] = ['page',
 'text-quote', 'region']` (this viewer's supported `LyraAnchor.kind` values for the shared
-anchor-target contract). Page and page-addressed region anchors require an in-range integer page
+anchor-target contract). The other inherited anchor-target properties are `highlights:
+LyraHighlight[] = []` (property only; reassign after mutation), `activeHighlightId: string | null =
+null` (attribute `active-highlight-id`), and `anchor: LyraAnchor | string | null = null` (property
+only). Page and page-addressed region anchors require an in-range integer page
 and are rejected rather than clamped; region rectangles also require finite coordinates and
 nonnegative dimensions.
 

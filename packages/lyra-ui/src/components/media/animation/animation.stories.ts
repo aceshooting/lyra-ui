@@ -8,11 +8,25 @@ const meta: Meta = {
   title: 'Animation',
   component: 'lr-animation',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      source: { type: 'code' },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
+  parameters: {
+    docs: {
+      source: {
+        code: `<lr-animation name="fade-in" play iterations="1">
+  <p>Content animated with a named preset.</p>
+</lr-animation>`,
+      },
+    },
+  },
   render: () => html`
     <lr-animation name="fade-in" play iterations="1">
       <p>Content animated with a named preset.</p>
@@ -21,6 +35,17 @@ export const Default: Story = {
 };
 
 export const Presets: Story = {
+  parameters: {
+    docs: {
+      source: {
+        code: `<div style="display: grid; gap: var(--lr-space-s);">
+  <lr-animation name="slide-in-start" play iterations="1"><span>Slide in from the start</span></lr-animation>
+  <lr-animation name="zoom-in" play iterations="1"><span>Zoom in</span></lr-animation>
+  <lr-animation name="bounce" play iterations="1"><span>Bounce</span></lr-animation>
+</div>`,
+      },
+    },
+  },
   render: () => html`
     <div style="display: grid; gap: var(--lr-space-s);">
       <lr-animation name="slide-in-start" play iterations="1"><span>Slide in from the start</span></lr-animation>
@@ -36,6 +61,13 @@ export const RegistryOverride: Story = {
       description: {
         story:
           'This story installs an RTL-aware per-element `animation.slide-in-start` override, rebuilds the paused native animation, then releases the registration before playing. The already-built animation keeps the selected frames while the registry immediately returns to its previous state.',
+      },
+      source: {
+        code: `<div dir="rtl">
+  <lr-animation name="slide-in-start" duration="400" iterations="1">
+    <span style="display: inline-block; padding: var(--lr-space-s);">Registry override</span>
+  </lr-animation>
+</div>`,
       },
     },
   },
@@ -73,6 +105,11 @@ export const RegisteredCustomName: Story = {
       description: {
         story:
           '`name` is a string, not only the built-in `LyraAnimationPreset` union. This story resolves the consumer-defined `animation.custom-lift` registry key.',
+      },
+      source: {
+        code: `<lr-animation name="custom-lift" duration="400" iterations="1">
+  <span style="display: inline-block; padding: var(--lr-space-s);">Custom registry name</span>
+</lr-animation>`,
       },
     },
   },

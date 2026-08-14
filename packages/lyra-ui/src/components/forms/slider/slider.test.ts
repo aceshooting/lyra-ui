@@ -100,7 +100,7 @@ it('emits one cancelable lr-invalid alias when a validity check fails', async ()
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
-  expect(aliases[0].target).to.equal(el);
+  expect((aliases[0].target) === (el)).to.equal(true);
   expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
   expect(aliases[0].cancelable).to.be.true;
   // Nothing cancelled it, so the browser's own validation UI stays enabled.
@@ -432,7 +432,7 @@ it('renders the visible value readout when requested, and omits it by default', 
   const hidden = (await fixture(
     html`<lr-slider value="42" .showValue=${false}></lr-slider>`,
   )) as LyraSlider;
-  expect(hidden.shadowRoot!.querySelector('[part="value"]')).to.equal(null);
+  expect((hidden.shadowRoot!.querySelector('[part="value"]')) === (null)).to.equal(true);
 });
 
 it('maps a numeric value to opt-in human-readable aria-valuetext without changing the visible readout', async () => {
@@ -479,7 +479,7 @@ it('omits the value readout from a plain HTML show-value="false" content attribu
   // parse as truthy (only presence matters to the default converter).
   const el = (await fixture(html`<lr-slider value="42" show-value="false"></lr-slider>`)) as LyraSlider;
   expect(el.showValue).to.be.false;
-  expect(el.shadowRoot!.querySelector('[part="value"]')).to.equal(null);
+  expect((el.shadowRoot!.querySelector('[part="value"]')) === (null)).to.equal(true);
 
   // Removing the attribute (never setting it at all) restores the false default, the other half of
   // the same converter's contract.
@@ -2104,7 +2104,7 @@ it('leaves the single-handle contract unchanged when none of the new properties 
   expect(el.shadowRoot!.querySelectorAll('[part~="tooltip"]').length).to.equal(0);
   expect((el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).hasAttribute('role')).to.be
     .false;
-  expect(el.shadowRoot!.querySelector('[part="value"]')).to.equal(null);
+  expect((el.shadowRoot!.querySelector('[part="value"]')) === (null)).to.equal(true);
 });
 
 it('keeps a range slider finite when min > max, step is 0, and the handles start outside the domain', async () => {

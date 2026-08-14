@@ -2022,7 +2022,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  now carry the same `data-col-key` attribute (for the sticky-offset
    *  measurement pass) but must never be treated as header cells here. */
   private visibleHeaders(): HTMLElement[] {
-    return [...this.renderRoot.querySelectorAll<HTMLElement>('th[data-col-key]')].filter(
+    return [...(this.renderRoot?.querySelectorAll<HTMLElement>('th[data-col-key]') ?? [])].filter(
       (el) => el.offsetParent !== null
     );
   }
@@ -2270,7 +2270,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     if (this.loading && !skeletonLoading) {
       return html`<div part="base" aria-busy="true">
         <div part="loading" aria-hidden="true">
-          <lr-spinner label-placement="after" accessible-label=${this.loadingText()}>
+          <lr-spinner label-placement="after" aria-label=${this.loadingText()}>
             ${this.loadingText()}
           </lr-spinner>
         </div>

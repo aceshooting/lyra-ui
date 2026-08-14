@@ -129,6 +129,11 @@ export interface LyraVirtualListEventMap {
  * Fenwick/segment tree for `O(log n)` offset queries+updates), which is out
  * of scope here.
  *
+ * Before a viewport can be measured, including during server rendering, one bounded deterministic
+ * first window (the first row plus `overscan`) is emitted instead of a false empty list. Hydration
+ * preserves that server window on its first pass, then reconciles it with the measured viewport;
+ * an ordinary browser-only mount retains its empty-until-measured range-event behavior.
+ *
  * **Accessibility.** The scroll container is `role="list"` and each rendered
  * row is `role="listitem"`, deliberately *not* `listbox`/`option` — this
  * component only provides windowing, not the roving-tabindex/
@@ -370,6 +375,11 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   // scrolls itself; [part="base"] does).
   @state() private containerScrollTop = 0;
   @state() private viewportHeight = 0;
+  /** SSR has no viewport to measure, so its first render exposes a bounded deterministic window.
+   * A normal browser mount preserves the established empty-until-measured event contract; a
+   * hydrating mount keeps the server window for exactly its first render, then returns to that
+   * browser contract through LyraElement's hydration-aware seed helper. */
+  private renderUnmeasuredWindow = true;
 
   /** `offsets[i]` = row `i`'s pixel top; `offsets[items.length]` = total content height. Rebuilt only when `offsetsDirty` is set -- see `willUpdate()`. */
   private offsets: number[] = [0];
@@ -491,6 +501,12 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.ownerDocument.defaultView) {
+      this.seedFirstRenderState(() => {
+        this.renderUnmeasuredWindow = false;
+        this.requestUpdate();
+      });
+    }
     this.resetOwnerRealmWork();
     const ownerDocument = this.ownerDocument;
     const ownerWindow = ownerDocument.defaultView;
@@ -589,11 +605,13 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     this.scrollListenerTarget = undefined;
   }
 
-  override firstUpdated(): void {
+  override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     this.attachContainerListeners();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     this.isFirstUpdate = !this.hasUpdated;
     if (
       changed.has("items") ||
@@ -756,11 +774,28 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   private computeRange(): void {
     const n = this.items.length;
-    if (n === 0 || this.viewportHeight <= 0) {
+    if (n === 0) {
       this.visibleStart = 0;
       this.visibleEnd = -1;
       this.renderStart = 0;
       this.renderEnd = -1;
+      return;
+    }
+    if (this.viewportHeight <= 0) {
+      if (!this.renderUnmeasuredWindow) {
+        this.visibleStart = 0;
+        this.visibleEnd = -1;
+        this.renderStart = 0;
+        this.renderEnd = -1;
+        return;
+      }
+      // Before the browser can measure the viewport (including SSR), serialize one deterministic
+      // overscanned window instead of a false empty list. This keeps content reachable with no JS
+      // while preserving the library's bounded-DOM guarantee for arbitrarily large collections.
+      this.visibleStart = 0;
+      this.visibleEnd = 0;
+      this.renderStart = 0;
+      this.renderEnd = Math.min(n - 1, normalizeOverscan(this.overscan));
       return;
     }
     const viewTop = this.containerScrollTop;

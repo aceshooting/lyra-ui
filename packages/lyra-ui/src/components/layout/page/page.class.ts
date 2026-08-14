@@ -242,7 +242,8 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     super.disconnectedCallback();
   }
 
-  protected override firstUpdated(): void {
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     this.measureAllocation();
     this.observeAllocation();
   }

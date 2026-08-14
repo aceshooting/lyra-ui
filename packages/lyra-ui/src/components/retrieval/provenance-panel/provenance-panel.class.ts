@@ -95,10 +95,13 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
 
   static override styles = [LyraElement.styles, styles];
 
+  /** Provenance model whose entity, relationship, community, and chunk sections are rendered. */
   @property({ attribute: false }) provenance: LyraProvenance | null = null;
   /** `lr-graph` `nodeTypes` pass-through; resolves each `entity.type` for the entity chips' `typeLabel`. */
   @property({ attribute: false }) types: NodeTypeStyle[] = [];
+  /** Score boundaries forwarded to the composed chunk inspector. */
   @property({ attribute: false }) thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 };
+  /** Accessible name for the provenance group; empty uses the localized default. */
   @property() label = '';
 
   @state() private expandedSections: Record<Section, boolean> = {

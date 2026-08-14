@@ -88,7 +88,7 @@ it('stops deferring once the element has hydrated', async () => {
     `<lr-demo-seed>${SERVER_SHADOW}<span>child</span></lr-demo-seed>`,
   );
   await el.updateComplete;
-  await el.updateComplete;
+  await waitUntil(() => el.seeds === 1);
   el.remove();
   document.body.append(el);
   await el.updateComplete;
@@ -105,7 +105,7 @@ it('renders lr-avatar initials first and adopts the slotted glyph after hydratio
   await el.updateComplete;
   expect(el.shadowRoot?.querySelectorAll('[part="initials"]').length).to.equal(1);
 
-  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot?.querySelectorAll('[part="initials"]').length === 0);
   expect(el.shadowRoot?.querySelectorAll('[part="initials"]').length).to.equal(0);
   expect(el.shadowRoot?.querySelector('[part="icon"]')?.hasAttribute('hidden')).to.be.false;
 });
@@ -117,7 +117,7 @@ it('renders lr-kbd key caps first and adopts slotted content after hydration', a
   await el.updateComplete;
   expect(el.shadowRoot?.querySelectorAll('[part="key"]').length).to.be.greaterThan(0);
 
-  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot?.querySelectorAll('[part="key"]').length === 0);
   expect(el.shadowRoot?.querySelectorAll('[part="key"]').length).to.equal(0);
   // The outer [part="base"] survives the switch -- only the branch inside it is replaced.
   expect(el.shadowRoot?.querySelectorAll('[part="base"]').length).to.equal(1);
@@ -130,7 +130,9 @@ it('renders lr-usage-badge inert first and adopts slotted content after hydratio
   await el.updateComplete;
   expect(el.shadowRoot?.querySelector('[part="base"]')?.hasAttribute('role')).to.be.false;
 
-  await el.updateComplete;
+  await waitUntil(
+    () => el.shadowRoot?.querySelector('[part="base"]')?.getAttribute('role') === 'group',
+  );
   expect(el.shadowRoot?.querySelector('[part="base"]')?.getAttribute('role')).to.equal('group');
 });
 
@@ -156,7 +158,7 @@ it('renders the lr-tree-item label attribute first and adopts the slot after hyd
   expect(el.shadowRoot?.querySelector('[part="label"]')?.textContent).to.contain('Fallback');
   expect(el.shadowRoot?.querySelectorAll('[part="label"] slot').length).to.equal(0);
 
-  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot?.querySelectorAll('[part="label"] slot').length === 1);
   expect(el.shadowRoot?.querySelectorAll('[part="label"] slot').length).to.equal(1);
 });
 
@@ -168,7 +170,9 @@ it('renders lr-color-picker without the eyedropper first and adds it after hydra
   expect(el.shadowRoot?.querySelectorAll('[part~="eyedropper-button"]').length).to.equal(0);
   expect(el.shadowRoot?.querySelector('[part~="label"]')?.hasAttribute('hidden')).to.be.true;
 
-  await el.updateComplete;
+  await waitUntil(
+    () => !el.shadowRoot?.querySelector('[part~="label"]')?.hasAttribute('hidden'),
+  );
   expect(el.shadowRoot?.querySelector('[part~="label"]')?.hasAttribute('hidden')).to.be.false;
 });
 
@@ -179,7 +183,9 @@ it('renders lr-chat-composer without adornment slots first and adopts them after
   await el.updateComplete;
   expect(el.shadowRoot?.querySelector('[part="leading"]')?.hasAttribute('hidden')).to.be.true;
 
-  await el.updateComplete;
+  await waitUntil(
+    () => !el.shadowRoot?.querySelector('[part="leading"]')?.hasAttribute('hidden'),
+  );
   expect(el.shadowRoot?.querySelector('[part="leading"]')?.hasAttribute('hidden')).to.be.false;
 });
 

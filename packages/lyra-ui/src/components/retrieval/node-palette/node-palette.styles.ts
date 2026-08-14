@@ -74,7 +74,7 @@ export const styles = css`
      :hover/:focus-visible itself -- (0,1,0) total, functionally identical selection to
      [part='item']:not([aria-disabled='true']):hover ((0,3,0)) but now losing (on the
      pseudo-element tiebreak) to a consumer's own ::part(item):hover override ((0,1,1)) without
-     that consumer needing !important. Matches attachment-trigger.styles.ts's remediation pattern. */
+     that consumer needing !important. Matches attachment-trigger.styles.ts's low-specificity pattern. */
   :where([part='item']):hover:where(:not([aria-disabled='true'])),
   :where([part='item']):focus-visible:where(:not([aria-disabled='true'])) {
     background: var(--lr-color-surface-hover, var(--lr-color-border));

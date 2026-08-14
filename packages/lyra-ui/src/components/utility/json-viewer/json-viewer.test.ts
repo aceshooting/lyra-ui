@@ -63,7 +63,7 @@ it('collapsed-depth="0" collapses the top-level node immediately', async () => {
   await el.updateComplete;
 
   // Collapsed root shows a preview instead of rendering any nested keys/values.
-  expect(el.shadowRoot!.querySelector('[part="key"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="key"]')) == null).to.be.true;
   expect(el.shadowRoot!.querySelector('.preview')).to.exist;
 });
 
@@ -72,7 +72,7 @@ it('normalizes a NaN collapsedDepth to 0 (fully collapsed) instead of silently d
   el.collapsedDepth = NaN;
   await el.updateComplete;
 
-  expect(el.shadowRoot!.querySelector('[part="key"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="key"]')) == null).to.be.true;
   expect(el.shadowRoot!.querySelector('.preview')).to.exist;
 });
 
@@ -119,7 +119,7 @@ it('hides the toggle button for leaf/empty nodes but keeps its layout box', asyn
 it('renders an empty object/array as a bare pair of brackets with no item count', async () => {
   const el = await withData({ emptyObject: {}, emptyArray: [] });
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('.preview')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('.preview')) == null).to.be.true;
 });
 
 it('shows an item/key count preview only for a collapsed, non-empty container', async () => {
@@ -184,7 +184,7 @@ it('keeps a dynamically emptied host aria-label on the root list owner and remov
 
 it('does not render a copy button by default', async () => {
   const el = await withData(sample);
-  expect(el.shadowRoot!.querySelector('[part="copy-button"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="copy-button"]')) == null).to.be.true;
 });
 
 it('gives tree toggles and copy controls the shared minimum hit area', async () => {
@@ -328,7 +328,7 @@ it('does not highlight anything when search is empty', async () => {
   const el = await withData(sample);
   el.search = '';
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[data-match]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[data-match]')) == null).to.be.true;
 });
 
 it('preserves manual toggle overrides across a data reassignment with the same shape', async () => {
@@ -563,7 +563,7 @@ it('renders a root primitive with no key label', async () => {
   const el = await withData('just a string');
   const value = el.shadowRoot!.querySelector('[part="value"]');
   expect(value!.textContent).to.equal('"just a string"');
-  expect(el.shadowRoot!.querySelector('[part="key"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="key"]')) == null).to.be.true;
 });
 
 it('respects max-height by setting the scoped custom property on the base part', async () => {
@@ -912,7 +912,7 @@ describe('imperative search API', () => {
     expect(afterMatches.map((match) => match.textContent)).to.deep.equal(
       beforeMatches.map((match) => match.textContent),
     );
-    expect(after.shadowRoot!.querySelector('[data-active]')).to.not.exist;
+    expect((after.shadowRoot!.querySelector('[data-active]')) == null).to.be.true;
     expect(afterMatches.every((match) => match.getAttribute('aria-current') === 'false')).to.be.true;
   });
 });

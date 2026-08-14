@@ -706,7 +706,7 @@ it("renders a leading icon on a command that has one, and omits the part for com
   expect(rows[0].querySelector('[part="icon"] svg.save-icon')).to.not.equal(
     null
   );
-  expect(rows[1].querySelector('[part="icon"]')).to.equal(null);
+  expect((rows[1].querySelector('[part="icon"]')) === (null)).to.equal(true);
 });
 
 it("renders localized strings from a .strings override for the dialog label, placeholder, results label, and empty message", async () => {

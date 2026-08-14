@@ -8,7 +8,7 @@ it('defaults to index 0, count 1, and renders nothing while count < 2', async ()
   const el = (await fixture(html`<lr-branch-picker></lr-branch-picker>`)) as LyraBranchPicker;
   expect(el.index).to.equal(0);
   expect(el.count).to.equal(1);
-  expect(el.shadowRoot!.querySelector('[part="base"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="base"]')) == null).to.be.true;
 });
 
 it('renders the 1-based position for a 0-based index', async () => {
@@ -151,11 +151,11 @@ it('renders nothing for a NaN or negative count instead of throwing or showing N
 
   el.count = NaN;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="base"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="base"]')) == null).to.be.true;
 
   el.count = -5;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="base"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="base"]')) == null).to.be.true;
 });
 
 it('clamps a NaN, negative, or oversized index to a valid branch instead of NaN/out-of-range', async () => {

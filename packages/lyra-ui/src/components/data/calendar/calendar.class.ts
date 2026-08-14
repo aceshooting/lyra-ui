@@ -67,7 +67,7 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
   static override styles = [LyraElement.styles, styles];
   @property({ attribute: false }) events: CalendarEvent[] = [];
   @property() value = '';
-  @property({ attribute: 'view-date' }) viewDate = formatISO(new Date()).slice(0, 7) + '-01';
+  @property({ attribute: 'view-date' }) viewDate: string = formatISO(new Date()).slice(0, 7) + '-01';
   @property({ reflect: true }) view: CalendarView = 'month';
   @property({ type: Number, attribute: 'first-day-of-week' }) firstDayOfWeek = 1;
   @property({ attribute: 'aria-label' }) accessibleLabel = '';

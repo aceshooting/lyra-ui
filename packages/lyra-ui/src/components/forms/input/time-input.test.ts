@@ -113,7 +113,7 @@ describe('lr-time-input segmented field', () => {
 
   it('shows seconds only for a sub-minute numeric step', async () => {
     const minute = await fixture<LyraTimeInput>(html`<lr-time-input step="60"></lr-time-input>`);
-    expect(minute.shadowRoot!.querySelector('[data-segment="second"]')).to.equal(null);
+    expect((minute.shadowRoot!.querySelector('[data-segment="second"]')) === (null)).to.equal(true);
     const second = await fixture<LyraTimeInput>(html`<lr-time-input step="30" value="09:04:30"></lr-time-input>`);
     expect(segment(second, 'second').textContent?.trim()).to.equal('30');
     expect(second.value).to.equal('09:04:30');
@@ -320,7 +320,7 @@ describe('lr-time-input popup and actions', () => {
     const footer = await fixture<LyraTimeInput>(html`
       <lr-time-input with-now><button slot="footer">Custom footer</button></lr-time-input>
     `);
-    expect(footer.shadowRoot!.querySelector('[part="now-button"]')).to.equal(null);
+    expect((footer.shadowRoot!.querySelector('[part="now-button"]')) === (null)).to.equal(true);
     expect(footer.shadowRoot!.querySelector('slot[name="footer"]')).not.to.equal(null);
   });
 
@@ -628,7 +628,7 @@ describe('lr-time-input popup dismissal, autofill, and stepping', () => {
     expect(el.reportValidity()).to.equal(true);
   });
 
-  // fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native control blurs it (plain platform
+  // Disabling a focused native control blurs it (plain platform
   // behavior, nothing custom-element-specific) -- here that's the active segment losing its
   // tabindex="0" while the browser still counts it as the focused element. That blur is not a
   // real user interaction and must not mark the field touched.

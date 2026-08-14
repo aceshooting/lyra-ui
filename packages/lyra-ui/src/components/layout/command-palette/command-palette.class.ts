@@ -179,6 +179,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has("open")) {
       if (this.open) {
         this.activateOverlay();
@@ -204,6 +205,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   // Runs after render so the manager can resolve the rendered [part="dialog"] panel -- mirrors
   // lr-dialog's/lr-tool-select-dialog's identical ordering rationale.
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has("open") && this.open) {
       this.overlay?.focusInitial();
     }

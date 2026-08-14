@@ -108,7 +108,7 @@ export const styles = css`
     border-radius: var(--lr-date-picker-radius);
   }
   /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself,
-     mirroring lr-pagination's/lr-table's identical remediation for this exact selector shape --
+     mirroring lr-pagination's/lr-table's low-specificity rule for this exact selector shape --
      a consumer's own ::part(previous):hover/::part(next):hover can win without !important. The
      background routes through a scoped cssprop so a consumer can retint just this hover state
      without hijacking the shared --lr-color-brand-quiet token used everywhere else. */

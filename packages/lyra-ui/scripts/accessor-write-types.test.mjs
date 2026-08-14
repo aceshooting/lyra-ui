@@ -47,20 +47,6 @@ function syntheticManifest() {
 }
 
 const EXPECTED_VALUES = {
-  'lr-badge': {
-    variant: ['neutral', 'brand', 'success', 'warning', 'danger', 'primary'],
-    size: ['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large'],
-  },
-  'lr-tag': {
-    variant: ['neutral', 'brand', 'success', 'warning', 'danger', 'primary', 'text'],
-    size: ['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large'],
-  },
-  'lr-rating': {
-    size: ['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large'],
-  },
-  'lr-toast-item': {
-    size: ['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large'],
-  },
   'lr-breadcrumb-item': { href: undefined },
   'lr-icon': { name: undefined, src: undefined },
   'lr-icon-button': { name: undefined },
@@ -77,14 +63,10 @@ const EXPECTED_BUCKET_B_WRITE_TYPES = {
 };
 
 const EXPECTED_BUCKET_B_RUNTIME_DEFAULTS = {
-  'lr-badge': { size: "'m'", variant: "'neutral'" },
   'lr-breadcrumb-item': { href: "''" },
   'lr-icon': { name: "''", src: "''" },
   'lr-icon-button': { name: "''" },
-  'lr-rating': { size: "'m'" },
   'lr-split-panel': { snap: "''" },
-  'lr-tag': { size: "'m'", variant: "'neutral'" },
-  'lr-toast-item': { size: "'m'" },
 };
 
 function syntheticRuntimeManifest() {
@@ -204,10 +186,10 @@ test('CEM projection fails closed when a configured member, attribute, or canoni
   );
 
   const drifted = syntheticManifest();
-  drifted.modules[0].declarations[0].members[0].type.text = 'string';
+  drifted.modules[0].declarations[0].members[0].type.text = 'number';
   assert.throws(
     () => plugin.packageLinkPhase({ customElementsManifest: drifted }),
-    /must be canonical BadgeVariant before write projection/,
+    /must be canonical string before write projection/,
   );
 });
 
@@ -307,7 +289,21 @@ test('fresh no-write CEM retains reviewed runtime and public-document subclass c
   ]) {
     assert.equal(member(tagName, 'type')?.default, `'${type}'`, `${tagName}.type default`);
   }
-  assert.equal(member('lr-tag', 'variant')?.type?.text, "BadgeVariant | 'primary' | 'text'");
+  for (const [tagName, name, type, expected] of [
+    ['lr-badge', 'variant', 'BadgeVariant', ['neutral', 'brand', 'success', 'warning', 'danger', 'primary']],
+    ['lr-badge', 'size', 'BadgeSize', ['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large']],
+    ['lr-tag', 'variant', 'TagVariant', ['neutral', 'brand', 'success', 'warning', 'danger', 'primary', 'text']],
+    ['lr-rating', 'size', 'LyraRatingSize', ['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large']],
+    ['lr-toast-item', 'size', 'ToastSize', ['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large']],
+  ]) {
+    assert.equal(member(tagName, name)?.type?.text, type, `${tagName}.${name} raw public type`);
+    assert.equal(attribute(tagName, name)?.type?.text, type, `${tagName}[${name}] raw attribute type`);
+    assert.deepEqual(
+      htmlDataValues(type, readTypeAliases(path.join(packageDir, 'src')))?.map(({ name: value }) => value),
+      expected,
+      `${tagName}.${name} editor values`,
+    );
+  }
   assert.equal(member('lr-option', 'disabled')?.reflects, true);
   assert.equal(member('lr-dropdown-item', 'submenuOpen')?.reflects, true);
   assert.equal(member('lr-dropdown-item', 'submenuOpen')?.default, 'false');

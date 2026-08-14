@@ -86,6 +86,7 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
   @state() private revealed = new Map<string, boolean>();
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('revealable') && !this.revealable && this.revealed.size > 0) {
       this.revealed = new Map();
     }

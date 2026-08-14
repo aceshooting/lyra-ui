@@ -18,3 +18,4 @@ export * from './localization.js';
 export * from './animation-registry.js';
 export * from './defined.js';
 export * from './theme.js';
+export type * from './anchor-target.js';

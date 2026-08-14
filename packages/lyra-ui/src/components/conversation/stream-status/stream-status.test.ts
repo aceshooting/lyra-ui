@@ -261,7 +261,7 @@ describe('announcement/message localization', () => {
 
 it('renders the message part (default slot) only while phase="stalled", with a built-in default when nothing is slotted', async () => {
   const el = (await fixture(html`<lr-stream-status phase="streaming"></lr-stream-status>`)) as LyraStreamStatus;
-  expect(el.shadowRoot!.querySelector('[part="message"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="message"]')) == null).to.be.true;
 
   el.phase = 'stalled';
   await el.updateComplete;

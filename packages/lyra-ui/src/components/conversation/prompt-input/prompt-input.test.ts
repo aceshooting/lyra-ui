@@ -543,6 +543,20 @@ it('forwards attachment lifecycle state and exposes a translated retry request',
   expect(rawRetries).to.equal(0);
 });
 
+it('forwards PromptInputAttachment.bytes to the attachment chip byte-count contract', async () => {
+  const attachments: PromptInputAttachment[] = [
+    { id: 'sized-doc', name: 'sized.pdf', bytes: 2_048 },
+  ];
+  const el = (await fixture(html`
+    <lr-prompt-input .attachments=${attachments}></lr-prompt-input>
+  `)) as LyraPromptInput;
+  const chip = el.shadowRoot!.querySelector('lr-attachment-chip') as LyraAttachmentChip;
+  await chip.updateComplete;
+
+  expect(chip.bytes).to.equal(2_048);
+  expect(chip.shadowRoot!.querySelector('[part="size"]')?.textContent?.trim()).to.equal('2.0 KB');
+});
+
 it('gates every composed interaction while disabled and forwards host click to the composer', async () => {
   const el = (await fixture(html`<lr-prompt-input
     disabled

@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hasRealContent, hostAriaLabel } from '../../../internal/a11y.js';
@@ -246,7 +246,8 @@ export class LyraKbd extends LyraElement {
   // keys rendering for one frame before the first slotchange event.
   @state() private hasCustomContent = false;
 
-  protected override willUpdate(): void {
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     // A server render sees no light-DOM children, so a hydrating chip reproduces the server's
     // keys rendering first and adopts slotted content on the very next update instead.
     this.seedFirstRenderState(() => {

@@ -80,7 +80,7 @@ describe('lr-file-icon', () => {
 
   it('renders no size part when bytes is unset', async () => {
     const el = await fixture(html`<lr-file-icon mime-type="application/pdf" variant="label"></lr-file-icon>`);
-    expect(el.shadowRoot!.querySelector('[part="size"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="size"]')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('PDF');
   });
 
@@ -93,7 +93,7 @@ describe('lr-file-icon', () => {
     )) as LyraFileIcon;
     expect('size' in el, 'size is gone from the instance').to.be.false;
     expect(el.bytes).to.equal(0);
-    expect(el.shadowRoot!.querySelector('[part="size"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="size"]')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('PDF');
   });
 
@@ -102,7 +102,7 @@ describe('lr-file-icon', () => {
       html`<lr-file-icon mime-type="application/pdf" variant="label" bytes="not-a-number"></lr-file-icon>`,
     )) as LyraFileIcon;
     expect(Number.isNaN(el.bytes)).to.be.true;
-    expect(el.shadowRoot!.querySelector('[part="size"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="size"]')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('PDF');
   });
 

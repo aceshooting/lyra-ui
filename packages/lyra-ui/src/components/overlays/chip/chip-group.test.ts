@@ -102,7 +102,7 @@ it('keeps long removable chips contained through collapsed and expanded overflow
 it('defaults max-visible to unset, showing every child and no overflow indicator', async () => {
   const el = (await fixture(fiveChips())) as LyraChipGroup;
   expect(el.maxVisible).to.be.undefined;
-  expect(el.shadowRoot!.querySelector('[part="overflow-indicator"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="overflow-indicator"]')) == null).to.be.true;
   const chips = Array.from(el.querySelectorAll('lr-chip')) as HTMLElement[];
   expect(chips.every((c) => !c.hidden)).to.be.true;
 });
@@ -240,7 +240,7 @@ it('shows every child when max-visible is greater than or equal to the child cou
       <lr-chip>two</lr-chip>
     </lr-chip-group>
   `)) as LyraChipGroup;
-  expect(el.shadowRoot!.querySelector('[part="overflow-indicator"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="overflow-indicator"]')) == null).to.be.true;
   const chips = Array.from(el.querySelectorAll('lr-chip')) as HTMLElement[];
   expect(chips.every((c) => !c.hidden)).to.be.true;
 });
@@ -336,7 +336,7 @@ describe('overflow behavior', () => {
     await el.updateComplete;
 
     expect(fired).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="overflow-indicator"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="overflow-indicator"]')) == null).to.be.true;
     const chips = Array.from(el.querySelectorAll('lr-chip')) as HTMLElement[];
     expect(chips.every((c) => !c.hidden)).to.be.true;
   });
@@ -350,7 +350,7 @@ describe('dynamic children', () => {
         <lr-chip>two</lr-chip>
       </lr-chip-group>
     `)) as LyraChipGroup;
-    expect(el.shadowRoot!.querySelector('[part="overflow-indicator"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="overflow-indicator"]')) == null).to.be.true;
 
     const extra = document.createElement('lr-chip');
     extra.textContent = 'three';

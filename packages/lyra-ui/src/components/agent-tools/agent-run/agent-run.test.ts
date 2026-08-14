@@ -36,7 +36,7 @@ it('defaults to run=null, showCancel=true, showRetry=true, and renders the share
   const empty = el.shadowRoot!.querySelector('[part="empty"]');
   expect((empty) != null).to.equal(true);
   expect(empty!.getAttribute('heading')).to.equal('No data');
-  expect(el.shadowRoot!.querySelector('[part="header"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="header"]')) == null).to.be.true;
 });
 
 it('renders a lifecycle-status badge with the built-in generic labels for running/error', async () => {
@@ -80,7 +80,7 @@ it('renders the optional status message', async () => {
 
 it('omits the status message entirely when unset', async () => {
   const el = (await fixture(html`<lr-agent-run .run=${makeRun()}></lr-agent-run>`)) as LyraAgentRun;
-  expect(el.shadowRoot!.querySelector('[part="status-message"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="status-message"]')) == null).to.be.true;
 });
 
 describe('elapsed time', () => {
@@ -94,7 +94,7 @@ describe('elapsed time', () => {
     expect(status.active).to.be.true;
     expect(status.startedAt).to.equal(startedAt);
     expect(status.showStop).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="elapsed-static"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="elapsed-static"]')) == null).to.be.true;
   });
 
   it('also ticks while collecting/waiting-input/waiting-approval, not just running', async () => {
@@ -113,7 +113,7 @@ describe('elapsed time', () => {
         .run=${makeRun({ status: { kind: 'done' }, startedAt: 1000, endedAt: 6000 })}
       ></lr-agent-run>`,
     )) as LyraAgentRun;
-    expect(el.shadowRoot!.querySelector('lr-generation-status')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('lr-generation-status')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="elapsed-static"]')!.textContent!.trim()).to.equal('5s');
   });
 
@@ -130,16 +130,16 @@ describe('elapsed time', () => {
     const el = (await fixture(
       html`<lr-agent-run .run=${makeRun({ status: { kind: 'done' }, endedAt: undefined })}></lr-agent-run>`,
     )) as LyraAgentRun;
-    expect(el.shadowRoot!.querySelector('lr-generation-status')).to.not.exist;
-    expect(el.shadowRoot!.querySelector('[part="elapsed-static"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('lr-generation-status')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part="elapsed-static"]')) == null).to.be.true;
   });
 
   it('renders nothing for an idle run with no startedAt', async () => {
     const el = (await fixture(
       html`<lr-agent-run .run=${makeRun({ status: { kind: 'idle' }, startedAt: undefined })}></lr-agent-run>`,
     )) as LyraAgentRun;
-    expect(el.shadowRoot!.querySelector('lr-generation-status')).to.not.exist;
-    expect(el.shadowRoot!.querySelector('[part="elapsed-static"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('lr-generation-status')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part="elapsed-static"]')) == null).to.be.true;
   });
 });
 
@@ -158,7 +158,7 @@ describe('current step', () => {
     const el = (await fixture(
       html`<lr-agent-run .run=${makeRun({ steps: noneRunning })}></lr-agent-run>`,
     )) as LyraAgentRun;
-    expect(el.shadowRoot!.querySelector('[part="current-step"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="current-step"]')) == null).to.be.true;
   });
 });
 
@@ -236,7 +236,7 @@ describe('cancel/retry controls', () => {
       const el = (await fixture(
         html`<lr-agent-run .run=${makeRun({ status: { kind } })}></lr-agent-run>`,
       )) as LyraAgentRun;
-      expect(el.shadowRoot!.querySelector('[part="cancel-button"]')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('[part="cancel-button"]')) == null).to.be.true;
     });
   }
   for (const kind of retryableKinds) {
@@ -252,7 +252,7 @@ describe('cancel/retry controls', () => {
       const el = (await fixture(
         html`<lr-agent-run .run=${makeRun({ status: { kind } })}></lr-agent-run>`,
       )) as LyraAgentRun;
-      expect(el.shadowRoot!.querySelector('[part="retry-button"]')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('[part="retry-button"]')) == null).to.be.true;
     });
   }
 
@@ -264,8 +264,8 @@ describe('cancel/retry controls', () => {
         show-retry="false"
       ></lr-agent-run>
     `)) as LyraAgentRun;
-    expect(el.shadowRoot!.querySelector('[part="cancel-button"]')).to.not.exist;
-    expect(el.shadowRoot!.querySelector('[part="retry-button"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="cancel-button"]')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part="retry-button"]')) == null).to.be.true;
   });
 
   it('emits lr-cancel with an empty-reason CancelEventDetail when Cancel is clicked', async () => {
@@ -359,7 +359,7 @@ describe('tasks slot default content', () => {
         .run=${makeRun({ status: { kind: 'running' }, startedAt: Number.POSITIVE_INFINITY })}
       ></lr-agent-run>
     `)) as LyraAgentRun;
-    expect(el.shadowRoot!.querySelector('lr-generation-status')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('lr-generation-status')) == null).to.be.true;
     expect(el.shadowRoot!.textContent).to.not.include('Infinity');
     expect(el.shadowRoot!.textContent).to.not.include('NaN');
   });
@@ -389,7 +389,7 @@ describe('tasks slot default content', () => {
 
   it('renders no fallback content when run.steps is empty', async () => {
     const el = (await fixture(html`<lr-agent-run .run=${makeRun({ steps: [] })}></lr-agent-run>`)) as LyraAgentRun;
-    expect(el.shadowRoot!.querySelector('lr-task-list')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('lr-task-list')) == null).to.be.true;
   });
 
   it('lets the host override the tasks slot entirely', async () => {
@@ -589,8 +589,8 @@ it('renders and distinguishes queued and collecting lifecycle states', async () 
   const queued = root.querySelector('#queued') as LyraAgentRun;
   expect(queued.shadowRoot!.querySelector('[part="status-badge"]')!.textContent!.trim()).to.equal('Waiting in queue');
   expect(queued.shadowRoot!.querySelector('[part="status-badge"]')!.getAttribute('variant')).to.equal('warning');
-  expect(queued.shadowRoot!.querySelector('lr-generation-status')).to.not.exist;
-  expect(queued.shadowRoot!.querySelector('[part="cancel-button"]')).to.not.exist;
+  expect((queued.shadowRoot!.querySelector('lr-generation-status')) == null).to.be.true;
+  expect((queued.shadowRoot!.querySelector('[part="cancel-button"]')) == null).to.be.true;
 
   const collecting = root.querySelector('#collecting') as LyraAgentRun;
   expect(collecting.shadowRoot!.querySelector('[part="status-badge"]')!.textContent!.trim()).to.equal('Collecting context');
@@ -608,8 +608,8 @@ it('lets header and summary slots replace the built-in chrome', async () => {
   `)) as LyraAgentRun;
   expect(el.querySelector('#custom-header')).to.exist;
   expect(el.querySelector('#custom-summary')).to.exist;
-  expect(el.shadowRoot!.querySelector('[part="status-badge"]')).to.not.exist;
-  expect(el.shadowRoot!.querySelector('[part="usage"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="status-badge"]')) == null).to.be.true;
+  expect((el.shadowRoot!.querySelector('[part="usage"]')) == null).to.be.true;
 });
 
 const baseChrome = (el: LyraAgentRun) => {

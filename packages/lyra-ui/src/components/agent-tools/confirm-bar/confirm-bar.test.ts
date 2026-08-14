@@ -55,7 +55,7 @@ it('a free-form heading wins over toolName and renders with no tool-name part', 
     html`<lr-confirm-bar tool-name="run_shell" heading="Send this email?"></lr-confirm-bar>`,
   )) as LyraConfirmBar;
   expect(el.shadowRoot!.querySelector('[part="heading"]')!.textContent!.trim()).to.equal('Send this email?');
-  expect(el.shadowRoot!.querySelector('[part="tool-name"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="tool-name"]')) == null).to.be.true;
 });
 
 it('hides the empty body wrapper when no default-slot content is projected, and shows it once content is added', async () => {
@@ -90,7 +90,7 @@ it('shows initial and dynamically-added text-only default-slot content', async (
 
 it('shows args read-only inside a collapsed lr-details + lr-json-viewer only when args is defined', async () => {
   const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
-  expect(el.shadowRoot!.querySelector('[part="args"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="args"]')) == null).to.be.true;
 
   const withArgs = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
   withArgs.args = { path: '/etc/hosts' };
@@ -112,8 +112,8 @@ it('lr-approve carries args as-is; lr-deny has no detail; both set decision and 
   expect((await approvePromise).detail).to.deep.equal({ args: { x: 1 } });
   await approveEl.updateComplete;
   expect(approveEl.decision).to.equal('approved');
-  expect(approveEl.shadowRoot!.querySelector('[part="approve-button"]')).to.not.exist;
-  expect(approveEl.shadowRoot!.querySelector('[part="deny-button"]')).to.not.exist;
+  expect((approveEl.shadowRoot!.querySelector('[part="approve-button"]')) == null).to.be.true;
+  expect((approveEl.shadowRoot!.querySelector('[part="deny-button"]')) == null).to.be.true;
 
   const denyEl = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
   const denyPromise = oneEvent(denyEl, 'lr-deny');
@@ -594,8 +594,8 @@ describe('async pending decisions', () => {
 
     el.decision = 'approved';
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="approve-button"]')).to.not.exist;
-    expect(el.shadowRoot!.querySelector('[part="deny-button"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="approve-button"]')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part="deny-button"]')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent!.trim()).to.equal('Approved');
   });
 

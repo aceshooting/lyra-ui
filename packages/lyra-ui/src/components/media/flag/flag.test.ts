@@ -65,7 +65,7 @@ it('shows a loading skeleton and aria-busy while the flag package loads, and ign
   el.country = '';
   await el.updateComplete;
   expect(el.getAttribute('aria-busy')).to.equal('false');
-  expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('lr-skeleton')) == null).to.be.true;
   expect((el.shadowRoot!.querySelector('img')) == null).to.equal(true);
 
   // Give the original 'fr' resolution every chance to land. A correctly
@@ -271,7 +271,7 @@ describe('src (pre-resolved URL, bypasses the peer-package lookup)', () => {
   it('does not render an image for an unsafe pre-resolved src URL', async () => {
     const el = (await fixture(html`<lr-flag src="javascript:alert(1)"></lr-flag>`)) as LyraFlag;
     expect((el.shadowRoot!.querySelector('img')) == null).to.equal(true);
-    expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="error"]')) == null).to.be.true;
   });
 
   it('falls back to country/language resolution once src is cleared', async () => {
@@ -379,9 +379,9 @@ describe('loadFlagUrl (uncached, dependency-injectable)', () => {
 describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
   // The real `@aceshooting/lyra-flags` peer's `flagUrl(code)` never actually rejects (an unknown
   // code just resolves `undefined`), so `loadFlagUrl()`'s own try/catch -- which only guards the
-  // *import* step -- can't be exercised into the "resolver *function* itself rejects" gap this
-  // task fixes. `__setFlagUrlResolverForTesting` swaps in a rejecting resolver at the exact seam
-  // `willUpdate()` reads through (`loadFlagUrlResolver()`'s cache) so that gap is directly
+  // *import* step -- cannot exercise a resolver function that itself rejects.
+  // `__setFlagUrlResolverForTesting` swaps in a rejecting resolver at the exact seam
+  // `willUpdate()` reads through (`loadFlagUrlResolver()`'s cache), making that behavior directly
   // testable without uninstalling the real peer package.
   afterEach(() => {
     // Restore the real cached resolver for every later test in this file/suite.
@@ -474,7 +474,7 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
       <lr-flag country="zz" .strings=${{ flagLoadError: 'Flags unavailable.' }}></lr-flag>
     `)) as LyraFlag;
     await waitUntil(() => !unknown.loading);
-    expect(unknown.shadowRoot!.querySelector('[part="error"]')).to.equal(null);
+    expect((unknown.shadowRoot!.querySelector('[part="error"]')) === (null)).to.equal(true);
     expect((unknown.shadowRoot!.querySelector('img')) === (null)).to.equal(true);
   });
 

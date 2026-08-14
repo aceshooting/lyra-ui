@@ -327,7 +327,7 @@ it('re-points roving tabindex to a surviving row when the focused row disappears
   el.runs = nested.filter((run) => run.id !== 'grandchild');
   await el.updateComplete;
 
-  expect(el.shadowRoot!.querySelector('[data-run-id="grandchild"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[data-run-id="grandchild"]')) == null).to.be.true;
   const tabbable = Array.from(el.shadowRoot!.querySelectorAll('[role="treeitem"]')).filter(
     (row) => row.getAttribute('tabindex') === '0',
   );

@@ -307,7 +307,7 @@ describe('lr-trace-tree', () => {
     const rows = el.shadowRoot!.querySelectorAll('[part="row"]');
     expect(rows.length).to.be.at.most(500);
     expect(el.shadowRoot!.querySelectorAll('[data-id="deep-0"]')).to.have.lengthOf(1);
-    expect(el.shadowRoot!.querySelector('[data-id="invalid"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[data-id="invalid"]')) == null).to.be.true;
 
     el.spans = [
       { id: 'a', parentId: 'b', name: 'A', kind: 'agent', status: 'success', startMs: 0 },
@@ -363,7 +363,7 @@ describe('lr-trace-tree', () => {
   it('shows tokens/cost columns only when show-tokens/show-cost are set', async () => {
     const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="tokens-in"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="tokens-in"]')) == null).to.be.true;
     el.showTokens = true;
     el.showCost = true;
     await el.updateComplete;
@@ -652,19 +652,19 @@ describe('lr-trace-tree', () => {
       html`<lr-trace-tree .spans=${SPANS} active-span-id="missing"></lr-trace-tree>`,
     )) as LyraTraceTree;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[data-active]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[data-active]')) == null).to.be.true;
   });
 
   it('shows only the tokens columns, or only the cost column, in the header row', async () => {
     const el = (await fixture(html`<lr-trace-tree .spans=${SPANS} show-tokens></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('.col-tokens')).to.exist;
-    expect(el.shadowRoot!.querySelector('.col-cost')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('.col-cost')) == null).to.be.true;
 
     el.showTokens = false;
     el.showCost = true;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('.col-tokens')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('.col-tokens')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('.col-cost')).to.exist;
   });
 
@@ -683,8 +683,8 @@ describe('lr-trace-tree', () => {
       html`<lr-trace-tree .spans=${SPANS} show-tokens hide-bars></lr-trace-tree>`,
     )) as LyraTraceTree;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('.col-bar')).to.not.exist;
-    expect(el.shadowRoot!.querySelector('[part="bar-track"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('.col-bar')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part="bar-track"]')) == null).to.be.true;
   });
 
   it('swaps ArrowLeft/ArrowRight for expand/collapse under RTL', async () => {

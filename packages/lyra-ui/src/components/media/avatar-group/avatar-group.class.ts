@@ -1,3 +1,4 @@
+import type { PropertyValues } from 'lit';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -146,19 +147,23 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   @state() private childCount = 0;
   private readonly overflowHiddenChildren = new Map<HTMLElement, HTMLElement['hidden']>();
 
-  protected override willUpdate(): void {
-    if (!this.hasUpdated) {
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (!this.hasUpdated) this.seedFirstRenderState(() => {
       this.childCount = this.children.length;
-    }
+    });
   }
 
-  override firstUpdated(): void {
+  override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     // Fallback reconciliation for slot-forwarding / engines that don't fire `slotchange` for
     // content present at parse time — same idiom as `<lr-chip-group>`'s identical
     // `firstUpdated`. `updated()` (below) always runs right after this and recomputes visibility
     // from this same corrected count.
     const slot = this.shadowRoot!.querySelector('slot') as HTMLSlotElement;
-    this.childCount = slot.assignedElements({ flatten: true }).length;
+    this.updateBrowserDerivedState(() => {
+      this.childCount = slot.assignedElements({ flatten: true }).length;
+    });
   }
 
   override connectedCallback(): void {
@@ -169,7 +174,8 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     if (this.hasUpdated) this.syncChildVisibility();
   }
 
-  protected override updated(): void {
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     this.syncChildVisibility();
   }
 
@@ -222,7 +228,11 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   }
 
   private onSlotChange = (e: Event): void => {
-    this.childCount = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length;
+    const slot = e.target as HTMLSlotElement;
+    this.updateBrowserDerivedState(() => {
+      if (!this.isConnected) return;
+      this.childCount = slot.assignedElements({ flatten: true }).length;
+    });
   };
 
   private onOverflowClick = (): void => {

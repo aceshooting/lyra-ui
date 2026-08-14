@@ -24,7 +24,7 @@ describe('lr-input', () => {
 
     expect(el.checkValidity()).to.be.false;
     expect(aliases).to.have.lengthOf(1);
-    expect(aliases[0].target).to.equal(el);
+    expect((aliases[0].target) === (el)).to.equal(true);
     expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
     expect(aliases[0].cancelable).to.be.true;
 
@@ -271,7 +271,7 @@ describe('lr-input', () => {
         expect(native.value, type).to.equal('');
         expect(seen, type).to.deep.equal(['input', 'lr-input', 'change', 'lr-change', 'lr-clear']);
         expect(el.shadowRoot!.activeElement?.id, type).to.equal('input');
-        expect(el.shadowRoot!.querySelector('[part="clear-button"]'), type).to.not.exist;
+        expect((el.shadowRoot!.querySelector('[part="clear-button"]')) == null, type).to.be.true;
       }
     });
 
@@ -291,7 +291,7 @@ describe('lr-input', () => {
       const email = (await fixture(html`
         <lr-input type="email" clearable value="user@example.com"></lr-input>
       `)) as LyraInput;
-      expect(email.shadowRoot!.querySelector('[part="clear-button"]')).to.not.exist;
+      expect((email.shadowRoot!.querySelector('[part="clear-button"]')) == null).to.be.true;
     });
 
     it('onClear() guard: no-ops when disabled, read-only, or the value is already empty', async () => {
@@ -616,7 +616,7 @@ describe('lr-input', () => {
     });
 
     it('does not mark touched from a blur caused by the control itself becoming disabled', async () => {
-      // Regression test for fr_asxOgk4UhNB07xevCWwFVQ. The browser force-blurs a focused
+      // Regression test: the browser force-blurs a focused
       // descendant when a form-associated custom element's own `disabled` state becomes true --
       // confirmed via a captured marker showing the native `blur` event firing synchronously
       // inside the `disabled` property setter, before Lit's own async re-render has even reached
@@ -1424,7 +1424,7 @@ describe('lr-input clear-button spelling parity', () => {
     const el = (await fixture(
       html`<lr-input type="search" value="query" aria-label="Search"></lr-input>`,
     )) as LyraInput;
-    expect(el.shadowRoot!.querySelector('[part="clear-button"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="clear-button"]')) == null).to.be.true;
   });
 });
 

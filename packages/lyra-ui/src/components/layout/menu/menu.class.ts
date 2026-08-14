@@ -350,7 +350,8 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     this.open = !this.open;
   }
 
-  protected override firstUpdated(): void {
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     // `slotchange` only fires when a slot's assigned nodes actually *change*,
     // so a slot that starts (and stays) empty never fires one at all. The
     // header/footer wrappers and the divider borders are driven off these

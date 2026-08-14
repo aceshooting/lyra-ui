@@ -164,11 +164,13 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     });
   }
 
-  protected override willUpdate(): void {
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     this._isFirstUpdate = !this.hasUpdated;
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('entries')) {
       if (this.follow) this.scrollToBottom();
       this.announceFinalizedEntries();

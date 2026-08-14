@@ -440,7 +440,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    * arrays, so a host can listen for the property update or continue treating the chart as a normal
    * controlled component. Missing series values become `null` rather than shifting alignment.
    */
-  appendData(label: string, values: (number | null)[], maxPoints = 0): void {
+  appendData(label: string, values: (number | null)[], maxPoints: number = 0): void {
     const limit = Math.max(0, finiteCount(maxPoints, 0));
     const labels = [...this.labels, label];
     const datasets = this.datasets.map((series, index) => ({
@@ -568,7 +568,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   // svgEl) already exists from before the disconnect. Together the two
   // cover first-mount and reconnect without ever double-observing the same
   // element from the same callback path.
-  protected override firstUpdated(): void {
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     this.armResizeObserver();
   }
 

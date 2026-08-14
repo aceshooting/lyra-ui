@@ -3,10 +3,10 @@
     "name": "@aceshooting/lyra-ui",
     "version": "8.0.0",
     "exports": {
-      "./custom-elements.json": "./custom-elements.json",
-      ".": {
-        "default": "./dist/lyra.js",
-        "types": "./dist/lyra.d.ts"
+    "./custom-elements.json": "./custom-elements.json",
+    ".": {
+      "types": "./dist/lyra.d.ts",
+      "default": "./dist/lyra.js"
       },
       "./theme.js": "./dist/theme/theme.js"
     }

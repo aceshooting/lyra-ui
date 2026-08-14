@@ -248,11 +248,8 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   // Set on first blur; gates the `data-invalid` reflection below so
   // validity styling never flashes on first render (matches lr-select).
   @state() private touched = false;
-  // `[part]:empty` never matches -- the part always contains a literal <slot> child element
-  // regardless of assigned content -- so real emptiness is tracked here instead (same fix as
-  // lr-select's identical hasHintSlot/hasErrorSlot) and reflected via the hidden attribute.
-  @state() private hasHintSlot = false;
-  @state() private hasErrorSlot = false;
+  // `[part]:empty` never matches because each wrapper contains a literal slot. The shared
+  // controller keeps label/hint/error presence hydration-safe and progressively visible in SSR.
   private readonly slotPresence = new SlotPresenceController(this);
 
   private internals: ElementInternals;
@@ -426,6 +423,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
     let modeChanged = false;
     if (this.hasUpdated) {
       const renderedClosedMode = this.renderRoot.querySelector('[part="trigger"]') !== null;
@@ -443,10 +441,6 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
       if (changed.has('value') || changed.has('allowCustom') || modeChanged) {
         this.query = this.labelFor(this._value);
       }
-    }
-    if (!this.hasUpdated) {
-      this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
-      this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
     }
   }
 
@@ -722,6 +716,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     const reposition =
       changed.has('open') || (this.open && (changed.has('catalog') || changed.has('allowCustom')));
     if (reposition) {
@@ -784,7 +779,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     // focus -- a platform reaction, not a user interaction -- and can land synchronously inside
     // the very property write that disabled this control, so `effectiveDisabled` already reads
     // true here whenever this is that case. Marking `touched` for it risked reentering that
-    // in-flight update for a state flip nothing observable needed (fr_asxOgk4UhNB07xevCWwFVQ).
+    // in-flight update for a state flip nothing observable needed.
     if (!this.effectiveDisabled) this.touched = true;
     this.hide();
     relayNativeEvent(this, event);
@@ -871,7 +866,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     }
     // Same disabled-forced-blur guard as onTriggerBlur above -- the combobox input's own
     // `disabled` state becoming true auto-blurs it if it currently holds focus, a platform
-    // reaction rather than user interaction (fr_asxOgk4UhNB07xevCWwFVQ).
+    // reaction rather than user interaction.
     if (!this.effectiveDisabled) this.touched = true;
     this.hide();
     relayNativeEvent(this, event);
@@ -971,14 +966,6 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     `;
   }
 
-  private onHintSlotChange = (e: Event): void => {
-    this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
-  };
-
-  private onErrorSlotChange = (e: Event): void => {
-    this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
-  };
-
   private get hasVisibleLabel(): boolean {
     return this.label.length > 0 || this.slotPresence.has('label');
   }
@@ -995,10 +982,10 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   private renderHintError(hasError: boolean, hasHint: boolean): TemplateResult {
     return html`
       <div id="model-select-error" part="error" ?hidden=${!hasError}>
-        ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
+        ${this.errorText}<slot name="error"></slot>
       </div>
       <div id="model-select-hint" part="hint" ?hidden=${!hasHint}>
-        ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
+        ${this.hint}<slot name="hint"></slot>
       </div>
     `;
   }
@@ -1008,8 +995,8 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
     const hasValue = this._value.length > 0;
     const hasLabel = this.hasVisibleLabel;
-    const hasHint = this.hasHintSlot || this.hint.length > 0;
-    const hasError = this.hasErrorSlot || this.errorText.length > 0;
+    const hasHint = this.slotPresence.has('hint') || this.hint.length > 0;
+    const hasError = this.slotPresence.has('error') || this.errorText.length > 0;
     const describedBy = [hasError ? 'model-select-error' : '', hasHint ? 'model-select-hint' : '']
       .filter(Boolean)
       .join(' ');
@@ -1049,8 +1036,8 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     const rows = this.filteredEntries;
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
     const hasLabel = this.hasVisibleLabel;
-    const hasHint = this.hasHintSlot || this.hint.length > 0;
-    const hasError = this.hasErrorSlot || this.errorText.length > 0;
+    const hasHint = this.slotPresence.has('hint') || this.hint.length > 0;
+    const hasError = this.slotPresence.has('error') || this.errorText.length > 0;
     const describedBy = [hasError ? 'model-select-error' : '', hasHint ? 'model-select-hint' : '']
       .filter(Boolean)
       .join(' ');

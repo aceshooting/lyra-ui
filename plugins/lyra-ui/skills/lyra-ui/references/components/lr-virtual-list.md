@@ -22,6 +22,12 @@ entirely caller-supplied: `renderItem(item, index)` returns whatever `lit-html` 
 that row, and `keyFunction(item, index)` gives it a stable identity for DOM reconciliation. First-party
 invention (no `wa-*`/`sl-*` counterpart).
 
+Before a viewport can be measured, including during server rendering, the component emits a bounded
+deterministic first window (the first visible row plus `overscan`) rather than a false empty list.
+Hydration preserves that window on its first pass and then reconciles it with the measured browser
+viewport; an ordinary browser-only mount retains the established empty-until-measured range-event
+contract.
+
 **Properties:**
 - `items: unknown[] = []` (attribute: false) — the full, non-windowed item collection. JS-only; set via
   a property/lit-html binding (`.items=`), not an HTML attribute.

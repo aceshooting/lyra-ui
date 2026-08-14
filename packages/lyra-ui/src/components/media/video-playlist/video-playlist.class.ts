@@ -43,6 +43,18 @@ export interface LyraVideoPlaylistVideo {
   readonly tracks: readonly LyraVideoPlaylistTrack[];
 }
 
+/**
+ * Deterministic metadata for one first-render playlist row. Its index must match the corresponding
+ * direct `<lr-video>` child; live child state becomes authoritative as soon as it is observable.
+ */
+export interface LyraVideoPlaylistItem {
+  readonly title: string;
+  readonly poster?: string;
+  readonly duration?: number;
+  /** Mirrors the corresponding child video's native `inert` state. */
+  readonly unavailable?: boolean;
+}
+
 export interface LyraVideoPlaylistChangeDetail {
   readonly previousIndex: number;
   readonly currentIndex: number;
@@ -139,11 +151,15 @@ function frozenTrack(
  * Lyra additionally exposes `autoAdvance` and `repeat`. `autoAdvance` defaults to `true` to
  * preserve the mirrored ended behavior; `repeat="one"` restarts the current video and
  * `repeat="all"` wraps the final video to the first.
+ * `items` can seed deterministic playlist-row metadata for server rendering. Seeded rows are
+ * visible but disabled until the browser can adopt the indexed direct video children; live child
+ * metadata is authoritative after that corrective update.
  *
- * A child marked `inert` is excluded exactly as a `disabled` one is: it never becomes the active
- * video, `next()`/`previous()`/auto-advance step past it, and its playlist row renders `disabled`
- * so the roving `tabindex` can never strand focus on it. Only the child's *own* `inert` counts — a
- * playlist inerted wholesale by an open modal keeps playing.
+ * A child marked `inert` is unavailable: it never becomes the active video,
+ * `next()`/`previous()`/auto-advance step past it, and its playlist row renders `disabled` so the
+ * roving `tabindex` can never strand focus on it. Only the child's *own* `inert` counts — a
+ * playlist inerted wholesale by an open modal keeps playing. `<lr-video>` has no `disabled`
+ * contract; use the native `inert` property to make a child unavailable.
  *
  * @customElement lr-video-playlist
  * @slot - Direct `<lr-video>` children. Other elements are not playlist items.
@@ -195,7 +211,15 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
   /** Automatic completion behavior: stop, repeat one, or wrap the full playlist. Lyra extension. */
   @property() repeat: LyraVideoPlaylistRepeat = 'none';
 
+  /**
+   * Initial row metadata for deterministic server rendering, indexed to the direct video children.
+   * Assign the same value before the first server and browser render. Once live children can be
+   * observed, their title/poster/duration/inert state replaces this seed.
+   */
+  @property({ attribute: false }) items: readonly LyraVideoPlaylistItem[] = [];
+
   @state() private playlistVideos: LyraVideo[] = [];
+  @state() private liveChildrenReady = false;
   @state() private activeIndex = -1;
   @state() private rovingIndex = -1;
 
@@ -213,7 +237,16 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.observeChildren();
-    this.scheduleAfterUpdate(() => this.reconcileChildren(), 'video-playlist-reconcile');
+    // A browser-only mount can derive its rows synchronously and never paint the seed. Hydration
+    // must reproduce the server's deterministic `items` pass first, then adopt the live children
+    // in a corrective update so Lit can reuse the server-rendered row nodes.
+    if (this.hasUpdated) {
+      this.scheduleAfterUpdate(() => this.reconcileChildren(), 'video-playlist-reconcile');
+    } else {
+      this.seedFirstRenderState(() => {
+        if (this.directVideos().length > 0) this.reconcileChildren();
+      });
+    }
   }
 
   override disconnectedCallback(): void {
@@ -256,7 +289,6 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
       attributes: true,
       attributeFilter: [
         'default',
-        'disabled',
         'inert',
         'kind',
         'label',
@@ -280,10 +312,9 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
   /**
    * Whether `video` can be selected, played, and reached by the playlist's roving `tabindex`.
    *
-   * `inert` counts alongside `disabled`, matching `<lr-menu>`'s own item predicate: an inert
-   * element refuses focus and pointer input, so a roving index that steps onto its row leaves
-   * `focus()` a silent no-op and strands the user's arrow key. The row this component renders for
-   * an inert video is itself `disabled`, so the two states can never disagree.
+   * An inert element refuses focus and pointer input, so a roving index that steps onto its row
+   * leaves `focus()` a silent no-op and strands the user's arrow key. The row this component
+   * renders for an inert video is itself `disabled`, so the two states can never disagree.
    *
    * Deliberately the child's **own** inert state, never an ancestor's. A playlist sitting in a
    * subtree an open modal has inerted is inert *as a whole*; treating every video as unavailable
@@ -291,7 +322,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
    * dialog stayed open.
    */
   private isEnabled(video: LyraVideo): boolean {
-    return !video.hasAttribute('disabled') && !video.inert;
+    return !video.inert;
   }
 
   private nearestEnabledIndex(videos: readonly LyraVideo[], preferred: number): number {
@@ -318,6 +349,9 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     const rovingHadFocus =
       this.shadowRoot?.activeElement?.getAttribute('part') === 'playlist-item';
     const videos = this.directVideos();
+    // Once any live child has been observed, it remains the source of truth even if all children
+    // are later removed. This prevents stale first-render metadata from reappearing after removal.
+    if (videos.length > 0 || this.liveChildrenReady) this.liveChildrenReady = true;
 
     let active = previousActive && videos.includes(previousActive) && this.isEnabled(previousActive)
       ? previousActive
@@ -379,8 +413,8 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
       ? videos.indexOf(previousRoving)
       : -1;
     this.rovingIndex = keptRoving >= 0 ? keptRoving : nextIndex;
-    // The row that held the roving tabindex just stopped being reachable (removed, disabled, or
-    // inert) while the user was standing on it. Its button is about to render `disabled`, which
+    // The row that held the roving tabindex just stopped being reachable (removed or made inert)
+    // while the user was standing on it. Its button is about to render `disabled`, which
     // drops focus to `<body>` -- beyond reach of the list's own keydown handler, leaving the
     // playlist keyboard-dead. Hand focus to the row that replaced it instead.
     if (rovingHadFocus && keptRoving < 0 && this.rovingIndex >= 0) this.focusItem(this.rovingIndex);
@@ -803,19 +837,27 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     }
   }
 
-  private itemTitle(video: LyraVideo, index: number): string {
-    const title = video.title.trim();
+  private itemTitle(value: unknown, index: number): string {
+    const title = typeof value === 'string' ? value.trim() : '';
     if (title) return title;
     const position = getNumberFormat(this.effectiveLocale).format(index + 1);
     return this.localize('videoPlaylistUntitled', undefined, { position });
   }
 
-  private renderItem(video: LyraVideo, index: number): TemplateResult {
-    const current = video === this.activeVideo;
-    const disabled = !this.isEnabled(video);
-    const title = this.itemTitle(video, index);
-    const poster = safeMediaSrc(video.poster);
-    const duration = finiteRange(video.duration, 0, 0);
+  private renderItem(
+    item: LyraVideoPlaylistItem,
+    index: number,
+    current: boolean,
+    disabled: boolean,
+    roving: boolean,
+  ): TemplateResult {
+    const title = this.itemTitle(item.title, index);
+    const poster = safeMediaSrc(typeof item.poster === 'string' ? item.poster : '');
+    const duration = finiteRange(
+      typeof item.duration === 'number' ? item.duration : 0,
+      0,
+      0,
+    );
     return html`
       <li>
         <button
@@ -824,7 +866,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
           data-index=${index}
           aria-current=${current ? 'true' : 'false'}
           aria-label=${title}
-          tabindex=${!disabled && index === this.rovingIndex ? '0' : '-1'}
+          tabindex=${!disabled && roving ? '0' : '-1'}
           ?disabled=${disabled}
           @click=${this.onItemClick}
           @keydown=${this.onItemKeyDown}
@@ -851,13 +893,38 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
 
   override render(): TemplateResult {
     const label = this.getAttribute('aria-label') ?? this.localize('videoPlaylistLabel');
+    const seededItems = Array.isArray(this.items)
+      ? this.items.filter((item): item is LyraVideoPlaylistItem =>
+          item !== null && typeof item === 'object')
+      : [];
+    const seededCurrent = seededItems.findIndex((item) => item.unavailable !== true);
+    const rows = this.liveChildrenReady
+      ? this.playlistVideos.map((video, index) => this.renderItem(
+          {
+            title: video.title,
+            poster: video.poster,
+            duration: video.duration,
+            unavailable: !this.isEnabled(video),
+          },
+          index,
+          video === this.activeVideo,
+          !this.isEnabled(video),
+          index === this.rovingIndex,
+        ))
+      : seededItems.map((item, index) => this.renderItem(
+          item,
+          index,
+          index === seededCurrent,
+          true,
+          false,
+        ));
     return html`
       <div part="base video-playlist">
         <div data-video-stage>
           <slot @slotchange=${this.onSlotChange}></slot>
         </div>
         <ol part="playlist" aria-label=${label}>
-          ${this.playlistVideos.map((video, index) => this.renderItem(video, index))}
+          ${rows}
         </ol>
       </div>
     `;

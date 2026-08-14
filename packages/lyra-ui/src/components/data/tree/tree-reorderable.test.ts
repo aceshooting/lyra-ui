@@ -175,7 +175,7 @@ describe('reorderable', () => {
     expect((deepActiveElement() as unknown as LyraTreeItem | null)?.item?.id).to.equal('2');
     expect((leaf as unknown as HTMLElement).tabIndex).to.equal(0);
     // No live region is rendered at all until the feature is opted into.
-    expect(el.shadowRoot!.querySelector('lr-live-region')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('lr-live-region')) == null).to.be.true;
     expect(el.hasAttribute('reorderable')).to.be.false;
   });
 

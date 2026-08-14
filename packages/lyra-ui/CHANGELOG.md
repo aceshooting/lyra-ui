@@ -25,7 +25,7 @@
 - 9c69ed7: Fix `<lr-textarea>` marking a field touched from a blur the platform forces when the control becomes disabled while focused, which could trip a Lit dev-mode reentrancy warning.
 - 9476967: Fix `<lr-time-input>` marking a segment touched from a blur the platform forces when the focused segment becomes disabled (its tabindex drops below zero while it still holds focus), which could trip a Lit dev-mode reentrancy warning.
 - 823b395: `@aceshooting/lyra-ui/testing`'s `installHappyDomFormAssociatedShims()` now resolves the stub `ElementInternals.form` live via `host.closest('form')` instead of always `null` — a form-associated component that calls `attachInternals()` from its constructor (before it's inserted anywhere) previously got a permanently-`null` form owner even after being placed inside a real `<form>`, silently breaking anything (like `<lr-button>`) that resolves its submit target through `internals.form`.
-- de626e7: Fix `<lr-input>` marking a field touched from a blur the platform forces when the control becomes disabled while focused (fr_asxOgk4UhNB07xevCWwFVQ), and stop `formDisabledCallback()` redoing validity/render work that a same-tick `disabled` write already performed — together these could trip Lit's dev-mode "scheduled an update after an update completed" warning inside a real `<lr-dialog>` for a re-render nothing observable needed.
+- de626e7: Fix `<lr-input>` marking a field touched from a blur the platform forces when the control becomes disabled while focused, and stop `formDisabledCallback()` redoing validity/render work that a same-tick `disabled` write already performed — together these could trip Lit's dev-mode "scheduled an update after an update completed" warning inside a real `<lr-dialog>` for a re-render nothing observable needed.
 - 340d39b: Fix `<lr-known-date>` marking a field touched from a blur the platform forces when the field becomes disabled while focused, which could trip a Lit dev-mode reentrancy warning.
 - db19f3e: `LyraElement`'s ancestor `class`/`style` observer (kept for CSS-only direction/locale context changes) now only calls `requestUpdate()` when the resolved direction or locale actually changes, instead of on every ancestor `class`/`style` mutation regardless of relevance — an unrelated ancestor style write (e.g. an overlay's own stacking-index custom property) could otherwise schedule a spurious re-render.
 - 6ef43b1: Fix `LyraElement`'s ancestor `class`/`style` observer (introduced in the previous release to stop spurious re-renders) forcing a `getComputedStyle()` read on _every_ ancestor `class`/`style`/`locale`/`lang` mutation, even ones with nothing to do with direction. That forced read — from a sibling's own unrelated `MutationObserver` reacting to an ancestor's inline-style write — could permanently break a completely unrelated host's own shadow-DOM CSS custom-property resolution in Chromium (observed with `<lr-chip-group>`'s `--lr-chip-group-overflow-expanded-color`), and forced an extra synchronous style read on every reconnect/adoption regardless of whether anything direction-relevant changed. The observer now only calls `getComputedStyle()` when the mutation could plausibly affect direction (an explicit `dir`/`class` change, or a `style` change that actually declares `direction`), and seeds its baseline from whatever the host's own render already resolved instead of forcing an extra read at connect time.
@@ -156,9 +156,8 @@
     the component's own wrapper event. The two buttons now route through `consumeChildEvent()` like
     the rest of the file.
 
-  `retrieval-results.class.ts` and `tool-select-dialog.class.ts` were also audited for the same
-  inconsistent-stopping pattern; both already stop every child event consistently, so neither needed
-  a change.
+  `retrieval-results.class.ts` and `tool-select-dialog.class.ts` already stop every child event
+  consistently, so neither needed a change.
 
 - d53cec6: `lr-spreadsheet-viewer` now validates that the optional `xlsx` peer's parsed `workbook.SheetNames`
   is actually an array of strings before using it, instead of trusting an unchecked type assertion.
@@ -764,7 +763,7 @@
 
 ### Minor Changes
 
-- 3e6ab4c: Full-sweep remediation: additive public surface, accessibility, i18n and documentation fixes across
+- 3e6ab4c: Add public surface, accessibility, i18n, and documentation improvements across
   the library. No breaking change — every item below is additive, and every new custom property is an
   inline `var()` fallback carrying today's value, so rendering is unchanged when it is left unset.
 
@@ -3597,7 +3596,7 @@ search: true, textSelect: false }`. `lr-virtual-list` itself gains the underlyin
   and type filtering all work identically to force mode. Fully additive — the default `layout:
 'force'` reproduces today's simulation-driven layout exactly.
 - 22c1006: Adds `<lr-graph-legend>`: a node-type legend for a paired `lr-graph`, rendering one swatch +
-  label + count row per §3.4 node type and doubling as a visibility filter. Event-decoupled from any
+  label + count row per declared node type and doubling as a visibility filter. Event-decoupled from any
   graph instance — a host forwards `graph.nodeTypes` in as `types` and forwards
   `lr-visibility-change`'s `hiddenTypes` back out to `graph.hiddenTypes`.
 - 942798e: `lr-graph` gains `GraphNode.type` and a new `nodeTypes` property declaring each type's legend

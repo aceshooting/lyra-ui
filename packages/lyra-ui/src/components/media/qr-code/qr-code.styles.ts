@@ -16,6 +16,8 @@ export const styles = css`
     --lr-qr-code-fill: var(--lr-color-text);
     /* Light/background modules, including the quiet zone -- same pattern. */
     --lr-qr-code-background: var(--lr-color-surface);
+    color: var(--lr-qr-code-fill);
+    background-color: var(--lr-qr-code-background);
   }
   [part~='base'] {
     display: inline-flex;

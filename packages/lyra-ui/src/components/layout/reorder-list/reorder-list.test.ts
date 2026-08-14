@@ -534,7 +534,7 @@ describe("<lr-reorder-list>", () => {
     expect(text).to.contain("Déplacé en position 1 sur 3");
   });
 
-  it("focuses the most recently moved item after two rapid consecutive moves fired with no await in between (round 2 regression: orphaned focus-restore chain)", async () => {
+  it("focuses the most recently moved item after two rapid consecutive moves fired with no await in between", async () => {
     // Reproduces a fast double-click / Ctrl+Arrow key-repeat outrunning a render tick: two moves
     // fired back-to-back, with NO `await` between them, so the second move's own focus-restore
     // bookkeeping is set up before the first move's has had any chance to resolve.

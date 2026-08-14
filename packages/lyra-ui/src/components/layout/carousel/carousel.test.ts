@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent } from "@open-wc/testing";
+import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./carousel.js";
 import "./carousel-item.js";
 import type { LyraCarousel } from "./carousel.js";
@@ -78,8 +78,8 @@ describe("Web Awesome carousel surface", () => {
     expect(el.getAttribute("current-slide")).to.equal("0");
     expect(el.getAttribute("index")).to.equal("0");
     expect(el.getAttribute("slides")).to.equal("3");
-    expect(el.shadowRoot!.querySelector('[part~="navigation"]')).to.be.null;
-    expect(el.shadowRoot!.querySelector('[part~="pagination"]')).to.be.null;
+    expect((el.shadowRoot!.querySelector('[part~="navigation"]')) === null).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part~="pagination"]')) === null).to.be.true;
 
     el.index = 1;
     await el.updateComplete;
@@ -158,8 +158,8 @@ describe("Web Awesome carousel surface", () => {
     await el.updateComplete;
     expect(el.navigation).to.be.false;
     expect(el.pagination).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part~="navigation"]')).to.be.null;
-    expect(el.shadowRoot!.querySelector('[part~="pagination"]')).to.be.null;
+    expect((el.shadowRoot!.querySelector('[part~="navigation"]')) === null).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part~="pagination"]')) === null).to.be.true;
   });
 
   it("moves by pages, exposes the correct final page, and keeps every visible slide operable", async () => {
@@ -548,9 +548,17 @@ it('inherits independent navigation and pagination hover/pressed paint from an a
   let rect = navigation.getBoundingClientRect();
   try {
     await sendMouse({ type: 'move', position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)] });
+    await waitUntil(
+      () => getComputedStyle(navigation).backgroundColor === 'rgb(1, 2, 3)',
+      'navigation hover paint must settle',
+    );
     expect(getComputedStyle(navigation).backgroundColor).to.equal('rgb(1, 2, 3)');
     expect(getComputedStyle(navigation).borderTopColor).to.equal('rgb(4, 5, 6)');
     await sendMouse({ type: 'down' });
+    await waitUntil(
+      () => getComputedStyle(navigation).backgroundColor === 'rgb(7, 8, 9)',
+      'navigation pressed paint must settle',
+    );
     expect(getComputedStyle(navigation).backgroundColor).to.equal('rgb(7, 8, 9)');
     expect(getComputedStyle(navigation).borderTopColor).to.equal('rgb(10, 11, 12)');
   } finally {
@@ -562,9 +570,17 @@ it('inherits independent navigation and pagination hover/pressed paint from an a
   rect = pagination.getBoundingClientRect();
   try {
     await sendMouse({ type: 'move', position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)] });
+    await waitUntil(
+      () => getComputedStyle(dot).backgroundColor === 'rgb(13, 14, 15)',
+      'pagination hover paint must settle',
+    );
     expect(getComputedStyle(dot).backgroundColor).to.equal('rgb(13, 14, 15)');
     expect(getComputedStyle(dot).borderTopColor).to.equal('rgb(16, 17, 18)');
     await sendMouse({ type: 'down' });
+    await waitUntil(
+      () => getComputedStyle(dot).backgroundColor === 'rgb(19, 20, 21)',
+      'pagination pressed paint must settle',
+    );
     expect(getComputedStyle(dot).backgroundColor).to.equal('rgb(19, 20, 21)');
     expect(getComputedStyle(dot).borderTopColor).to.equal('rgb(22, 23, 24)');
   } finally {
@@ -621,7 +637,7 @@ it("omits the indicator group entirely when showIndicators is false", async () =
       <lr-carousel-item>Two</lr-carousel-item>
     </lr-carousel>
   `);
-  expect(el.shadowRoot!.querySelector('[part~="indicators"]')).to.be.null;
+  expect((el.shadowRoot!.querySelector('[part~="indicators"]')) === null).to.be.true;
 });
 
 it('honors a plain show-indicators="false" markup attribute, not just a JS property binding', async () => {
@@ -635,7 +651,7 @@ it('honors a plain show-indicators="false" markup attribute, not just a JS prope
     el.showIndicators,
     "the true-default converter must parse the literal string"
   ).to.be.false;
-  expect(el.shadowRoot!.querySelector('[part~="indicators"]')).to.be.null;
+  expect((el.shadowRoot!.querySelector('[part~="indicators"]')) === null).to.be.true;
 });
 
 it("removing the show-indicators attribute restores the mapped false default", async () => {
@@ -649,7 +665,7 @@ it("removing the show-indicators attribute restores the mapped false default", a
   el.removeAttribute("show-indicators");
   await el.updateComplete;
   expect(el.showIndicators).to.be.false;
-  expect(el.shadowRoot!.querySelector('[part~="indicators"]')).to.be.null;
+  expect((el.shadowRoot!.querySelector('[part~="indicators"]')) === null).to.be.true;
 });
 
 it("emits slide changes and supports keyboard navigation", async () => {

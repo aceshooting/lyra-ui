@@ -128,7 +128,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
               aria-pressed=${active?.id === metric.id ? 'true' : 'false'}
               aria-label=${this.localize('chartValueLabel', undefined, { label: metric.label, value })}
               @click=${() => this.emit('lr-metric-change', { metricId: metric.id })}
-            ><lr-stat appearance="plain" .label=${metric.label} .value=${value}></lr-stat></button>`;
+            ><lr-stat frame="plain" .label=${metric.label} .value=${value}></lr-stat></button>`;
           })}</div>`
         : nothing}
       ${this.showChart && active && this.runs.length

@@ -50,7 +50,7 @@ export const AliasSizes: StoryObj = {
   parameters: {
     docs: {
       description: {
-        story: '`small`, `medium`, and `large` are accepted write aliases whose getters normalize to `s`, `m`, and `l`.',
+        story: '`small`, `medium`, and `large` remain the observable property/attribute spellings while mapping to the same rendered sizes as `s`, `m`, and `l`. The host is the single focusable `role="slider"` owner; the shadow star row is presentational.',
       },
     },
   },

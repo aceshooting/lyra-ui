@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
-- **Themeable via** 19 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -127,10 +127,17 @@ the offscreen keyboard-roving items)
 falls back to `--lr-color-brand`) and `--lr-link-color` (set inline per-link from
 `GraphLink.color`, falling back to `--lr-color-border`); also uses `--lr-color-text` +
 `--lr-font` (label text), `--lr-focus-ring-*` (node/link `:focus-visible` outline).
-`--lr-graph-cat-1..8` (i.e. `--lr-graph-cat-1` through `--lr-graph-cat-8`) — the ordered
-categorical fallback palette for a typed node with no `GraphNodeType.color`, assigned by the type's
-index in `nodeTypes` (wraps every 8 entries); declared centrally in `tokens.styles.ts` so this stays
-the same default across components.
+The ordered categorical fallback palette for a typed node with no `GraphNodeType.color` is
+`--lr-graph-cat-1` (default `var(--lr-theme-graph-cat-1,#8250df)`),
+`--lr-graph-cat-2` (default `var(--lr-theme-graph-cat-2,#bf3989)`),
+`--lr-graph-cat-3` (default `var(--lr-theme-graph-cat-3,#0a7d91)`),
+`--lr-graph-cat-4` (default `var(--lr-theme-graph-cat-4,#57606a)`),
+`--lr-graph-cat-5` (default `var(--lr-theme-graph-cat-5,#b083f5)`),
+`--lr-graph-cat-6` (default `var(--lr-theme-graph-cat-6,#f470b8)`),
+`--lr-graph-cat-7` (default `var(--lr-theme-graph-cat-7,#52d6e8)`), and
+`--lr-graph-cat-8` (default `var(--lr-theme-graph-cat-8,#c9d1d9)`). Assignment follows the type's
+index in `nodeTypes` and wraps every eight entries; the `--lr-theme-graph-cat-*` inputs are the
+preferred theme-level overrides.
 `--lr-graph-edge-label-halo` (default `var(--lr-color-surface)`) — the legibility halo painted
 behind a drawn `[part="link-label"]` (via `paint-order: stroke`).
 `--lr-graph-focus-halo-color` (default `var(--lr-color-brand)`) — `[part="focus-halo"]` stroke.

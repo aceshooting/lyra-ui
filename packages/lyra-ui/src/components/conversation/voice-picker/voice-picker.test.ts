@@ -1,4 +1,4 @@
-import { fixture, expect, oneEvent, html } from '@open-wc/testing';
+import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import './voice-picker.js';
 import type { LyraVoicePicker } from './voice-picker.js';
 import { styles } from './voice-picker.styles.js';
@@ -89,7 +89,7 @@ function stubMediaPlay(impl: () => Promise<void>): () => void {
 it('renders a closed dropdown when catalog is non-empty and allow-custom is unset', async () => {
   const el = (await fixture(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
   expect(trigger(el) != null).to.equal(true);
-  expect(el.shadowRoot!.querySelector('[part="combobox-input"]')).to.be.null;
+  expect((el.shadowRoot!.querySelector('[part="combobox-input"]')) === null).to.be.true;
 });
 
 it('renders a free-text input when catalog is empty/undefined or allow-custom is set', async () => {
@@ -1291,9 +1291,9 @@ it("reflects required/touched-invalid state onto the free-text input's aria-requ
 
 describe('touched state — blur guard against platform-forced blur', () => {
   it('does not mark touched from a blur caused by the trigger itself becoming disabled', async () => {
-    // Regression test for fr_asxOgk4UhNB07xevCWwFVQ (see lr-input's identical fix). The browser
-    // force-blurs a focused native control when it becomes disabled -- not a user interaction --
-    // so onTriggerBlur() unconditionally marking `touched = true` for it could reenter an
+    // Regression test for the same disabled-forced-blur behavior (see lr-input's identical fix).
+    // The browser force-blurs a focused native control when it becomes disabled -- not a user
+    // interaction -- so onTriggerBlur() unconditionally marking `touched = true` for it could reenter an
     // in-flight update and trip Lit's dev-mode "scheduled an update after an update completed"
     // warning for a state flip nothing observable needed (a disabled control is barred from
     // validation regardless). Proven observably here: re-enabling afterwards must still see the
@@ -1699,11 +1699,10 @@ it('tracks slotted hint and error content through slotchange', async () => {
 
   el.querySelector('[slot="hint"]')!.remove();
   el.querySelector('[slot="error"]')!.remove();
-  await new Promise((r) => requestAnimationFrame(() => r(null)));
-  await el.updateComplete;
-  expect((el as unknown as { hasHintSlot: boolean }).hasHintSlot, 'removing the slotted hint clears the tracked flag')
-    .to.be.false;
-  expect((el as unknown as { hasErrorSlot: boolean }).hasErrorSlot).to.be.false;
+  const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+  const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+  await waitUntil(() => hint.hidden && error.hidden, 'removing slotted hint/error must collapse both wrappers');
+  expect(trigger(el).hasAttribute('aria-describedby')).to.be.false;
 });
 
 it('an ended event from a superseded audio element does not stop the current preview', async () => {
@@ -2046,25 +2045,25 @@ async function mountServerRendered(markup: string): Promise<LyraVoicePicker> {
 
 const SERVER_SHADOW = '<template shadowrootmode="open"></template>';
 
-it('renders the hint/error region hidden first and adopts slotted hint content after hydration', async () => {
+it('keeps authored hint/error progressively visible while hydration reconciles slot presence', async () => {
   const el = await mountServerRendered(
-    `<lr-voice-picker>${SERVER_SHADOW}<span slot="hint">Pick a voice</span></lr-voice-picker>`,
+    `<lr-voice-picker>${SERVER_SHADOW}<span slot="hint">Pick a voice</span><span slot="error">Required</span></lr-voice-picker>`,
   );
   await el.updateComplete;
 
-  // A server renderer is handed no children at all, so the browser's first render has to agree
-  // with that markup -- seeding the light-DOM read before it fails hydration outright and throws
-  // the whole server-rendered subtree away.
-  expect(
-    el.shadowRoot!.querySelector('[part="hint"]')!.hasAttribute('hidden'),
-    'the first render reproduces the server output',
-  ).to.equal(true);
+  // The server cannot inspect light DOM, so it progressively exposes named-slot wrappers. The
+  // first browser pass must preserve that visibility instead of replacing the server subtree.
+  const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+  const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+  expect(hint.hidden).to.be.false;
+  expect(error.hidden).to.be.false;
 
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
   await el.updateComplete;
-  expect(
-    el.shadowRoot!.querySelector('[part="hint"]')!.hasAttribute('hidden'),
-    'the deferred seed adopts the slotted hint on the very next update',
-  ).to.equal(false);
+  expect(el.shadowRoot!.querySelector('[part="hint"]') === hint).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="error"]') === error).to.be.true;
+  expect(hint.hidden).to.be.false;
+  expect(error.hidden).to.be.false;
 });
 
 it('still seeds slotted hint/error state synchronously on an ordinary browser-only mount', async () => {

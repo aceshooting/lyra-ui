@@ -28,7 +28,7 @@ it('rejects unsafe custom color ramps and discrete legend paints', async () => {
   el.legendStops = [{ value: 1, color: 'red;position:fixed' }];
   await el.updateComplete;
   expect(el.style.getPropertyValue('--lr-heatmap-color-steps-gradient')).to.equal('');
-  expect(el.shadowRoot!.querySelector('[part="legend-swatch"]')).to.equal(null);
+  expect((el.shadowRoot!.querySelector('[part="legend-swatch"]')) === (null)).to.equal(true);
 
   el.colorSteps = ['var(--lr-color-brand)', 'color-mix(in srgb, red 50%, blue)'];
   el.legendStops = [{ value: 1, color: '#123456' }];
@@ -1283,7 +1283,7 @@ describe('annotation/overlay affordance', () => {
     el.values = [[1]];
     el.annotations = [{ row: 0, col: 0 }];
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="legend-annotation"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="legend-annotation"]')) == null).to.be.true;
   });
 
   it('omits legend-annotation when there are no annotations at all', async () => {
@@ -1292,7 +1292,7 @@ describe('annotation/overlay affordance', () => {
     el.colLabels = ['x'];
     el.values = [[1]];
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="legend-annotation"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="legend-annotation"]')) == null).to.be.true;
   });
 
   it('calendar mode: accepts date-based annotations, redraws without throwing, and renders their legend label', async () => {
@@ -3062,7 +3062,7 @@ describe('legendStops', () => {
     const legend = el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement;
     expect(el.legendStops).to.equal(undefined);
     expect(stripLitMarkers(legend.innerHTML)).to.equal(BASELINE_LEGEND);
-    expect(legend.querySelector('[part="legend-stop"]')).to.not.exist;
+    expect((legend.querySelector('[part="legend-stop"]')) == null).to.be.true;
   });
 
   it('renders one legend-stop per stop, in order and in its own color, instead of the lo/hi gradient', async () => {
@@ -3091,9 +3091,9 @@ describe('legendStops', () => {
       stops.map((s) => getComputedStyle(s.querySelector('[part="legend-swatch"]') as HTMLElement).backgroundColor),
     ).to.deep.equal(['rgb(255, 0, 0)', 'rgb(0, 128, 0)', 'rgb(0, 0, 255)']);
     // The stops replace the two-endpoint bar rather than adding to it.
-    expect(legend.querySelector('[part="legend-lo"]')).to.not.exist;
-    expect(legend.querySelector('[part="legend-hi"]')).to.not.exist;
-    expect(legend.querySelector('.bar')).to.not.exist;
+    expect((legend.querySelector('[part="legend-lo"]')) == null).to.be.true;
+    expect((legend.querySelector('[part="legend-hi"]')) == null).to.be.true;
+    expect((legend.querySelector('.bar')) == null).to.be.true;
   });
 
   it('labels a stop with the component\'s own locale-aware numeric formatting unless `label` overrides it', async () => {
@@ -3199,7 +3199,7 @@ describe('legendStops', () => {
     el.legendStops = [{ value: 0, color: 'rgb(255, 0, 0)' }];
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="legend-stop"]').length).to.equal(1);
-    expect(el.shadowRoot!.querySelector('[part="legend-lo"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="legend-lo"]')) == null).to.be.true;
   });
 
   it('renders a caption-only stop (no `color`) with its label and no swatch element at all', async () => {

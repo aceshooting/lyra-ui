@@ -40,7 +40,7 @@ it('renders the built-in lr-empty state with no items', async () => {
   const empty = el.shadowRoot!.querySelector('lr-empty');
   expect(empty).to.exist;
   expect(empty!.getAttribute('heading')).to.equal('No documents queued');
-  expect(el.shadowRoot!.querySelector('[part="base"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="base"]')) == null).to.be.true;
 });
 
 it('is accessible in the empty state', async () => {
@@ -130,11 +130,11 @@ describe('populated rows', () => {
       ></lr-ingestion-queue>`,
     )) as LyraIngestionQueue;
     const rows = [...el.shadowRoot!.querySelectorAll('[part="item"]')] as HTMLElement[];
-    expect(rows[0]!.querySelector('lr-progress-bar')).to.not.exist;
+    expect((rows[0]!.querySelector('lr-progress-bar')) == null).to.be.true;
     expect(rows[1]!.querySelector('lr-progress-bar')).to.exist;
-    expect(rows[2]!.querySelector('lr-progress-bar')).to.not.exist;
-    expect(rows[3]!.querySelector('lr-progress-bar')).to.not.exist;
-    expect(rows[4]!.querySelector('lr-progress-bar')).to.not.exist;
+    expect((rows[2]!.querySelector('lr-progress-bar')) == null).to.be.true;
+    expect((rows[3]!.querySelector('lr-progress-bar')) == null).to.be.true;
+    expect((rows[4]!.querySelector('lr-progress-bar')) == null).to.be.true;
   });
 
   it('passes a numeric progress value through, and marks indeterminate when progress is unset', async () => {
@@ -161,7 +161,7 @@ describe('populated rows', () => {
       ></lr-ingestion-queue>`,
     )) as LyraIngestionQueue;
     const rows = [...el.shadowRoot!.querySelectorAll('[part="item"]')] as HTMLElement[];
-    expect(rows[0]!.querySelector('[part="item-chunk-count"]')).to.not.exist;
+    expect((rows[0]!.querySelector('[part="item-chunk-count"]')) == null).to.be.true;
     expect(rows[1]!.querySelector('[part="item-chunk-count"]')!.textContent!.trim()).to.equal('12 chunks');
   });
 
@@ -184,7 +184,7 @@ describe('populated rows', () => {
       ></lr-ingestion-queue>`,
     )) as LyraIngestionQueue;
     const rows = [...el.shadowRoot!.querySelectorAll('[part="item"]')] as HTMLElement[];
-    expect(rows[0]!.querySelector('[part="item-embedding-status"]')).to.not.exist;
+    expect((rows[0]!.querySelector('[part="item-embedding-status"]')) == null).to.be.true;
     expect(rows[1]!.querySelector('[part="item-embedding-status"]')!.textContent!.trim()).to.equal(
       '4 of 10 chunks embedded',
     );
@@ -197,7 +197,7 @@ describe('populated rows', () => {
       ></lr-ingestion-queue>`,
     )) as LyraIngestionQueue;
     const rows = [...el.shadowRoot!.querySelectorAll('[part="item"]')] as HTMLElement[];
-    expect(rows[0]!.querySelector('[part="item-attempts"]')).to.not.exist;
+    expect((rows[0]!.querySelector('[part="item-attempts"]')) == null).to.be.true;
     expect(rows[1]!.querySelector('[part="item-attempts"]')!.textContent!.trim()).to.equal('Attempt 2');
   });
 
@@ -211,7 +211,7 @@ describe('populated rows', () => {
       ></lr-ingestion-queue>`,
     )) as LyraIngestionQueue;
     const rows = [...el.shadowRoot!.querySelectorAll('[part="item"]')] as HTMLElement[];
-    expect(rows[0]!.querySelector('[part="item-error"]')).to.not.exist;
+    expect((rows[0]!.querySelector('[part="item-error"]')) == null).to.be.true;
     const error = rows[1]!.querySelector('[part="item-error"]') as HTMLElement;
     expect(error.textContent!.trim()).to.equal('Unsupported file type');
     expect(error.hasAttribute('role')).to.be.false;
@@ -301,7 +301,7 @@ describe('retry/cancel affordances', () => {
       ></lr-ingestion-queue>`,
     )) as LyraIngestionQueue;
     const rows = [...el.shadowRoot!.querySelectorAll('[part="item"]')] as HTMLElement[];
-    expect(rows[0]!.querySelector('[part="retry-button"]')).to.not.exist;
+    expect((rows[0]!.querySelector('[part="retry-button"]')) == null).to.be.true;
     expect(rows[1]!.querySelector('[part="retry-button"]')).to.exist;
   });
 
@@ -320,9 +320,9 @@ describe('retry/cancel affordances', () => {
     const rows = [...el.shadowRoot!.querySelectorAll('[part="item"]')] as HTMLElement[];
     expect(rows[0]!.querySelector('[part="cancel-button"]')).to.exist;
     expect(rows[1]!.querySelector('[part="cancel-button"]')).to.exist;
-    expect(rows[2]!.querySelector('[part="cancel-button"]')).to.not.exist;
-    expect(rows[3]!.querySelector('[part="cancel-button"]')).to.not.exist;
-    expect(rows[4]!.querySelector('[part="cancel-button"]')).to.not.exist;
+    expect((rows[2]!.querySelector('[part="cancel-button"]')) == null).to.be.true;
+    expect((rows[3]!.querySelector('[part="cancel-button"]')) == null).to.be.true;
+    expect((rows[4]!.querySelector('[part="cancel-button"]')) == null).to.be.true;
   });
 
   it('fires lr-retry with { itemId, attempt } on click, attempt = (attempts ?? 0) + 1', async () => {
@@ -490,7 +490,7 @@ describe('virtualization', () => {
       ></lr-ingestion-queue>`,
     )) as LyraIngestionQueue;
     expect(el.shadowRoot!.querySelector('[part="list"]')).to.exist;
-    expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('lr-virtual-list')) == null).to.be.true;
   });
 
   it('switches to an internal lr-virtual-list above virtualizeAt, wired with items/keyFunction', async () => {
@@ -504,7 +504,7 @@ describe('virtualization', () => {
       renderItem: (item: unknown, index: number) => unknown;
     } | null;
     expect(virtualList).to.exist;
-    expect(el.shadowRoot!.querySelector('[part="list"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="list"]')) == null).to.be.true;
     expect(virtualList!.items).to.equal(items);
     expect(virtualList!.keyFunction(items[1], 1)).to.equal('2');
     await nextFrame();

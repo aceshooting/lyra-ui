@@ -16,7 +16,7 @@ it('emits one cancelable lr-invalid alias when a validity check fails', async ()
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
-  expect(aliases[0].target).to.equal(el);
+  expect((aliases[0].target) === (el)).to.equal(true);
   expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
   expect(aliases[0].cancelable).to.be.true;
   // Nothing cancelled it, so the browser's own validation UI stays enabled.
@@ -770,7 +770,7 @@ it('temporarily disables through a fieldset without overwriting the author disab
 });
 
 it('does not mark touched/hasInteracted from a blur caused by the control itself becoming disabled', async () => {
-  // Regression test for fr_asxOgk4UhNB07xevCWwFVQ, the same root cause already fixed in
+  // Regression test for the same root cause already fixed in
   // <lr-input>'s onBlur, reached here by a different path: <lr-checkbox> has no NATIVE
   // disableable form control to force-blur -- its focus target is a plain `role="checkbox"` span
   // whose own `tabindex` alone would not cause a forced blur (confirmed: a bare `<span tabindex>`

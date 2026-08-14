@@ -223,13 +223,11 @@ it('cascades disablement from an ancestor <fieldset disabled> via formDisabledCa
 });
 
 it('does not redundantly requestUpdate() from formDisabledCallback when it merely echoes the element\'s own disabled attribute change', async () => {
-  // Regression test for fr_asxOgk4UhNB07xevCWwFVQ. The browser invokes formDisabledCallback() not
+  // Regression test: the browser invokes formDisabledCallback() not
   // only for ancestor <fieldset disabled> cascading (its doc comment's stated purpose) but also
-  // whenever the element's OWN `disabled` content attribute is added/removed directly -- confirmed
-  // via a captured stack trace showing it fire as a second, separate custom-element reaction to
-  // the exact same toggleAttribute('disabled', ...) call that also drives the `disabled` property
-  // setter (and a dedicated scratch repro against a bare FACE element with zero fieldset anywhere
-  // in the tree, which still logs formDisabledCallback(true)/formDisabledCallback(false)). That
+  // whenever the element's OWN `disabled` content attribute is added/removed directly. The
+  // platform fires it as a second, separate custom-element reaction to the same
+  // toggleAttribute('disabled', ...) call that also drives the `disabled` property setter. That
   // setter already calls updateValidity()/syncValidityStates()/requestUpdate() for the same
   // transition, so formDisabledCallback's own unconditional, unguarded requestUpdate() was pure
   // redundant work reacting to a change it did not need to react to -- and, being a second
@@ -240,7 +238,7 @@ it('does not redundantly requestUpdate() from formDisabledCallback when it merel
   // outcome -- own `disabled` already accounts for it.
   //
   // The rising edge (false -> true) is the one that matters here: it is what a
-  // `?disabled=${true}` lit-html binding produces, and the shape the reported race actually needs
+  // `?disabled=${true}` lit-html binding produces, and the shape the update race actually needs
   // (own `disabled` and `value` changing together on a control that already has a completed
   // render behind it). It must cost exactly the one requestUpdate() the `disabled` setter itself
   // already made.

@@ -623,8 +623,83 @@ test('package lifecycle and root custom-elements metadata are clean-checkout saf
   const lyraPackage = JSON.parse(
     readFileSync(path.join(repoRoot, 'packages/lyra-ui/package.json'), 'utf8'),
   );
+  const lyraManifestRelativePath = path.posix.join(
+    'packages/lyra-ui',
+    lyraPackage.customElements,
+  );
+  const rootManifestPath = path.resolve(repoRoot, rootPackage.customElements);
+  const lyraManifestPath = path.resolve(repoRoot, lyraManifestRelativePath);
 
-  assert.equal(rootPackage.customElements, 'packages/lyra-ui/custom-elements.json');
+  assert.equal(rootPackage.customElements, lyraManifestRelativePath);
+  assert.equal(rootManifestPath, lyraManifestPath);
+  const customElementsManifest = JSON.parse(readFileSync(rootManifestPath, 'utf8'));
+  assert.equal(customElementsManifest.schemaVersion, '1.0.0');
+  assert.ok(
+    Array.isArray(customElementsManifest.modules) && customElementsManifest.modules.length > 0,
+    'the root customElements target must be a populated custom-elements manifest',
+  );
   assert.equal(lyraPackage.scripts.pretest, 'pnpm run build');
   assert.match(lyraPackage.scripts.prepack, /^pnpm run package-metadata &&/);
+});
+
+test('contributor docs follow the package-manager authority', () => {
+  const rootPackage = JSON.parse(readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+  const packageManagerVersion = rootPackage.packageManager.replace(/^pnpm@/u, '');
+  const guide = readFileSync(path.join(repoRoot, 'docs/agents/ci-and-gates.md'), 'utf8');
+
+  assert.match(guide, new RegExp(`pnpm ${packageManagerVersion.replaceAll('.', '\\.')}`, 'u'));
+  assert.doesNotMatch(guide, /pnpm 11\.20\.0/u);
+});
+
+test('local platform legs keep nested package-manager calls on their selected toolchain', () => {
+  const ciScript = readFileSync(path.join(repoRoot, 'scripts/ci.sh'), 'utf8');
+  const pnpmProxy = readFileSync(path.join(repoRoot, 'scripts/ci-bin/pnpm'), 'utf8');
+  const runWithToolchain = ciScript.slice(
+    ciScript.indexOf('run_with_toolchain()'),
+    ciScript.indexOf('\nvalidate_platform_toolchain()', ciScript.indexOf('run_with_toolchain()')),
+  );
+
+  assert.match(
+    runWithToolchain,
+    /PATH="\$CI_SH_ROOT\/scripts\/ci-bin:\$\(dirname "\$node_bin"\):\$PATH"/u,
+  );
+  assert.match(runWithToolchain, /CI_SH_SELECTED_PNPM_BIN="\$pnpm_bin"/u);
+  assert.match(runWithToolchain, /npm_config_scripts_prepend_node_path=false/u);
+  assert.match(pnpmProxy, /"\$CI_SH_SELECTED_PNPM_BIN" "\$@"/u);
+  assert.match(pnpmProxy, /npm_config_manage_package_manager_versions=false/u);
+});
+
+test('policy-summary registration and authored docs match its actual composition', () => {
+  const registration = readFileSync(
+    path.join(
+      repoRoot,
+      'packages/lyra-ui/src/components/agent-tools/policy-summary/policy-summary.ts',
+    ),
+    'utf8',
+  );
+  const readme = readFileSync(path.join(repoRoot, 'packages/lyra-ui/README.md'), 'utf8');
+  const authored = readFileSync(
+    path.join(repoRoot, 'packages/lyra-ui/llms/agent-tools.md'),
+    'utf8',
+  );
+
+  assert.doesNotMatch(registration, /overlays\/callout/u);
+  const catalogRow = readme.split('\n').find((line) => line.includes('<lr-policy-summary>')) ?? '';
+  assert.doesNotMatch(catalogRow, /lr-callout/u);
+  const section = authored.split('## `lr-policy-summary`')[1]?.split('\n## ')[0] ?? '';
+  assert.doesNotMatch(section, /tones? the badge and callout/iu);
+});
+
+test('interactive graph-legend story exposes visible feedback without a duplicate live region', () => {
+  const story = readFileSync(
+    path.join(
+      repoRoot,
+      'packages/lyra-ui/src/components/retrieval/graph-legend/graph-legend.stories.ts',
+    ),
+    'utf8',
+  );
+
+  assert.doesNotMatch(story, /@lr-visibility-change=\$\{[^}]*console\.log/su);
+  assert.match(story, /<p data-visibility-feedback>/u);
+  assert.doesNotMatch(story, /data-visibility-feedback[^>]*aria-live/u);
 });

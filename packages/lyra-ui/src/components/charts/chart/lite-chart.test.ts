@@ -217,7 +217,7 @@ it('uses one roving tab stop, arrow/Home/End navigation, and a data-table altern
 
   // BAR_DATASETS is multi-series, so the screen-reader alternative is the grouped data table
   // (one row per category, one column per series), not the flat single-series data list.
-  expect(el.shadowRoot!.querySelector('[part="data-list"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="data-list"]')) == null).to.be.true;
   expect(el.shadowRoot!.querySelectorAll('[part="data-table"] tbody tr')).to.have.length(BAR_LABELS.length);
 });
 
@@ -358,7 +358,7 @@ it('renders no legend by default, and one legend-item per dataset when legend is
     .labels=${BAR_LABELS}
     .datasets=${BAR_DATASETS}
   ></lr-lite-chart>`);
-  expect(el.shadowRoot!.querySelector('[part="legend"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="legend"]')) == null).to.be.true;
 
   el.legend = true;
   await el.updateComplete;
@@ -501,7 +501,7 @@ it('renders the legend with just the label when legendText is unset (unchanged d
   ></lr-lite-chart>`);
   const items = [...el.shadowRoot!.querySelectorAll('[part="legend-item"]')];
   expect(items.map((i) => i.textContent!.trim())).to.deep.equal(['A', 'B']);
-  expect(el.shadowRoot!.querySelector('[part="legend-text"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="legend-text"]')) == null).to.be.true;
 });
 
 it('appends legendText output next to each series label when set', async () => {
@@ -1719,9 +1719,9 @@ describe('minBarHeight', () => {
 
 describe('scale="sqrt" stacked proportionality', () => {
   it('sqrt-compresses the bar total, then splits it linearly by each segment share of that bar', async () => {
-    // Reproduces the filed bug's exact repro: three categories, one stacked bar, values
-    // 10/10/80 (domain max 100) -- segment heights must come out to 10%/10%/80% of the
-    // sqrt-compressed bar height, not 31.6%/13.1%/55.3% (today's buggy per-segment-position sqrt).
+    // With three categories, one stacked bar, and values 10/10/80 (domain max 100), segment
+    // heights must be 10%/10%/80% of the sqrt-compressed bar height, not
+    // 31.6%/13.1%/55.3% from applying sqrt to each segment position.
     const el = await mount(html`
       <lr-lite-chart
         type="bar"
@@ -1812,7 +1812,7 @@ describe('scale="sqrt" stacked proportionality', () => {
     const bars = el.shadowRoot!.querySelectorAll('[part="bar"]');
     const h0 = Number(bars[0]!.getAttribute('height'));
     const h1 = Number(bars[1]!.getAttribute('height'));
-    // sqrt(10/90) ≈ 0.333 of h1's height -- same formula as before this task.
+    // sqrt(10/90) ≈ 0.333 of h1's height, preserving the established scale formula.
     expect(h0 / h1).to.be.closeTo(Math.sqrt(10 / 90), 0.02);
   });
 });
@@ -1870,7 +1870,7 @@ describe('multi-series screen-reader data table', () => {
     await el.updateComplete;
     const table = el.shadowRoot!.querySelector('table[part="data-table"]');
     expect((table) != null).to.equal(true);
-    expect(el.shadowRoot!.querySelector('ul[part="data-list"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('ul[part="data-list"]')) == null).to.be.true;
     const headerCells = table!.querySelectorAll('thead th');
     // The corner cell carries a visible category header (the localized 'chartCategory' string,
     // 'Category' with no locale registered) rather than an empty <th> -- matching the sibling
@@ -1917,7 +1917,7 @@ describe('multi-series screen-reader data table', () => {
     el.datasets = [{ label: 'Revenue', data: [10, 20] }];
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('ul[part="data-list"]')).to.exist;
-    expect(el.shadowRoot!.querySelector('table[part="data-table"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('table[part="data-table"]')) == null).to.be.true;
   });
 
   it('caps generated marks and the single-series alternative at 1,000 endpoint-preserving records', async () => {

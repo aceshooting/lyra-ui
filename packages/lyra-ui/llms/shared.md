@@ -133,7 +133,8 @@ The entry points, then:
 - **Document anchor/highlight types.** The granular document-viewer entry owns and exports
   `LyraAnchor`, `LyraAnchorKind`, `LyraHighlight`, `LyraHighlightTone`,
   `AnchorTargetCapabilities`, `HighlightActivateDetail`, `TextSelectDetail`, and
-  `AnchorResultDetail`:
+  `AnchorResultDetail`. The registration-free root now intentionally re-exports these contracts,
+  together with `LyraAnchorTarget` and `LyraAnchorTargetEventMap`, and all are semver-covered:
   ```ts
   import type {
     LyraAnchor,
@@ -141,7 +142,8 @@ The entry points, then:
     AnchorTargetCapabilities,
   } from '@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer.js';
   ```
-  Use that entry instead of depending on incidental root-barrel coverage.
+  Prefer the granular entry for component-local imports; use the root export when an application
+  deliberately shares the contracts across several viewer integrations.
 - **`lr-flag`** registers from the barrel, but resolving a flag by `country`/`language` (rather than
   a pre-resolved `src`) additionally needs
   `import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';` once.
@@ -1554,6 +1556,13 @@ feature-request API described in "When no component fits" so it can be promoted 
   "Events"), the typed `addEventListener` overload (see "TypeScript"), `locale`/`strings` (see
   "Localization"), and protected `localize()` / `effectiveLocale` / `effectiveDirection`, all
   memoized once per update cycle.
+- **`anchor-target` → `LyraAnchorTarget` and `LyraAnchorTargetEventMap`** — type-only structural
+  contracts for viewers that expose Lyra's shared document-anchor surface. Import them from
+  `@aceshooting/lyra-ui/utilities/anchor-target.js` when a host, adapter, or external viewer needs
+  to accept or implement `highlights`, `activeHighlightId`, `anchor`, `anchorKinds`, and
+  `scrollToAnchor()` without importing the internal mixin. The event map types the shared
+  `lr-highlight-activate`, `lr-text-select`, and `lr-anchor-result` listener vocabulary; a concrete
+  viewer can support only the events it actually emits, as documented on that component.
 - **`positioner` → `place(anchor, popup, opts?): () => void`** — thin wrapper over
   `@floating-ui/dom`'s `computePosition` + `autoUpdate`. Forces `strategy: 'fixed'` (matching the
   popup's own `position: fixed` CSS — otherwise it lands offset by the page scroll), middleware

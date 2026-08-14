@@ -37,12 +37,13 @@ level. `<lr-badge>`/`<lr-tag>` made the identical shape change, with the identic
   scale for typography, padding, gap, and icon size; `m` preserves the original chip dimensions
 - `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected) —
   **renamed from `tone` in 8.0.0, with no alias** (see above). `<lr-badge>`, `<lr-callout>` and
-  `<lr-toast-item>` all already spelled it `variant`. The exported `ChipTone` *type* name is kept
-  alongside `ChipVariant`, so an existing `import type { ChipTone }` keeps resolving to the same five
-  values. It tints the whole surface using the loud-color-on-quiet-tint convention: background is the
+  `<lr-toast-item>` all already spelled it `variant`. It tints the whole surface using the
+  loud-color-on-quiet-tint convention: background is the
   variant's quiet fill, text/icon its loud fill, both read from the shared semantic grid. `neutral`
   deliberately opts out of that grid and falls back to a plain bordered-surface look.
 - `removable: boolean = false` (reflected — shows the remove (×) button)
+- `disabled: boolean = false` (reflected) — disables the active native toggle/remove control,
+  blocks focus and activation, and suppresses selection/removal requests without mutating state
 - `pill: boolean = false` (reflected) — **new in 8.0.0.** Fully-rounded ends instead of the default
   rounded rectangle; the same property `<lr-badge>`/`<lr-tag>` carry. Since it defaults to `false`,
   `pill="false"` is not a way to switch it off — remove the attribute, or assign `.pill = false`.
@@ -70,7 +71,8 @@ Enter/Space with the proposed next state when toggle mode is active and `removab
 Calling `preventDefault()` keeps the current `selected` state unchanged)
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the active internal control
-(toggle or remove button); a passive chip's `click()` retains ordinary host behavior.
+(toggle or remove button); a disabled control refuses focus/click, and a passive chip's `click()`
+retains ordinary host behavior.
 
 **Slots:** default (the chip's label content; inert in toggle mode, so move links/buttons outside a
 toggleable chip), `icon` (optional leading icon or status dot; nothing reserved for it — no extra

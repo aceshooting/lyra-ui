@@ -380,6 +380,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     // role/aria-disabled/aria-checked live on the host (see the class doc),
     // so they're plain imperative attribute writes here rather than part of
     // render()'s shadow-DOM template -- mirrors lr-tree-item's identical

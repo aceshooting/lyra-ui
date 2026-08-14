@@ -120,8 +120,8 @@ describe('DocumentAnchorTarget mixin', () => {
 
   it('scrollToAnchor degrades a throwing applyAnchor to a resolved false and still emits lr-anchor-result', async () => {
     // Regression for the mixin's default scrollToAnchor()/performScrollToAnchor() safety net
-    // (finding 7, docs/superpowers/plans/2026-08-04-full-sweep-remediation-plan.md): a throwing
-    // applyAnchor() must not leave scrollToAnchor()'s documented "always reports a definite
+    // when applyAnchor() throws: the failure must not leave scrollToAnchor()'s documented
+    // "always reports a definite
     // result" contract broken by rejecting instead of resolving.
     const el = await fixture<ThrowingStubAnchorTarget>(
       litHtml`<lr-anchor-target-test-throwing></lr-anchor-target-test-throwing>`,

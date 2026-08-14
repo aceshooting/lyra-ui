@@ -24,9 +24,12 @@ export const styles = css`
     justify-content: stretch;
   }
   [part~='panel'] {
-    inline-size: min(var(--size, var(--lr-drawer-width, var(--lr-size-24rem))), 100%);
+    inline-size: min(
+      var(--size, var(--lr-drawer-width, var(--width, var(--lr-dialog-width, var(--lr-size-24rem))))),
+      100%
+    );
     block-size: 100%;
-    max-inline-size: 100%;
+    max-inline-size: min(var(--lr-dialog-max-width, 100%), 100%);
     max-block-size: 100%;
     border-radius: 0;
     /* Modal layer, one step below lr-dialog's --lr-shadow-xl: an edge-anchored sheet is flush with
@@ -38,6 +41,7 @@ export const styles = css`
   :host([placement='bottom']) [part~='panel'] {
     inline-size: 100%;
     block-size: min(var(--size, var(--lr-drawer-height, var(--lr-size-24rem))), 100%);
+    max-inline-size: 100%;
     max-block-size: 100%;
   }
   :host([placement='end']) [part~='panel'] {

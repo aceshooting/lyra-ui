@@ -15,7 +15,7 @@ const renderPromptInput = () => html`
   <lr-prompt-input
     value="Summarize the attached report for the executive team."
     .attachments=${[
-      { id: 'report', name: 'annual-report.pdf', mimeType: 'application/pdf' },
+      { id: 'report', name: 'annual-report.pdf', mimeType: 'application/pdf', bytes: 2_408_448 },
     ]}
     .modelCatalog=${['fast', 'accurate']}
     model="accurate"

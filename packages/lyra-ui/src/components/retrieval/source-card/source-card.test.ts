@@ -96,7 +96,7 @@ it('does not render a show-more toggle when the full slot is empty', async () =>
   const el = (await fixture(
     html`<lr-source-card title="a.pdf"><span slot="excerpt">Preview</span></lr-source-card>`,
   )) as LyraSourceCard;
-  expect(el.shadowRoot!.querySelector('[part="toggle"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="toggle"]')) == null).to.be.true;
   expect((el.shadowRoot!.querySelector('[part="full"]') as HTMLElement).hidden).to.be.true;
 });
 
@@ -118,7 +118,7 @@ it('reveals a toggle reactively when full-slot content is added after initial mo
   const el = (await fixture(
     html`<lr-source-card title="a.pdf"><span slot="excerpt">Preview</span></lr-source-card>`,
   )) as LyraSourceCard;
-  expect(el.shadowRoot!.querySelector('[part="toggle"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="toggle"]')) == null).to.be.true;
 
   const fullSlot = el.shadowRoot!.querySelector('slot[name="full"]') as HTMLSlotElement;
   const full = document.createElement('span');
@@ -148,7 +148,7 @@ it('collapses the full wrapper and removes the toggle when its only slotted cont
   await slotChanged;
   await el.updateComplete;
 
-  expect(el.shadowRoot!.querySelector('[part="toggle"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="toggle"]')) == null).to.be.true;
   expect((el.shadowRoot!.querySelector('[part="full"]') as HTMLElement).hidden).to.be.true;
 });
 

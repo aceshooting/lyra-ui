@@ -122,8 +122,8 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/exportbutton--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/feedback-alert--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/feedback-callout--docs</loc></url>
-  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/feedback-progress--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/feedback-progress-bar--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/feedback-progress-guides--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/feedback-progress-ring--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/feedback-spinner--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/feedback-toast-item--docs</loc></url>
@@ -215,7 +215,7 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/observability-trace-tree--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/overlay-dropdown--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/overlay-popover--docs</loc></url>
-  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/overlay-positioned-surfaces--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/overlay-positioned-surface-guides--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/overlay-tooltip--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/overlays-popup--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/pagination--docs</loc></url>
@@ -265,6 +265,8 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/switch--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/table--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/tabs--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/tabs-tab--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/tabs-tab-panel--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/tasklist--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/terminal--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/test-results--docs</loc></url>
@@ -272,6 +274,7 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/thinkingpanel--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/threadlist--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/timeline--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/timeline-item--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/timerange--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/toast--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/token-input--docs</loc></url>
@@ -290,7 +293,7 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/utilities-format-bytes--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/utilities-format-date--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/utilities-format-number--docs</loc></url>
-  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/utilities-formatting--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/utilities-formatting-guides--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/utilities-include--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/utilities-intersection-observer--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/utilities-mutation-observer--docs</loc></url>

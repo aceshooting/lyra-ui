@@ -142,7 +142,7 @@ describe('lr-browser-frame', () => {
       html`<lr-browser-frame frame-src="javascript:alert(1)"></lr-browser-frame>`,
     )) as LyraBrowserFrame;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="frame"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="frame"]')) == null).to.be.true;
   });
 
   it('renders an <img> for a safe frameSrc, ignored once the default slot is populated', async () => {
@@ -152,7 +152,7 @@ describe('lr-browser-frame', () => {
       ></lr-browser-frame>`,
     )) as LyraBrowserFrame;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="frame"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="frame"]')) == null).to.be.true;
   });
 
   it('clears image-specific ping geometry when slotted content replaces the image', async () => {
@@ -206,12 +206,12 @@ describe('lr-browser-frame', () => {
 
     el.frameSrc = '';
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="frame"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="frame"]')) == null).to.be.true;
     expect(pingLeft()).to.equal('50%');
 
     el.frameSrc = 'javascript:alert(1)';
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="frame"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="frame"]')) == null).to.be.true;
     expect(pingLeft()).to.equal('50%');
   });
 

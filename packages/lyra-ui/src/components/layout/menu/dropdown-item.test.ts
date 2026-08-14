@@ -260,7 +260,7 @@ describe('<lr-dropdown-item>', () => {
     item.focus();
     const focusEvent = await focused;
     expect(focusEvent).to.be.instanceOf(FocusEvent);
-    expect(focusEvent.target).to.equal(item);
+    expect((focusEvent.target) === (item)).to.equal(true);
     expect(focusEvent.bubbles).to.equal(false);
     expect(focusEvent.cancelable).to.equal(false);
 
@@ -268,7 +268,7 @@ describe('<lr-dropdown-item>', () => {
     item.blur();
     const blurEvent = await blurred;
     expect(blurEvent).to.be.instanceOf(FocusEvent);
-    expect(blurEvent.target).to.equal(item);
+    expect((blurEvent.target) === (item)).to.equal(true);
     expect(blurEvent.bubbles).to.equal(false);
     expect(blurEvent.cancelable).to.equal(false);
     expect(translatedEvents).to.equal(0);

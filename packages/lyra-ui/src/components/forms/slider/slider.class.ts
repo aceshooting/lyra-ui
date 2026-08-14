@@ -721,7 +721,8 @@ export class LyraSlider extends LyraSliderBase {
     this.syncValidityStates();
   }
 
-  protected override firstUpdated(): void {
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     if (!this.autofocus) return;
     const owner = this.ownerDocument.defaultView;
     if (!owner) return;
@@ -925,12 +926,12 @@ export class LyraSlider extends LyraSliderBase {
   }
 
   /** Silently advances the focused handle, matching native range IDL semantics. */
-  stepUp(steps = 1): void {
+  stepUp(steps: number = 1): void {
     this.stepBy(steps);
   }
 
   /** Silently retreats the focused handle, matching native range IDL semantics. */
-  stepDown(steps = 1): void {
+  stepDown(steps: number = 1): void {
     this.stepBy(-steps);
   }
 

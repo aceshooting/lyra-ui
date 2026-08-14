@@ -59,7 +59,7 @@ it('defaults to capabilities=["files"], rendering a single trigger button and no
   expect(el.disabled).to.be.false;
   const btn = trigger(el);
   expect(btn.getAttribute('aria-label')).to.equal('Attach files');
-  expect(el.shadowRoot!.querySelector('lr-menu')).to.be.null;
+  expect((el.shadowRoot!.querySelector('lr-menu')) === null).to.be.true;
 });
 
 it('uses an image-specific aria-label for a single image capability', async () => {
@@ -296,8 +296,7 @@ it('renders a lr-menu with one item per capability, in order, once more than one
   el.capabilities = ['files', 'image', 'camera'];
   await el.updateComplete;
 
-  expect(el.shadowRoot!.querySelector('[part="trigger"]'), 'no single-capability trigger part while multi').to.be
-    .null;
+  expect((el.shadowRoot!.querySelector('[part="trigger"]')) === null, 'no single-capability trigger part while multi').to.be.true;
   const menu = el.shadowRoot!.querySelector('[part="menu"]');
   expect((menu) != null).to.equal(true);
   expect(menu!.tagName.toLowerCase()).to.equal('lr-menu');

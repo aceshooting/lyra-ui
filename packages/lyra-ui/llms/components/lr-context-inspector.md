@@ -45,7 +45,11 @@ segment's embedded `lr-citation-badge`), `lr-citation-open` (`detail: { sourceId
 number; href?: string }`, the "full preview" signal), `lr-copy` (`detail: { text: string }`, from the
 embedded `lr-copy-button`), `lr-export` (`detail: { format: string }`, from the embedded
 `lr-export-button`), `lr-export-complete` (`detail: { format: string }`, after a non-cancelled export
-finishes).
+finishes), `lr-error` (the embedded clipboard write failed), `lr-copy-error` (`detail: { text:
+string; reason: string }`, the detailed compatibility event for that clipboard failure),
+`lr-export-error` (`detail: { format: ExportFormat; error: unknown }`, the embedded export could not
+complete), and the cancelable `lr-show` / `lr-hide` lifecycle events from the embedded export-format
+menu. These composed child events surface unchanged; the inspector does not emit duplicate copies.
 
 **CSS parts:** `base`, `toolbar`,
 `segments`, `segment`, `segment-header`, `segment-label`, `segment-text`, `segment-tokens`,

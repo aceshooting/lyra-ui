@@ -1,3 +1,4 @@
+import type { PropertyValues } from 'lit';
 import { html, svg, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -125,7 +126,8 @@ export class LyraGauge extends LyraElement {
     );
   }
 
-  protected override willUpdate(): void {
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     // Normalize a reversed min > max domain the same way `ratio` does, so the
     // announced aria-value* trio always agrees with the visual fill instead
     // of aria-valuenow pinning to one bound regardless of `value` (and

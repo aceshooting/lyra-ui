@@ -24,6 +24,7 @@ import {
   validateComponentMetadata,
   validateManifestMetadataProjection,
 } from './component-metadata.mjs';
+import { generateManifest } from './generate-manifest.mjs';
 import cemConfig from '../custom-elements-manifest.config.js';
 import {
   buildComponentMetadataIndex,
@@ -56,7 +57,7 @@ test('checked-in metadata covers the current manifest and inventory', () => {
   assert.equal(state.metadata.assignments['introduced-mapped-experimental'].length, 2);
   assert.equal(state.metadata.assignments['compatibility-stable'].length, 1);
   assert.equal(state.metadata.assignments['introduced-stable'].length, 13);
-  assert.equal(state.metadata.deprecations.length, 10);
+  assert.equal(state.metadata.deprecations.length, 15);
 });
 
 test('new mirrors of experimental upstream media surfaces remain experimental everywhere authored', () => {
@@ -527,6 +528,31 @@ test('CEM projection surfaces status, since, policy, and structured member depre
   }), []);
 });
 
+test('authored compatibility parts carry deprecation markers before metadata validation', async () => {
+  const { manifest } = await generateManifest({ write: false });
+  const declarations = new Map(
+    manifest.modules
+      .flatMap((module) => module.declarations ?? [])
+      .filter((declaration) => declaration.tagName)
+      .map((declaration) => [declaration.tagName, declaration]),
+  );
+
+  for (const [tag, parts] of [
+    ['lr-file-input', ['base', 'label']],
+    ['lr-qr-code', ['base']],
+  ]) {
+    const declaration = declarations.get(tag);
+    assert.ok(declaration, `${tag} declaration`);
+    for (const name of parts) {
+      const part = declaration.cssParts?.find((entry) => entry.name === name);
+      assert.ok(part, `${tag}::part(${name})`);
+      assert.match(part.description ?? '', /^Deprecated\b/i, `${tag}::part(${name}) source marker`);
+      assert.equal(part.deprecation?.kind, 'part', `${tag}::part(${name}) structured policy`);
+      assert.ok(part.deprecation?.replacement?.name, `${tag}::part(${name}) replacement`);
+    }
+  }
+});
+
 test('Storybook presentation exposes central maturity and structured deprecations', () => {
   const state = fixture();
   const manifest = structuredClone(state.manifest);
@@ -616,6 +642,50 @@ test('the final analyzer plugin projects central metadata into generated CEM', (
   plugin.packageLinkPhase({ customElementsManifest: manifest });
   assert.equal(manifest.modules[0].declarations[0].status, 'stable');
   assert.equal(manifest.modules[0].declarations[0].since, '4.0.0');
+});
+
+test('the registration analyzer records module-evaluation definitions but ignores lazy helper calls', () => {
+  const plugin = cemConfig.plugins.find((entry) => entry.name === 'lr-define-element-registration');
+  assert.ok(plugin);
+  const SyntaxKind = {
+    CallExpression: 1,
+    SourceFile: 2,
+    FunctionDeclaration: 3,
+  };
+  const sourceFile = { kind: SyntaxKind.SourceFile, parent: null };
+  const expressionStatement = { kind: 99, parent: sourceFile };
+  const helperFunction = { kind: SyntaxKind.FunctionDeclaration, parent: sourceFile };
+  const lazyExpressionStatement = { kind: 99, parent: helperFunction };
+  const call = (parent) => ({
+    kind: SyntaxKind.CallExpression,
+    parent,
+    expression: { getText: () => 'defineElement' },
+    arguments: [{ text: 'fixture' }, { getText: () => 'LyraFixture' }],
+  });
+
+  const moduleDoc = { exports: [] };
+  plugin.analyzePhase({ ts: { SyntaxKind }, node: call(lazyExpressionStatement), moduleDoc });
+  assert.deepEqual(moduleDoc.exports, [], 'a function-scoped helper call is not an import-time definition');
+
+  plugin.analyzePhase({ ts: { SyntaxKind }, node: call(expressionStatement), moduleDoc });
+  assert.deepEqual(moduleDoc.exports, [{
+    kind: 'custom-element-definition',
+    name: 'lr-fixture',
+    declaration: { name: 'LyraFixture' },
+  }]);
+});
+
+test('generated CSS custom-property names are concrete valid identifiers', () => {
+  const state = fixture();
+  const graph = state.manifest.modules
+    .flatMap((module) => module.declarations ?? [])
+    .find((entry) => entry.tagName === 'lr-graph');
+  const names = graph.cssProperties.map((entry) => entry.name);
+
+  assert.equal(names.some((name) => name.includes('..')), false);
+  for (let index = 1; index <= 8; index += 1) {
+    assert.ok(names.includes(`--lr-graph-cat-${index}`), `missing concrete graph palette slot ${index}`);
+  }
 });
 
 test('source annotations replace stale tags on the exact component JSDoc idempotently', () => {

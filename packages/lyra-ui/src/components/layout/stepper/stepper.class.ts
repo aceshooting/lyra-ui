@@ -252,7 +252,8 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     this.resetResizeObserver();
   }
 
-  protected override firstUpdated(): void {
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     if (this.orientationBreakpoints.containerObservationEnabled)
       this.armResizeObserver();
   }

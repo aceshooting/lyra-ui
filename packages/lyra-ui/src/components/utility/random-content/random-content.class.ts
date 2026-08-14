@@ -198,7 +198,8 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     super.disconnectedCallback();
   }
 
-  protected override firstUpdated(): void {
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     // Handles slotted content present at parse time: the slot's assigned
     // elements are already resolved synchronously once the shadow tree
     // renders, so this doesn't need to wait on the (async, and not
@@ -211,6 +212,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (this.hasUpdatedOnce) {
       if (changed.has('items')) {
         this.reselect({ announce: this.selectionAnnouncementsArmed });

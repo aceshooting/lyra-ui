@@ -6,7 +6,9 @@
 - **Class** `LyraQrCode`, also available unregistered from `@aceshooting/lyra-ui/components/media/qr-code/qr-code.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecations** none
+- **Deprecated part** `base` since `8.2.3`; use part `::part(qr-code)`; removal not before `10.0.0` — The qr-code part names the rendered code wrapper explicitly; base remains on that same node during the compatibility window.
+- **Deprecated property** `background` / `background` since `8.2.3`; use host-css-property `style="background: …"`; removal not before `10.0.0` — The standard host background property themes both backing paint and canvas while background remains an attribute compatibility alias.
+- **Deprecated property** `fill` / `fill` since `8.2.3`; use host-css-property `style="color: …"`; removal not before `10.0.0` — The standard host color property themes foreground modules while fill remains an attribute compatibility alias.
 - **Optional peers** `qrcode` — see `llms/peers.md`
 - **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

@@ -112,11 +112,8 @@ it('keyboard: Space toggles the focused row, ArrowDown moves focus, ArrowRight e
   const tree = el.shadowRoot!.querySelector('[part="tree"]')!;
   tree.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
   await el.updateComplete;
-  // folder1 expanded: folder1 + its 2 children (doc1, doc2) + doc3 = 4. (The plan brief's literal
-  // test asserted 3 here, which is inconsistent with the same `sources` fixture's folder1 having
-  // 2 children -- as verified by every other test in this file, e.g. the tri-state and
-  // folder-toggle-selects-both-descendants tests. Corrected to 4 to match the fixture and the
-  // brief's own reference implementation, which does produce 4.)
+  // folder1 expanded: folder1 + its 2 children (doc1, doc2) + doc3 = 4. This matches the `sources`
+  // fixture and the tri-state/folder-toggle tests, which also treat both children as visible.
   expect(el.shadowRoot!.querySelectorAll('[role="treeitem"]').length).to.equal(4);
 
   const listener = oneEvent(el, 'lr-sources-change');

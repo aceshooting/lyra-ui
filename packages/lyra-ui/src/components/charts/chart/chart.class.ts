@@ -763,7 +763,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * Point-based scatter/bubble series are left unchanged because their x/y/r coordinates need a
    * richer host-defined append contract.
    */
-  appendData(label: string, values: (number | null)[], maxPoints = 0): void {
+  appendData(label: string, values: (number | null)[], maxPoints: number = 0): void {
     const limit = Number.isFinite(maxPoints) ? Math.max(0, Math.floor(maxPoints)) : 0;
     if (this.hasExplicitConfigData()) {
       const effective = this.effectiveData();
@@ -1004,14 +1004,15 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       // The server always renders the stable loading branch. A cached/fast optional-peer import can
       // otherwise settle while the browser is still upgrading the declarative-shadow-DOM host,
       // switching render() to the canvas branch before Lit's first hydration pass and forcing a
-      // full shadow-tree replacement. Let that first update claim the server markers before any
-      // peer result is allowed to change the template. On an ordinary client-only mount this keeps
-      // the existing loading skeleton for exactly the initial update as well.
+      // full shadow-tree replacement. Await the initial update, then route the branch change through
+      // LyraElement's hydration release seam: observers can capture the claimed server nodes before
+      // the correction, while an ordinary client-only mount continues immediately.
       try {
         await this.updateComplete;
       } catch {
         return;
       }
+      await new Promise<void>((resolve) => this.updateBrowserDerivedState(resolve));
       if (generation !== this.loadGeneration || !this.isConnected) return;
       this.loading = false;
       if (!mod) {

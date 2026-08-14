@@ -32,9 +32,11 @@ document; unresolved highlights and idle/loading/error states never expose an en
 `max-height`). A host `aria-label` names the rendered document by attribute presence, including an
 explicitly empty value; `name` and the localized label are fallbacks. `maxHeight` caps the
 scrollable document body; invalid CSS `max-height` values, declaration breaks, and `url()` are
-ignored. `anchorKinds: readonly LyraAnchorKind[] = ['fragment',
-'text-quote']` (this
-viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
+ignored. The inherited anchor-target properties are `highlights: LyraHighlight[] = []` (property
+only; reassign after mutation), `activeHighlightId: string | null = null` (attribute
+`active-highlight-id`), `anchor: LyraAnchor | string | null = null` (property only), and
+`anchorKinds: readonly LyraAnchorKind[] = ['fragment', 'text-quote']` (this viewer's supported
+`LyraAnchor.kind` values).
 
 **Methods:** `getHeadingTree()` returns the document-ordered outline as `DocxHeadingItem[]` (`{ id,
 label, level }`), cached on every successful load. `search(query)` resolves the match count via a

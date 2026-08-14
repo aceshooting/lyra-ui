@@ -193,7 +193,7 @@ it('never runs a slotted custom element through the bare-geometry clone path', a
     </lr-icon-button>
   `);
   // No fallback SVG at all -- lr-flag is a complete element, not bare geometry.
-  expect(el.shadowRoot!.querySelector('[part="fallback"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="fallback"]')) == null).to.be.true;
   const flag = el.querySelector('lr-flag')!;
   expect(flag.shadowRoot!.querySelectorAll('img').length).to.equal(1);
 });
@@ -204,7 +204,7 @@ it('leaves a complete slotted svg/img untouched by the fallback path', async () 
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle></svg>
     </lr-icon-button>
   `);
-  expect(el.shadowRoot!.querySelector('[part="fallback"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="fallback"]')) == null).to.be.true;
   expect(el.querySelectorAll('svg').length).to.equal(1);
 });
 

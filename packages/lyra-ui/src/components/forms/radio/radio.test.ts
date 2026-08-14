@@ -85,7 +85,7 @@ it('emits one cancelable group-owned lr-invalid alias when its aggregate validit
 
   expect(group.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
-  expect(aliases[0].target).to.equal(group);
+  expect((aliases[0].target) === (group)).to.equal(true);
   expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
   expect(aliases[0].cancelable).to.be.true;
   // Nothing cancelled it, so the browser's own validation UI stays enabled.
@@ -241,7 +241,7 @@ it('accepts appearance="button" on lr-radio and exports both WA and Shoelace par
   expect(button.getAttribute('part')!.split(/\s+/)).to.include.members([
     'base', 'button', 'button--checked', 'control',
   ]);
-  expect(el.shadowRoot!.querySelector('[part~="circle"]')).to.equal(null);
+  expect((el.shadowRoot!.querySelector('[part~="circle"]')) === (null)).to.equal(true);
   await expect(el).to.be.accessible();
 });
 
@@ -1013,7 +1013,7 @@ it('emits only the aggregate alias to a capture listener registered before group
   radio.click();
 
   expect(events).to.have.length(1);
-  expect(events[0]!.target).to.equal(group);
+  expect((events[0]!.target) === (group)).to.equal(true);
   expect(events[0]!.detail).to.deep.equal({ value: 'a', radio });
   expect(radioEvents).to.have.length(0);
 });
@@ -1052,7 +1052,7 @@ it('switches between standalone and new-group lr-change ownership without waitin
   expect(radioEvents).to.have.length(1);
   expect(sourceEvents).to.have.length(0);
   expect(destinationEvents).to.have.length(1);
-  expect(destinationEvents[0]!.target).to.equal(destination);
+  expect((destinationEvents[0]!.target) === (destination)).to.equal(true);
   expect(destinationEvents[0]!.detail).to.deep.equal({ value: 'a', radio });
 });
 
@@ -2612,12 +2612,10 @@ describe('lr-radio-group branch-coverage edge cases', () => {
 
     // Calls the group's own reset entry point directly -- exactly what a native `form.reset()`
     // invokes on it -- to isolate its own restoration logic from each *individually*
-    // form-associated owned radio's own separate `formResetCallback()`. See the KNOWN GAP noted in
-    // this task's report: under a real `form.reset()`, each owned radio's own native reset fires
-    // too and (since neither radio here carries a matching `checked` attribute of its own) clobbers
-    // this restored selection back to empty immediately afterward -- a pre-existing radio.class.ts
-    // gap (`formResetCallback()` there is missing the `if (this.currentGroup()) return;` guard that
-    // `formStateRestoreCallback()` already has), left unfixed per this task's scope.
+    // form-associated owned radio's own separate `formResetCallback()`. Under a real `form.reset()`,
+    // each owned radio's native reset also fires and, when neither radio carries a matching
+    // `checked` attribute, replaces this restored selection with an empty value. This assertion is
+    // intentionally limited to the group's own restoration contract.
     group.formResetCallback();
     expect(
       group.value,

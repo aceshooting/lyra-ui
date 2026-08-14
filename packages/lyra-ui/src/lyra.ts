@@ -9,7 +9,6 @@ export type { EnvEntry, LyraEnvListEventMap } from './components/data/env-list/e
 export { LyraHandoffDivider } from './components/conversation/handoff-divider/handoff-divider.class.js';
 export { LyraActivityFeed } from './components/agent-tools/activity-feed/activity-feed.class.js';
 export type {
-  ActivityEntryTone,
   ActivityEntry,
   ActivityFeedMode,
   ActivityFeedToggleDetail,
@@ -198,6 +197,7 @@ export type {
 export { LyraInclude } from './components/viewers/include/include.class.js';
 export type {
   LyraIncludeMode,
+  LyraIncludeErrorDetail,
   LyraIncludeErrorReason,
   LyraIncludeEventMap,
 } from './components/viewers/include/include.class.js';
@@ -310,6 +310,8 @@ export type {
   SplitCollapseState,
   SplitCollapseStateInput,
   SplitCollapseChangeDetail,
+  SplitOrientation,
+  SplitOrientationChangeDetail,
   SplitResizeDetail,
 } from './components/layout/split/split.class.js';
 export { LyraSplitPanel } from './components/layout/split-panel/split-panel.class.js';
@@ -341,9 +343,12 @@ export type {
   LyraPaginationSize,
   LyraPaginationFormat,
   LyraPaginationAppearance,
+  LyraPaginationChangeDetail,
 } from './components/data/pagination/pagination.class.js';
 export { LyraHeatmap } from './components/data/heatmap/heatmap.class.js';
 export type {
+  HeatmapMode,
+  HeatmapScale,
   MatrixCellPos,
   CalendarCellPos,
   HeatmapAnnotation,
@@ -364,6 +369,7 @@ export { LyraFileTree } from './components/data/file-tree/file-tree.class.js';
 export type { FileTreeNode, GitStatus, LyraFileTreeEventMap } from './components/data/file-tree/file-tree.class.js';
 export { LyraCommitCard } from './components/agent-tools/commit-card/commit-card.class.js';
 export type {
+  CommitCardAppearance,
   CommitFileChange,
   LyraCommitCardEventMap,
 } from './components/agent-tools/commit-card/commit-card.class.js';
@@ -427,10 +433,20 @@ export { LyraBoxPlot } from './components/charts/chart/box-plot.class.js';
 export type {
   BoxPlotSeries,
   BoxPlotPoint,
+  LyraBoxPlotPointDetail,
   LyraBoxPlotEventMap,
 } from './components/charts/chart/box-plot.class.js';
 export { LyraGraph } from './components/retrieval/graph/graph.class.js';
-export type { GraphNode, GraphLink } from './components/retrieval/graph/graph.class.js';
+export type {
+  GraphCommunity,
+  GraphLayout,
+  GraphLink,
+  GraphNode,
+  GraphNodeType,
+  GraphPickKind,
+  GraphRenderer,
+  GraphSelectionMode,
+} from './components/retrieval/graph/graph.class.js';
 export { LyraMap } from './components/media/map/map.class.js';
 export type {
   LegendEntry,
@@ -457,6 +473,7 @@ export type {
   PhoneNumberAdapter,
   LibphonenumberModuleLike,
   LyraPhoneInputEventDetail,
+  LyraPhoneInputSize,
   PhoneInputSelectionDirection,
 } from './components/forms/phone-input/phone-input.class.js';
 export { LyraWidget } from './components/layout/widget/widget.class.js';
@@ -569,7 +586,12 @@ export type {
 export { LyraStreamStatus } from './components/conversation/stream-status/stream-status.class.js';
 export type { StreamStatusPhase } from './components/conversation/stream-status/stream-status.class.js';
 export { LyraVirtualList } from './components/layout/virtual-list/virtual-list.class.js';
-export type { VirtualListRange, VirtualListGroup } from './components/layout/virtual-list/virtual-list.class.js';
+export type {
+  VirtualListGroup,
+  VirtualListItemRole,
+  VirtualListRange,
+  VirtualListScroll,
+} from './components/layout/virtual-list/virtual-list.class.js';
 export { LyraConversationItem } from './components/conversation/conversation-item/conversation-item.class.js';
 export type { ConversationItemRenameDetail } from './components/conversation/conversation-item/conversation-item.class.js';
 export { LyraModelSelect } from './components/conversation/model-select/model-select.class.js';
@@ -672,14 +694,29 @@ export type {
   LyraPopupBoundary,
   LyraPopupEventMap,
   LyraPopupFlipFallbackStrategy,
+  PlaceAutoSize,
+  PlaceBoundary,
+  PlaceFlipFallbackStrategy,
+  PlaceStrategy,
+  PlaceSync,
+  VirtualAnchor,
 } from './components/overlays/popup/popup.class.js';
-export type { LyraPopoverEventMap } from './components/overlays/overlay/popover.class.js';
+export type {
+  LyraPopoverEventMap,
+  LyraPopupRole,
+  OverlayVirtualRect,
+} from './components/overlays/overlay/popover.class.js';
 export type { LyraTooltipEventMap, LyraTooltipTrigger } from './components/overlays/overlay/tooltip.class.js';
 export type { LyraArrowPlacement } from './components/overlays/overlay/popover.class.js';
 export { LyraTooltip } from './components/overlays/overlay/tooltip.class.js';
 export { LyraDropdown, type LyraDropdownEventMap } from './components/overlays/overlay/dropdown.class.js';
 export { LyraChip } from './components/overlays/chip/chip.class.js';
-export type { ChipTone, ChipRemoveDetail, ChipSelectDetail } from './components/overlays/chip/chip.class.js';
+export type {
+  ChipRemoveDetail,
+  ChipSelectDetail,
+  ChipSize,
+  ChipVariant,
+} from './components/overlays/chip/chip.class.js';
 export { LyraChipGroup } from './components/overlays/chip/chip-group.class.js';
 export type { ChipGroupOverflowToggleDetail } from './components/overlays/chip/chip-group.class.js';
 export { LyraModelSettingsPanel } from './components/conversation/model-settings-panel/model-settings-panel.class.js';
@@ -716,7 +753,10 @@ export type {
   DocumentRendererRegistry,
 } from './components/viewers/document-viewer/registry.js';
 export { LyraEbookViewer } from './components/viewers/ebook-viewer/ebook-viewer.class.js';
-export type { LyraEbookViewerEventMap } from './components/viewers/ebook-viewer/ebook-viewer.class.js';
+export type {
+  EbookTocItem,
+  LyraEbookViewerEventMap,
+} from './components/viewers/ebook-viewer/ebook-viewer.class.js';
 export { LyraPptxViewer } from './components/viewers/pptx-viewer/pptx-viewer.class.js';
 export type { LyraPptxViewerEventMap } from './components/viewers/pptx-viewer/pptx-viewer.class.js';
 export { LyraFileIcon } from './components/media/file-icon/file-icon.class.js';
@@ -739,7 +779,11 @@ export type {
   VCardTypedValue,
 } from './components/viewers/contact-viewer/vcard.js';
 export { LyraMediaCard, safeMediaSrc, safeLinkHref } from './components/media/media-card/media-card.class.js';
-export type { MediaCardKind, MediaCardOpenDetail } from './components/media/media-card/media-card.class.js';
+export type {
+  MediaCardFrame,
+  MediaCardKind,
+  MediaCardOpenDetail,
+} from './components/media/media-card/media-card.class.js';
 export { LyraAttachmentTrigger } from './components/media/attachment-trigger/attachment-trigger.class.js';
 export type {
   AttachmentCapability,
@@ -792,9 +836,17 @@ export { LyraMutationObserver } from './components/utility/mutation-observer/mut
 export type { LyraMutationObserverEventMap } from './components/utility/mutation-observer/mutation-observer.class.js';
 export type { CardAppearance, CardOrientation, LyraCardEventMap } from './components/layout/card/card.class.js';
 export { LyraStepper } from './components/layout/stepper/stepper.class.js';
-export type { StepItem, StepState } from './components/layout/stepper/stepper.class.js';
+export type {
+  StepItem,
+  StepState,
+  StepperOrientation,
+  StepperOrientationChangeDetail,
+} from './components/layout/stepper/stepper.class.js';
 export { LyraSegmented } from './components/layout/segmented/segmented.class.js';
-export type { SegmentedItem } from './components/layout/segmented/segmented.class.js';
+export type {
+  LyraSegmentedSize,
+  SegmentedItem,
+} from './components/layout/segmented/segmented.class.js';
 export { LyraSwatchPicker } from './components/forms/swatch-picker/swatch-picker.class.js';
 export type {
   LyraSwatchPickerMode,
@@ -865,20 +917,37 @@ export type {
   BadgeAttention,
 } from './components/overlays/badge/badge.class.js';
 export { LyraTag } from './components/overlays/badge/tag.class.js';
-export type { LyraTagEventMap } from './components/overlays/badge/tag.class.js';
+export type { LyraTagEventMap, TagVariant } from './components/overlays/badge/tag.class.js';
 export { LyraAlert } from './components/overlays/alert/alert.class.js';
 export type { AlertCountdown, AlertVariant, LyraAlertEventMap } from './components/overlays/alert/alert.class.js';
 export { LyraCallout } from './components/overlays/callout/callout.class.js';
-export type { CalloutVariant, LyraCalloutEventMap } from './components/overlays/callout/callout.class.js';
+export type {
+  CalloutAppearance,
+  CalloutSize,
+  CalloutVariant,
+  LyraCalloutEventMap,
+} from './components/overlays/callout/callout.class.js';
 export { LyraDetails } from './components/layout/details/details.class.js';
 export type {
+  LyraDetailsAppearance,
   LyraDetailsEventMap,
+  LyraDetailsIconPlacement,
+  LyraDetailsSize,
   LyraDetailsToggleDetail,
   LyraDetailsToggleSource,
 } from './components/layout/details/details.class.js';
 export { LyraAccordion } from './components/layout/details/accordion.class.js';
-export type { LyraAccordionEventMap } from './components/layout/details/accordion.class.js';
+export type {
+  LyraAccordionEventDetail,
+  LyraAccordionEventMap,
+  LyraAccordionMode,
+} from './components/layout/details/accordion.class.js';
 export { LyraAccordionItem } from './components/layout/details/accordion-item.class.js';
+export type {
+  LyraAccordionAppearance,
+  LyraAccordionHeadingLevel,
+  LyraAccordionIconPlacement,
+} from './components/layout/details/accordion-item.class.js';
 export { LyraDivider } from './components/utility/divider/divider.class.js';
 export { LyraVisuallyHidden } from './components/utility/visually-hidden/visually-hidden.class.js';
 export type { DividerOrientation } from './components/utility/divider/divider.class.js';
@@ -908,7 +977,10 @@ export type {
   LyraColorHsva,
 } from './components/forms/color-picker/color-picker.class.js';
 export { LyraCheckboxGroup } from './components/forms/checkbox-group/checkbox-group.class.js';
-export type { LyraCheckboxGroupEventMap } from './components/forms/checkbox-group/checkbox-group.class.js';
+export type {
+  CheckboxGroupOrientation,
+  LyraCheckboxGroupEventMap,
+} from './components/forms/checkbox-group/checkbox-group.class.js';
 export { LyraTokenInput } from './components/forms/token-input/token-input.class.js';
 export type { LyraTokenInputEventMap, LyraTokenInputSize } from './components/forms/token-input/token-input.class.js';
 export { LyraIcon } from './components/utility/icon/icon.class.js';
@@ -935,7 +1007,11 @@ export type {
 export { LyraCodeEditor } from './components/forms/code-editor/code-editor.class.js';
 export type { LyraCodeEditorEventMap } from './components/forms/code-editor/code-editor.class.js';
 export { LyraCalendar } from './components/data/calendar/calendar.class.js';
-export type { CalendarEvent, LyraCalendarEventMap } from './components/data/calendar/calendar.class.js';
+export type {
+  CalendarEvent,
+  CalendarView,
+  LyraCalendarEventMap,
+} from './components/data/calendar/calendar.class.js';
 
 export type { LyraAppRailEventMap } from './components/layout/app-rail/app-rail.class.js';
 export type { LyraAttachmentChipEventMap } from './components/media/attachment-chip/attachment-chip.class.js';
@@ -955,14 +1031,29 @@ export type { LyraConversationItemEventMap } from './components/conversation/con
 export type {
   LyraCopyButtonEventMap,
   LyraCopyErrorReason,
+  LyraCopyButtonTooltip,
+  LyraCopyButtonTooltipPlacement,
 } from './components/utility/copy-button/copy-button.class.js';
 export type { LyraDateInputEventMap, LyraDateInputSize } from './components/forms/date-picker/date-input.class.js';
 export type { LyraDatePickerEventMap } from './components/forms/date-picker/date-picker.class.js';
 export type { LyraDialogEventMap } from './components/overlays/dialog/dialog.class.js';
-export type { LyraDiffViewEventMap } from './components/utility/diff-view/diff-view.class.js';
+export type {
+  LyraDiffViewEventMap,
+  LyraDiffViewLayout,
+} from './components/utility/diff-view/diff-view.class.js';
 export type { LyraDockPanelEventMap } from './components/layout/dock-panel/dock-panel.class.js';
 export type { LyraDocumentPreviewEventMap } from './components/viewers/document-preview/document-preview.class.js';
 export type { LyraDocumentViewerEventMap } from './components/viewers/document-viewer/document-viewer.class.js';
+export type {
+  AnchorResultDetail,
+  AnchorTargetCapabilities,
+  HighlightActivateDetail,
+  LyraAnchor,
+  LyraAnchorKind,
+  LyraHighlight,
+  LyraHighlightTone,
+  TextSelectDetail,
+} from './components/viewers/document-viewer/anchors.js';
 export type { LyraSvgViewerEventMap } from './components/viewers/svg-viewer/svg-viewer.class.js';
 export type { LyraHtmlViewerEventMap } from './components/viewers/html-viewer/html-viewer.class.js';
 export type { LyraDatasetViewerEventMap } from './components/viewers/dataset-viewer/dataset-viewer.class.js';
@@ -982,6 +1073,7 @@ export { LyraVideoPlaylist } from './components/media/video-playlist/video-playl
 export type {
   LyraVideoPlaylistChangeDetail,
   LyraVideoPlaylistEventMap,
+  LyraVideoPlaylistItem,
   LyraVideoPlaylistRepeat,
   LyraVideoPlaylistSource,
   LyraVideoPlaylistTrack,
@@ -1089,7 +1181,10 @@ export type { LyraJsonViewerEventMap } from './components/utility/json-viewer/js
 export type { LyraLiteChartEventMap } from './components/charts/chart/lite-chart.class.js';
 export type { LyraMapEventMap } from './components/media/map/map.class.js';
 export { LyraGeojsonView } from './components/viewers/geojson-view/geojson-view.class.js';
-export type { LyraGeojsonViewEventMap } from './components/viewers/geojson-view/geojson-view.class.js';
+export type {
+  GeoJsonTypeTag,
+  LyraGeojsonViewEventMap,
+} from './components/viewers/geojson-view/geojson-view.class.js';
 export type { LyraMarkdownEventMap } from './components/conversation/markdown/markdown.class.js';
 export type { LyraMarkdownCoreEventMap } from './components/conversation/markdown/markdown-core.class.js';
 export type { MarkdownHeadingItem } from './components/conversation/markdown/markdown.class.js';
@@ -1143,6 +1238,75 @@ export type { LyraWordCloudEventMap } from './components/data/word-cloud/word-cl
 export { LyraElement } from './internal/lyra-element.js';
 export { FormAssociated } from './internal/form-associated.js';
 export { LYRA_PREFIX, tag, defineElement } from './internal/prefix.js';
+export type {
+  LyraAnchorTarget,
+  LyraAnchorTargetEventMap,
+} from './utilities/anchor-target.js';
+
+// Public support types reached by component class signatures. Keep this list type-only: these
+// modules contain implementation helpers, while the contracts themselves are semver-covered by
+// the registration-free root. `check:event-barrel` derives this closure from the source graph and
+// fails if a newly exposed support type is not reachable here.
+export type { AnsiStyles } from './internal/ansi.js';
+export type {
+  BreakpointBasis,
+  OrientationBreakpointBasis,
+} from './internal/orientation-breakpoint.js';
+export type {
+  FormOwnerValue,
+  FormSubmissionValue,
+  FormValueAdapter,
+} from './internal/form-associated.js';
+export type {
+  LyraAppearance,
+  LyraFrame,
+  LyraSize,
+  LyraSizeAlias,
+  LyraSizeStep,
+  LyraVariant,
+} from './internal/variants.js';
+export type {
+  LyraEmitArgs,
+  LyraEmittedEvent,
+} from './internal/lyra-element.js';
+export type {
+  LyraSelectionDirection,
+  LyraTextWrap,
+  LyraToolStatus,
+  LyraTranscriptMode,
+} from './internal/shared-unions.js';
+export type {
+  LyraTextViewerTarget,
+  LyraTextViewerTargetEventMap,
+} from './internal/text-viewer-target.js';
+export type { OverlayDeactivateOptions } from './internal/overlay-manager.js';
+export type { RegisteredAnimationSpec } from './internal/registered-animation.js';
+export type {
+  CalendarMode,
+  WeekdayFormat,
+} from './components/forms/date-picker/calendar-core.js';
+export type { TimeHourFormat } from './components/forms/input/time-input-shared.js';
+export type {
+  FormatCurrencyDisplay,
+  FormatDateHour,
+  FormatDateMonth,
+  FormatDateNumeric,
+  FormatDateStyle,
+  FormatDateText,
+  FormatDateTimeZoneName,
+  FormatNumberNotation,
+  FormatNumberType,
+  RelativeTimeNumeric,
+} from './components/utility/format/format-options.js';
+export type {
+  LyraSpanKind,
+  LyraSpanStatus,
+} from './components/agent-tools/trace-tree/span.js';
+export type {
+  MarkedExtension,
+  MarkedParserContext,
+  MarkedRenderer,
+} from './components/conversation/markdown/markdown-loader.js';
 
 export type * from './ai/types.js';
 

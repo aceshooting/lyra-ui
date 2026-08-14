@@ -253,7 +253,7 @@ it('renders no redacted-indicator and leaves args/result untouched when redacted
   const entries: ToolTimelineEntry[] = [makeEntry({ args: { query: 'ok' }, result: { count: 1 } })];
   const el = (await fixture(html`<lr-tool-timeline .entries=${entries}></lr-tool-timeline>`)) as LyraToolTimeline;
   const row = await openEntry(el);
-  expect(row.querySelector('[part="entry-redacted-indicator"]')).to.not.exist;
+  expect((row.querySelector('[part="entry-redacted-indicator"]')) == null).to.be.true;
   expect(resultViewIn(row).args).to.deep.equal({ query: 'ok' });
 });
 
@@ -386,8 +386,8 @@ it('renders a retry badge with the localized "Retry" label and formatted count o
   expect((badge) != null).to.equal(true);
   expect(rows[0].querySelector('[part="entry-retries-label"]')!.textContent).to.equal('Retry');
   expect(rows[0].querySelector('[part="entry-retries-count"]')!.textContent).to.equal('2');
-  expect(rows[1].querySelector('[part="entry-retries"]')).to.not.exist;
-  expect(rows[2].querySelector('[part="entry-retries"]')).to.not.exist;
+  expect((rows[1].querySelector('[part="entry-retries"]')) == null).to.be.true;
+  expect((rows[2].querySelector('[part="entry-retries"]')) == null).to.be.true;
 });
 
 it('honors a `.strings` override for the reused "retry" key', async () => {

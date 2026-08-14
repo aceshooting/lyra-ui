@@ -50,7 +50,7 @@ describe('the semantic grid is live, not inert', () => {
   it('keeps each flat token and its grid slot the same colour', async () => {
     // `--lr-color-brand` and `--lr-color-brand-fill-loud` are two names for one decision. While
     // they resolved independently, migrating a stylesheet from the flat name to the slot silently
-    // changed its colour -- which would have made P3's rename a visual regression.
+    // changed its colour -- which would have made the token rename a visual regression.
     const el = await probe();
     for (const [flat, slot] of [
       ['--lr-color-brand', '--lr-color-brand-fill-loud'],

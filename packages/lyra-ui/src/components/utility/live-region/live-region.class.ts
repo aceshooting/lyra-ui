@@ -134,13 +134,15 @@ export class LyraLiveRegion extends LyraElement {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('throttleMs')) {
       this.announcer.throttleMs = this.safeThrottleMs;
     }
     if (changed.has('mode')) this.syncSink();
   }
 
-  override firstUpdated(): void {
+  override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     this.regionEl = this.renderRoot.querySelector<HTMLElement>('[part="region"]') ?? undefined;
     if (this.pendingWrite !== undefined && this.regionEl) {
       // Only the mirror is caught up here. The announcement itself already happened, back when

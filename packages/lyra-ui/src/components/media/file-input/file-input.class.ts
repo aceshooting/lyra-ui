@@ -158,17 +158,19 @@ export interface LyraFileInputEventMap {
  * @event lr-invalid - The file input failed a validity check. Cancelable: calling
  * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the browser's
  * own validation bubble so an app can present the failure its own way.
- * @csspart file-input - Compatibility name for the complete form-control wrapper.
+ * @csspart file-input - The interactive picker surface.
  * @csspart form-control - The complete label, dropzone, selected-file, error, and hint frame.
  * @csspart form-control-label - The form-control label.
- * @csspart label - Compatibility wrapper around the visible label content.
+ * @csspart label - Deprecated in 8.2.3; compatibility name for `form-control-label`; both names
+ *   are on the same node.
  * @csspart hint - The form-control hint.
  * @csspart error - The visible validation message or authored error content.
  * @csspart dropzone - The drag/drop and paste target around the semantic button.
  * @csspart dropzone-icon - The default decorative file icon.
  * @csspart dropzone-text - Wrapper around dropzone slot/text content.
- * @csspart base - The native dropzone button, visually backing the slotted content while remaining
- *   its sibling in the accessibility tree so arbitrary slotted controls are never nested in it.
+ * @csspart base - Deprecated in 8.2.3; compatibility name for `file-input`; both names are on the
+ *   native dropzone button, visually backing the slotted content while remaining its sibling in
+ *   the accessibility tree so arbitrary slotted controls are never nested in it.
  * @csspart input - The visually-hidden native `<input type="file">`.
  * @csspart status - The visually-hidden, `aria-hidden` mirror of the drag accept/reject state and
  * accepted/rejected selection counts. The announcement itself lands in the shared light-DOM polite
@@ -195,27 +197,27 @@ export interface LyraFileInputEventMap {
  * inside the dropzone. Retuned per `size` tier; the documented default is the `m`/`medium` tier.
  * @cssprop [--lr-file-input-dropzone-icon-size=var(--lr-font-size-xl)] - `[part="dropzone-icon"]`
  * glyph size. Retuned per `size` tier.
- * @cssprop [--lr-file-input-dropzone-padding=var(--lr-space-l)] - Padding inside `[part="base"]`
+ * @cssprop [--lr-file-input-dropzone-padding=var(--lr-space-l)] - Padding inside `[part~="base"]`
  * and the stacked dropzone content. Retuned per `size` tier; `compact` overrides it.
  * @cssprop [--lr-file-input-detail-font-size=var(--lr-font-size-sm)] - Size of the secondary text:
  * the hint, the validation error, and each selected file's formatted size. Retuned per `size` tier.
  * @cssprop [--lr-file-input-gap=var(--lr-space-xs)] - Gap between the dropzone's slotted
  * children. While `compact`, this is the fallback when `--lr-file-input-compact-gap` is unset.
- * @cssprop [--lr-file-input-radius=var(--lr-radius)] - Corner radius of `[part="base"]`.
- * @cssprop [--lr-file-input-compact-padding=var(--lr-space-s)] - `[part="base"]` padding while
+ * @cssprop [--lr-file-input-radius=var(--lr-radius)] - Corner radius of `[part~="base"]`.
+ * @cssprop [--lr-file-input-compact-padding=var(--lr-space-s)] - `[part~="base"]` padding while
  * `compact`.
  * @cssprop [--lr-file-input-compact-gap=var(--lr-space-2xs)] - Gap between the dropzone's slotted
  * children while `compact`.
  * @cssprop [--lr-file-input-compact-font-size=var(--lr-font-size-sm)] - Label font size while
  * `compact`.
  * @cssprop [--lr-file-input-accept-border-color=var(--lr-color-success)] - Border color of
- * `[part="base"][data-drag-state="accept"]`.
+ * `[part~="base"][data-drag-state="accept"]`.
  * @cssprop [--lr-file-input-accept-bg=color-mix(in srgb, var(--lr-color-success) 8%, transparent)] -
- * Background of `[part="base"][data-drag-state="accept"]`.
+ * Background of `[part~="base"][data-drag-state="accept"]`.
  * @cssprop [--lr-file-input-reject-border-color=var(--lr-color-danger)] - Border color of
- * `[part="base"][data-drag-state="reject"]`.
+ * `[part~="base"][data-drag-state="reject"]`.
  * @cssprop [--lr-file-input-reject-bg=color-mix(in srgb, var(--lr-color-danger) 8%, transparent)] -
- * Background of `[part="base"][data-drag-state="reject"]`.
+ * Background of `[part~="base"][data-drag-state="reject"]`.
  * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
  * `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
  * other quoted string (`' (required)'`, a localized word) to replace it.
@@ -333,7 +335,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   // Server renderers do not necessarily expose Element.children. The shared controller treats
   // missing DOM surfaces as empty and seeds real light-DOM slot presence after browser hydration.
   private readonly slotPresence = new SlotPresenceController(this);
-  @query('[part="base"]') private baseEl?: HTMLElement;
+  @query('[part~="base"]') private baseEl?: HTMLElement;
   @query('input[type="file"]') private inputEl?: HTMLInputElement;
 
   private internals: ElementInternals;
@@ -544,6 +546,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   // Untyped `PropertyValues` (not `PropertyValues<this>`): the announced transitions are tracked
   // on private `@state()` fields, which `keyof this` does not include.
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('validators')) {
       this.updateValidity();
       this.syncValidatorAttributeObserver();
@@ -1086,7 +1089,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     input.value = '';
     if (!this.effectiveDisabled && files.length) this.emitFiles(files);
   };
-  // Bridged off [part="base"] (the actual keyboard-focusable dropzone), not the visually-hidden,
+  // Bridged off [part~="base"] (the actual keyboard-focusable dropzone), not the visually-hidden,
   // tabindex="-1", aria-hidden native `<input type="file">` — that input is never focused by a
   // user, only `.click()`ed by `openPicker()`, so binding here is what makes a host-level
   // `addEventListener('focus' | 'blur', ...)` observe real focus/blur at all; native focus/blur
@@ -1095,14 +1098,14 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     relayNativeEvent(this, event);
   };
   private onBlur = (event: FocusEvent): void => {
-    // The dropzone `[part="base"]` button becoming disabled while it holds focus force-blurs it --
+    // The dropzone `[part~="base"]` button becoming disabled while it holds focus force-blurs it --
     // a platform reaction to the very `?disabled=${effectiveDisabled}` render that turned it on, not
     // a user interaction. That blur can land synchronously nested inside the update this handler is
     // itself part of (Lit committing the button's `disabled` attribute), before `effectiveDisabled`
     // could read anything but `true` here. Marking `touched` for it was, depending on timing, capable
     // of reentering that same in-flight update and tripping Lit's dev-mode "scheduled an update
     // after an update completed" warning for a state flip nothing observable needed -- a disabled
-    // control is barred from validation regardless (fr_asxOgk4UhNB07xevCWwFVQ).
+    // control is barred from validation regardless.
     if (!this.effectiveDisabled) this.touched = true;
     this.publishCustomStates();
     relayNativeEvent(this, event);
@@ -1198,9 +1201,9 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
       .join(' ');
     const invalid = hasError || (this.touched && !this.internals.validity.valid);
     return html`
-      <div part="file-input form-control">
-        <label part="form-control-label" ?hidden=${!hasLabel}>
-          <span part="label">${this.label}<slot name="label"></slot></span>
+      <div part="form-control">
+        <label part="form-control-label label" ?hidden=${!hasLabel}>
+          <span>${this.label}<slot name="label"></slot></span>
         </label>
         <div
           part="dropzone"
@@ -1213,7 +1216,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
           @click=${this.onDropzoneClick}
         >
           <button
-            part="base"
+            part="file-input base"
             type="button"
             role="button"
             tabindex=${this.effectiveDisabled ? '-1' : '0'}

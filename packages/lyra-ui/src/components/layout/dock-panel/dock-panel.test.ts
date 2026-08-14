@@ -99,8 +99,8 @@ it("renders with defaults: docked to the end edge, a resizable handle, no collap
   expect((handle) !== (null)).to.equal(true);
   expect(handle!.getAttribute("role")).to.equal("separator");
   expect(handle!.getAttribute("aria-orientation")).to.equal("vertical");
-  expect(el.shadowRoot!.querySelector('[part="collapse-toggle"]')).to.equal(
-    null
+  expect((el.shadowRoot!.querySelector('[part="collapse-toggle"]')) === (null)).to.equal(
+    true
   );
 });
 
@@ -190,14 +190,14 @@ it("renders no drag handle at all when resizable is false", async () => {
   const el = await dockedFixture();
   el.resizable = false;
   await elementUpdated(el);
-  expect(el.shadowRoot!.querySelector('[part="handle"]')).to.equal(null);
+  expect((el.shadowRoot!.querySelector('[part="handle"]')) === (null)).to.equal(true);
 });
 
 it('honors the plain resizable="false" attribute form, not just a property binding', async () => {
   const el = await dockedFixture('resizable="false"');
   await elementUpdated(el);
   expect(el.resizable).to.equal(false);
-  expect(el.shadowRoot!.querySelector('[part="handle"]')).to.equal(null);
+  expect((el.shadowRoot!.querySelector('[part="handle"]')) === (null)).to.equal(true);
 });
 
 it("sets aria-orientation to horizontal for a top/bottom-docked handle", async () => {
@@ -619,7 +619,7 @@ it("toggles collapsed via the collapse-toggle button and emits lr-collapse-chang
   ) as HTMLElement;
   expect(content.hidden).to.equal(true);
   // No drag handle while collapsed -- nothing meaningful to resize.
-  expect(el.shadowRoot!.querySelector('[part="handle"]')).to.equal(null);
+  expect((el.shadowRoot!.querySelector('[part="handle"]')) === (null)).to.equal(true);
 });
 
 it("emits a cancelable lr-collapse-request before lr-collapse-change, vetoing the mutation when prevented", async () => {

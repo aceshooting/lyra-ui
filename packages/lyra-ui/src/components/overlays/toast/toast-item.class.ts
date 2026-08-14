@@ -1,5 +1,6 @@
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { keyed } from 'lit/directives/keyed.js';
 import {
   composedParentElement,
   isAccessibilitySubtreeExcluded,
@@ -29,7 +30,7 @@ import { LYRA_DEFAULT_close, LYRA_DEFAULT_closeWithContext, LYRA_DEFAULT_closeWi
 /** The library's one semantic-tone vocabulary. */
 export type ToastVariant = LyraVariant;
 /** The library's one size ladder. */
-export type ToastSize = LyraSizeStep;
+export type ToastSize = LyraSize;
 
 function parseTime(value: string): number {
   const trimmed = value.trim();
@@ -96,7 +97,8 @@ export interface LyraToastItemEventMap {
  *   owns removing it.
  * @event lr-after-show - Fired after the show animation completes.
  * @event lr-hide - The item is about to hide, including an auto-dismiss expiry. Cancelable —
- *   `preventDefault()` leaves it visible and still counting down.
+ *   `preventDefault()` leaves it visible. A vetoed auto-dismiss restarts the full current
+ *   normalized duration; a vetoed manual `hide()` leaves any active countdown untouched.
  * @event lr-after-hide - Fired after the hide animation completes (item then removes itself).
  * @csspart toast-item - The outer container.
  * @csspart accent - The colored accent bar.
@@ -160,17 +162,13 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   /** Auto-dismiss delay in ms. Set to `Infinity` (or <= 0) to disable. */
   @property({ type: Number }) duration = 5000;
 
-  private _size: ToastSize = 'm';
-  /** Visual size. Upstream `small`/`medium`/`large` writes normalize to canonical `s`/`m`/`l`
-   * reads without changing the constructed `m` default. */
-  @property({ reflect: true })
-  get size(): ToastSize {
-    return this._size;
-  }
-  set size(value: LyraSize) {
-    const old = this._size;
-    this._size = normalizeSize(value ?? 'm');
-    this.requestUpdate('size', old);
+  /** Visual size. Valid upstream `small`/`medium`/`large` values round-trip verbatim while the CSS
+   * maps both spellings onto the same rendered ladder. */
+  @property({ reflect: true }) size: ToastSize = 'm';
+  private get effectiveSize(): LyraSizeStep {
+    const value = this.size as string;
+    if (!['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large'].includes(value)) return 'm';
+    return normalizeSize(value as LyraSize);
   }
 
   /** Severity/variant. */
@@ -206,6 +204,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   private afterHideEmitted = false;
   @state() private messageText = '';
   @state() private hiding = false;
+  @state() private progressRun = 0;
 
   /** `duration` normalized to a finite, non-negative delay -- *or* `Infinity` verbatim.
    *  `Infinity` is this property's own documented "never auto-dismiss" sentinel (see its doc
@@ -219,6 +218,8 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    this.setAttribute('data-effective-size', this.effectiveSize);
     // `elapsedMs`/`duration` are re-read fresh every time the timer is
     // (re)scheduled, so a `duration` change while paused (hovering/focused)
     // or before the timer has ever started needs no action here -- the next
@@ -242,6 +243,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (this.hasAttribute('data-visible')) {
       const previousVariant = changed.get('variant') as ToastVariant | undefined;
       const urgencyChanged = changed.has('variant') &&
@@ -260,7 +262,8 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       ?.setAttribute('part', 'close-icon__svg');
   }
 
-  override firstUpdated(): void {
+  override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     this.scheduleShow();
   }
 
@@ -369,16 +372,25 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     if (!isFinite(duration) || duration <= 0) return;
     const remaining = duration - this.elapsedMs;
     // A duration shortened below the already-elapsed time must hide promptly,
-    // not silently never schedule anything.
+    // not silently never schedule anything. It is still a countdown-driven
+    // request, so a veto restarts a full duration just like a timeout expiry.
     if (remaining <= 0) {
-      void this.hide();
+      void this.requestHide('timer');
       return;
     }
     const view = this.ownerDocument.defaultView;
     if (!view) return;
     this.startedAt = view.performance.now();
     this.timerOwner = view;
-    this.timer = view.setTimeout(() => this.hide(), remaining);
+    const timer = view.setTimeout(() => {
+      // A pause/resume or duration update may have replaced this timeout. Ignore any stale callback
+      // that a browser had already queued before clearTimeout() ran.
+      if (this.timer !== timer || this.timerOwner !== view) return;
+      this.timer = undefined;
+      this.timerOwner = undefined;
+      void this.requestHide('timer');
+    }, remaining);
+    this.timer = timer;
   };
 
   private pauseTimer = (): void => {
@@ -586,13 +598,38 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     return this.localize('closeWithContext', undefined, { snippet });
   }
 
-  /** Hide with animation, then remove from the DOM. */
+  /** Hide with animation, then remove from the DOM. A vetoed manual request leaves the current
+   * countdown untouched; a vetoed auto-dismiss request restarts the full normalized duration. */
   async hide(): Promise<void> {
+    await this.requestHide('manual');
+  }
+
+  private async requestHide(source: 'manual' | 'timer'): Promise<void> {
     if (this.hiding) return;
     // Emitted before any teardown so a veto leaves the item exactly as it was -- still visible,
-    // still counting down -- instead of half-dismissed.
-    if (this.emit('lr-hide', undefined, { cancelable: true }).defaultPrevented) return;
+    // instead of half-dismissed. A timeout has no remaining countdown once its callback runs, so
+    // restart it from the full current duration after a veto; repeated vetoes therefore retry at
+    // deterministic intervals instead of making the toast immortal.
+    if (this.emit('lr-hide', undefined, { cancelable: true }).defaultPrevented) {
+      if (source === 'timer') {
+        this.elapsedMs = 0;
+        this.startedAt = 0;
+        // Recreate the SVG animation in the same transaction as the timer reset. Merely changing
+        // elapsedMs leaves the finished CSS animation attached to its existing DOM node, making
+        // the ring look expired for the entire retry interval.
+        this.progressRun += 1;
+        if (this.isConnected && !this.hovering && !this.focused) this.resumeTimer();
+      }
+      return;
+    }
     this.hiding = true;
+    // Reflect the disabled state on the DOM node synchronously, not just via the reactive binding
+    // in render(). Lit's update lands on the next microtask, which is too late for a screen reader
+    // (or a second rapid click) inspecting the control immediately after an accepted dismissal.
+    // Keep this after the veto point so a blocked dismissal leaves the close control operable.
+    this.shadowRoot
+      ?.querySelector<HTMLElement>('[part="close-button"]')
+      ?.setAttribute('aria-disabled', 'true');
     this.cancelShowAnimation?.();
     this.cancelShowAnimation = undefined;
     this.clearTimer();
@@ -651,17 +688,19 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
 
     return html`
       <span part="progress-ring" aria-hidden="true">
-        <svg part="progress-ring__base" viewBox="0 0 20 20" focusable="false">
-          <circle part="progress-ring__track" cx="10" cy="10" r="8" pathLength="1"></circle>
-          <circle
-            part="progress-ring__indicator"
-            cx="10"
-            cy="10"
-            r="8"
-            pathLength="1"
-            style=${`animation-duration: ${duration}ms`}
-          ></circle>
-        </svg>
+        ${keyed(this.progressRun, html`
+          <svg part="progress-ring__base" viewBox="0 0 20 20" focusable="false">
+            <circle part="progress-ring__track" cx="10" cy="10" r="8" pathLength="1"></circle>
+            <circle
+              part="progress-ring__indicator"
+              cx="10"
+              cy="10"
+              r="8"
+              pathLength="1"
+              style=${`animation-duration: ${duration}ms`}
+            ></circle>
+          </svg>
+        `)}
         <span part="progress-ring__label">${close}</span>
       </span>
     `;
@@ -684,16 +723,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
           type="button"
           aria-label=${this.closeLabel}
           aria-disabled=${this.hiding ? 'true' : 'false'}
-          @click=${(e: Event) => {
-            // Reflect the disabled state on the DOM node synchronously, not
-            // just via the reactive binding above -- Lit's re-render from
-            // `this.hiding = true` (inside hide()) lands on the next
-            // microtask, which is too late for a screen reader (or a second
-            // rapid click) that inspects the attribute right after this
-            // handler returns.
-            (e.currentTarget as HTMLElement).setAttribute('aria-disabled', 'true');
-            void this.hide();
-          }}
+          @click=${() => void this.hide()}
         >
           ${this.renderCloseControl()}
         </button>

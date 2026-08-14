@@ -143,7 +143,7 @@ describe('lr-rubric-form', () => {
     const el = (await fixture(html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`)) as LyraRubricForm;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[data-key="score"] lr-slider')).to.exist;
-    expect(el.shadowRoot!.querySelector('[data-key="score"] lr-segmented')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[data-key="score"] lr-segmented')) == null).to.be.true;
   });
 
   it('localizes visible segmented scores like slider scores while preserving raw values', async () => {
@@ -316,7 +316,7 @@ describe('lr-rubric-form', () => {
     expect(el.shadowRoot!.querySelector('[data-key="accuracy"] [part="error"]')).to.exist;
     el.itemId = 'item-2';
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[data-key="accuracy"] [part="error"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[data-key="accuracy"] [part="error"]')) == null).to.be.true;
   });
 
   it('forwards required to lr-select, lr-checkbox-group, and lr-textarea, matching each sibling’s own required-driven aria state', async () => {
@@ -732,8 +732,7 @@ describe('lr-rubric-form', () => {
     await el.updateComplete;
     for (const k of keys) {
       expect(el.shadowRoot!.querySelector(`[data-key="${k.key}"] lr-slider`), `${k.key} should be lr-slider`).to.exist;
-      expect(el.shadowRoot!.querySelector(`[data-key="${k.key}"] lr-segmented`), `${k.key} should not be lr-segmented`)
-        .to.not.exist;
+      expect((el.shadowRoot!.querySelector(`[data-key="${k.key}"] lr-segmented`)) == null, `${k.key} should not be lr-segmented`).to.be.true;
     }
   });
 
@@ -841,7 +840,7 @@ describe('lr-rubric-form', () => {
     await el.updateComplete;
     expect(el.value).to.deep.equal({ accuracy: 5 });
     expect(el.value === initialValue).to.equal(false);
-    expect(el.shadowRoot!.querySelector('[data-key="accuracy"] [part="error"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[data-key="accuracy"] [part="error"]')) == null).to.be.true;
 
     el.value.accuracy = 1;
     form.reset();

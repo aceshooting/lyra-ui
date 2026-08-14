@@ -84,7 +84,7 @@ describe('lr-approval-queue', () => {
     await dialog.updateComplete;
     expect(dialog.toolName).to.equal('read_file');
     expect(dialog.pending).to.equal(null);
-    expect(dialog.shadowRoot!.querySelector('[part="args-editor"]')).to.not.exist;
+    expect((dialog.shadowRoot!.querySelector('[part="args-editor"]')) == null).to.be.true;
     expect(dialog.shadowRoot!.querySelector('[part="args-view"]')).to.exist;
   });
 

@@ -60,7 +60,7 @@ it('defaults max to undefined, size to medium, shape to circle, variant to neutr
   expect(el.size).to.equal('medium');
   expect(el.shape).to.equal('circle');
   expect(el.variant).to.equal('neutral');
-  expect(el.shadowRoot!.querySelector('[part="overflow-badge"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="overflow-badge"]')) == null).to.be.true;
   const avatars = Array.from(el.querySelectorAll('lr-avatar')) as HTMLElement[];
   expect(avatars.every((a) => !a.hidden)).to.be.true;
 });
@@ -115,7 +115,7 @@ it('shows every avatar with no badge when max is greater than or equal to the ch
       <lr-avatar initials="CD"></lr-avatar>
     </lr-avatar-group>
   `)) as LyraAvatarGroup;
-  expect(el.shadowRoot!.querySelector('[part="overflow-badge"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="overflow-badge"]')) == null).to.be.true;
   const avatars = Array.from(el.querySelectorAll('lr-avatar')) as HTMLElement[];
   expect(avatars.every((a) => !a.hidden)).to.be.true;
 });
@@ -195,7 +195,7 @@ describe('dynamic children', () => {
         <lr-avatar initials="CD"></lr-avatar>
       </lr-avatar-group>
     `)) as LyraAvatarGroup;
-    expect(el.shadowRoot!.querySelector('[part="overflow-badge"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="overflow-badge"]')) == null).to.be.true;
 
     const extra = document.createElement('lr-avatar');
     extra.setAttribute('initials', 'EF');
@@ -218,7 +218,7 @@ describe('dynamic children', () => {
     await new Promise((resolve) => requestAnimationFrame(resolve));
     await el.updateComplete;
 
-    expect(el.shadowRoot!.querySelector('[part="overflow-badge"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="overflow-badge"]')) == null).to.be.true;
     const remaining = Array.from(el.querySelectorAll('lr-avatar')) as HTMLElement[];
     expect(remaining.every((a) => !a.hidden)).to.be.true;
   });

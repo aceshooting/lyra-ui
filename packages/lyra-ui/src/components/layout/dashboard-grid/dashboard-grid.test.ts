@@ -2285,7 +2285,7 @@ describe("defensive edge cases", () => {
     await el.updateComplete;
     await Promise.resolve();
 
-    expect(el.shadowRoot!.querySelector('[data-cell-id="b"]')).to.equal(null);
+    expect((el.shadowRoot!.querySelector('[data-cell-id="b"]')) === (null)).to.equal(true);
     expect((el.shadowRoot!.activeElement) === (null), "cellElement(\"b\") found nothing, so the scheduled focus() was skipped").to.equal(true);
   });
 

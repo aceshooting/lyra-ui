@@ -62,7 +62,7 @@ it('renders the noData empty state and no tabs when entity is null', async () =>
   const empty = el.shadowRoot!.querySelector('[part="empty"]');
   expect((empty) != null).to.equal(true);
   expect(empty!.getAttribute('heading')).to.equal('No data');
-  expect(el.shadowRoot!.querySelector('lr-tab-group')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('lr-tab-group')) == null).to.be.true;
 });
 
 it('renders lr-entity-card with entity/types/communityLabel/showFocusButton forwarded', async () => {
@@ -95,7 +95,7 @@ it('omits the confidence stat entirely when confidence is null (the default)', a
   const el = (await fixture(html`<lr-entity-dossier></lr-entity-dossier>`)) as LyraEntityDossier;
   el.entity = entity;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="confidence"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="confidence"]')) == null).to.be.true;
 });
 
 it('renders the confidence lr-stat with every field forwarded when confidence is set', async () => {

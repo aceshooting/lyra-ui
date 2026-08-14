@@ -125,7 +125,7 @@ it('renders plain <pre><code> immediately, HTML-escaped, when language is unset 
   const el = (await fixture(
     html`<lr-code-block .code=${'<script>alert(1)</script>'}></lr-code-block>`,
   )) as LyraCodeBlock;
-  expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('lr-skeleton')) == null).to.be.true;
   const pre = el.shadowRoot!.querySelector('[part="pre"]');
   const code = el.shadowRoot!.querySelector('[part="code"]');
   expect((pre) != null).to.equal(true);
@@ -188,7 +188,7 @@ it('renders no header at all when there is nothing to put in it', async () => {
   const el = (await fixture(
     html`<lr-code-block .copyable=${false} .code=${jsSample}></lr-code-block>`,
   )) as LyraCodeBlock;
-  expect(el.shadowRoot!.querySelector('[part="header"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="header"]')) == null).to.be.true;
 });
 
 it('gives compact header controls the shared minimum hit area', async () => {
@@ -355,7 +355,7 @@ describe('shiki highlighting (real peer)', () => {
       await el.updateComplete;
 
       expect(internals.highlightedHtml).to.equal(null);
-      expect(el.shadowRoot!.querySelector('.shiki')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('.shiki')) == null).to.be.true;
       expect(el.shadowRoot!.querySelector('[part="code"]')!.textContent).to.equal(jsSample);
     } finally {
       hl.codeToHtml = originalCodeToHtml;
@@ -390,7 +390,7 @@ describe('languages (fine-grained shiki opt-in)', () => {
     // Assert synchronously, right after the first render -- the whole point
     // is that this doesn't depend on `loadShikiHighlighter()`'s singleton
     // ever resolving at all.
-    expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('lr-skeleton')) == null).to.be.true;
     expect(el.hasAttribute('aria-busy')).to.be.false;
   });
 
@@ -470,7 +470,7 @@ describe('fallback matrix (reaching into private state to exercise both paths de
     // interactive-lines addressing), so a bare `[part="pre"] span` selector no longer
     // distinguishes this from shiki's real output -- assert there's no *nested* span inside the
     // line wrapper instead, since that's what shiki's own per-token tokenization would add.
-    expect(el.shadowRoot!.querySelector('[part="pre"] .line span')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="pre"] .line span')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="code"]')!.textContent).to.equal(jsSample);
   });
 
@@ -641,7 +641,7 @@ describe('copy button', () => {
     const el = (await fixture(
       html`<lr-code-block .copyable=${false} .code=${jsSample} filename="x.ts"></lr-code-block>`,
     )) as LyraCodeBlock;
-    expect(el.shadowRoot!.querySelector('[part="copy-button"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="copy-button"]')) == null).to.be.true;
   });
 
   it('honors a plain copyable="false" attribute (not just a .copyable=${false} property binding)', async () => {
@@ -657,7 +657,7 @@ describe('copy button', () => {
 describe('collapsible / collapsed', () => {
   it('renders no toggle when collapsible is false, and the body is always visible', async () => {
     const el = (await fixture(html`<lr-code-block .code=${jsSample}></lr-code-block>`)) as LyraCodeBlock;
-    expect(el.shadowRoot!.querySelector('[part="toggle"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="toggle"]')) == null).to.be.true;
     expect((el.shadowRoot!.querySelector('[part="body"]') as HTMLElement).hidden).to.be.false;
   });
 
@@ -1236,7 +1236,7 @@ describe('tab width (--lr-code-block-tab-size)', () => {
   });
 });
 
-// Sweep F35: the active-line outline had no component-scoped override, so a consumer retinting the
+// The active-line outline needs a component-scoped override so a consumer retinting the
 // active anchor had to reach for the shared --lr-color-brand (which every other brand-colored
 // surface in the component also reads) or a ::part override that suppresses the rest of the rule.
 describe('active-line outline color (--lr-code-block-active-line-outline-color)', () => {

@@ -152,10 +152,11 @@ it('gates search, tags, and row selection while disabled', async () => {
     html`<lr-eval-dataset disabled searchable .examples=${examples()}></lr-eval-dataset>`,
   )) as LyraEvalDataset;
   const search = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
-  const chip = el.shadowRoot!.querySelector('lr-chip') as HTMLElement & { disabled: boolean };
+  const chip = el.shadowRoot!.querySelector('lr-chip') as LyraChip;
   const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement & { selectionMode: string };
   expect(search.disabled).to.be.true;
   expect(chip.disabled).to.be.true;
+  expect(chip.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle-button"]')!.disabled).to.be.true;
   expect(table.selectionMode).to.equal('none');
   let selected = 0;
   el.addEventListener('lr-example-select', () => selected++);
@@ -352,7 +353,7 @@ it('shows the no-matches message (not the empty-dataset message) once a filter m
 it('does not render a search field unless `searchable` is set', async () => {
   const el = (await fixture(html`<lr-eval-dataset .examples=${examples()}></lr-eval-dataset>`)) as LyraEvalDataset;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="search-input"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="search-input"]')) == null).to.be.true;
 });
 
 it('is accessible with no examples', async () => {

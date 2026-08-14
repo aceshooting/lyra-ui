@@ -773,7 +773,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     // empirically: setting the host's `disabled` content attribute, *and* an ancestor `<fieldset>`
     // disabling it (even through an intermediate, itself-enabled fieldset), both force-blur a
     // focused descendant inside the shadow tree, exactly like a native disableable control
-    // force-blurs itself (fr_asxOgk4UhNB07xevCWwFVQ, originally found in `<lr-input>`'s onBlur).
+    // force-blurs itself (originally found in `<lr-input>`'s onBlur).
     // That blur is a platform reaction, not a user interaction, and would otherwise leave the
     // control primed to show as touched/user-invalid the instant it is re-enabled, or -- depending
     // on exactly when in an in-flight update it lands -- risk reentering that update and tripping

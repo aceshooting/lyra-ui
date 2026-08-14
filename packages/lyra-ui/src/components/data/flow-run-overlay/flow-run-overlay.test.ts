@@ -269,7 +269,7 @@ it('hideSummary suppresses the visible strip but still mirrors decorations into 
   await wrapper.updateComplete;
   const overlay = wrapper.querySelector('lr-flow-run-overlay') as LyraFlowRunOverlay;
   await overlay.updateComplete;
-  expect(overlay.shadowRoot!.querySelector('[part="summary"]')).to.not.exist;
+  expect((overlay.shadowRoot!.querySelector('[part="summary"]')) == null).to.be.true;
   expect(wrapper.decorations).to.deep.equal({ fetch: { status: 'running' } });
 });
 

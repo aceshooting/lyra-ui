@@ -28,7 +28,11 @@ distinct from `<lr-transcript-feed>` (live captions for an in-progress voice ses
 ''`, `loop: boolean = false`, `muted: boolean = false`, `preload: 'none' | 'metadata' | 'auto' =
 'metadata'`, `playbackRate: number = 1` (attribute `playback-rate`, reflected), `rates: number[] =
 [0.75, 1, 1.25, 1.5, 2]` (attribute: false), `cues: LyraAvCue[] = []` (attribute: false), `peaks:
-number[] = []` (attribute: false), and `tracks: LyraAvTrack[] = []` (attribute: false).
+number[] = []` (attribute: false), and `tracks: LyraAvTrack[] = []` (attribute: false). The inherited
+anchor-target surface is `highlights: LyraHighlight[] = []` (property only; reassign after
+mutation), `activeHighlightId: string | null = null` (attribute `active-highlight-id`),
+`anchor: LyraAnchor | string | null = null` (property only), and readonly
+`anchorKinds: readonly LyraAnchorKind[] = ['time-range']`.
 `LyraAvCue = { id, start, end?, text, speaker? }`; `LyraAvTrack = { src, kind: 'subtitles' |
 'captions' | 'descriptions', srclang, label, default? }`.
 
@@ -57,7 +61,9 @@ error state and emits `lr-render-error`. `seek(seconds)` sets `currentTime` and 
 and reveal the active match in the virtualized transcript without seeking playback; `clearSearch()`
 resets the query and match state. `focus(options?)`, `blur()`, and `click()` forward to the native
 `[part='media']` element, which carries `controls` and is therefore the player's primary focusable
-affordance.
+affordance. `scrollToAnchor(target: LyraAnchor | string): Promise<boolean>` seeks to a resolved
+`time-range` anchor's `start` after media metadata loads and makes an id-addressed highlight active;
+unsupported or unresolved targets report `false` through the return value and `lr-anchor-result`.
 
 **Events:** `lr-play`, `lr-pause`, `lr-load` (`detail: { duration, kind }`), `lr-time-change`
 (`detail: { currentTime }`, throttled to at most 4/s while playing plus one extra per `seek()`),
@@ -69,7 +75,9 @@ found }`), `lr-search-change` (`detail: { query, matchCount, activeIndex }`), an
 events are also relayed exactly once from the host as native `Event` instances. Like the original
 media notifications, these relays are non-bubbling, non-composed, and non-cancelable. The richer
 `lr-*` notifications above remain unchanged. The native media element's `focus`/`blur` are
-additionally bridged as bubbling, composed host events.
+additionally bridged as bubbling, composed host events. `lr-text-select` is not part of this
+player's event contract: transcript rows live inside the embedded virtual list's nested shadow
+root, so no selection binding is installed.
 
 **CSS parts:** `base`, `media` (the native `<audio>`/`<video>` element), `toolbar`, `rate-select`,
 `timeline` (click-to-seek and arrow-key seeking), `timeline-marker` (one per `time-range` highlight;

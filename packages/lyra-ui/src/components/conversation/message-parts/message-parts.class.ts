@@ -154,6 +154,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
     if (!changed.has('parts')) return;
     const current = this.parts.filter((part) => part.type === 'error');
     if (this.hasUpdated && !this.suppressNextErrorAnnouncement) {
@@ -167,6 +168,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   }
 
   protected override updated(_changed: PropertyValues<this>): void {
+    super.updated(_changed);
     this.suppressNextErrorAnnouncement = false;
   }
 

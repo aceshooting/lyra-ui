@@ -172,7 +172,7 @@ describe('showTimestamps', () => {
     const withoutFlag = (await fixture(
       html`<lr-activity-feed expanded .entries=${[{ id: '1', text: 'x', timestamp: ts }]}></lr-activity-feed>`,
     )) as LyraActivityFeed;
-    expect(withoutFlag.shadowRoot!.querySelector('[part="entry-timestamp"]')).to.not.exist;
+    expect((withoutFlag.shadowRoot!.querySelector('[part="entry-timestamp"]')) == null).to.be.true;
 
     const withFlag = (await fixture(
       html`<lr-activity-feed
@@ -203,7 +203,7 @@ describe('showTimestamps', () => {
         .entries=${[{ id: '1', text: 'x', timestamp: 'not-a-date' }]}
       ></lr-activity-feed>`,
     )) as LyraActivityFeed;
-    expect(el.shadowRoot!.querySelector('[part="entry-timestamp"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="entry-timestamp"]')) == null).to.be.true;
   });
 });
 
@@ -426,7 +426,7 @@ describe('follow contract (virtualized)', () => {
       html`<lr-activity-feed expanded virtualize-at="4" .entries=${makeEntries(5)}></lr-activity-feed>`,
     )) as LyraActivityFeed;
     expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.exist;
-    expect(el.shadowRoot!.querySelector('[part="body"][role="list"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="body"][role="list"]')) == null).to.be.true;
   });
 
   it('normalizes a NaN virtualizeAt to the default (199) instead of silently disabling virtualization', async () => {
@@ -434,7 +434,7 @@ describe('follow contract (virtualized)', () => {
       html`<lr-activity-feed expanded virtualize-at="not-a-number" .entries=${makeEntries(5)}></lr-activity-feed>`,
     )) as LyraActivityFeed;
     expect(Number.isNaN(el.virtualizeAt)).to.be.true;
-    expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('lr-virtual-list')) == null).to.be.true;
     expect(el.shadowRoot!.querySelectorAll('[part="entry"]').length).to.equal(5);
 
     const nativeResizeObserver = window.ResizeObserver;
@@ -489,7 +489,7 @@ describe('follow contract (virtualized)', () => {
     const el = (await fixture(
       html`<lr-activity-feed expanded virtualize-at="4" .entries=${makeEntries(4)}></lr-activity-feed>`,
     )) as LyraActivityFeed;
-    expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('lr-virtual-list')) == null).to.be.true;
     expect(el.shadowRoot!.querySelectorAll('[part="entry"]').length).to.equal(4);
   });
 

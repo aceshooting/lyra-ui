@@ -132,6 +132,7 @@ export class LyraUsageBadge extends LyraElement {
   private focused = false;
 
   protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
     // A server render sees no light-DOM children at all, so a hydrating badge reproduces the
     // server's slot-less rendering first and picks the slotted content up one update later.
     this.seedFirstRenderState(() => {
@@ -150,6 +151,7 @@ export class LyraUsageBadge extends LyraElement {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('tooltipOpen')) {
       this.cleanupPositioner?.();
       this.cleanupPositioner = undefined;

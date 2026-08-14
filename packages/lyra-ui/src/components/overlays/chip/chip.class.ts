@@ -17,9 +17,6 @@ import { LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_selec
 
 /** The library's one semantic-tone vocabulary. */
 export type ChipVariant = LyraVariant;
-/** The name this vocabulary carried while the property was called `tone`, kept exported so a
- *  consumer's own `import type { ChipTone }` keeps resolving to the same five values. */
-export type ChipTone = LyraVariant;
 /** The shared six-step ladder plus one step below it: a chip is the library's smallest labelled
  *  surface and needs a tier that fits inside a table cell, which no other component does. */
 export type ChipSize = LyraSizeStep | '3xs';
@@ -63,6 +60,8 @@ export interface LyraChipEventMap {
  * interaction, the same contract `<lr-attachment-chip>`/
  * `<lr-conversation-item>` already follow. A consumer owns the underlying
  * list and decides whether/how the click actually removes anything.
+ * `disabled` disables whichever native action control is active and suppresses
+ * selection/removal requests without changing the controlled state.
  *
  * @customElement lr-chip
  * @slot - The chip's label content. Visible accessible text and forwarding-slot reassignment stay
@@ -145,6 +144,9 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   /** Shows the remove (×) button. */
   @property({ type: Boolean, reflect: true }) removable = false;
 
+  /** Disables the active toggle/remove control and suppresses its request event. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
+
   /** Draws fully-rounded ends instead of the default rounded rectangle, matching
    *  `<lr-badge>`/`<lr-tag>`'s identical property. */
   @property({ type: Boolean, reflect: true }) pill = false;
@@ -209,7 +211,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     const target = event.target as Element | null;
     if (target?.nodeType !== 1 || target.localName !== 'slot') return;
     this.bindLabelObserverTargets();
-    this.recomputeLabelText();
+    this.updateBrowserDerivedState(() => this.recomputeLabelText());
   };
 
   override connectedCallback(): void {
@@ -219,7 +221,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     this.labelObserver = MutationObserverCtor
       ? new MutationObserverCtor(() => {
           this.bindLabelObserverTargets();
-          this.recomputeLabelText();
+          this.updateBrowserDerivedState(() => this.recomputeLabelText());
         })
       : undefined;
     this.addEventListener('slotchange', this.onLabelSlotChange);
@@ -254,7 +256,12 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   }
 
   private onIconSlotChange = (e: Event): void => {
-    this.hasIconSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    const slot = e.target as HTMLSlotElement;
+    const update = (): void => {
+      if (!this.isConnected) return;
+      this.hasIconSlot = slot.assignedElements({ flatten: true }).length > 0;
+    };
+    this.updateBrowserDerivedState(update);
   };
 
   private recomputeHasEndSlot(): void {
@@ -264,7 +271,12 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   }
 
   private onEndSlotChange = (e: Event): void => {
-    this.hasEndSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    const slot = e.target as HTMLSlotElement;
+    const update = (): void => {
+      if (!this.isConnected) return;
+      this.hasEndSlot = slot.assignedElements({ flatten: true }).length > 0;
+    };
+    this.updateBrowserDerivedState(update);
   };
 
   // Only the default slot's own content counts toward the remove/toggle button's accessible name --
@@ -318,10 +330,12 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   }
 
   private onRemoveClick = (): void => {
+    if (this.disabled) return;
     this.emit('lr-remove', { value: this.value });
   };
 
   private onToggleClick = (): void => {
+    if (this.disabled) return;
     const selected = !this.selected;
     const event = this.emit(
       'lr-chip-select',
@@ -361,24 +375,31 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
       <span
         part="base"
       >
-        <span part="icon" aria-hidden="true" ?hidden=${!this.hasIconSlot}>
+        <span part="icon" aria-hidden="true" ?hidden=${!this.renderSlotPresence(this.hasIconSlot)}>
           <slot name="icon" @slotchange=${this.onIconSlotChange}></slot>
         </span>
         <span part="label" ?inert=${toggleMode}><slot @slotchange=${this.onLabelSlotChange}></slot></span>
-        <span part="end" ?hidden=${!this.hasEndSlot}>
+        <span part="end" ?hidden=${!this.renderSlotPresence(this.hasEndSlot)}>
           <slot name="end" @slotchange=${this.onEndSlotChange}></slot>
         </span>
         ${toggleMode
           ? html`<button
               part="toggle-button"
               type="button"
+              ?disabled=${this.disabled}
               aria-label=${this.accessibleToggleLabel}
               aria-pressed=${pressed ? 'true' : 'false'}
               @click=${this.onToggleClick}
             ></button>`
           : nothing}
         ${this.removable
-          ? html`<button part="remove-button" type="button" aria-label=${this.accessibleRemoveLabel} @click=${this.onRemoveClick}>
+          ? html`<button
+              part="remove-button"
+              type="button"
+              ?disabled=${this.disabled}
+              aria-label=${this.accessibleRemoveLabel}
+              @click=${this.onRemoveClick}
+            >
               ${closeIcon()}
             </button>`
           : nothing}

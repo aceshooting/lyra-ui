@@ -293,7 +293,7 @@ it('omits the label part in linear mode when label is empty', async () => {
   const el = (await fixture(
     html`<lr-gauge type="linear" value="5" max="100"></lr-gauge>`,
   )) as LyraGauge;
-  expect(el.shadowRoot!.querySelector('[part="label"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="label"]')) == null).to.be.true;
 });
 
 it('exposes a base part on the render root for both radial and linear', async () => {

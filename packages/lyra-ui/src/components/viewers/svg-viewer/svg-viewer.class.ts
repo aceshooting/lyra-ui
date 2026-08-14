@@ -113,7 +113,7 @@ type SvgFetchState =
   | { kind: 'loaded'; markup: string }
   | { kind: 'error'; message: string };
 
-export interface LyraSvgViewerEventMap extends LyraAnchorTargetEventMap {
+export interface LyraSvgViewerEventMap extends Omit<LyraAnchorTargetEventMap, 'lr-text-select'> {
   'lr-render-error': CustomEvent<{ error: unknown }>;
 }
 

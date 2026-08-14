@@ -1,3 +1,4 @@
+import type { PropertyValues } from 'lit';
 import { html, nothing, type TemplateResult } from 'lit';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -432,7 +433,8 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
     action();
   }
 
-  protected override updated(): void {
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (this.pendingFocusAdd) {
       this.pendingFocusAdd = false;
       (this.renderRoot.querySelector('[part="add-button"]') as (HTMLElement & { focus(): void }) | null)?.focus();

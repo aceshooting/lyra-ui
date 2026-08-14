@@ -35,7 +35,8 @@ export interface PromptSuggestion extends MentionItem {
 
 export interface PromptInputAttachment extends DocumentRef {
   file?: File;
-  size?: number;
+  /** File size in bytes, forwarded to the rendered attachment chip. */
+  bytes?: number;
   status?: AttachmentChipStatus;
   progress?: number;
 }
@@ -273,6 +274,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   }
 
   protected override updated(_changed: PropertyValues): void {
+    super.updated(_changed);
     const popover = this.suggestionPopover;
     if (popover && this.suggestionAnchor) {
       popover.anchor = this.suggestionAnchor;
@@ -419,7 +421,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       .id=${attachment.id}
       .file=${attachment.file}
       .name=${attachment.name}
-      .size=${attachment.size ?? 0}
+      .bytes=${attachment.bytes ?? 0}
       .mimeType=${attachment.mimeType ?? ''}
       .previewSrc=${attachment.uri ?? ''}
       .status=${attachment.status ?? 'pending'}

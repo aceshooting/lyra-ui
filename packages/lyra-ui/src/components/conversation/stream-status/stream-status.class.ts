@@ -166,7 +166,8 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
-  protected override willUpdate(): void {
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasActionsSlot = this.hasSlotted('actions');
       this.hasMessageContent = Array.from(this.childNodes).some(isRealMessageNode);
@@ -188,6 +189,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   // again here would just be redundant, not wrong, but the `else` skips that
   // double work.
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('phase')) {
       this.onPhaseChanged(changed.get('phase') as StreamStatusPhase | undefined);
     } else if (changed.has('stallThresholdMs') && this.phase === 'streaming') {

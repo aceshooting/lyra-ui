@@ -66,9 +66,10 @@ controls, rendered before the built-in close button), `footer` — all inherited
 `header-actions`; `close-button close-button__base`; `body`; `footer`. Names grouped together are
 aliases on the same functional node.
 
-**Themeable custom properties:** mapped `--size` controls the active axis. Inherited `--width`
-remains visible in the shared dialog surface, but drawer sizing deliberately shadows it with
-`--size`. The other mapped/inherited aliases are `--backdrop-filter`, `--spacing`, `--header-spacing`, `--body-spacing`,
+**Themeable custom properties:** mapped `--size` controls the active axis. For start/end drawers,
+the inherited `--width` and `--lr-dialog-width` remain compatibility fallbacks when neither
+`--size` nor `--lr-drawer-width` is set, and `--lr-dialog-max-width` remains an effective cap.
+The other mapped/inherited aliases are `--backdrop-filter`, `--spacing`, `--header-spacing`, `--body-spacing`,
 `--footer-spacing`, `--show-duration`, and `--hide-duration`. Lyra compatibility tokens remain:
 `--lr-drawer-width` (default `--lr-size-24rem`; used by
 `placement="start"|"end"`, capped at `100%`), `--lr-drawer-height` (default `--lr-size-24rem`;
@@ -79,8 +80,8 @@ explicitly flipped under `:dir(rtl)` since `translateX` is physical. Override to
 the slide). It also inherits every `<lr-dialog>` token — `--lr-dialog-overlay-color`,
 `--lr-dialog-backdrop-filter`, `--lr-dialog-width`, `--lr-dialog-max-width`, `--lr-dialog-spacing`,
 `--lr-dialog-spacing-block`, `--lr-dialog-panel-duration` and `--lr-dialog-backdrop-duration` —
-since `LyraDrawer` extends `LyraDialog`. The drawer's own width/height tokens take precedence for
-its panel, and only the animation *name* is overridden, so `--lr-dialog-panel-duration` retunes the
+since `LyraDrawer` extends `LyraDialog`. The drawer's own size/width/height tokens take precedence
+for its panel, and only the animation *name* is overridden, so `--lr-dialog-panel-duration` retunes the
 slide too and the reduced-motion flattening of the shared `--lr-duration-*` tokens still reaches it.
 
 ```html

@@ -153,8 +153,8 @@ describe('kind resolution', () => {
       html`<lr-media-card src="https://example.test/a.zip" mime-type="application/zip"></lr-media-card>`,
     )) as LyraMediaCard;
     expect(el.shadowRoot!.querySelector('[part="file-icon"]')).to.exist;
-    expect(el.shadowRoot!.querySelector('img[part="media"]')).to.not.exist;
-    expect(el.shadowRoot!.querySelector('video[part="media"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('img[part="media"]')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('video[part="media"]')) == null).to.be.true;
   });
 
   it('an explicit kind wins over mime-type detection', async () => {
@@ -162,7 +162,7 @@ describe('kind resolution', () => {
       html`<lr-media-card src="https://example.test/a.png" mime-type="image/png" kind="file"></lr-media-card>`,
     )) as LyraMediaCard;
     expect(el.shadowRoot!.querySelector('[part="file-icon"]')).to.exist;
-    expect(el.shadowRoot!.querySelector('img[part="media"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('img[part="media"]')) == null).to.be.true;
   });
 });
 
@@ -255,7 +255,7 @@ describe('kind="image"', () => {
     const el = (await fixture(
       html`<lr-media-card src="javascript:alert(1)" kind="image" filename="payload.jpg"></lr-media-card>`,
     )) as LyraMediaCard;
-    expect(el.shadowRoot!.querySelector('img[part="media"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('img[part="media"]')) == null).to.be.true;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     // javascript: fails both the media-src and href allowlists, so there is
     // nothing safe to link to either -- a plain, unclickable span.
@@ -340,7 +340,7 @@ describe('kind="video"', () => {
     const el = (await fixture(
       html`<lr-media-card src="vbscript:msgbox(1)" kind="video" filename="clip.mp4"></lr-media-card>`,
     )) as LyraMediaCard;
-    expect(el.shadowRoot!.querySelector('video[part="media"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('video[part="media"]')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="file-icon"]')).to.exist;
   });
 

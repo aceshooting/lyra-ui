@@ -22,7 +22,7 @@ describe('lr-html-viewer', () => {
       await waitUntil(() => el.shadowRoot!.querySelector('[part="html"] h1') !== null);
       await el.updateComplete;
       expect(el.shadowRoot!.querySelector('[part="html"] h1')!.textContent).to.equal('Safe');
-      expect(el.shadowRoot!.querySelector('[part="html"] script')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('[part="html"] script')) == null).to.be.true;
       expect(el.shadowRoot!.querySelector('[part="html"]')!.getAttribute('aria-label')).to.equal('Report');
     } finally { window.fetch = original; }
   });
@@ -138,7 +138,7 @@ describe('lr-html-viewer', () => {
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
         'This viewer needs the optional "dompurify" package installed to render safely.',
       );
-      expect(el.shadowRoot!.querySelector('[part="html"]')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('[part="html"]')) == null).to.be.true;
     } finally { window.fetch = original; }
   });
   it('renders a .strings override for the empty-state message', async () => {

@@ -184,6 +184,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   @state() private selectedId: string | null = null;
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('searchable') && !this.searchable) {
       this.searchText = '';
     }

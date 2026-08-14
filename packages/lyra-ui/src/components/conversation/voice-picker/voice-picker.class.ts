@@ -242,8 +242,8 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   @state() private activeIndex = -1;
   @state() private query = '';
   @state() private touched = false;
-  @state() private hasHintSlot = false;
-  @state() private hasErrorSlot = false;
+  // Label/hint/error wrappers share one hydration-aware slot-presence authority. On the server,
+  // unknowable authored slots remain progressively visible until the browser reconciles them.
   private readonly slotPresence = new SlotPresenceController(this);
   /** The voiceId currently playing via the internal `<audio>` (`null` when nothing is). */
   @state() private previewingId: string | null = null;
@@ -412,6 +412,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
     if (this.hasUpdated) {
       const renderedClosedMode = this.renderRoot.querySelector('[part="trigger"]') !== null;
       const switchingMode = renderedClosedMode !== this.closedMode;
@@ -422,15 +423,6 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
         focused?.nodeType === 1 &&
         (focused as Element).matches('[part="trigger"], [part="combobox-input"]');
     }
-    // Both feed render()'s own shadow output (the `hidden` binding on [part="hint"]/[part="error"]),
-    // so they go through seedFirstRenderState(): a browser-only mount still answers the light-DOM
-    // question before its first render (no flash of the fallback), while a hydrating mount
-    // reproduces the server's childless render first and corrects itself on the next update
-    // instead of failing hydration and losing the whole server-rendered subtree.
-    this.seedFirstRenderState(() => {
-      this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
-      this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
-    });
     if (
       this.hasUpdated &&
       (changed.has('catalog') || changed.has('allowCustom') || changed.has('value'))
@@ -710,6 +702,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     const reposition = changed.has('open') || (this.open && (changed.has('catalog') || changed.has('allowCustom')));
     if (reposition) {
       this.syncPopup();
@@ -901,7 +894,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     // already reads true here whenever this is that case. Marking `touched` for it anyway could
     // reenter an in-flight update and trip Lit's dev-mode "scheduled an update after an update
     // completed" warning for a state flip nothing observable needed -- a disabled control is
-    // barred from validation regardless (fr_asxOgk4UhNB07xevCWwFVQ).
+    // barred from validation regardless.
     if (!this.effectiveDisabled) this.touched = true;
     this.hide();
     this.emit('blur');
@@ -978,7 +971,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   private onInputBlur = (): void => {
     if (this.suppressControlEvents) return;
     // Same platform reaction as onTriggerBlur() above, for the free-text mode's internal
-    // `<input>` (fr_asxOgk4UhNB07xevCWwFVQ): the browser force-blurs it the moment it becomes
+    // `<input>`: the browser force-blurs it the moment it becomes
     // disabled, and that is not a user interaction worth marking `touched` for.
     if (!this.effectiveDisabled) this.touched = true;
     this.hide();
@@ -1087,13 +1080,6 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     `;
   }
 
-  private onHintSlotChange = (e: Event): void => {
-    this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
-  };
-  private onErrorSlotChange = (e: Event): void => {
-    this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
-  };
-
   private get hasVisibleLabel(): boolean {
     return this.label.length > 0 || this.slotPresence.has('label');
   }
@@ -1107,10 +1093,10 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   private renderHintError(hasError: boolean, hasHint: boolean): TemplateResult {
     return html`
       <div id="voice-picker-error" part="error" ?hidden=${!hasError}>
-        ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
+        ${this.errorText}<slot name="error"></slot>
       </div>
       <div id="voice-picker-hint" part="hint" ?hidden=${!hasHint}>
-        ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
+        ${this.hint}<slot name="hint"></slot>
       </div>
     `;
   }
@@ -1138,8 +1124,8 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
     const hasValue = this._value.length > 0;
     const hasLabel = this.hasVisibleLabel;
-    const hasHint = this.hasHintSlot || this.hint.length > 0;
-    const hasError = this.hasErrorSlot || this.errorText.length > 0;
+    const hasHint = this.slotPresence.has('hint') || this.hint.length > 0;
+    const hasError = this.slotPresence.has('error') || this.errorText.length > 0;
     const describedBy = [hasError ? 'voice-picker-error' : '', hasHint ? 'voice-picker-hint' : '']
       .filter(Boolean)
       .join(' ');
@@ -1182,8 +1168,8 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     const rows = this.filteredEntries;
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
     const hasLabel = this.hasVisibleLabel;
-    const hasHint = this.hasHintSlot || this.hint.length > 0;
-    const hasError = this.hasErrorSlot || this.errorText.length > 0;
+    const hasHint = this.slotPresence.has('hint') || this.hint.length > 0;
+    const hasError = this.slotPresence.has('error') || this.errorText.length > 0;
     const describedBy = [hasError ? 'voice-picker-error' : '', hasHint ? 'voice-picker-hint' : '']
       .filter(Boolean)
       .join(' ');

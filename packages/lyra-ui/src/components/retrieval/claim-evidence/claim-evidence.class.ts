@@ -79,9 +79,13 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
+  /** Grounded claims rendered as the selectable evidence index. */
   @property({ attribute: false }) claims: GroundedClaim[] = [];
+  /** Citation records resolved by each claim's citation indexes. */
   @property({ attribute: false }) citations: Citation[] = [];
+  /** Controlled id of the claim whose evidence is expanded. */
   @property({ attribute: 'selected-claim-id' }) selectedClaimId = '';
+  /** Accessible name for the claim-and-evidence region; empty uses the localized default. */
   @property() label = '';
   /** Tighter claim-trigger padding and column gap, for dense evidence lists -- same convention as
    *  `lr-source-card`'s/`lr-entity-card`'s `compact`. Defaults to `false`, i.e. the full

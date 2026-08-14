@@ -33,6 +33,11 @@ export const styles = css`
     pointer-events: none;
     transition-duration: var(--hide-duration, var(--lr-duration-fast));
   }
+  [part~='popup'][data-awaits-position] {
+    /* An active request without a live, placed anchor is not a hide transition: letting the old
+       surface fade at stale coordinates would paint unattached chrome for another frame. */
+    transition: none;
+  }
 
   [part~='hover-bridge'] {
     /* A viewport-sized transparent box clipped down to the quad internal/positioner.ts writes

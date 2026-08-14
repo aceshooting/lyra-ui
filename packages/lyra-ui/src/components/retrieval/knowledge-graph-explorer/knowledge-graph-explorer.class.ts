@@ -184,9 +184,13 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
+  /** Nodes forwarded to the composed graph and search experience. */
   @property({ attribute: false }) nodes: GraphNode[] = [];
+  /** Links forwarded to the composed graph and path interactions. */
   @property({ attribute: false }) links: GraphLink[] = [];
+  /** Labels, colors, and shapes for the graph's node-type vocabulary. */
   @property({ attribute: false }) nodeTypes: GraphNodeType[] = [];
+  /** Community hull definitions forwarded to the graph. */
   @property({ attribute: false }) communities: GraphCommunity[] = [];
   /** Extra dossier fields, keyed by node id -- see `LyraKnowledgeGraphEntityDetails`. */
   @property({ attribute: false }) entityDetails: Record<string, LyraKnowledgeGraphEntityDetails> = {};
@@ -210,7 +214,9 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
    *  narrows how the node-detail popover anchors and disables its pan/zoom tracking -- see the
    *  class doc's anchoring note. */
   @property() renderer: GraphRenderer = 'svg';
+  /** Requested width of the composed graph viewport in CSS pixels. */
   @property({ type: Number }) width = 800;
+  /** Requested height of the composed graph viewport in CSS pixels. */
   @property({ type: Number }) height = 600;
   /** Accessible name for the root landmark; falls back to the localized `graphExplorerLabel`. */
   @property() label = '';

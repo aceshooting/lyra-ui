@@ -14,7 +14,7 @@ it('emits one cancelable lr-invalid alias when a validity check fails', async ()
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
-  expect(aliases[0].target).to.equal(el);
+  expect((aliases[0].target) === (el)).to.equal(true);
   expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
   expect(aliases[0].cancelable).to.be.true;
 });
@@ -748,7 +748,7 @@ it('resets touched state (re-hiding aria-invalid) via form.reset(), even when th
 });
 
 describe('touched state', () => {
-  // Regression test for fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native form control
+  // Regression test: disabling a focused native form control
   // (input/select/textarea/button) force-blurs it -- plain platform behavior, not a user
   // interaction -- and marking `touched` for that blur could reenter an in-flight Lit update.
   it('does not mark touched from a blur the platform forces when the control becomes disabled while focused', async () => {

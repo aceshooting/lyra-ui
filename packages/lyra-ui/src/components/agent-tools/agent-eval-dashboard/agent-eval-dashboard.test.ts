@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './agent-eval-dashboard.js';
 import type { LyraAgentEvalDashboard } from './agent-eval-dashboard.class.js';
+import type { LyraStat } from '../../data/stat/stat.class.js';
 describe('lr-agent-eval-dashboard', () => {
   it('renders metrics, trend, and runs', async () => { const el = (await fixture(html`<lr-agent-eval-dashboard .strings=${{ evaluationDashboardLabel: 'Evaluation overview' }} .metrics=${[{ id: 'pass', label: 'Pass rate', value: 0.9, format: 'percent' }]} .runs=${[{ id: 'r1', label: 'Run 1', status: 'done', metrics: { pass: 0.9 } }]}></lr-agent-eval-dashboard>`)) as LyraAgentEvalDashboard; await el.updateComplete; expect(el.shadowRoot!.querySelector('lr-lite-chart')).to.exist; expect(el.shadowRoot!.querySelectorAll('[part="run"]').length).to.equal(1); });
   it('is accessible in empty and populated states', async () => { await expect((await fixture(html`<lr-agent-eval-dashboard></lr-agent-eval-dashboard>`)) as LyraAgentEvalDashboard).to.be.accessible(); await expect((await fixture(html`<lr-agent-eval-dashboard .runs=${[{ id: 'r', label: 'Run', status: 'done' }]}></lr-agent-eval-dashboard>`)) as LyraAgentEvalDashboard).to.be.accessible(); });
@@ -30,6 +31,23 @@ describe('lr-agent-eval-dashboard', () => {
       new Intl.NumberFormat('de-DE', { style: 'unit', unit: 'millisecond', unitDisplay: 'short', maximumFractionDigits: 0 }).format(1200),
       new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(2.5),
     ]);
+  });
+
+  it('composes metric stats with the public plain-frame contract and no card chrome', async () => {
+    const el = (await fixture(html`
+      <lr-agent-eval-dashboard
+        .metrics=${[{ id: 'accuracy', label: 'Accuracy', value: 0.95, format: 'percent' }]}
+      ></lr-agent-eval-dashboard>
+    `)) as LyraAgentEvalDashboard;
+    const stat = el.shadowRoot!.querySelector('lr-stat') as LyraStat;
+    await stat.updateComplete;
+    const base = stat.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const chrome = getComputedStyle(base);
+
+    expect(stat.frame).to.equal('plain');
+    expect(chrome.borderTopWidth).to.equal('0px');
+    expect(chrome.paddingTop).to.equal('0px');
+    expect(chrome.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
   });
 
   it('falls back to USD when the currency code is invalid', async () => {

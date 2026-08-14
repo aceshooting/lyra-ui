@@ -2,7 +2,19 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './toast-item.js';
 
-const meta: Meta = { title: 'Feedback/Toast item', component: 'lr-toast-item', tags: ['autodocs'] };
+const meta: Meta = {
+  title: 'Feedback/Toast item',
+  component: 'lr-toast-item',
+  tags: ['autodocs'],
+  parameters: {
+    docs: {
+      // These demos have no args, so their rendered markup never changes. Using Storybook's
+      // compiled CSF source also keeps the snippets available without relying on the dynamic
+      // source event that is absent when this docs page mounts all five stories together.
+      source: { type: 'auto' },
+    },
+  },
+};
 export default meta;
 export const Default: StoryObj = { render: () => html`<lr-toast-item>Saved successfully.</lr-toast-item>` };
 export const NarrowLongContent: StoryObj = {
@@ -20,7 +32,7 @@ export const AliasSizes: StoryObj = {
   parameters: {
     docs: {
       description: {
-        story: '`small`, `medium`, and `large` are accepted write aliases whose getters normalize to `s`, `m`, and `l`.',
+        story: '`small`, `medium`, and `large` remain the observable property/attribute spellings while mapping to the same rendered sizes as `s`, `m`, and `l`.',
       },
     },
   },

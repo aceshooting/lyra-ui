@@ -963,7 +963,7 @@ describe('focus/blur bridging', () => {
   });
 
   it('does not mark touched from a blur caused by a field itself becoming disabled', async () => {
-    // Regression test for fr_asxOgk4UhNB07xevCWwFVQ. Disabling the control mid-focus force-blurs
+    // Regression test: disabling the control mid-focus force-blurs
     // whichever internal native field currently holds focus -- a platform reaction to the
     // field's own `?disabled=${this.effectiveDisabled}` binding turning true, not a user
     // interaction. onFieldBlur() unconditionally marking `touched = true` for it was, depending on

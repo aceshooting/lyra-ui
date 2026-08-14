@@ -108,6 +108,11 @@ it('gives an explicitly empty host aria-label presence precedence without disabl
   expect(descriptionProxy(explicitEmpty).textContent).to.equal('Action text');
   expect(popup(explicitEmpty).getAttribute('aria-label')).to.equal('Popover');
 
+  explicitEmpty.setAttribute('aria-label', 'Helpful actions');
+  await explicitEmpty.updateComplete;
+  expect(descriptionProxy(explicitEmpty).textContent).to.equal('Helpful actions');
+  expect(popup(explicitEmpty).getAttribute('aria-label')).to.equal('Helpful actions');
+
   const fallback = (await fixture(html`
     <lr-tooltip manual .strings=${{ popover: 'Localized actions' }}>
       <button type="button" slot="trigger">Help</button>
@@ -301,7 +306,7 @@ it('closes an already-rendered open tooltip immediately when disabled is set aft
   expect(el.open).to.be.false;
 });
 
-it('deactivates the overlay when open interactive content stops being actionable without closing', async () => {
+it('keeps Escape ownership when open interactive content stops being actionable', async () => {
   const el = (await fixture(html`
     <lr-tooltip manual>
       <button type="button" slot="trigger">Help</button>
@@ -318,12 +323,20 @@ it('deactivates the overlay when open interactive content stops being actionable
   await waitUntil(() => popup(el).getAttribute('role') === 'tooltip');
   expect(el.open).to.be.true;
 
-  // The overlay manager entry was torn down along with the promotion, so a document-level
-  // Escape (as opposed to one dispatched on a focused trigger) no longer owns dismissal here.
-  const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+  const unrelated = document.createElement('button');
+  unrelated.textContent = 'Unrelated focus';
+  document.body.append(unrelated);
+  unrelated.focus();
+  const escape = new KeyboardEvent('keydown', {
+    key: 'Escape',
+    bubbles: true,
+    cancelable: true,
+  });
   document.dispatchEvent(escape);
   await el.updateComplete;
-  expect(el.open).to.be.true;
+  expect(el.open).to.be.false;
+  expect(document.activeElement?.textContent).to.equal('Unrelated focus');
+  unrelated.remove();
 });
 
 it('keeps the tooltip open when lr-hide is prevented', async () => {
@@ -367,6 +380,158 @@ it('uses a nested element aria-label instead of its own text when computing the 
   expect(descriptionProxy(el).textContent).to.equal('Custom accessible label');
 });
 
+it('tracks image alternatives, labeling references, and collapsed details in its description', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <span id="diagram-label" hidden>Architecture diagram</span>
+      <lr-tooltip manual>
+        <button type="button" slot="trigger">Help</button>
+        <img id="diagram" alt="Fallback diagram" aria-labelledby="diagram-label" />
+        <details id="details">
+          <summary>More context</summary>
+          <span>Hidden details</span>
+        </details>
+      </lr-tooltip>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+  const label = wrapper.querySelector('#diagram-label')!;
+  const image = el.querySelector('#diagram')!;
+  const details = el.querySelector<HTMLDetailsElement>('#details')!;
+
+  await waitUntil(() => descriptionProxy(el).textContent === 'Architecture diagram More context');
+
+  label.removeAttribute('id');
+  await waitUntil(() => descriptionProxy(el).textContent === 'Fallback diagram More context');
+  label.id = 'diagram-label';
+  await waitUntil(() => descriptionProxy(el).textContent === 'Architecture diagram More context');
+  label.id = 'renamed-diagram-label';
+  await waitUntil(() => descriptionProxy(el).textContent === 'Fallback diagram More context');
+  image.setAttribute('aria-labelledby', 'renamed-diagram-label');
+  await waitUntil(() => descriptionProxy(el).textContent === 'Architecture diagram More context');
+
+  label.textContent = 'Updated architecture diagram';
+  await waitUntil(
+    () => descriptionProxy(el).textContent === 'Updated architecture diagram More context'
+  );
+
+  image.removeAttribute('aria-labelledby');
+  image.setAttribute('alt', 'Updated fallback diagram');
+  details.open = true;
+  await waitUntil(
+    () =>
+      descriptionProxy(el).textContent === 'Updated fallback diagram More context Hidden details'
+  );
+});
+
+it('tracks missing, inserted, replaced, removed, and cyclic external labeling targets', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <lr-tooltip manual>
+        <button type="button" slot="trigger">Help</button>
+        <img id="late-image" alt="Fallback image" aria-labelledby="late-label" />
+      </lr-tooltip>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+  const image = el.querySelector('#late-image')!;
+  await waitUntil(() => descriptionProxy(el).textContent === 'Fallback image');
+
+  const inserted = document.createElement('span');
+  inserted.id = 'late-label';
+  inserted.hidden = true;
+  inserted.textContent = 'Inserted label';
+  wrapper.prepend(inserted);
+  await waitUntil(() => descriptionProxy(el).textContent === 'Inserted label');
+
+  const replacement = document.createElement('span');
+  replacement.id = 'late-label';
+  replacement.hidden = true;
+  replacement.textContent = 'Replacement label';
+  inserted.replaceWith(replacement);
+  await waitUntil(() => descriptionProxy(el).textContent === 'Replacement label');
+
+  replacement.remove();
+  await waitUntil(() => descriptionProxy(el).textContent === 'Fallback image');
+
+  const first = document.createElement('span');
+  const second = document.createElement('span');
+  first.id = 'cycle-label-a';
+  first.hidden = true;
+  first.setAttribute('aria-labelledby', 'cycle-label-b');
+  second.id = 'cycle-label-b';
+  second.hidden = true;
+  second.setAttribute('aria-labelledby', 'cycle-label-a');
+  wrapper.prepend(first, second);
+  image.setAttribute('aria-labelledby', 'cycle-label-a');
+  await waitUntil(() => descriptionProxy(el).textContent === '');
+  expect(descriptionProxy(el).textContent?.length).to.equal(0);
+});
+
+it('does not expose fallback description text when an empty node is assigned', async () => {
+  const el = (await fixture(html`
+    <lr-tooltip manual content="Fallback help">
+      <button type="button" slot="trigger">Help</button>
+      <span id="assigned"></span>
+    </lr-tooltip>
+  `)) as LyraTooltip;
+
+  await waitUntil(() => descriptionProxy(el).textContent === '');
+  expect(descriptionProxy(el).textContent).to.equal('');
+
+  for (const child of [...el.childNodes]) {
+    const element = child.nodeType === Node.ELEMENT_NODE ? (child as Element) : null;
+    if (
+      element?.getAttribute('slot') !== 'trigger' &&
+      !element?.hasAttribute('data-lyra-tooltip-description')
+    ) {
+      child.remove();
+    }
+  }
+  await waitUntil(() => descriptionProxy(el).textContent === 'Fallback help');
+});
+
+it('force-closes after losing its sole trigger even when lr-hide is vetoed', async () => {
+  const el = (await fixture(html`
+    <lr-tooltip manual open>
+      <button type="button" slot="trigger">Help</button>
+      Helpful text
+    </lr-tooltip>
+  `)) as LyraTooltip;
+  await el.updateComplete;
+  el.addEventListener('lr-hide', (event) => event.preventDefault());
+
+  el.querySelector('[slot="trigger"]')!.remove();
+  await waitUntil(() => !el.open);
+  expect(el.hasAttribute('open')).to.equal(false);
+});
+
+it('rolls back a vetoed showAt anchor before a later ordinary open', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <button id="return">Virtual return</button>
+      <lr-tooltip manual>
+        <button type="button" slot="trigger">Help</button>
+        Helpful text
+      </lr-tooltip>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+  const trigger = el.querySelector<HTMLButtonElement>('[slot="trigger"]')!;
+  const virtualReturn = wrapper.querySelector<HTMLButtonElement>('#return')!;
+  el.addEventListener('lr-show', (event) => event.preventDefault(), {
+    once: true,
+  });
+  el.showAt({ x: 200, y: 200 }, { returnFocusTo: virtualReturn });
+  expect(el.open).to.equal(false);
+
+  trigger.focus();
+  await el.show();
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await el.updateComplete;
+  expect(document.activeElement?.textContent).to.equal('Help');
+});
+
 it('reuses the active overlay handle when re-anchoring an already-open virtual-anchor tooltip', async () => {
   const el = (await fixture(html`<lr-tooltip manual></lr-tooltip>`)) as LyraTooltip;
   el.showAt({ x: 10, y: 10, width: 0, height: 0 });
@@ -390,6 +555,32 @@ it('reuses the active overlay handle when re-anchoring an already-open virtual-a
     expect(returnTarget.ownerDocument.activeElement === returnTarget).to.be.true;
   } finally {
     returnTarget.remove();
+  }
+});
+
+it('releases the previous positioner subscription before virtual re-anchoring', async () => {
+  const viewport = window.visualViewport;
+  if (!viewport) return;
+  const originalAdd = viewport.addEventListener.bind(viewport);
+  const originalRemove = viewport.removeEventListener.bind(viewport);
+  let removals = 0;
+  viewport.addEventListener = ((...args: Parameters<typeof viewport.addEventListener>) =>
+    originalAdd(...args)) as typeof viewport.addEventListener;
+  viewport.removeEventListener = ((...args: Parameters<typeof viewport.removeEventListener>) => {
+    if (args[0] === 'resize' || args[0] === 'scroll') removals++;
+    return originalRemove(...args);
+  }) as typeof viewport.removeEventListener;
+  const el = (await fixture(html`<lr-tooltip manual></lr-tooltip>`)) as LyraTooltip;
+  try {
+    el.showAt({ x: 10, y: 10 });
+    await el.updateComplete;
+    removals = 0;
+    el.showAt({ x: 30, y: 30 });
+    expect(removals).to.be.at.least(2);
+  } finally {
+    viewport.addEventListener = originalAdd;
+    viewport.removeEventListener = originalRemove;
+    el.remove();
   }
 });
 

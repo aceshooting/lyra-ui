@@ -758,7 +758,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     }
     const related = event.relatedTarget;
     if (containsElement(this.renderRoot.querySelector('[part="input"]'), related)) return;
-    // fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused segment (its tabindex drops to -1) makes the
+    // Disabling a focused segment (its tabindex drops to -1) makes the
     // browser force a blur here that is not a real user interaction; don't mark the field touched
     // for it.
     if (!this.effectiveDisabled) this.touched = true;

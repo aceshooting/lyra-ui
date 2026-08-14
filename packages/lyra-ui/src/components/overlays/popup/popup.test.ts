@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import { nothing } from 'lit';
 import './popup.js';
 import type { LyraPopup } from './popup.class.js';
@@ -31,6 +31,7 @@ it('exposes the positioned popup and consumes the mapped transition aliases', as
       <button slot="anchor">Anchor</button><div>Content</div>
     </lr-popup>
   `);
+  await waitUntil(() => el.popup.hasAttribute('data-active'));
   expect(el.popup.localName).to.equal('div');
   expect(partsOf(el.popup)).to.include('popup');
   expect(getComputedStyle(el.popup).transitionDuration).to.equal('0.123s');
@@ -116,6 +117,248 @@ it('anchors to an element resolved through for', async () => {
   expect(popupOf(el).getBoundingClientRect().top).to.be.greaterThan(target.getBoundingClientRect().top);
 });
 
+describe('live anchor identity and positioned readiness', () => {
+  const positionedBelow = (el: LyraPopup, anchor: Element): boolean => {
+    const popup = el.shadowRoot?.querySelector<HTMLElement>('[part~="popup"]');
+    if (!popup) return false;
+    const popupBox = popup.getBoundingClientRect();
+    const anchorBox = anchor.getBoundingClientRect();
+    return Math.abs(popupBox.top - anchorBox.bottom) <= 2;
+  };
+
+  it('keeps active intent non-painted until a for target exists, then suppresses paint if it is removed', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <lr-popup active hover-bridge for="late-popup-anchor" strategy="fixed" placement="bottom">
+          <div style="inline-size: 80px;">Content</div>
+        </lr-popup>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-popup') as LyraPopup;
+    const popup = popupOf(el);
+    const bridge = el.shadowRoot!.querySelector<HTMLElement>('[part~="hover-bridge"]')!;
+    await settle(el);
+
+    expect(el.active).to.equal(true);
+    expect(popup.hasAttribute('data-active')).to.equal(false);
+    expect(getComputedStyle(popup).visibility).to.equal('hidden');
+    expect(getComputedStyle(popup).pointerEvents).to.equal('none');
+    expect(bridge.hasAttribute('data-active')).to.equal(false);
+    expect(getComputedStyle(bridge).display).to.equal('none');
+
+    const target = document.createElement('button');
+    target.id = 'late-popup-anchor';
+    target.textContent = 'Late anchor';
+    target.style.cssText =
+      'position: fixed; inset-block-start: 140px; inset-inline-start: 160px; inline-size: 60px;';
+    wrapper.prepend(target);
+    await waitUntil(
+      () =>
+        popup.hasAttribute('data-active')
+        && bridge.hasAttribute('data-active')
+        && positionedBelow(el, target),
+      'late for target should become the positioned anchor',
+    );
+
+    target.remove();
+    await waitUntil(
+      () => !popup.hasAttribute('data-active'),
+      'removing the sole target should suppress stale popup paint',
+    );
+    expect(el.active).to.equal(true);
+    expect(getComputedStyle(popup).visibility).to.equal('hidden');
+    expect(getComputedStyle(popup).pointerEvents).to.equal('none');
+    expect(bridge.hasAttribute('data-active')).to.equal(false);
+    expect(getComputedStyle(bridge).display).to.equal('none');
+  });
+
+  it('atomically rebinds same-id replacement and id-transfer targets', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <button
+          id="moving-popup-anchor"
+          style="position: fixed; inset-block-start: 40px; inset-inline-start: 40px;"
+        >First</button>
+        <button
+          id="transfer-destination"
+          style="position: fixed; inset-block-start: 260px; inset-inline-start: 300px;"
+        >Third</button>
+        <lr-popup active for="moving-popup-anchor" strategy="fixed" placement="bottom">
+          <div style="inline-size: 80px;">Content</div>
+        </lr-popup>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-popup') as LyraPopup;
+    const first = wrapper.querySelector('#moving-popup-anchor') as HTMLButtonElement;
+    await waitUntil(() => positionedBelow(el, first));
+
+    const replacement = document.createElement('button');
+    replacement.id = 'moving-popup-anchor';
+    replacement.textContent = 'Replacement';
+    replacement.style.cssText =
+      'position: fixed; inset-block-start: 160px; inset-inline-start: 180px;';
+    first.replaceWith(replacement);
+    await waitUntil(
+      () => positionedBelow(el, replacement),
+      'same-id replacement should become authoritative',
+    );
+
+    const transfer = wrapper.querySelector('#transfer-destination') as HTMLButtonElement;
+    replacement.id = 'retired-popup-anchor';
+    transfer.id = 'moving-popup-anchor';
+    await waitUntil(
+      () => positionedBelow(el, transfer),
+      'transferring the configured id should rebind the popup',
+    );
+    expect(popupOf(el).hasAttribute('data-active')).to.equal(true);
+  });
+
+  it('falls back from a dangling string anchor to the slot and rebinds when that id appears or disappears', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <lr-popup
+          active
+          anchor="late-string-anchor"
+          strategy="fixed"
+          placement="bottom"
+        >
+          <button
+            slot="anchor"
+            style="position: fixed; inset-block-start: 40px; inset-inline-start: 40px;"
+          >Fallback</button>
+          <div style="inline-size: 80px;">Content</div>
+        </lr-popup>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-popup') as LyraPopup;
+    const fallback = el.querySelector('[slot="anchor"]') as HTMLButtonElement;
+    await waitUntil(() => positionedBelow(el, fallback));
+
+    const preferred = document.createElement('button');
+    preferred.id = 'late-string-anchor';
+    preferred.textContent = 'Preferred';
+    preferred.style.cssText =
+      'position: fixed; inset-block-start: 180px; inset-inline-start: 200px;';
+    wrapper.prepend(preferred);
+    await waitUntil(() => positionedBelow(el, preferred));
+
+    preferred.remove();
+    await waitUntil(
+      () => positionedBelow(el, fallback),
+      'removing the string target should restore the lower-priority slot anchor',
+    );
+  });
+
+  it('re-resolves direct and forwarded slotted anchor replacements', async () => {
+    const direct = await fixture<LyraPopup>(html`
+      <lr-popup active strategy="fixed" placement="bottom">
+        <div style="inline-size: 80px;">Content</div>
+      </lr-popup>
+    `);
+    await settle(direct);
+    expect(popupOf(direct).hasAttribute('data-active')).to.equal(false);
+
+    const first = document.createElement('button');
+    first.slot = 'anchor';
+    first.textContent = 'First';
+    first.style.cssText =
+      'position: fixed; inset-block-start: 40px; inset-inline-start: 40px;';
+    direct.append(first);
+    await waitUntil(() => positionedBelow(direct, first));
+    first.remove();
+    await waitUntil(
+      () => !popupOf(direct).hasAttribute('data-active'),
+      'removing the sole slotted anchor should suppress paint',
+    );
+
+    const second = document.createElement('button');
+    second.slot = 'anchor';
+    second.textContent = 'Second';
+    second.style.cssText =
+      'position: fixed; inset-block-start: 180px; inset-inline-start: 200px;';
+    direct.append(second);
+    await waitUntil(() => positionedBelow(direct, second));
+
+    const replacement = document.createElement('button');
+    replacement.slot = 'anchor';
+    replacement.textContent = 'Replacement';
+    replacement.style.cssText =
+      'position: fixed; inset-block-start: 240px; inset-inline-start: 260px;';
+    second.replaceWith(replacement);
+    await waitUntil(
+      () => positionedBelow(direct, replacement),
+      'a replacement assigned directly to the anchor slot should rebind',
+    );
+
+    const forwardingHost = await fixture<HTMLDivElement>(html`
+      <div>
+        <button
+          slot="forwarded-anchor"
+          style="position: fixed; inset-block-start: 60px; inset-inline-start: 60px;"
+        >Forwarded first</button>
+      </div>
+    `);
+    const forwardedFirst = forwardingHost.querySelector(
+      '[slot="forwarded-anchor"]',
+    ) as HTMLButtonElement;
+    const root = forwardingHost.attachShadow({ mode: 'open' });
+    root.innerHTML = `
+      <lr-popup active strategy="fixed" placement="bottom">
+        <slot name="forwarded-anchor" slot="anchor"></slot>
+        <div style="inline-size: 80px;">Content</div>
+      </lr-popup>
+    `;
+    const forwarded = root.querySelector('lr-popup') as LyraPopup;
+    await waitUntil(() => positionedBelow(forwarded, forwardedFirst));
+
+    const forwardedSecond = document.createElement('button');
+    forwardedSecond.slot = 'forwarded-anchor';
+    forwardedSecond.textContent = 'Forwarded second';
+    forwardedSecond.style.cssText =
+      'position: fixed; inset-block-start: 240px; inset-inline-start: 260px;';
+    forwardedFirst.replaceWith(forwardedSecond);
+    await waitUntil(
+      () => positionedBelow(forwarded, forwardedSecond),
+      'a replacement behind a forwarding slot should rebind',
+    );
+  });
+
+  it('adopts a connected direct element over the slot and restores the slot when it disconnects', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <lr-popup active strategy="fixed" placement="bottom">
+          <button
+            slot="anchor"
+            style="position: fixed; inset-block-start: 40px; inset-inline-start: 40px;"
+          >Fallback</button>
+          <div style="inline-size: 80px;">Content</div>
+        </lr-popup>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-popup') as LyraPopup;
+    const fallback = el.querySelector('[slot="anchor"]') as HTMLButtonElement;
+    const direct = document.createElement('button');
+    direct.textContent = 'Direct';
+    direct.style.cssText =
+      'position: fixed; inset-block-start: 200px; inset-inline-start: 220px;';
+    el.anchor = direct;
+    await el.updateComplete;
+    await waitUntil(() => positionedBelow(el, fallback));
+
+    wrapper.prepend(direct);
+    await waitUntil(
+      () => positionedBelow(el, direct),
+      'connecting the direct element should promote it over the slot',
+    );
+
+    direct.remove();
+    await waitUntil(
+      () => positionedBelow(el, fallback),
+      'disconnecting the direct element should restore the live slot fallback',
+    );
+  });
+});
+
 it('accepts anchor as either an id string or an element reference', async () => {
   const wrapper = await fixture(html`
     <div>
@@ -187,6 +430,9 @@ it('clamps negative virtual-anchor dimensions and ignores non-finite rects', asy
 
   expect(popupOf(el).style.left).to.equal(priorLeft);
   expect(popupOf(el).style.top).to.equal(priorTop);
+  expect(el.active).to.equal(true);
+  expect(popupOf(el).hasAttribute('data-active')).to.equal(false);
+  expect(getComputedStyle(popupOf(el)).visibility).to.equal('hidden');
 });
 
 it('encodes the resolved side in the part name', async () => {
@@ -207,6 +453,27 @@ it('renders an arrow only when asked', async () => {
     <lr-popup active arrow><button slot="anchor">A</button><div>C</div></lr-popup>
   `);
   expect(withArrow.shadowRoot!.querySelectorAll('[part~="arrow"]').length).to.equal(1);
+});
+
+it('keeps behavior booleans as attribute inputs without reflecting property writes', async () => {
+  const el = await fixture<LyraPopup>(html`
+    <lr-popup active><button slot="anchor">A</button><div>C</div></lr-popup>
+  `);
+
+  el.arrow = true;
+  el.flip = true;
+  el.shift = true;
+  el.hoverBridge = true;
+  el.boundary = 'scroll';
+  await el.updateComplete;
+
+  expect(el.hasAttribute('arrow')).to.equal(false);
+  expect(el.hasAttribute('flip')).to.equal(false);
+  expect(el.hasAttribute('shift')).to.equal(false);
+  expect(el.hasAttribute('hover-bridge')).to.equal(false);
+  expect(el.hasAttribute('boundary')).to.equal(false);
+  expect(el.shadowRoot!.querySelector('[part~="arrow"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part~="hover-bridge"]')).to.exist;
 });
 
 it('uses the mapped arrow color alias', async () => {

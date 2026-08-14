@@ -99,7 +99,7 @@ it('renders args read-only via lr-json-viewer by default', async () => {
   const viewer = el.shadowRoot!.querySelector('[part="args-view"]') as LyraJsonViewer;
   expect(viewer).to.exist;
   expect(viewer.data).to.deep.equal(ARGS);
-  expect(el.shadowRoot!.querySelector('[part="args-editor"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="args-editor"]')) == null).to.be.true;
 });
 
 it('renders slotted footer content alongside the built-in action buttons', async () => {
@@ -141,7 +141,7 @@ describe('editing', () => {
     editButton(el).click();
     await el.updateComplete;
 
-    expect(el.shadowRoot!.querySelector('[part="args-view"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="args-view"]')) == null).to.be.true;
     expect(textarea(el).value).to.equal(JSON.stringify(ARGS, null, 2));
     expect(editButton(el).textContent!.trim()).to.equal('Cancel');
   });
@@ -321,7 +321,7 @@ describe('editing', () => {
     editButton(el).click();
     await el.updateComplete;
 
-    expect(el.shadowRoot!.querySelector('[part="args-editor"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="args-editor"]')) == null).to.be.true;
     const viewer = el.shadowRoot!.querySelector('[part="args-view"]') as LyraJsonViewer;
     expect(viewer.data).to.deep.equal(ARGS);
     expect(editButton(el).textContent!.trim()).to.equal('Edit');
@@ -380,7 +380,7 @@ describe('editing', () => {
     el.open = true;
     await el.updateComplete;
 
-    expect(el.shadowRoot!.querySelector('[part="args-editor"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="args-editor"]')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="args-view"]')).to.exist;
     expect(approveButton(el).disabled).to.be.false;
   });

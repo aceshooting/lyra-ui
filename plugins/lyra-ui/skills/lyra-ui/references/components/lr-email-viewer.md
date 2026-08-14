@@ -49,6 +49,9 @@ localized show/hide toggle. `false` (the default) preserves the full body render
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
   DOMRect[] }`) — fired after a selection ends inside the rendered message.
 
+`lr-highlight-activate` is not part of this viewer's event contract: painted text highlights are
+passive and cannot be activated.
+
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base`, `headers`, `from-label`, `from`, `to-label`, `to`, `subject-label`, `subject`,

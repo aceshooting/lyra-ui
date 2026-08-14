@@ -26,8 +26,8 @@ text: string; icon?: string; timestamp?: Date | string; variant?: LyraVariant }`
 `icon` is a literal glyph hint (e.g. an emoji), the same convention `lr-tool-call-chip.icon` uses; a
 small variant dot renders in its place when omitted. `LyraVariant = 'neutral' | 'brand' | 'success'
 | 'warning' | 'danger'` is the library-wide semantic vocabulary, so an entry is toned with the same
-five values as every other `variant` in the library; the exported alias `ActivityEntryTone` is
-retained as a name for it. An invalid `timestamp` string is treated as unset. `mode: 'live' | 'post-hoc' =
+five values as every other `variant` in the library. An invalid `timestamp` string is treated as
+unset. `mode: 'live' | 'post-hoc' =
 'live'` (reflected), `follow: boolean = true` (reflected), `expanded: boolean = false` (reflected),
 `label: string = 'Activity'`, `showTimestamps: boolean = false` (attribute `show-timestamps`),
 `formatTimestamp?: (date: Date) => string` (attribute: false), `renderText?: (entry: ActivityEntry)

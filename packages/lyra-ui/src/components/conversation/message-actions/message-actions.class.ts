@@ -146,18 +146,21 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('revealOnHover')) {
       if (this.revealOnHover) this.bindHoverTarget();
       else this.unbindHoverTarget();
     }
   }
 
-  protected override firstUpdated(): void {
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     this.setActiveStop(this.focusableStops(), 0);
     void this.reconcileStopsAfterChildren();
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('controls')) {
       const stops = this.focusableStops();
       this.setActiveStop(stops, Math.min(this.activeStopIndex, Math.max(0, stops.length - 1)));

@@ -1,3 +1,4 @@
+import type { PropertyValues } from 'lit';
 import { html, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -128,7 +129,8 @@ export class LyraTypingIndicator extends LyraElement {
     return this.localize('thinking', trimmed === '' || trimmed === 'Thinking…' ? undefined : trimmed);
   }
 
-  protected override willUpdate(): void {
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     this.setAttribute('role', 'status');
     const currentAriaLabel = this.getAttribute('aria-label');
     if (currentAriaLabel !== this.appliedAriaLabel) {

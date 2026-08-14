@@ -270,7 +270,7 @@ describe('lr-commit-card', () => {
     // `new Date(NaN).toISOString()` throws a RangeError -- fixture()/updateComplete resolving at
     // all (rather than rejecting) is itself proof render() didn't hit that path.
     await nonFinite.updateComplete;
-    expect(nonFinite.shadowRoot!.querySelector('[part="time"]')).to.not.exist;
+    expect((nonFinite.shadowRoot!.querySelector('[part="time"]')) == null).to.be.true;
 
     const negative = (await fixture(
       html`<lr-commit-card .timestamp=${-5000}></lr-commit-card>`,
@@ -286,7 +286,7 @@ describe('lr-commit-card', () => {
       html`<lr-commit-card .timestamp=${Number.MAX_VALUE}></lr-commit-card>`,
     )) as LyraCommitCard;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="time"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="time"]')) == null).to.be.true;
   });
 
   it('is accessible with hash, message, author, timestamp, and files', async () => {

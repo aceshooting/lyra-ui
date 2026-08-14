@@ -57,18 +57,27 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  /** Markdown answer content rendered when the `answer` slot is empty. */
   @property() answer = '';
+  /** Citations referenced by the answer and grounding assessment. */
   @property({ attribute: false }) citations: Citation[] = [];
+  /** Source records rendered when the `sources` slot is empty. */
   @property({ attribute: false }) sources: DocumentRef[] = [];
+  /** Optional grounding assessment summarized above the citations. */
   @property({ attribute: false }) assessment: GroundingAssessment | null = null;
+  /** Marks answer generation as pending and renders the initial loading state. */
   @property({ type: Boolean, reflect: true }) loading = false;
   /** Caller-supplied error text. The visible message is deliberately not a shadow live region;
    *  new non-empty values are announced through a shared assertive light-DOM region. Content
    *  present on the initial render or reconnect is not replayed. */
   @property({ attribute: 'error-text' }) errorText = '';
+  /** Whether the source section is rendered when source data or slotted content exists. */
   @property({ type: Boolean, attribute: 'show-sources', reflect: true, converter: trueDefaultBooleanConverter }) showSources = true;
+  /** Whether claim-level details are forwarded to the grounding summary. */
   @property({ type: Boolean, attribute: 'show-claims', reflect: true, converter: trueDefaultBooleanConverter }) showClaims = true;
+  /** Visible and fallback accessible label for the answer. */
   @property() label = '';
+  /** Host accessible-name override; takes precedence over `label` and the localized default. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   private isMounting = true;

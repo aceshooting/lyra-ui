@@ -484,9 +484,9 @@ describe('lr-terminal', () => {
   });
 
   it('renders per-line match/active-match state via O(1) lookups, combined with highlight tone, correctly across every rendered line', async () => {
-    // Exercises renderLine()'s finding-2 rewrite (a precomputed Set<lineNumber> + a single
-    // active-match line number, instead of a per-row this.searchMatches.some() scan) together
-    // with finding-1's highlight map, checking every one of 12 lines against an independently
+    // Exercises renderLine()'s precomputed Set<lineNumber> and single active-match line number,
+    // instead of a per-row this.searchMatches.some() scan, together with the highlight map. It
+    // checks every one of 12 lines against an independently
     // reasoned expectation. Search state is poked directly (bypassing search()/searchNext(),
     // which themselves scroll the view via activeId and would otherwise make which lines are
     // actually mounted depend on virtual-list's own scroll-into-view timing) so this test stays
@@ -1077,13 +1077,13 @@ describe('lr-terminal', () => {
       html`<lr-terminal .copyable=${false} .downloadable=${false}></lr-terminal>`,
     )) as LyraTerminal;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="toolbar"]')).to.be.null;
+    expect((el.shadowRoot!.querySelector('[part="toolbar"]')) === null).to.be.true;
   });
 
   it('renders only the download button when copyable is false and downloadable is true', async () => {
     const el = (await fixture(html`<lr-terminal .copyable=${false} downloadable></lr-terminal>`)) as LyraTerminal;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="copy-button"]')).to.be.null;
+    expect((el.shadowRoot!.querySelector('[part="copy-button"]')) === null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="download-button"]')).to.exist;
   });
 

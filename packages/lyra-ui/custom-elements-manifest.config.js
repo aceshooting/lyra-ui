@@ -19,18 +19,12 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
     },
   ],
   [
-    'lr-badge',
-    {
-      size: { default: "'m'", attribute: 'size' },
-      variant: { default: "'neutral'", attribute: 'variant' },
-    },
-  ],
-  [
     'lr-button',
     {
       disabled: { default: 'false', attribute: 'disabled' },
       href: { default: 'undefined', attribute: 'href' },
       name: { default: "''", attribute: 'name' },
+      variant: { default: "'neutral'", attribute: 'variant' },
     },
   ],
   [
@@ -103,9 +97,11 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
   [
     'lr-dropdown',
     {
+      arrow: { default: 'false', attribute: 'arrow' },
       disabled: { default: 'false', attribute: 'disabled' },
       distance: { default: '0', attribute: 'distance' },
       placement: { default: "'bottom-start'", attribute: 'placement' },
+      popupRole: { default: "'menu'", attribute: 'popup-role' },
       sync: { default: 'undefined', attribute: 'sync' },
     },
   ],
@@ -201,7 +197,11 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
   [
     'lr-radio-button',
     {
+      checked: { default: 'false', attribute: 'checked' },
+      customError: { default: 'null', attribute: 'custom-error' },
       disabled: { default: 'false', attribute: 'disabled' },
+      name: { default: "''", attribute: 'name' },
+      required: { default: 'false', attribute: 'required' },
     },
   ],
   [
@@ -224,7 +224,6 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
       max: { default: '5', attribute: 'max' },
       name: { default: "''", attribute: 'name' },
       required: { default: 'false', attribute: 'required' },
-      size: { default: "'m'", attribute: 'size' },
       value: { default: '0', attribute: 'value' },
     },
   ],
@@ -264,21 +263,14 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
   [
     'lr-tag',
     {
-      removable: { default: 'false', attribute: 'removable' },
-      size: { default: "'m'", attribute: 'size' },
-      variant: { default: "'neutral'", attribute: 'variant' },
+      removable: { default: 'false', attribute: 'removable', reflects: true },
+      withRemove: { default: 'false', attribute: 'with-remove', reflects: true },
     },
   ],
   [
     'lr-textarea',
     {
       autocorrect: { default: 'true', attribute: 'autocorrect' },
-    },
-  ],
-  [
-    'lr-toast-item',
-    {
-      size: { default: "'m'", attribute: 'size' },
     },
   ],
   [
@@ -294,19 +286,6 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
 // vocabulary here so migration aliases reach manifests and editor completions without widening
 // the source getter/read type that application code relies on.
 export const ACCESSOR_WRITE_TYPE_CONTRACTS = new Map([
-  [
-    'lr-badge',
-    {
-      variant: {
-        readType: 'BadgeVariant',
-        writeType: "BadgeVariant | 'primary'",
-      },
-      size: {
-        readType: 'BadgeSize',
-        writeType: "BadgeSize | 'small' | 'medium' | 'large'",
-      },
-    },
-  ],
   [
     'lr-breadcrumb-item',
     {
@@ -348,28 +327,6 @@ export const ACCESSOR_WRITE_TYPE_CONTRACTS = new Map([
     },
   ],
   [
-    'lr-tag',
-    {
-      variant: {
-        readType: 'BadgeVariant',
-        writeType: "BadgeVariant | 'primary' | 'text'",
-      },
-      size: {
-        readType: 'BadgeSize',
-        writeType: "BadgeSize | 'small' | 'medium' | 'large'",
-      },
-    },
-  ],
-  [
-    'lr-rating',
-    {
-      size: {
-        readType: 'LyraRatingSize',
-        writeType: "LyraRatingSize | 'small' | 'medium' | 'large'",
-      },
-    },
-  ],
-  [
     'lr-split-panel',
     {
       snap: {
@@ -387,15 +344,6 @@ export const ACCESSOR_WRITE_TYPE_CONTRACTS = new Map([
       },
     },
   ],
-  [
-    'lr-toast-item',
-    {
-      size: {
-        readType: 'ToastSize',
-        writeType: "ToastSize | 'small' | 'medium' | 'large'",
-      },
-    },
-  ],
 ]);
 
 // CEM's inheritance pass omits a small class-field edge case: a public readonly field initialized
@@ -403,6 +351,97 @@ export const ACCESSOR_WRITE_TYPE_CONTRACTS = new Map([
 // field normally. Keep the compatibility projection explicit and source-linked so a rename fails closed.
 export const INHERITED_PUBLIC_MEMBER_CONTRACTS = new Map([
   ['lr-drawer', { sourceTag: 'lr-dialog', members: ['modal'] }],
+  [
+    'lr-tag',
+    {
+      sourceTag: 'lr-badge',
+      members: ['size', 'variant'],
+      memberTypes: { variant: 'TagVariant' },
+    },
+  ],
+]);
+
+/** Every concrete element that adopts the source-only `DocumentAnchorTarget` mixin, directly or
+ * through the source-only `TextViewerTarget` mixin. */
+export const DOCUMENT_ANCHOR_TARGET_TAGS = Object.freeze([
+  'lr-archive-viewer',
+  'lr-av-player',
+  'lr-calendar-viewer',
+  'lr-contact-viewer',
+  'lr-csv-viewer',
+  'lr-dataset-viewer',
+  'lr-docx-viewer',
+  'lr-ebook-viewer',
+  'lr-email-viewer',
+  'lr-geojson-view',
+  'lr-html-viewer',
+  'lr-image-viewer',
+  'lr-include',
+  'lr-markdown',
+  'lr-markdown-core',
+  'lr-notebook-viewer',
+  'lr-pdf-viewer',
+  'lr-pptx-viewer',
+  'lr-spreadsheet-viewer',
+  'lr-svg-viewer',
+  'lr-xml-viewer',
+]);
+
+// Exported so source-composition governance and the CEM projection consume one effective public
+// contract. The mixin implementation lives outside the analyzer globs and must not be exposed as
+// a fake registered element merely to make its members visible.
+export const DOCUMENT_ANCHOR_TARGET_CONTRACT = Object.freeze({
+  fields: Object.freeze({
+    highlights: Object.freeze({
+      type: 'LyraHighlight[]',
+      default: '[]',
+      description: 'Highlights rendered by the document target. Reassign after mutation.',
+    }),
+    activeHighlightId: Object.freeze({
+      type: 'string | null',
+      attribute: 'active-highlight-id',
+      default: 'null',
+      description: 'Id of the currently active highlight, or null when none is active.',
+    }),
+    anchor: Object.freeze({
+      type: 'LyraAnchor | string | null',
+      default: 'null',
+      description: 'Anchor or highlight id to resolve and scroll into view.',
+    }),
+    anchorKinds: Object.freeze({
+      type: 'readonly LyraAnchorKind[]',
+      default: '[]',
+      readonly: true,
+      description: 'Anchor kinds supported by this viewer instance.',
+    }),
+  }),
+  methods: Object.freeze({
+    scrollToAnchor: Object.freeze({
+      parameters: Object.freeze([{ name: 'target', type: { text: 'LyraAnchor | string' } }]),
+      returnType: 'Promise<boolean>',
+      description: 'Resolves an anchor or highlight id, scrolls it into view, and reports whether it was found.',
+    }),
+  }),
+});
+
+/** Content attributes deliberately owned without a same-named public JavaScript property. */
+export const ATTRIBUTE_ONLY_CONTRACTS = new Map([
+  ['lr-app-rail-item', { 'icon-only': { type: 'boolean' } }],
+]);
+
+/** Reflected attributes that exist only as framework/hydration transport and must not be
+ * advertised as consumer-settable HTML API. The private field and its Lit attribute mapping stay
+ * in source so hydration can consume the declarative seed; only the published CEM projection is
+ * suppressed. */
+export const INTERNAL_ATTRIBUTE_CONTRACTS = new Map([
+  ['lr-split', { 'data-lr-panel-count': { fieldName: 'panelCount' } }],
+]);
+
+// CEM reports a generic class field using its type parameter (`Variant`) rather than the concrete
+// default selected by the public component class. Project only that syntax-level generic back to
+// the exported closed public type; inherited `lr-tag` then refines it to `TagVariant` below.
+export const CONCRETE_GENERIC_MEMBER_CONTRACTS = new Map([
+  ['lr-badge', { variant: { genericType: 'Variant', type: 'BadgeVariant' } }],
 ]);
 
 // Event-map interfaces are the runtime/type source of truth, but CEM does not connect a class's
@@ -455,6 +494,19 @@ export default {
       analyzePhase({ ts, node, moduleDoc }) {
         if (node.kind !== ts.SyntaxKind.CallExpression) return;
         if (node.expression.getText() !== 'defineElement') return;
+        const lazyFunctionKinds = new Set([
+          ts.SyntaxKind.FunctionDeclaration,
+          ts.SyntaxKind.FunctionExpression,
+          ts.SyntaxKind.ArrowFunction,
+          ts.SyntaxKind.MethodDeclaration,
+          ts.SyntaxKind.Constructor,
+          ts.SyntaxKind.GetAccessor,
+          ts.SyntaxKind.SetAccessor,
+        ]);
+        for (let parent = node.parent; parent; parent = parent.parent) {
+          if (lazyFunctionKinds.has(parent.kind)) return;
+          if (parent.kind === ts.SyntaxKind.SourceFile) break;
+        }
         const [name, classReference] = node.arguments ?? [];
         if (!name?.text || !classReference) return;
 
@@ -710,6 +762,152 @@ export default {
       },
     },
     {
+      name: 'lr-effective-mixin-and-wrapper-surfaces',
+      // The analyzer records these mixin/superclass relationships but cannot materialize their
+      // effective public API in the compact raw CEM. Project the runtime surface as own effective
+      // entries so editor/framework/composition consumers do not need source-path exceptions.
+      packageLinkPhase({ customElementsManifest }) {
+        const declarations = new Map();
+        for (const module of customElementsManifest.modules ?? []) {
+          for (const declaration of module.declarations ?? []) {
+            if (declaration.tagName) declarations.set(declaration.tagName, { declaration, module });
+          }
+        }
+
+        const expectedAnchorTags = new Set(DOCUMENT_ANCHOR_TARGET_TAGS);
+        const discoveredAnchorTags = new Set(
+          [...declarations]
+            .filter(([, { module }]) => {
+              const sourcePath = normalizeSourcePath(module.path);
+              const source = readFileSync(new URL(`./${sourcePath}`, import.meta.url), 'utf8');
+              return /\b(?:DocumentAnchorTarget|TextViewerTarget)\s*\(/u.test(source);
+            })
+            .map(([tagName]) => tagName),
+        );
+        const unexpected = [...discoveredAnchorTags].filter((tagName) => !expectedAnchorTags.has(tagName));
+        const missing = [...expectedAnchorTags].filter((tagName) => !discoveredAnchorTags.has(tagName));
+        if (unexpected.length || missing.length) {
+          throw new Error(
+            `DocumentAnchorTarget adopter inventory drifted` +
+            `${missing.length ? `; missing ${missing.join(', ')}` : ''}` +
+            `${unexpected.length ? `; unexpected ${unexpected.join(', ')}` : ''}`,
+          );
+        }
+
+        for (const tagName of DOCUMENT_ANCHOR_TARGET_TAGS) {
+          const declaration = declarations.get(tagName)?.declaration;
+          if (!declaration) throw new Error(`${tagName}: DocumentAnchorTarget projection requires declaration`);
+          declaration.members ??= [];
+          declaration.attributes ??= [];
+
+          for (const [name, metadata] of Object.entries(DOCUMENT_ANCHOR_TARGET_CONTRACT.fields)) {
+            let member = declaration.members.find(
+              (candidate) => candidate.kind === 'field' && candidate.name === name,
+            );
+            if (!member) {
+              member = { kind: 'field', name, privacy: 'public' };
+              declaration.members.push(member);
+            }
+            member.type ??= { text: metadata.type };
+            member.default ??= metadata.default;
+            member.description ??= metadata.description;
+            if (metadata.attribute) member.attribute ??= metadata.attribute;
+            if (metadata.readonly) member.readonly ??= true;
+            delete member.inheritedFrom;
+
+            if (!metadata.attribute) continue;
+            let attribute = declaration.attributes.find((candidate) => candidate.name === metadata.attribute);
+            if (!attribute) {
+              attribute = { name: metadata.attribute, fieldName: name };
+              declaration.attributes.push(attribute);
+            }
+            attribute.fieldName = name;
+            attribute.type ??= structuredClone(member.type);
+            attribute.default ??= member.default;
+            attribute.description ??= member.description;
+            delete attribute.inheritedFrom;
+          }
+
+          for (const [name, metadata] of Object.entries(DOCUMENT_ANCHOR_TARGET_CONTRACT.methods)) {
+            let method = declaration.members.find(
+              (candidate) => candidate.kind === 'method' && candidate.name === name,
+            );
+            if (!method) {
+              method = { kind: 'method', name };
+              declaration.members.push(method);
+            }
+            method.parameters ??= structuredClone(metadata.parameters);
+            method.return ??= { type: { text: metadata.returnType } };
+            method.description ??= metadata.description;
+            delete method.inheritedFrom;
+          }
+
+        }
+
+        const radio = declarations.get('lr-radio')?.declaration;
+        const radioButton = declarations.get('lr-radio-button')?.declaration;
+        if (!radio || !radioButton) {
+          throw new Error('lr-radio-button effective wrapper projection requires lr-radio and lr-radio-button');
+        }
+        for (const collection of ['members', 'attributes', 'events']) {
+          radioButton[collection] ??= [];
+          const identity = (entry) => collection === 'members' ? `${entry.kind}:${entry.name}` : entry.name;
+          const existing = new Map(radioButton[collection].map((entry) => [identity(entry), entry]));
+          for (const sourceEntry of radio[collection] ?? []) {
+            const key = identity(sourceEntry);
+            const targetEntry = existing.get(key);
+            const effective = { ...structuredClone(sourceEntry), ...(targetEntry ?? {}) };
+            delete effective.inheritedFrom;
+            if (targetEntry) {
+              Object.assign(targetEntry, effective);
+              delete targetEntry.inheritedFrom;
+            }
+            else radioButton[collection].push(effective);
+          }
+        }
+
+        sortManifest(customElementsManifest);
+      },
+    },
+    {
+      name: 'lr-internal-implementation-attributes',
+      packageLinkPhase({ customElementsManifest }) {
+        const declarations = new Map();
+        for (const module of customElementsManifest.modules ?? []) {
+          for (const declaration of module.declarations ?? []) {
+            if (declaration.tagName) declarations.set(declaration.tagName, declaration);
+          }
+        }
+
+        for (const [tagName, contract] of INTERNAL_ATTRIBUTE_CONTRACTS) {
+          const declaration = declarations.get(tagName);
+          if (!declaration) {
+            throw new Error(`${tagName}: internal-attribute projection requires component declaration`);
+          }
+          for (const [attributeName, metadata] of Object.entries(contract)) {
+            const member = declaration.members?.find(
+              (candidate) => candidate.kind === 'field' && candidate.name === metadata.fieldName,
+            );
+            if (
+              !member ||
+              !['private', 'protected'].includes(member.privacy) ||
+              member.attribute !== attributeName
+            ) {
+              throw new Error(
+                `${tagName}[${attributeName}]: internal-attribute projection requires private field ${metadata.fieldName}`,
+              );
+            }
+          }
+          declaration.attributes = (declaration.attributes ?? []).filter(
+            (attribute) => !Object.hasOwn(contract, attribute.name),
+          );
+          if (declaration.attributes.length === 0) delete declaration.attributes;
+        }
+
+        sortManifest(customElementsManifest);
+      },
+    },
+    {
       name: 'lr-default-value-attribute-alias',
       // Lit needs a reactive accessor to accept the mapped `default-value` spelling, but the
       // supported JavaScript property is the native-like `defaultValue`. Keep the content
@@ -852,21 +1050,102 @@ export default {
           }
           target.declaration.members ??= [];
           for (const name of contract.members) {
-            if (target.declaration.members.some((member) => member.name === name)) continue;
             const sourceMember = source.declaration.members?.find((member) => member.name === name);
             if (!sourceMember) {
               throw new Error(`${targetTag}: inherited-member projection requires ${contract.sourceTag}.${name}`);
             }
-            target.declaration.members.push({
+            const projected = {
               ...structuredClone(sourceMember),
               inheritedFrom: {
                 name: source.declaration.name,
                 module: source.module.path,
               },
-            });
+            };
+            const projectedType = contract.memberTypes?.[name];
+            if (projectedType) {
+              projected.type = { ...projected.type, text: projectedType };
+              delete projected.inheritedFrom;
+            }
+            const existingMember = target.declaration.members.find((member) => member.name === name);
+            if (existingMember) {
+              Object.assign(existingMember, projected);
+              if (!projected.inheritedFrom) delete existingMember.inheritedFrom;
+            } else target.declaration.members.push(projected);
+
+            if (!projected.attribute) continue;
+            target.declaration.attributes ??= [];
+            const sourceAttribute = source.declaration.attributes?.find(
+              (attribute) => attribute.name === projected.attribute,
+            );
+            if (!sourceAttribute) continue;
+            const projectedAttribute = structuredClone(sourceAttribute);
+            if (projectedType) {
+              projectedAttribute.type = { ...projectedAttribute.type, text: projectedType };
+              delete projectedAttribute.inheritedFrom;
+            } else {
+              projectedAttribute.inheritedFrom = {
+                name: source.declaration.name,
+                module: source.module.path,
+              };
+            }
+            const existingAttribute = target.declaration.attributes.find(
+              (attribute) => attribute.name === projected.attribute,
+            );
+            if (existingAttribute) {
+              Object.assign(existingAttribute, projectedAttribute);
+              if (!projectedAttribute.inheritedFrom) delete existingAttribute.inheritedFrom;
+            } else target.declaration.attributes.push(projectedAttribute);
           }
         }
 
+        sortManifest(customElementsManifest);
+      },
+    },
+    {
+      name: 'lr-concrete-generic-member-contracts',
+      packageLinkPhase({ customElementsManifest }) {
+        const declarations = new Map();
+        for (const module of customElementsManifest.modules ?? []) {
+          for (const declaration of module.declarations ?? []) {
+            if (declaration.tagName) declarations.set(declaration.tagName, declaration);
+          }
+        }
+        for (const [tagName, contract] of CONCRETE_GENERIC_MEMBER_CONTRACTS) {
+          const declaration = declarations.get(tagName);
+          if (!declaration) throw new Error(`${tagName}: generic-member projection requires declaration`);
+          for (const [name, metadata] of Object.entries(contract)) {
+            const member = declaration.members?.find(
+              (candidate) => candidate.kind === 'field' && candidate.name === name,
+            );
+            const attribute = declaration.attributes?.find(
+              (candidate) => candidate.name === (member?.attribute ?? name),
+            );
+            if (!member || !attribute) {
+              throw new Error(`${tagName}.${name}: generic-member projection requires member and attribute`);
+            }
+            for (const [surface, entry] of [['member', member], ['attribute', attribute]]) {
+              const current = entry.type?.text;
+              if (current !== metadata.genericType && current !== metadata.type) {
+                throw new Error(
+                  `${tagName}.${name}: ${surface} type must be generic ${metadata.genericType} before projection`,
+                );
+              }
+              entry.type = { ...entry.type, text: metadata.type };
+              delete entry.inheritedFrom;
+            }
+          }
+        }
+        for (const [tagName, contract] of ATTRIBUTE_ONLY_CONTRACTS) {
+          const declaration = (customElementsManifest.modules ?? [])
+            .flatMap((module) => module.declarations ?? [])
+            .find((candidate) => candidate.tagName === tagName);
+          if (!declaration) throw new Error(`${tagName}: attribute-only contract requires declaration`);
+          for (const [name, metadata] of Object.entries(contract)) {
+            const attribute = declaration.attributes?.find((candidate) => candidate.name === name);
+            if (!attribute) throw new Error(`${tagName}[${name}]: attribute-only contract requires attribute`);
+            attribute.type = { text: metadata.type };
+          }
+        }
         sortManifest(customElementsManifest);
       },
     },
@@ -968,6 +1247,92 @@ export default {
       },
     },
     {
+      name: 'lr-effective-attribute-contracts',
+      // CEM derives an attribute and its linked field in separate passes. Named field constants
+      // and inherited accessor overrides can consequently leave the attribute with an identifier
+      // default or no type even when the effective field is precise. Resolve source-local literal
+      // constants, then make the associated field authoritative for type/default metadata.
+      packageLinkPhase({ customElementsManifest }) {
+        const modulesByPath = new Map(
+          (customElementsManifest.modules ?? []).map((module) => [normalizeSourcePath(module.path), module]),
+        );
+        const constantsByPath = new Map();
+        const constantsFor = (modulePath) => {
+          const normalized = normalizeSourcePath(modulePath);
+          if (constantsByPath.has(normalized)) return constantsByPath.get(normalized);
+          const module = modulesByPath.get(normalized);
+          const constants = new Map();
+          if (module) {
+            const source = readFileSync(new URL(`./${normalized}`, import.meta.url), 'utf8');
+            const declaration = /(?:^|\n)\s*(?:export\s+)?const\s+([A-Za-z_$][A-Za-z0-9_$]*)[^=;\n]*=\s*([^;\n]+)\s*;/g;
+            for (const match of source.matchAll(declaration)) {
+              const value = match[2].trim();
+              if (/^(?:'[^']*'|"[^"]*"|-?\d+(?:\.\d+)?|true|false|null|undefined|Infinity)$/.test(value)) {
+                constants.set(match[1], value.startsWith('"') ? `'${value.slice(1, -1)}'` : value);
+              }
+            }
+          }
+          constantsByPath.set(normalized, constants);
+          return constants;
+        };
+        const resolveDefault = (value, modulePath) => {
+          let current = value;
+          const seen = new Set();
+          while (
+            typeof current === 'string' &&
+            /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(current) &&
+            !['true', 'false', 'null', 'undefined', 'Infinity'].includes(current)
+          ) {
+            if (seen.has(current)) return undefined;
+            seen.add(current);
+            current = constantsFor(modulePath).get(current);
+            if (current === undefined) return undefined;
+          }
+          return current;
+        };
+
+        for (const module of customElementsManifest.modules ?? []) {
+          for (const declaration of module.declarations ?? []) {
+            if (!declaration.tagName) continue;
+            for (const attribute of declaration.attributes ?? []) {
+              const member = (declaration.members ?? []).find(
+                (candidate) =>
+                  candidate.kind === 'field' &&
+                  candidate.name === (attribute.fieldName ?? attribute.name),
+              ) ?? (declaration.members ?? []).find(
+                (candidate) => candidate.kind === 'field' && candidate.attribute === attribute.name,
+              );
+              // A few compatibility-only attributes intentionally target private adapters. They
+              // remain in the CEM, but have no public property contract to synchronize here.
+              if (!member) continue;
+              const ownerPath = member.inheritedFrom?.module ?? module.path;
+              if (member.default !== undefined) {
+                const resolved = resolveDefault(member.default, ownerPath);
+                if (resolved === undefined) {
+                  throw new Error(
+                    `${declaration.tagName}.${member.name}: unresolved public default ${member.default}`,
+                  );
+                }
+                member.default = resolved;
+                attribute.default = resolved;
+              } else if (attribute.default !== undefined) {
+                const resolved = resolveDefault(attribute.default, ownerPath);
+                if (resolved === undefined) {
+                  throw new Error(
+                    `${declaration.tagName}[${attribute.name}]: unresolved public default ${attribute.default}`,
+                  );
+                }
+                attribute.default = resolved;
+              }
+              if (member.type?.text) attribute.type = structuredClone(member.type);
+              attribute.fieldName = member.name;
+            }
+          }
+        }
+        sortManifest(customElementsManifest);
+      },
+    },
+    {
       name: 'lr-event-runtime-contracts',
       packageLinkPhase({ customElementsManifest }) {
         const contracts = sourceEventTypeContracts(customElementsManifest);
@@ -1040,6 +1405,10 @@ function compareText(left, right) {
   const a = String(left ?? '');
   const b = String(right ?? '');
   return a < b ? -1 : a > b ? 1 : 0;
+}
+
+function normalizeSourcePath(path = '') {
+  return path.replace(/^\//, '').replace(/\.js$/, '.ts');
 }
 
 function stableStringify(value) {

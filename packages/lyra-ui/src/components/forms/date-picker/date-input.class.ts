@@ -864,6 +864,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
       this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
@@ -892,7 +893,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     return settled;
   }
   /** Close the calendar popover, unless the cancelable `lr-hide` request is vetoed. */
-  hide(restoreFocus = false): Promise<void> {
+  hide(restoreFocus: boolean = false): Promise<void> {
     if (!this.open) return Promise.resolve();
     const request = this.emit('lr-hide', undefined, { cancelable: true });
     if (request.defaultPrevented) return Promise.resolve();
@@ -1369,8 +1370,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   private onInputBlur = (event: FocusEvent): void => {
     // A blur the platform itself forces when a focused native control becomes `disabled` is not a
     // real user interaction -- marking `touched` for it could reenter an in-flight Lit update and
-    // trip Lit's dev-mode "scheduled an update after an update completed" warning (fr_asxOgk4UhNB07xevCWwFVQ;
-    // same fix as <lr-input>'s onBlur).
+    // trip Lit's dev-mode "scheduled an update after an update completed" warning; this is the
+    // same fix as <lr-input>'s onBlur.
     if (!this.effectiveDisabled) this.touched = true;
     relayNativeEvent(this, event);
   };

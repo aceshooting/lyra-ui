@@ -1514,7 +1514,7 @@ it('renders no [part="presets"] row at all when presets is empty (the default)',
     html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
   )) as LyraTimeRange;
   expect(el.presets).to.deep.equal([]);
-  expect(el.shadowRoot!.querySelector('[part="presets"]')).to.equal(null);
+  expect((el.shadowRoot!.querySelector('[part="presets"]')) === (null)).to.equal(true);
   expect(el.shadowRoot!.querySelectorAll('[part="preset-button"]').length).to.equal(0);
 });
 

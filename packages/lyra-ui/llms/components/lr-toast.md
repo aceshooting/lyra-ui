@@ -24,12 +24,15 @@ One per page recommended — the region.
 
 **Properties:**
 - `placement: ToastPlacement = 'top-end'` (reflected) — one of `'top-start'|'top-center'|'top-end'|
-  'bottom-start'|'bottom-center'|'bottom-end'`
+  'bottom-start'|'bottom-center'|'bottom-end'`. Every placement resolves inside one logical usable
+  rectangle whose four edges are the greater of `--lr-space-l` and the matching safe-area token.
+  Start/end follow direction, center placements use that rectangle's midpoint even when the inline
+  safe-area insets are asymmetric, and an oversized stack is capped to its usable inline size.
 
 **Methods:** `async create(message: string, options?: ToastCreateOptions): Promise<LyraToastItem>` —
 `ToastCreateOptions = { variant?, duration?, size?, withIcon? }`. Its `size` accepts the canonical
-`2xs`/`xs`/`s`/`m`/`l`/`xl` values plus `small`/`medium`/`large`; the created item's getter
-normalizes the long aliases to `s`/`m`/`l`.
+`2xs`/`xs`/`s`/`m`/`l`/`xl` values plus `small`/`medium`/`large`; either spelling is preserved by
+the created item's getter and reflected attribute.
 
 **Events:** none.
 
@@ -54,16 +57,19 @@ A single notification.
 
 **Properties:**
 - `duration: number = 5000` (ms; `Infinity` or `<= 0` disables auto-dismiss)
-- `size: '2xs'|'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — drives both `--lr-toast-padding` and the
-  toast's own font-size via `:host([size=...])`, from a compact `2xs` up to a roomier `xl`;
-  setters also accept `small`/`medium`/`large` and normalize reads to `s`/`m`/`l`)
+- `size: '2xs'|'xs'|'s'|'m'|'l'|'xl'|'small'|'medium'|'large' = 'm'` (reflected — drives both `--lr-toast-padding` and the
+  toast's own font-size through a private effective-size mapping, from a compact `2xs` up to a roomier `xl`;
+  valid property and attribute writes round-trip without changing spelling)
 - `variant: 'brand'|'success'|'warning'|'danger'|'neutral' = 'neutral'` (reflected)
 - `withIcon: boolean = false` (attribute `with-icon`)
 
 **Methods:** `async hide(): Promise<void>` — plays the hide animation, then removes itself from the
 DOM.
 
-**Events:** `lr-show`, `lr-after-show`, `lr-hide`, `lr-after-hide`
+**Events:** `lr-show`, `lr-after-show`, `lr-hide`, `lr-after-hide`. `lr-hide` is the cancelable
+pre-hide veto point. Vetoing an auto-dismiss expiry leaves the item visible and restarts the full
+current normalized `duration`; repeated vetoes retry at that same interval. Vetoing a manual
+`hide()` leaves any active countdown at its current elapsed position.
 
 **Slots:** default (message), `icon`
 
@@ -108,7 +114,9 @@ on `pointerleave`/`focusout`, with real elapsed-time bookkeeping (WCAG 2.2.1 tim
 hover and focus are tracked as independent pause reasons, so releasing only one (e.g. the pointer
 leaves while focus remains, or vice versa) keeps the timer paused until *neither* holds it anymore.
 A `duration` change while the timer is actively counting down reschedules it immediately against
-the new value instead of waiting for the next pause/resume cycle.
+the new value instead of waiting for the next pause/resume cycle. A vetoed timer expiry restarts
+that full normalized value; if hover/focus or a disconnect begins during the veto event, the retry
+stays paused and starts from the full value only after the item resumes/reconnects.
 
 ### `toast()`
 
@@ -126,7 +134,7 @@ toast({ message: 'Deleted', variant: 'danger', action: { label: 'Undo', onClick:
 `ToastOptions = ToastCreateOptions & { message: string; placement?: ToastPlacement; action?: { label: string; onClick: (item: LyraToastItem) => void } }`,
 and `ToastHandle = { item: Promise<LyraToastItem>; dismiss: () => void }`. Because it extends
 `ToastCreateOptions`, the helper accepts the same long `small`/`medium`/`large` size aliases and
-normalizes the created item identically. It lazily mounts (and
+preserves them on the created item identically. It lazily mounts (and
 re-mounts if removed) **one singleton `<lr-toast>` region per distinct `placement`** on
 `document.body` — a `toast()` call targeting one placement never relocates toasts already showing
 at another, since `placement` is a per-call option rather than a single global region's setting.

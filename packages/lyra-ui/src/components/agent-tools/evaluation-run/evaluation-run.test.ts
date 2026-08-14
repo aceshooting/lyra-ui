@@ -102,7 +102,7 @@ it('shows a running/failed count badge only when that count is nonzero', async (
 it('renders an empty state when examples is []', async () => {
   const el = (await fixture(html`<lr-evaluation-run></lr-evaluation-run>`)) as LyraEvaluationRun;
   expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
-  expect(el.shadowRoot!.querySelector('[part="example"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="example"]')) == null).to.be.true;
 });
 
 it('renders one lr-details[part="example"] per example, carrying data-status', async () => {
@@ -146,7 +146,7 @@ it('renders code input/output via lr-code-block when the example requests it, wi
 it('renders no grounding section when the example carries no grounding assessment', async () => {
   const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
   const row = await expandExample(el, 1);
-  expect(row.querySelector('[part="grounding-section"]')).to.not.exist;
+  expect((row.querySelector('[part="grounding-section"]')) == null).to.be.true;
 });
 
 it('composes lr-grounding-summary with the example assessment and citations when grounding is present', async () => {
@@ -220,7 +220,7 @@ it('forgets an expanded example id once that example is removed', async () => {
 it('renders no tool-trace section when the example has no toolTrace', async () => {
   const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
   const row = await expandExample(el);
-  expect(row.querySelector('[part="tool-trace-section"]')).to.not.exist;
+  expect((row.querySelector('[part="tool-trace-section"]')) == null).to.be.true;
 });
 
 it('composes lr-tool-timeline with the example entries for the tool-trace section', async () => {

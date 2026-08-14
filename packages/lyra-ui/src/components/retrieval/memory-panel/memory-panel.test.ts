@@ -54,7 +54,7 @@ describe('lr-memory-panel', () => {
     expect(el.shortTerm).to.deep.equal([]);
     expect(el.longTerm).to.deep.equal([]);
     expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
-    expect(el.shadowRoot!.querySelector('[part="section"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="section"]')) == null).to.be.true;
   });
 
   it('renders one section per non-empty list with localized headings and role="list" wrappers', async () => {
@@ -95,7 +95,7 @@ describe('lr-memory-panel', () => {
       (s) => s.getAttribute('data-scope') === 'long-term',
     )!;
     expect(emptySection.querySelector('[part="section-empty"]')!.textContent).to.equal('No data');
-    expect(emptySection.querySelector('[part="list"]')).to.not.exist;
+    expect((emptySection.querySelector('[part="list"]')) == null).to.be.true;
   });
 
   it('renders a visible, tone-mapped confidence tier label (never color alone) reusing the citation confidence vocabulary', async () => {
@@ -122,15 +122,15 @@ describe('lr-memory-panel', () => {
   it('omits the confidence part entirely when an item has no confidence', async () => {
     const el = await populated();
     const row = el.shadowRoot!.querySelector('[part="item"][data-id="s2"]')!;
-    expect(row.querySelector('[part="confidence"]')).to.not.exist;
+    expect((row.querySelector('[part="confidence"]')) == null).to.be.true;
   });
 
   it('only renders the provenance expand-toggle (and disclosure body) when an item defines provenance, collapsed by default', async () => {
     const el = await populated();
     const withProvenance = el.shadowRoot!.querySelector('[part="item"][data-id="l1"]')!;
     const withoutProvenance = el.shadowRoot!.querySelector('[part="item"][data-id="l2"]')!;
-    expect(withoutProvenance.querySelector('[part="expand-toggle"]')).to.equal(null);
-    expect(withoutProvenance.querySelector('[part="item-body"]')).to.equal(null);
+    expect((withoutProvenance.querySelector('[part="expand-toggle"]')) === (null)).to.equal(true);
+    expect((withoutProvenance.querySelector('[part="item-body"]')) === (null)).to.equal(true);
 
     const toggle = withProvenance.querySelector('[part="expand-toggle"]') as HTMLButtonElement;
     const body = withProvenance.querySelector('[part="item-body"]') as HTMLElement;
@@ -205,7 +205,7 @@ describe('lr-memory-panel', () => {
     expect(shortRow.querySelector('[part="remove-button"]')).to.exist;
 
     const longRow = el.shadowRoot!.querySelector('[part="item"][data-id="l1"]')!;
-    expect(longRow.querySelector('[part="add-button"]')).to.not.exist;
+    expect((longRow.querySelector('[part="add-button"]')) == null).to.be.true;
     expect(longRow.querySelector('[part="remove-button"]')).to.exist;
   });
 
@@ -220,8 +220,8 @@ describe('lr-memory-panel', () => {
     expect((confirmBar) != null).to.equal(true);
     expect(confirmBar.variant).to.equal('neutral');
     expect(confirmBar.heading).to.equal('Add this to long-term memory?');
-    expect(row.querySelector('[part="add-button"]')).to.not.exist;
-    expect(row.querySelector('[part="remove-button"]')).to.not.exist;
+    expect((row.querySelector('[part="add-button"]')) == null).to.be.true;
+    expect((row.querySelector('[part="remove-button"]')) == null).to.be.true;
 
     const listener = oneEvent(el, 'lr-add');
     (confirmBar.shadowRoot!.querySelector('[part="approve-button"]') as HTMLButtonElement).click();
@@ -229,7 +229,7 @@ describe('lr-memory-panel', () => {
     expect(event.detail).to.deep.equal({ item: shortTermItems[0] });
     await el.updateComplete;
 
-    expect(row.querySelector('lr-confirm-bar')).to.not.exist;
+    expect((row.querySelector('lr-confirm-bar')) == null).to.be.true;
     expect(row.querySelector('[part="add-button"]')).to.exist;
     expect(el.shortTerm).to.equal(originalShortTerm); // controlled: never mutated by the component itself
   });
@@ -263,7 +263,7 @@ describe('lr-memory-panel', () => {
     await el.updateComplete;
     expect(added).to.be.false;
     expect(removed).to.be.false;
-    expect(row.querySelector('lr-confirm-bar')).to.not.exist;
+    expect((row.querySelector('lr-confirm-bar')) == null).to.be.true;
     expect(row.querySelector('[part="remove-button"]')).to.exist;
   });
 
@@ -277,7 +277,7 @@ describe('lr-memory-panel', () => {
 
     (rowB.querySelector('[part="add-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
-    expect(rowA.querySelector('lr-confirm-bar')).to.not.exist;
+    expect((rowA.querySelector('lr-confirm-bar')) == null).to.be.true;
     expect(rowA.querySelector('[part="remove-button"]')).to.exist;
     expect(rowB.querySelector('lr-confirm-bar')).to.exist;
   });
@@ -289,7 +289,7 @@ describe('lr-memory-panel', () => {
     const withoutLongTerm = (await fixture(html`<lr-memory-panel></lr-memory-panel>`)) as LyraMemoryPanel;
     withoutLongTerm.shortTerm = shortTermItems;
     await withoutLongTerm.updateComplete;
-    expect(withoutLongTerm.shadowRoot!.querySelector('[part="forget-all-button"]')).to.not.exist;
+    expect((withoutLongTerm.shadowRoot!.querySelector('[part="forget-all-button"]')) == null).to.be.true;
   });
 
   it('Forget all opens a danger-tone lr-confirm-bar with the memory count in its body; approving emits lr-forget with no id', async () => {
@@ -323,7 +323,7 @@ describe('lr-memory-panel', () => {
     (confirmBar.shadowRoot!.querySelector('[part="deny-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
     expect(forgot).to.be.false;
-    expect(section.querySelector('lr-confirm-bar')).to.not.exist;
+    expect((section.querySelector('lr-confirm-bar')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="forget-all-button"]')).to.exist;
   });
 
@@ -343,7 +343,7 @@ describe('lr-memory-panel', () => {
     (confirmBar.shadowRoot!.querySelector('[part="approve-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
     await new Promise((resolve) => requestAnimationFrame(resolve));
-    expect(el.shadowRoot!.querySelector('[part="forget-all-button"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="forget-all-button"]')) == null).to.be.true;
     expect(
       (el.shadowRoot!.activeElement as HTMLElement | null)?.closest('[part="item"]')?.getAttribute(
         'data-scope',
@@ -557,7 +557,7 @@ describe('lr-memory-panel', () => {
       await el.updateComplete;
       await settleFocus(el);
       expect(el.shadowRoot!.querySelectorAll('lr-confirm-bar').length).to.equal(0);
-      expect(el.shadowRoot!.querySelector('[part="item"][data-id="s1"]')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('[part="item"][data-id="s1"]')) == null).to.be.true;
     });
   });
 
@@ -697,7 +697,7 @@ describe('lr-memory-panel', () => {
     (confirmBar.shadowRoot!.querySelector('[part="approve-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
     await new Promise((resolve) => requestAnimationFrame(resolve));
-    expect(el.shadowRoot!.querySelector('[part="item"][data-id="s1"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="item"][data-id="s1"]')) == null).to.be.true;
     expect(
       (el.shadowRoot!.activeElement as HTMLElement | null)?.closest('[part="item"]')?.getAttribute(
         'data-scope',
@@ -723,7 +723,7 @@ describe('lr-memory-panel', () => {
     (confirmBar.shadowRoot!.querySelector('[part="approve-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
     await new Promise((resolve) => requestAnimationFrame(resolve));
-    expect(el.shadowRoot!.querySelector('[part="item"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="item"]')) == null).to.be.true;
     expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal(
       'base',
     );
@@ -917,7 +917,7 @@ it('moves focus to the stable base wrapper when a controlled longTerm clear empt
   el.longTerm = [];
   await settleFocus(el);
 
-  expect(el.shadowRoot!.querySelector('[part="forget-all-button"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="forget-all-button"]')) == null).to.be.true;
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
 });
 
@@ -927,7 +927,7 @@ it('moves focus to the stable base wrapper when a controlled longTerm clear empt
   forgetAll.focus();
   el.longTerm = [];
   await settleFocus(el);
-  expect(el.shadowRoot!.querySelector('[part="forget-all-button"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="forget-all-button"]')) == null).to.be.true;
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
 });
 

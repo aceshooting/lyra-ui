@@ -144,7 +144,7 @@ describe('lr-retrieval-trace', () => {
     const bare: RetrievalStage[] = [{ id: 'x', kind: 'retrieve', startMs: 0, status: 'success' }];
     const el = (await fixture(html`<lr-retrieval-trace .stages=${bare}></lr-retrieval-trace>`)) as LyraRetrievalTrace;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="evidence-list"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="evidence-list"]')) == null).to.be.true;
   });
 
   it('evidence rows start collapsed', async () => {
@@ -264,7 +264,7 @@ describe('lr-retrieval-trace', () => {
 
     el.stages = STAGES.filter((s) => s.id !== 'retrieve');
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[data-id="retrieve"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[data-id="retrieve"]')) == null).to.be.true;
 
     el.stages = STAGES;
     await el.updateComplete;

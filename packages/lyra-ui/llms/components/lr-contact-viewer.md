@@ -42,6 +42,9 @@ precedence over `name` by attribute presence, including an explicitly empty valu
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
   DOMRect[] }`) — fired after a selection ends inside the rendered contacts.
 
+`lr-highlight-activate` is not part of this viewer's event contract: painted contact-text
+highlights are passive and cannot be activated.
+
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base`, `body`, `contact`, `contact-name`, `contact-org`, `contact-tel`,

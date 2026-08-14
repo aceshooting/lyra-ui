@@ -13,7 +13,7 @@ describe('lr-button', () => {
     el.dispatchEvent(new Event('invalid', { cancelable: true }));
 
     expect(aliases).to.have.lengthOf(1);
-    expect(aliases[0].target).to.equal(el);
+    expect((aliases[0].target) === (el)).to.equal(true);
     expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
     expect(aliases[0].cancelable).to.be.false;
   });
@@ -99,7 +99,7 @@ describe('lr-button', () => {
 
   it('renders a spinner part only while loading, and sets aria-busy', async () => {
     const el = (await fixture(html`<lr-button>Save</lr-button>`)) as LyraButton;
-    expect(el.shadowRoot!.querySelector('[part="spinner"]')).to.be.null;
+    expect((el.shadowRoot!.querySelector('[part="spinner"]')) === null).to.be.true;
     el.loading = true;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="spinner"]')).to.not.be.null;
@@ -834,7 +834,7 @@ describe('lr-button', () => {
       const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
       expect((anchor) != null).to.equal(true);
       expect(anchor.getAttribute('href')).to.equal('https://example.com');
-      expect(el.shadowRoot!.querySelector('button[part~="base"]')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('button[part~="base"]')) == null).to.be.true;
     });
 
     it('still renders the label/start/end/spinner content inside the anchor', async () => {
@@ -897,7 +897,7 @@ describe('lr-button', () => {
       const el = (await fixture(
         html`<lr-button href="javascript:alert(1)">Go</lr-button>`,
       )) as LyraButton;
-      expect(el.shadowRoot!.querySelector('a[part~="base"]')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('a[part~="base"]')) == null).to.be.true;
       expect(el.shadowRoot!.querySelector('button[part~="base"]')).to.exist;
     });
 
@@ -936,7 +936,7 @@ describe('lr-button', () => {
       await expect(el).to.be.accessible();
     });
 
-    describe('D8: a disabled link button omits href and cannot navigate', () => {
+    describe('a disabled link button omits href and cannot navigate', () => {
       it('renders an <a> with NO href attribute when disabled', async () => {
         const el = (await fixture(
           html`<lr-button disabled href="https://example.com">Go</lr-button>`,
@@ -1047,7 +1047,7 @@ describe('lr-button', () => {
           html`<lr-button variant="brand" appearance="outlined" size="l">Go</lr-button>`,
         )) as LyraButton;
         expect(el.shadowRoot!.querySelector('button[part~="base"]')).to.exist;
-        expect(el.shadowRoot!.querySelector('a[part~="base"]')).to.not.exist;
+        expect((el.shadowRoot!.querySelector('a[part~="base"]')) == null).to.be.true;
       });
 
       it('exposes href/target/download as undefined by default', async () => {

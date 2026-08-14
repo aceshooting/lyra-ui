@@ -242,6 +242,7 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     const wasMounting = this.isMounting;
     this.isMounting = false;
     if (changed.has('examples')) this.diffAndAnnounce(wasMounting);

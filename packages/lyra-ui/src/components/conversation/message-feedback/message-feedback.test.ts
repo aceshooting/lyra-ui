@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import './message-feedback.js';
 import type { LyraMessageFeedback } from './message-feedback.js';
+import type { LyraChip } from '../../overlays/chip/chip.class.js';
 import { styles } from './message-feedback.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
@@ -43,7 +44,7 @@ describe('thumbs-only (no reasons, not commentable)', () => {
     up.click();
     expect((await first).detail).to.deep.equal({ value: 'up' });
     expect(el.value).to.equal('up');
-    expect(el.shadowRoot!.querySelector('[part="panel"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="panel"]')) == null).to.be.true;
 
     const second = oneEvent(el, 'lr-change');
     up.click(); // re-activating the pressed thumb clears it
@@ -391,8 +392,9 @@ it('disables reason chips and ignores their events while the whole control is di
   const el = (await fixture(
     html`<lr-message-feedback value="down" .reasons=${reasons} disabled></lr-message-feedback>`
   )) as LyraMessageFeedback;
-  const chip = el.shadowRoot!.querySelector('lr-chip')!;
+  const chip = el.shadowRoot!.querySelector('lr-chip') as LyraChip;
   expect(chip.disabled).to.be.true;
+  expect(chip.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle-button"]')!.disabled).to.be.true;
   chip.dispatchEvent(new CustomEvent('lr-chip-select', { bubbles: true, composed: true }));
   await el.updateComplete;
   expect(chip.selected).to.be.false;

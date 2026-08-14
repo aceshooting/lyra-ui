@@ -544,7 +544,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     // *before* Lit's own async re-render has even reached its `tabindex` attribute. Confirmed via
     // a captured marker showing the `blur` firing synchronously inside the `disabled` property
     // setter, with the span's `tabIndex` still `0` at that point -- the exact same observable race
-    // as `<lr-input>`'s `onBlur` (fr_asxOgk4UhNB07xevCWwFVQ), just reached through the FACE
+    // as `<lr-input>`'s `onBlur`, just reached through the FACE
     // disabled-state's forced blur rather than a native `<input disabled>`'s. That is not a user
     // interaction: marking `touched` for it could reenter an in-flight Lit update and trip Lit's
     // dev-mode "scheduled an update after an update completed" warning, and would otherwise let a

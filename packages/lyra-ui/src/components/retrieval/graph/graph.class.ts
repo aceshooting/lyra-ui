@@ -334,10 +334,15 @@ export interface LyraGraphEventMap {
  * @csspart cursor-item - An offscreen keyboard-roving item (`renderer="canvas"`'s a11y virtual cursor).
  * @cssprop [--lr-node-fill=var(--lr-color-brand)] - Default node fill, overridden per-node by `GraphNode.color`.
  * @cssprop [--lr-link-color=var(--lr-color-border)] - Default link stroke, overridden per-link by a link's own `color`.
- * @cssprop [--lr-graph-cat-1..8] - Ordered categorical fallback palette for a typed node with no
- *   `GraphNodeType.color`, assigned by the type's index in `nodeTypes` (wraps every 8 entries).
- *   Declared centrally in `specialist-tokens.styles.ts` so `<lr-graph>` and any future
- *   `<lr-graph-legend>`-style component resolve the identical default.
+ * @cssprop [--lr-graph-cat-1=var(--lr-theme-graph-cat-1,#8250df)] - First categorical fallback color for typed nodes.
+ * @cssprop [--lr-graph-cat-2=var(--lr-theme-graph-cat-2,#bf3989)] - Second categorical fallback color for typed nodes.
+ * @cssprop [--lr-graph-cat-3=var(--lr-theme-graph-cat-3,#0a7d91)] - Third categorical fallback color for typed nodes.
+ * @cssprop [--lr-graph-cat-4=var(--lr-theme-graph-cat-4,#57606a)] - Fourth categorical fallback color for typed nodes.
+ * @cssprop [--lr-graph-cat-5=var(--lr-theme-graph-cat-5,#b083f5)] - Fifth categorical fallback color for typed nodes.
+ * @cssprop [--lr-graph-cat-6=var(--lr-theme-graph-cat-6,#f470b8)] - Sixth categorical fallback color for typed nodes.
+ * @cssprop [--lr-graph-cat-7=var(--lr-theme-graph-cat-7,#52d6e8)] - Seventh categorical fallback color for typed nodes.
+ * @cssprop [--lr-graph-cat-8=var(--lr-theme-graph-cat-8,#c9d1d9)] - Eighth categorical fallback color for typed nodes; the palette wraps
+ *   for later `nodeTypes` entries.
  * @cssprop [--lr-graph-edge-label-halo=var(--lr-color-surface)] - Legibility halo (`stroke`)
  *   behind a drawn edge label, painted under the fill via `paint-order: stroke`.
  * @cssprop [--lr-graph-focus-halo-color=var(--lr-color-brand)] - `focus-halo` stroke color.
@@ -377,7 +382,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
 
+  /** Nodes in the controlled graph model. Node ids provide stable render and interaction identity. */
   @property({ attribute: false }) nodes: GraphNode[] = [];
+  /** Directed or undirected connections between node ids in `nodes`. */
   @property({ attribute: false }) links: GraphLink[] = [];
   /** Declares each `GraphNode.type` value's legend label, fill color, and shape. A typed node with
    *  no matching entry here renders as untyped (default circle, token fill) but still participates
@@ -407,11 +414,17 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  props otherwise behave identically across renderers. Runtime changes tear down and rebuild
    *  the surface; positions survive via `prevById`/`lastPositionById`. */
   @property() renderer: GraphRenderer = 'svg';
+  /** Requested graph viewport width in CSS pixels. */
   @property({ type: Number }) width = 800;
+  /** Requested graph viewport height in CSS pixels. */
   @property({ type: Number }) height = 600;
+  /** Many-body force strength used by the force layout. Negative values repel nodes. */
   @property({ type: Number, attribute: 'charge-strength' }) chargeStrength = -300;
+  /** Preferred link length for force layout and layer separation for layered layout. */
   @property({ type: Number, attribute: 'link-distance' }) linkDistance = 100;
+  /** Minimum camera scale accepted by zoom interactions. */
   @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.1;
+  /** Maximum camera scale accepted by zoom interactions. */
   @property({ type: Number, attribute: 'max-zoom' }) maxZoom = 8;
   /** Accessible name forwarded from the host to the semantic graph SVG. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
@@ -442,7 +455,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  never mutates `selectedNodeIds`/`selectedLinkIds` itself, only emits intent; the host assigns
    *  them back. */
   @property({ attribute: 'selection-mode' }) selectionMode: GraphSelectionMode = 'none';
+  /** Controlled ids of selected nodes. Selection gestures emit intent without mutating this array. */
   @property({ attribute: false }) selectedNodeIds: string[] = [];
+  /** Controlled ids of selected links, using each link's stable effective key. */
   @property({ attribute: false }) selectedLinkIds: string[] = [];
   /** Node ids to render dimmed (`data-dimmed` on the matching `[part="node"]`, themeable via
    *  `--lr-graph-dimmed-opacity`). Controlled, mirroring `selectedNodeIds`/`selectedLinkIds`: the
@@ -700,12 +715,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       // Keep the server-rendered loading branch stable through Lit's first browser update. A
       // cached/fast d3 import may otherwise switch render() to SVG before declarative-shadow-DOM
       // hydration has claimed its markers, producing a mismatch and replacing the whole shadow
-      // tree. Client-only mounts retain the skeleton for the same single initial update.
+      // tree. The shared browser-state seam delays only the hydrating branch change; client-only
+      // mounts proceed as soon as their initial update completes.
       try {
         await this.updateComplete;
       } catch {
         return;
       }
+      await new Promise<void>((resolve) => this.updateBrowserDerivedState(resolve));
       if (generation !== this.loadGeneration || !this.isConnected) return;
       this.loading = false;
       // A null module means the optional `d3` peer isn't installed — fail closed into the visible

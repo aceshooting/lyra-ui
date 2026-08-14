@@ -42,7 +42,7 @@ it('preserves nested per-node expanded state when a nested children array is reo
   await root.updateComplete;
 
   const after = [...root.shadowRoot!.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
-  expect(after[0]).to.equal(childB, 'the "B" node instance should be reused after reordering');
+  expect((after[0]) === (childB)).to.equal(true, 'the "B" node instance should be reused after reordering');
   expect(after[0].expanded).to.be.true;
 });
 

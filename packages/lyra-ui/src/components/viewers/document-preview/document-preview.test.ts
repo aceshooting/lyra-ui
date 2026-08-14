@@ -259,8 +259,8 @@ describe('text/* and application/json dispatch', () => {
         html`<lr-document-preview mime-type="text/plain"></lr-document-preview>`,
       )) as LyraDocumentPreview;
       await aTimeout(10);
-      expect(el.shadowRoot!.querySelector('[part="spinner"]')).to.not.exist;
-      expect(el.shadowRoot!.querySelector('[part="body"] pre')).to.not.exist;
+      expect((el.shadowRoot!.querySelector('[part="spinner"]')) == null).to.be.true;
+      expect((el.shadowRoot!.querySelector('[part="body"] pre')) == null).to.be.true;
       const emptyNote = el.shadowRoot!.querySelector('[part="body"] .empty-note');
       expect((emptyNote) != null).to.equal(true);
       expect(emptyNote!.textContent).to.equal('No document to display.');
@@ -487,6 +487,24 @@ describe('image/* dispatch', () => {
 });
 
 describe('generic-download fallback', () => {
+  it('lets a composing shell suppress the duplicate download action through the public property', async () => {
+    const el = (await fixture(html`
+      <lr-document-preview
+        src="https://example.com/report.pdf"
+        filename="report.pdf"
+        mime-type="application/pdf"
+        .suppressDownload=${true}
+      ></lr-document-preview>
+    `)) as LyraDocumentPreview;
+
+    expect(el.suppressDownload).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part="download-link"]')) === null).to.be.true;
+
+    el.suppressDownload = false;
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="download-link"]')) !== null).to.be.true;
+  });
+
   it('renders a file glyph, message, and download link for an unrecognized mime-type', async () => {
     const el = (await fixture(html`
       <lr-document-preview
@@ -513,7 +531,7 @@ describe('generic-download fallback', () => {
     const el = (await fixture(
       html`<lr-document-preview mime-type="application/pdf" filename="report.pdf"></lr-document-preview>`,
     )) as LyraDocumentPreview;
-    expect(el.shadowRoot!.querySelector('[part="download-link"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="download-link"]')) == null).to.be.true;
   });
 
   it('fails closed when the src attribute is removed at runtime', async () => {
@@ -578,7 +596,7 @@ describe('unsupported slot escape hatch', () => {
       </lr-document-preview>
     `)) as LyraDocumentPreview;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="download-link"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="download-link"]')) == null).to.be.true;
     const slot = el.shadowRoot!.querySelector('slot[name="unsupported"]') as HTMLSlotElement;
     const assigned = slot.assignedElements({ flatten: true });
     expect(assigned).to.have.lengthOf(1);
@@ -613,7 +631,7 @@ describe('status="converting"', () => {
     expect((spinner) != null).to.equal(true);
     expect(spinner.getAttribute('role')).to.equal(null);
     expect(spinner.querySelector('.sr-only')!.textContent).to.equal('Converting document…');
-    expect(el.shadowRoot!.querySelector('[part="download-link"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="download-link"]')) == null).to.be.true;
   });
 
   it('shows a determinate role="progressbar" once progress is set', async () => {

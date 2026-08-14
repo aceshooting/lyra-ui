@@ -26,9 +26,8 @@ export type LibraryDocumentFreshness = "fresh" | "aging" | "stale";
 /**
  * One inventory row. Extends the shared `DocumentRef` (`src/ai/types.ts`) -- `id`/`name`/
  * `mimeType`/`uri`/`version` assign directly onto/from it with no adapter -- with the
- * version/tags/owner/freshness fields the roadmap's document-library surface needs that the
- * provider-neutral `DocumentRef` deliberately doesn't carry (those concepts are specific to an
- * inventory view, not to "a reference to a document" in general). `updatedAt` reuses
+ * tags/owner/freshness fields specific to an inventory view that the provider-neutral
+ * `DocumentRef` deliberately doesn't carry. `updatedAt` reuses
  * `ChatMessage.timestamp`'s own `Date | string` shape from the same `src/ai/types.ts` module for
  * consistency across this component family.
  */
@@ -241,6 +240,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (
       (changed.has("documents") || changed.has("selectedIds")) &&
       this.selectedIds.length > 0

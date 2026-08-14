@@ -322,13 +322,15 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     super.disconnectedCallback();
   }
 
-  override firstUpdated(): void {
+  override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     this.syncDividerSources();
     this.measureAndSynchronize(true);
     this.observeSize();
   }
 
   protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
     if (changed.has('disabled') && this.disabled) this.stopDragging();
     if (changed.has('orientation') || changed.has('vertical')) {
       this.stopDragging();

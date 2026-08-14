@@ -22,7 +22,7 @@ it('renders no built-ins by default and no copy button without copyText', async 
   const withCopyControlOnly = (await fixture(
     html`<lr-message-actions .controls=${['copy']}></lr-message-actions>`,
   )) as LyraMessageActions;
-  expect(withCopyControlOnly.shadowRoot!.querySelector('lr-copy-button')).to.not.exist;
+  expect((withCopyControlOnly.shadowRoot!.querySelector('lr-copy-button')) == null).to.be.true;
 });
 
 it('renders built-ins in the order controls lists them', async () => {
@@ -103,7 +103,7 @@ it('the feedback built-in is thumbs-only: reasons/commentable/detailFor are neve
   };
   expect(feedback.reasons).to.deep.equal([]);
   expect(feedback.commentable).to.be.false;
-  expect(feedback.shadowRoot!.querySelector('[part="panel"]')).to.not.exist;
+  expect((feedback.shadowRoot!.querySelector('[part="panel"]')) == null).to.be.true;
 });
 
 it('forwards feedbackValue to the embedded feedback built-in', async () => {

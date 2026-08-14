@@ -431,7 +431,7 @@ describe('annotation', () => {
     expect(event.detail.anchor.kind).to.equal('region');
     expect(event.detail.anchor.rect.x).to.be.closeTo(39.5, 0.01);
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="annotation-box"]')) == null).to.be.true;
   });
 
   it('keeps annotation ArrowLeft/ArrowRight physical under RTL', async () => {
@@ -474,7 +474,7 @@ describe('annotation', () => {
     viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     await el.updateComplete;
     expect(fired).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="annotation-box"]')) == null).to.be.true;
   });
 
   it('moves the draft box with ArrowLeft/ArrowUp/ArrowDown and ignores unrecognized keys', async () => {
@@ -536,7 +536,7 @@ describe('annotation', () => {
     const viewport = el.shadowRoot!.querySelector('[part="image-wrapper"]') as HTMLElement;
     viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="annotation-box"]')) == null).to.be.true;
   });
 
   it('clears a keyboard-created draft on source change, annotation disable, and reconnect', async () => {
@@ -553,12 +553,12 @@ describe('annotation', () => {
     await startKeyboardDraft();
     el.src = `${PNG_SRC}?replacement`;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="annotation-box"]')) == null).to.be.true;
 
     await startKeyboardDraft();
     el.annotatable = false;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="annotation-box"]')) == null).to.be.true;
 
     el.annotatable = true;
     await el.updateComplete;
@@ -566,7 +566,7 @@ describe('annotation', () => {
     el.remove();
     document.body.append(el);
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="annotation-box"]')) == null).to.be.true;
   });
 });
 
@@ -651,7 +651,7 @@ describe('pointer-driven annotation', () => {
     expect(event.detail.anchor.kind).to.equal('region');
     expect(event.detail.anchor.rect.width).to.be.closeTo(40, 0.01);
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="annotation-box"]')) == null).to.be.true;
   });
 
   it('cancels the pointer-drawn draft on release if the dragged region stays too small', async () => {
@@ -666,7 +666,7 @@ describe('pointer-driven annotation', () => {
     wrapper.dispatchEvent(new PointerEvent('pointerup', { pointerId: 2, bubbles: true }));
     await el.updateComplete;
     expect(fired).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="annotation-box"]')) == null).to.be.true;
   });
 
   it('maps the pointer position through the rotated coordinate space for 90/180/270 rotations', async () => {
@@ -723,7 +723,7 @@ describe('pointer-driven annotation', () => {
     const wrapper = stubWrapperRect(el);
     wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 3, clientX: 20, clientY: 10, bubbles: true }));
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="annotation-box"]')) == null).to.be.true;
   });
 
   it('ignores a pointermove/pointerup that never had a matching pointerdown', async () => {
@@ -738,7 +738,7 @@ describe('pointer-driven annotation', () => {
     wrapper.dispatchEvent(new PointerEvent('pointerup', { pointerId: 4, bubbles: true }));
     await el.updateComplete;
     expect(fired).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="annotation-box"]')) == null).to.be.true;
   });
 });
 

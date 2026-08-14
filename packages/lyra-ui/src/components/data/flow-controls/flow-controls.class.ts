@@ -166,6 +166,7 @@ export class LyraFlowControls extends LyraElement {
   // Runs from `willUpdate()`, not `updated()`, so the reset lands in the render this same cycle
   // produces instead of synchronously scheduling a second cycle from within `updated()`.
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (this.hasUpdated && changed.has('for')) {
       this.resolveAndAttach();
     }

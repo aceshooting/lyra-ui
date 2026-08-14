@@ -1,18 +1,18 @@
 // Guards against the exact bug class that has already hit this repo twice:
-// a component ships an `export interface Lyra*EventMap` in its `*.class.ts`
-// but the root barrel (src/lyra.ts) never re-exports it -- either because the
-// component's side-effect import was added without the matching type export,
-// or because a whole family landed via `export *` chains that quietly didn't
-// carry the type through. Unlike `type-tests/event-types.ts` (a hand-curated
-// compile-check tuple that a human has to remember to extend every time a
-// component ships), this script is fully derived from the source tree: it
-// finds every EventMap interface itself, then resolves the real ES-module
-// export graph rooted at lyra.ts to see whether that name is actually
-// reachable -- so it never goes stale.
+// a component ships a public support type/interface but the root barrel
+// (src/lyra.ts) never re-exports it. Unlike a hand-curated compile-check tuple,
+// this script derives the closure from each class's public signatures, follows
+// references into support modules and type-only re-exports, then resolves the
+// real ES-module export graph rooted at lyra.ts.
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+
+import {
+  collectPublicSupportTypes,
+  missingPublicSupportTypes,
+} from './public-type-reachability.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const componentsDir = path.join(packageDir, 'src', 'components');
@@ -26,7 +26,7 @@ function walk(directory) {
   });
 }
 
-// --- Step 1: find every `export interface Lyra*EventMap` in a `*.class.ts` module. ---
+// --- Step 1: retain the direct EventMap census for its duplicate-name invariant. ---
 
 const EVENT_MAP_DECLARATION_RE = /^export interface (Lyra\w*EventMap)\b/gm;
 
@@ -70,7 +70,7 @@ if (duplicates.length) {
 const DIRECT_DECLARATION_RE =
   /^export\s+(?:declare\s+)?(?:default\s+)?(?:abstract\s+)?(?:async\s+)?(?:interface|type|class|function|const|let|enum)\s+(\w+)/gm;
 const NAMED_EXPORT_RE = /^export\s+(?:type\s+)?\{([^}]*)\}\s*(?:from\s+['"]([^'"]+)['"])?\s*;/gm;
-const WILDCARD_EXPORT_RE = /^export\s+\*\s+from\s+['"]([^'"]+)['"]\s*;?/gm;
+const WILDCARD_EXPORT_RE = /^export\s+(?:type\s+)?\*\s+from\s+['"]([^'"]+)['"]\s*;?/gm;
 const NAMESPACE_EXPORT_RE = /^export\s+\*\s+as\s+\w+\s+from/gm;
 
 function resolveModuleFile(fromFile, spec) {
@@ -130,13 +130,15 @@ function getExportedNames(filePath, stack) {
 
 const rootBarrelExports = getExportedNames(rootBarrelPath, new Set());
 
-// --- Step 3: cross-reference every declared EventMap against the barrel's export graph. ---
+// --- Step 3: cross-reference every declared support type against the barrel's export graph. ---
 
 const errors = [];
-for (const entry of declaredEventMaps) {
-  if (!rootBarrelExports.has(entry.name)) {
-    errors.push(`${path.relative(packageDir, entry.file)}: exports \`${entry.name}\` but src/lyra.ts does not re-export it (directly or via \`export *\`)`);
-  }
+const publicSupportTypes = collectPublicSupportTypes({ packageDir });
+for (const entry of missingPublicSupportTypes(publicSupportTypes, rootBarrelExports)) {
+  errors.push(
+    `${path.relative(packageDir, entry.file)}: public support type \`${entry.name}\` (reached from ` +
+      `${entry.referencedBy}) is not re-exported by src/lyra.ts`,
+  );
 }
 
 for (const message of unresolvableSpecs) errors.push(message);
@@ -158,15 +160,18 @@ if (!optionalPeerBlock) {
 }
 
 if (errors.length) {
-  console.error(`Lyra event-barrel reachability check failed (${errors.length} issue${errors.length === 1 ? '' : 's'}):\n`);
+  console.error(`Lyra public-type barrel reachability check failed (${errors.length} issue${errors.length === 1 ? '' : 's'}):\n`);
   console.error(errors.map((message) => `  - ${message}`).join('\n'));
   console.error(
-    '\nEvery `export interface Lyra*EventMap` in a component `*.class.ts` module must be reachable from src/lyra.ts, ' +
+    '\nEvery exported type/interface in a component public signature or type-only class-module re-export ' +
+      'must be reachable from src/lyra.ts, ' +
       "either as a direct named `export type { ... }` or transitively through an `export * from '...'` chain " +
       '(lyra.ts -> the component\'s own wrapper file -> its `.class.ts`). Add the missing export to src/lyra.ts.',
   );
   process.exitCode = 1;
 } else {
-  console.log(`Lyra event-barrel reachability check passed: ${declaredNames.size} EventMap types all reachable from src/lyra.ts.`);
+  console.log(
+    `Lyra public-type barrel reachability check passed: ${publicSupportTypes.length} support types ` +
+      `(${declaredNames.size} EventMap types) all reachable from src/lyra.ts.`,
+  );
 }
-

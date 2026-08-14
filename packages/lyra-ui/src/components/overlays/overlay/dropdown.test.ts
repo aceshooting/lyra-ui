@@ -1,4 +1,4 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './dropdown.js';
 import '../../layout/menu/dropdown-item.js';
 import '../../layout/menu/menu.js';
@@ -38,7 +38,7 @@ it('owns direct dropdown items through one contained lr-menu engine without repl
     'panel',
   ]);
   expect(engine?.localName).to.equal('lr-menu');
-  expect(engine?.shadowRoot?.querySelector('[role="menu"]')).to.equal(null);
+  expect((engine?.shadowRoot?.querySelector('[role="menu"]')) === (null)).to.equal(true);
 });
 
 it('uses the mapped distance=0 default without changing an explicit distance', async () => {
@@ -87,6 +87,10 @@ it('opens from ArrowDown/ArrowUp and reuses disabled-skipping roving focus', asy
   }));
   await el.updateComplete;
   expect(el.open).to.equal(true);
+  await waitUntil(
+    () => document.activeElement === first,
+    'the first enabled item receives focus once initial placement makes the popup visible',
+  );
   expect((document.activeElement as HTMLElement).getAttribute('value')).to.equal(first?.value);
 
   el.hide();
@@ -97,6 +101,10 @@ it('opens from ArrowDown/ArrowUp and reuses disabled-skipping roving focus', asy
     cancelable: true,
   }));
   await el.updateComplete;
+  await waitUntil(
+    () => document.activeElement === last,
+    'the last enabled item receives focus once initial placement makes the popup visible',
+  );
   expect((document.activeElement as HTMLElement).getAttribute('value')).to.equal(last?.value);
 });
 
@@ -262,7 +270,7 @@ it('accepts a consumer-supplied lr-menu as the owned content without adding a se
   await el.updateComplete;
 
   expect(el.shadowRoot!.querySelectorAll('lr-menu[part~="menu"]').length).to.equal(0);
-  expect(supplied.shadowRoot!.querySelector('[role="menu"]')).to.equal(null);
+  expect((supplied.shadowRoot!.querySelector('[role="menu"]')) === (null)).to.equal(true);
   expect(selectCount).to.equal(1);
   expect(legacyAliasCount).to.equal(0);
 });
@@ -286,6 +294,10 @@ it('rejoins the contained menu engine after an open dropdown is reparented', asy
   expect(el.open).to.equal(true);
   expect(engine.open).to.equal(true);
   engine.show('last');
+  await waitUntil(
+    () => document.activeElement?.getAttribute('value') === 'delete',
+    'the reconnected popup restores its selected roving item after placement',
+  );
   expect((document.activeElement as HTMLElement).getAttribute('value')).to.equal('delete');
 });
 
@@ -370,6 +382,10 @@ it('mirrors submenu arrows and preserves the safe pointer corridor under RTL', a
   }));
   await parent.updateComplete;
   expect(parent.submenuOpen).to.equal(false);
+  await waitUntil(
+    () => (document.activeElement as HTMLElement | null)?.id === 'share',
+    'submenu focus returns once its outer dropdown has completed placement',
+  );
   expect((document.activeElement as HTMLElement).id).to.equal('share');
 
   // Pointer intent opens after 150ms. Leaving the outer list schedules a 300ms close; reaching

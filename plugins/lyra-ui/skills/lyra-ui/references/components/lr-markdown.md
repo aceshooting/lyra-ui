@@ -117,6 +117,13 @@ uses for its own `[part="body"]`.
   GitHub-slugger-style slug as `id` on every rendered heading.
 - `math: boolean = false` — renders `$inline$` and `$$block$$` TeX via the optional `katex` peer,
   lazy-loaded the same way as `marked`/`dompurify`/`shiki`.
+- `highlights: LyraHighlight[] = []` (attribute: false) — host-supplied `text-quote` highlights;
+  reassign the array after mutation so painting is refreshed.
+- `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — identifies the
+  currently active entry in `highlights` for active paint and outline treatment.
+- `anchor: LyraAnchor | string | null = null` (attribute: false) — declaratively applies an anchor
+  or a highlight id through the same path as `scrollToAnchor()`; assigning the same value again
+  deliberately re-runs resolution.
 - `anchorKinds: readonly ('fragment' | 'text-quote')[] = ['fragment', 'text-quote']` — the anchor kinds this
   component resolves for the shared anchor-target contract.
 

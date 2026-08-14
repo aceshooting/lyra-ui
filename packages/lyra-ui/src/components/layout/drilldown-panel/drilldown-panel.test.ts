@@ -43,7 +43,7 @@ it('renders a "no item selected" empty state and no breadcrumb when path is empt
   const empty = el.shadowRoot!.querySelector('[part="empty"]');
   expect((empty) != null).to.equal(true);
   expect(empty!.getAttribute('heading')).to.equal('No item selected');
-  expect(el.shadowRoot!.querySelector('lr-breadcrumb')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('lr-breadcrumb')) == null).to.be.true;
 });
 
 it('renders the noData empty state when the current node has no content in any category', async () => {
@@ -72,7 +72,7 @@ it('renders a clickable button for every non-current step and plain text (no but
   const items = el.shadowRoot!.querySelectorAll('lr-breadcrumb-item');
   expect(items[0].shadowRoot!.querySelector('button[part~="base"]')).to.exist;
   expect(items[0].getAttribute('exportparts')).to.equal('base: breadcrumb-button');
-  expect(items[1].shadowRoot!.querySelector('button[part~="base"]')).to.not.exist;
+  expect((items[1].shadowRoot!.querySelector('button[part~="base"]')) == null).to.be.true;
 });
 
 it('fires lr-drilldown-navigate with the step\'s id/index when a non-current breadcrumb button is activated', async () => {
@@ -91,7 +91,7 @@ it('renders a single category directly with no lr-tab-group chrome when only one
   const el = (await fixture(html`<lr-drilldown-panel></lr-drilldown-panel>`)) as LyraDrilldownPanel;
   el.path = [nodeWithEvidenceOnly];
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('lr-tab-group')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('lr-tab-group')) == null).to.be.true;
   const category = el.shadowRoot!.querySelector('[part="category"]');
   expect((category) != null).to.equal(true);
   expect(category!.getAttribute('aria-label')).to.equal('Sources');
@@ -199,7 +199,7 @@ it('shows the Agent runs tab only once content is projected into the runs slot, 
   const el = (await fixture(html`<lr-drilldown-panel></lr-drilldown-panel>`)) as LyraDrilldownPanel;
   el.path = [nodeWithEvidenceOnly];
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('lr-tab-group')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('lr-tab-group')) == null).to.be.true;
 
   const runContent = document.createElement('div');
   runContent.setAttribute('slot', 'runs');
@@ -227,7 +227,7 @@ it('detects a slot="runs" attribute toggled on an already-connected child, not j
   el.appendChild(runContent); // connected, but not slotted into "runs" yet
   await new Promise((resolve) => setTimeout(resolve, 0));
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('lr-tab-group')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('lr-tab-group')) == null).to.be.true;
 
   runContent.setAttribute('slot', 'runs'); // toggled on an already-connected child
   await new Promise((resolve) => setTimeout(resolve, 0));

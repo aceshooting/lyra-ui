@@ -18,10 +18,10 @@ export const styles = css`
   :host(:where([variant='circle'])) [part~='indicator'] {
     border-radius: 50%;
   }
-  :host(:where([effect='pulse'])) [part~='indicator'] {
+  [part~='indicator'][data-effect='pulse'] {
     animation: lr-skeleton-pulse var(--lr-transition-ambient) infinite;
   }
-  :host(:where([effect='sheen'])) [part~='indicator'] {
+  [part~='indicator'][data-effect='sheen'] {
     background-image: linear-gradient(
       90deg,
       var(--lr-skeleton-color, var(--color, var(--lr-color-border))) 0%,
@@ -35,7 +35,7 @@ export const styles = css`
      left-to-right; play the same keyframes backwards under RTL so it sweeps in the reading
      direction. animation-direction (not a second animation-name) leaves the reduced-motion
      'animation: none !important' below fully in charge of disabling it. */
-  :host(:where([effect='sheen']):dir(rtl)) [part~='indicator'] {
+  :host(:dir(rtl)) [part~='indicator'][data-effect='sheen'] {
     animation-direction: reverse;
   }
   @keyframes lr-skeleton-pulse {
@@ -59,7 +59,7 @@ export const styles = css`
     [part~='indicator'] {
       animation: none !important;
     }
-    :host(:where([effect='sheen'])) [part~='indicator'] {
+    [part~='indicator'][data-effect='sheen'] {
       background-image: none;
     }
   }

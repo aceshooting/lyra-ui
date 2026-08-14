@@ -81,26 +81,26 @@ function warnInvalidColor(value: string): void {
 }
 
 /**
- * Validates `value` as a syntactically valid CSS `<color>` via a canvas `fillStyle` sentinel
- * round-trip (mirrors `LyraHeatmap`'s `resolveRgb()`) and returns it unchanged when it parses --
- * `ctx.fillStyle` already accepts the full CSS color grammar natively, so no hex/RGB decomposition
- * is needed here, only a validity check. Falls back to `fallbackHex` (with a one-time
- * `console.warn`, deduplicated per distinct bad value) when it doesn't.
+ * Validates `value` as a syntactically valid CSS `<color>` via two canvas `fillStyle` sentinel
+ * round-trips and returns it unchanged when it parses. Two sentinels are required because a valid
+ * color can normalize to either sentinel itself (`#010203` and `rgb(1 2 3)` both do); an invalid
+ * assignment is the only one that leaves both distinct sentinels unchanged. Falls back to
+ * `fallbackHex` (with a one-time `console.warn`, deduplicated per distinct bad value) when neither
+ * round-trip accepts the value.
  */
 function resolveQrColor(
   value: string,
   fallbackHex: string,
   ctx: CanvasRenderingContext2D,
 ): string {
-  const sentinel = 'rgb(1, 2, 3)';
-  ctx.fillStyle = sentinel;
-  const sentinelNormalized = ctx.fillStyle;
-  ctx.fillStyle = value;
-  if (ctx.fillStyle === sentinelNormalized && value.trim() !== sentinel) {
-    warnInvalidColor(value);
-    return fallbackHex;
+  for (const sentinel of ['rgb(1, 2, 3)', 'rgb(4, 5, 6)']) {
+    ctx.fillStyle = sentinel;
+    const sentinelNormalized = ctx.fillStyle;
+    ctx.fillStyle = value;
+    if (ctx.fillStyle !== sentinelNormalized) return value;
   }
-  return value;
+  warnInvalidColor(value);
+  return fallbackHex;
 }
 
 /**
@@ -123,8 +123,9 @@ function resolveQrColor(
  * `[part="empty"]` instead of an `img`-role element -- there is nothing to
  * encode or name.
  *
- * `--lr-qr-code-fill`/`--lr-qr-code-background` (dark/light modules)
- * default to `--lr-color-text`/`--lr-color-surface`, which -- like every
+ * Standard host `color`/`background-color` control the dark/light modules. They default through
+ * `--lr-qr-code-fill`/`--lr-qr-code-background` to
+ * `--lr-color-text`/`--lr-color-surface`, which -- like every
  * semantic token in this library -- flip under a dark theme. That means the
  * *default* rendering under a dark theme is a polarity-inverted QR code
  * (light modules on a dark background) rather than the conventional
@@ -151,7 +152,7 @@ function resolveQrColor(
  * grid.
  *
  * @customElement lr-qr-code
- * @csspart base - Compatibility name for the outer wrapper; use `qr-code`.
+ * @csspart base - Deprecated in 8.2.3; compatibility name for the outer wrapper; use `qr-code`.
  * @csspart qr-code - The outer wrapper, sized to `size`×`size` CSS px in every state. It is the
  *   same node as `base`.
  * @csspart canvas - The rendered QR code canvas.
@@ -193,12 +194,14 @@ export class LyraQrCode extends LyraElement {
    *  comment for the full precedence order. Caller-supplied data, not routed through `localize()`. */
   @property() label = '';
 
-  /** Mapped foreground module color. A non-empty value takes precedence over
-   *  `--lr-qr-code-fill`. */
+  /** Legacy foreground-module color override. A non-empty value takes precedence over host
+   * `color`.
+   * @deprecated Use the standard host CSS `color` property. */
   @property() fill = '';
 
-  /** Mapped canvas background color. A non-empty value takes precedence over
-   *  `--lr-qr-code-background`. */
+  /** Legacy canvas-background color override. A non-empty value takes precedence over host
+   * `background-color`.
+   * @deprecated Use the standard host CSS `background-color` property. */
   @property() background = '';
 
   /** Safe media URL for an optional centered logo/image. */
@@ -276,7 +279,6 @@ export class LyraQrCode extends LyraElement {
    *  `loadLibrary` field). */
   private loadLibrary: () => Promise<QrCodeApi | null> = loadQrCodeCached;
   private generation = 0;
-
   private dprQuery?: MediaQueryList;
 
   constructor() {
@@ -287,6 +289,10 @@ export class LyraQrCode extends LyraElement {
   }
 
   override connectedCallback(): void {
+    // `value` is synchronously observable on both server and client. Initialize the matching
+    // honest pending state before Lit's first lifecycle pass so hydration never has to replace an
+    // empty branch from inside `willUpdate()`.
+    if (this.value && this.loadState.kind === 'empty') this.loadState = { kind: 'loading' };
     super.connectedCallback();
     this.syncErrorAnnouncementSink();
     this.watchDpr();
@@ -391,6 +397,16 @@ export class LyraQrCode extends LyraElement {
     }
   }
 
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    // Encoding and canvas paint are intentionally client-only, but a non-empty declarative value
+    // is already enough information to distinguish pending work from genuine empty data. Seed the
+    // honest state before the server render and before the browser's first render alike.
+    if (changed.has('value') && this.value && this.loadState.kind === 'empty') {
+      this.loadState = { kind: 'loading' };
+    }
+  }
+
   /** Re-encodes `value` via the optional `qrcode` peer's `create()` and caches the resulting
    *  module matrix. Redraw-only geometry changes (`size`/`radius`) and theme/DPR refreshes never
    *  call this -- see the class doc comment and `updated()`'s dispatch. */
@@ -451,23 +467,19 @@ export class LyraQrCode extends LyraElement {
   }
 
   private fillColor(ctx: CanvasRenderingContext2D): string {
+    const computed = this.ownerDocument.defaultView?.getComputedStyle(this);
     const raw =
       this.fill.trim() ||
-      this.ownerDocument.defaultView
-        ?.getComputedStyle(this)
-        .getPropertyValue('--lr-qr-code-fill')
-        .trim() ||
+      computed?.color?.trim() ||
       FALLBACK_FILL;
     return resolveQrColor(raw, FALLBACK_FILL, ctx);
   }
 
   private backgroundColor(ctx: CanvasRenderingContext2D): string {
+    const computed = this.ownerDocument.defaultView?.getComputedStyle(this);
     const raw =
       this.background.trim() ||
-      this.ownerDocument.defaultView
-        ?.getComputedStyle(this)
-        .getPropertyValue('--lr-qr-code-background')
-        .trim() ||
+      computed?.backgroundColor?.trim() ||
       FALLBACK_BACKGROUND;
     return resolveQrColor(raw, FALLBACK_BACKGROUND, ctx);
   }

@@ -122,14 +122,19 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
 
   static override styles = [LyraElement.styles, styles];
 
+  /** Retrieved chunks to inspect. The input order is preserved when `sort="none"`. */
   @property({ attribute: false }) chunks: LyraChunk[] = [];
+  /** Score boundaries used to classify each chunk as high, medium, or low relevance. */
   @property({ attribute: false }) thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 };
+  /** Ordering applied before rendering the supplied chunks. */
   @property() sort: ChunkInspectorSort = 'score';
   /** Marks the chunk currently open in the viewer. */
   @property({ attribute: 'active-id' }) activeId = '';
+  /** Row count at which rendering switches to the internal virtual list. */
   @property({ type: Number, attribute: 'virtualize-at' }) virtualizeAt = 50;
   /** Compact rows render title + score bar + open button only. */
   @property({ type: Boolean, reflect: true }) compact = false;
+  /** Accessible name for the chunk collection; empty uses the localized default. */
   @property() label = '';
 
   @state() private expandedIds = new Set<string>();

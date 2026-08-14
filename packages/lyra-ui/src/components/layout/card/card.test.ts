@@ -37,7 +37,7 @@ describe("lr-card", () => {
   });
   it("renders as a div by default, an <a> when href is set", async () => {
     const plain = (await fixture(html`<lr-card>body</lr-card>`)) as LyraCard;
-    expect(plain.shadowRoot!.querySelector('a[part="base"]')).to.not.exist;
+    expect((plain.shadowRoot!.querySelector('a[part="base"]')) == null).to.be.true;
     expect(plain.shadowRoot!.querySelector('div[part="base"]')).to.exist;
 
     const linked = (await fixture(
@@ -61,7 +61,7 @@ describe("lr-card", () => {
     const el = (await fixture(
       html`<lr-card href="java	script:alert(1)">body</lr-card>`
     )) as LyraCard;
-    expect(el.shadowRoot!.querySelector('a[part="base"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('a[part="base"]')) == null).to.be.true;
   });
 
   it('derives rel="noopener noreferrer" whenever target is set on a linked card', async () => {
@@ -555,8 +555,7 @@ describe("lr-card", () => {
       // The <a href> is already natively focusable and natively activated by Enter -- adding a
       // tabindex or a synthetic activation event would double-fire the navigation.
       expect(anchor.hasAttribute("tabindex")).to.be.false;
-      expect(el.shadowRoot!.querySelector('[part="activation-button"]')).to.not
-        .exist;
+      expect(el.shadowRoot!.querySelector('[part="activation-button"]') === null).to.be.true;
 
       let fired = false;
       el.addEventListener("lr-card-activate", () => (fired = true));
@@ -570,8 +569,7 @@ describe("lr-card", () => {
       const el = (await fixture(html`<lr-card>body</lr-card>`)) as LyraCard;
       expect(base(el).hasAttribute("tabindex")).to.be.false;
       expect(base(el).hasAttribute("role")).to.be.false;
-      expect(el.shadowRoot!.querySelector('[part="activation-button"]')).to.not
-        .exist;
+      expect(el.shadowRoot!.querySelector('[part="activation-button"]') === null).to.be.true;
 
       let fired = false;
       el.addEventListener("lr-card-activate", () => (fired = true));

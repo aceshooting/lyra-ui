@@ -1286,7 +1286,7 @@ describe('blur/focus bubbling', () => {
   });
 });
 
-describe('touched state and disabled-forced blur (fr_asxOgk4UhNB07xevCWwFVQ)', () => {
+describe('touched state under disabled-forced blur', () => {
   // Regression test: the platform itself force-blurs a focused native control when it becomes
   // `disabled` (nothing to do with custom elements) -- that is not a real user interaction, and
   // marking `touched` for it could reenter an in-flight Lit update and trip Lit's dev-mode
@@ -1618,7 +1618,7 @@ it('clamps its floating surface width through the shared popover-viewport-clamp 
   expect(renderedClamp(el, "[part='popup']")).to.equal('10px');
 });
 
-// -- Coverage backfill: locale-order fallback paths, selection accessors before
+// -- Locale-order fallback paths, selection accessors before
 //    first render, setter edge cases, defensive validity guards, show/hide
 //    no-ops, parse fallbacks, and range-text edge cases. ---------------------
 
@@ -2453,7 +2453,7 @@ describe('lr-date-input barred from constraint validation', () => {
   });
 });
 
-// -- Coverage backfill round 2: locale-order construction failure, invalid placement fallback,
+// -- Locale-order construction failure, invalid placement fallback,
 //    validator branches (function/object-validate/checkValidity/observedAttributes), a throwing
 //    isDateDisabled predicate, min/max-range violations, validationTarget override, reading
 //    valueAsRange, stale cross-document listener guards, popup reconnect-while-open, dropped

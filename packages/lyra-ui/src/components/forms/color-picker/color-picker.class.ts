@@ -494,6 +494,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('open')) {
       const suppressClose = this.suppressDisconnectedClose && !this.open;
       this.suppressDisconnectedClose = false;
@@ -551,7 +552,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
 
   /** Generates a hex string from HSV percentages. `alpha` is also percent-scaled and omitted from
    *  the result at 100, matching ordinary six-digit hex notation. */
-  getHexString(hue: number, saturation: number, brightness: number, alpha = 100): string {
+  getHexString(hue: number, saturation: number, brightness: number, alpha: number = 100): string {
     const normalizedAlpha = finiteRange(alpha, 100, 0, 100);
     return formatColor(
       hsva(hue, saturation, brightness, normalizedAlpha / 100),

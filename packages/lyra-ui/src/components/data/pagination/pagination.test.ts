@@ -465,7 +465,7 @@ it('omits the built-in summary by default, without removing the controls', async
   const el = await pagination(html` <lr-pagination total="30"></lr-pagination> `);
 
   expect(el.withSummary).to.equal(false);
-  expect(el.shadowRoot!.querySelector('[part="summary"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="summary"]')) == null).to.be.true;
   expect(el.shadowRoot!.querySelector('[part~="next-button"]')).to.exist;
 });
 
@@ -1319,8 +1319,8 @@ describe('Web Awesome navigation surface', () => {
 
   it('without-nav removes only previous/next and hide-single-page renders nothing', async () => {
     const withoutNav = await pagination(html` <lr-pagination total="50" without-nav with-edges></lr-pagination> `);
-    expect(withoutNav.shadowRoot!.querySelector('[part~="previous-button"]')).to.not.exist;
-    expect(withoutNav.shadowRoot!.querySelector('[part~="next-button"]')).to.not.exist;
+    expect((withoutNav.shadowRoot!.querySelector('[part~="previous-button"]')) == null).to.be.true;
+    expect((withoutNav.shadowRoot!.querySelector('[part~="next-button"]')) == null).to.be.true;
     expect(withoutNav.shadowRoot!.querySelector('[part~="first-button"]')).to.exist;
     expect(withoutNav.shadowRoot!.querySelector('[part~="page"]')).to.exist;
 

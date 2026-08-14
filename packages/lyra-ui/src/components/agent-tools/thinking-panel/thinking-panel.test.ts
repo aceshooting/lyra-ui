@@ -87,7 +87,7 @@ describe('duration display', () => {
     const el = (await fixture(
       html`<lr-thinking-panel mode="post-hoc"></lr-thinking-panel>`,
     )) as LyraThinkingPanel;
-    expect(el.shadowRoot!.querySelector('[part="duration"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="duration"]')) == null).to.be.true;
   });
 
   it('shows "Thought for …" once duration-ms is set, in either mode, and clears the pending flag', async () => {
@@ -126,7 +126,7 @@ describe('duration display', () => {
     )) as LyraThinkingPanel;
     postHocNan.durationMs = Number.NaN;
     await postHocNan.updateComplete;
-    expect(postHocNan.shadowRoot!.querySelector('[part="duration"]')).to.not.exist;
+    expect((postHocNan.shadowRoot!.querySelector('[part="duration"]')) == null).to.be.true;
 
     const negative = (await fixture(
       html`<lr-thinking-panel mode="post-hoc"></lr-thinking-panel>`,

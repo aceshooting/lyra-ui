@@ -20,7 +20,7 @@ it('renders the noData empty state when entity is null (the default)', async () 
   const el = (await fixture(html`<lr-entity-card></lr-entity-card>`)) as LyraEntityCard;
   expect(el.entity).to.equal(null);
   expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
-  expect(el.shadowRoot!.querySelector('[part="header"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="header"]')) == null).to.be.true;
 });
 
 it('renders label, description, and property rows for a given entity', async () => {

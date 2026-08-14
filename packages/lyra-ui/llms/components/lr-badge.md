@@ -17,7 +17,9 @@
 ## `lr-badge` and `lr-tag`
 
 Compact status labels. `LyraTag` extends `LyraBadge`, so the two share one visual contract; `lr-tag`
-adds tag semantics and an optional remove affordance.
+adds tag semantics and an optional remove affordance. The `lr-badge` light-DOM host is the single
+`role="status"` owner of its projected label. `lr-tag` deliberately opts out of that inherited
+status role, including during SSR/hydration, because a removable keyword is not a live status.
 
 **Visual break in 8.0.0 — a badge is no longer a pill by default.** Both components used to render
 fully-rounded ends unconditionally. `--lr-badge-radius` now defaults to `var(--lr-radius)` (a rounded
@@ -26,15 +28,15 @@ its corner radius only if you add `pill`, or set `--lr-badge-radius: var(--lr-ra
 the app level.
 
 **Properties** (all are declared by `lr-badge` and inherited by `lr-tag`; `lr-tag` adds the
-`variant="text"` write alias plus `withRemove` / `removable`):
-- `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected) — the
-  semantic palette. Both components accept the upstream `primary` setter/attribute alias and
-  normalize it to the canonical `brand` read value. `lr-tag` additionally accepts `text`, renders
-  the neutral plain treatment, and reads back the canonical `neutral` variant.
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — the same visual-density scale
+`variant="text"` spelling plus `withRemove` / `removable`):
+- `variant: 'neutral' | 'brand' | 'primary' | 'success' | 'warning' | 'danger' = 'neutral'`
+  (reflected) — the semantic palette. `primary` renders through the same brand palette while
+  remaining `primary` on property reads, selectors, serialization and reflection. `lr-tag`
+  additionally accepts and preserves `text`, rendering the neutral plain treatment.
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected) — the same visual-density scale
   `<lr-chip>` uses, for typography/padding/minimum block size; `m` preserves the original badge
-  dimensions. The setters also accept `small` / `medium` / `large` and normalize reads to
-  `s` / `m` / `l`.
+  dimensions. Both short and long upstream spellings round-trip verbatim while resolving to the
+  same private effective size for rendering.
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'filled-outlined'`
   (reflected) — **new in 8.0.0.** The second visual axis: `variant` picks the palette, `appearance`
   decides how much of it lands on the fill, the border and the text. `filled-outlined` (the default)
@@ -56,16 +58,18 @@ the app level.
   8.0.0.** Renders the remove affordance. `lr-badge` never renders one, even if the attribute is
   present on the markup.
 - `removable: boolean = false` (attribute `removable`) — **`lr-tag` only.** Shoelace-compatible
-  alias for `withRemove`; reading or assigning either property reaches the same state.
+  alias for `withRemove`; reading either property reports the shared state. Either authored
+  attribute keeps removal enabled until both are absent. Assigning `false` through either property
+  clears both attributes, while assigning `true` reflects that property's own spelling.
 
-**Events:** `lr-remove` — cancelable, no detail, bubbles and composes. Emitted by `lr-tag` only (a
+**Events:** `lr-remove` — noncancelable, no detail, bubbles and composes. Emitted by `lr-tag` only (a
 badge emits nothing at all) when the remove button is activated by click or by Enter/Space while
 focused; it is a real native `<button>`, so both come for free. Only rendered, and therefore only
 fired, while `withRemove` / `removable` is set, and the event's `target` is the tag itself.
 
-Unlike `<lr-chip>` — a deliberately controlled component that only ever *announces* a remove request
-— a removable `lr-tag` removes **itself** from the DOM on activation. `lr-remove` is the veto point
-for that: call `preventDefault()` to keep the tag mounted and own the removal from your own state.
+Like `<lr-chip>`, a removable `lr-tag` is controlled: activation only announces the request. The
+tag remains connected even if a listener calls `preventDefault()` (the event is not cancelable),
+and the consumer removes it by updating the collection that rendered it.
 
 **Slots:** default (the label), `start` (content before the label, typically an icon) and `end`
 (content after it) — both new in 8.0.0. Each wrapper collapses entirely (`display: none`, so no
@@ -105,7 +109,7 @@ palette.
 
 *Density and shape:* `--lr-badge-font-size` (default `var(--lr-font-size-sm)`),
 `--lr-badge-padding-inline` (default `var(--lr-space-s)`) and `--lr-badge-min-height` (default
-`var(--lr-size-1-25rem)`) — the trio each `:host([size])` rule rewrites to that step's font size,
+`var(--lr-size-1-25rem)`) — the trio each private effective-size rule rewrites to that step's font size,
 inline padding and minimum block size; the `m` defaults above exactly reproduce the pre-`size` fixed
 badge treatment. `--lr-badge-gap` (default `var(--lr-space-2xs)`, new in 8.0.0) is the space between
 the `start` slot, the label and the `end` slot — it collapses on its own when a wrapper is empty,
@@ -154,7 +158,7 @@ the remove button's `:hover` fill).
   import '@aceshooting/lyra-ui/components/overlays/badge/tag.js';
 
   document.querySelector('lr-tag').addEventListener('lr-remove', (e) => {
-    e.preventDefault(); // keep it mounted; drive removal from your own state instead
+    e.target.remove(); // in an app, update the backing collection instead
   });
 </script>
 ```

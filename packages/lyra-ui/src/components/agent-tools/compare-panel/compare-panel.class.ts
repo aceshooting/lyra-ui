@@ -263,6 +263,7 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
   };
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('syncScroll') && !this.syncScroll) this.resetScrollSyncFrame();
     if (this.pendingScrollReset) {
       this.pendingScrollReset = false;

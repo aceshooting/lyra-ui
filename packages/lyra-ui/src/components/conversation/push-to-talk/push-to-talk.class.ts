@@ -233,6 +233,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
     if (this.hasUpdated) this.syncCaptureSupport();
     else this.seedFirstRenderState(() => this.syncCaptureSupport());
     if (changed.has('disabled') && this.disabled && (this._state === 'recording' || this._state === 'requesting')) {

@@ -110,8 +110,11 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   /** Leaf ids only. Duplicates and ids absent from `sources` are discarded. The picker updates
    * its own copy on toggle *then* emits; reassign to control. */
   @property({ attribute: false }) selectedIds: string[] = [];
+  /** Whether the header exposes one control for selecting or clearing every visible leaf source. */
   @property({ type: Boolean, attribute: 'show-select-all', converter: trueDefaultBooleanConverter }) showSelectAll = true;
+  /** Whether the built-in source filter is rendered. */
   @property({ type: Boolean, converter: trueDefaultBooleanConverter }) searchable = true;
+  /** Visible/fallback accessible label for the source tree. */
   @property() label = '';
   /** Overrides the tree's computed accessible name. Wins over `label` and the localized
    *  default. Attribute-reflects from a host-level `aria-label` so a plain-markup consumer

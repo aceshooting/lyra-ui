@@ -445,7 +445,16 @@ function validateDeprecations(metadata, componentsByTag, manifest, findings) {
       if (!isDeprecatedEntry(attribute)) findings.push(`${key}: paired attribute ${entry.attribute} is not deprecated`);
       covered.add(`${entry.tag}:attribute:${entry.attribute}`);
     }
-    if (replacement?.kind !== 'component' && !manifestMember(declaration, replacement?.kind, replacement?.name)) {
+    if (
+      replacement?.kind === 'host-css-property' &&
+      !['color', 'background'].includes(replacement.name)
+    ) {
+      findings.push(`${key}: unsupported host CSS replacement ${replacement.name}`);
+    } else if (
+      replacement?.kind !== 'component' &&
+      replacement?.kind !== 'host-css-property' &&
+      !manifestMember(declaration, replacement?.kind, replacement?.name)
+    ) {
       findings.push(`${key}: replacement ${replacement.kind} ${replacement.name} does not exist`);
     }
     if (replacement?.kind === 'component' && !componentsByTag.has(replacement.name)) {

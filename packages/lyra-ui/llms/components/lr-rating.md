@@ -24,25 +24,30 @@ It is form-associated through `ElementInternals` directly rather than through th
 `FormAssociated` mixin, because its `value` is a number and the mixin's contract assumes a plain
 string — routing through it would force every consumer into string round-tripping for what is
 natively a numeric score. The submitted entry is the clamped value stringified (`"0"` while
-unrated), and `required` reports `valueMissing` until a rating above zero is set. As on a native
-`<input>`, the `value` *content attribute* is the reset default that `form.reset()` restores, while
-the `value` IDL property is the live score and is deliberately not reflected. The mapped
-`default-value` attribute is accepted as a compatibility spelling for that same reset default.
+unrated), and `required` reports `valueMissing` until a rating above zero is set. The `value`
+content attribute and IDL property both control the live score. `defaultValue` and its
+`default-value` attribute independently own the reset target that `form.reset()` restores.
 
-**Properties:** live, non-reflecting `value: number = 0`; reflected
-`defaultValue: number = 0` (attribute `value`, the current reset default; `default-value` is an
-accepted compatibility alias); `customError: string |
+**Properties:** live `value: number = 0` (attribute `value`);
+`defaultValue: number = 0` (attribute `default-value`, the current reset target); `customError: string |
 null` (attribute `custom-error`); `max: number = 5`; `precision: number = 1`;
 `readonly: boolean = false` (reflected), `disabled`, `required`, `name`,
-`size: '2xs'|'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — rewrites `--lr-rating-size` from a type ramp
+`size: '2xs'|'xs'|'s'|'m'|'l'|'xl'|'small'|'medium'|'large' = 'm'` (reflected — rewrites `--lr-rating-size` from a type ramp
 rather than the shared control ladder, since a rating has no control frame to size; the `m` default
-reproduces the treatment this component had before `size` existed; setters also accept
-`small`/`medium`/`large` and normalize reads to `s`/`m`/`l`), plus two separate naming knobs:
-`accessibleLabel: string = ''` (attribute **`aria-label`**) and `label: string = ''` (attribute
+reproduces the treatment this component had before `size` existed; valid long-form spellings
+round-trip unchanged), plus two separate naming knobs:
+`accessibleLabel: string = ''` (property) and `label: string = ''` (attribute
 `label`). An authored host `aria-label` wins by attribute presence, including an explicitly empty
-value; otherwise `accessibleLabel`, `label`, then the localized name provide the fallback. Neither
-is visible label text, since a rating is a bare row of symbols with no field frame of its own; wrap
-the element in your own layout for a labelled field, exactly as `<lr-slider>` does.
+value. Without one, a non-empty external `<label for>` names the host; `accessibleLabel`, `label`,
+then the localized name are the fallback order when no external label supplies text. Clicking an
+associated external label focuses the host-owned slider without changing its value. Neither
+property is visible label text, since a rating is a bare row of symbols with no field frame of its
+own; wrap the element in your own layout for a labelled field, exactly as `<lr-slider>` does.
+
+The host is the one focusable `role="slider"` owner and carries `tabindex`, its accessible name,
+`aria-valuemin`/`aria-valuemax`/`aria-valuenow`/`aria-valuetext`, and explicit true/false disabled,
+readonly and required states. The shadow star row is `aria-hidden` presentation only, so custom
+host ARIA never creates a competing second slider.
 
 Assigning `null` to `name` is accepted for mapped source compatibility; it removes the attribute and
 clears to the canonical `''` read value rather than creating a nullable state.
@@ -72,13 +77,14 @@ Left unset, the built-in star outline/solid pair is unchanged.
   `pointerleave` **and** on `pointercancel` (a touch drag taken over by scrolling, palm rejection),
   so an interrupted gesture never leaves the preview frozen. A disconnect or a disablement drops the
   preview silently, with no `end` phase — that teardown wasn't user-driven.
-- `focus` / `blur` — re-dispatched from the internal rating control as bubbling, composed host
-  events, because the native ones do not cross the shadow boundary.
-- `lr-focus` / `lr-blur` — prefixed compatibility aliases (no detail), each fired immediately after
-  its unprefixed counterpart.
+- `focus` / `blur` — the host-owned slider's ordinary native focus transitions. Like native focus
+  events, they do not bubble; listen on the rating itself (or use capture on an ancestor).
+- `lr-focus` / `lr-blur` — bubbling, composed prefixed compatibility aliases (no detail), each
+  fired from the corresponding native host transition.
 - `lr-invalid` — no detail; fired when a validity check finds the rating invalid.
 
-**Methods:** `focus()`, `blur()` and `click()` forward to the internal rating control.
+**Methods:** `focus()`, `blur()` and `click()` operate on the host-owned slider and are gated while
+disabled.
 `getForm()` returns the browser-resolved owning form. `checkValidity()` and `reportValidity()`
 behave as on a native form control — `reportValidity()`
 additionally shows the browser's validation UI, and counts as interaction, so a failed submit is
@@ -92,9 +98,9 @@ unrated stays `valueMissing`. Like a native control, the custom error survives e
 recomputation in between (each `value`/`max`/`required` change re-runs validation) and a
 `form.reset()`; `setCustomValidity('')` or `resetValidity()` clears it.
 
-**Reset and state restore.** A live `value` write marks the rating dirty, so later
-`defaultValue`/`value`-attribute/`default-value`-attribute mutations update the reset target without
-overwriting the live score. `form.reset()` restores that current default, drops any
+**Reset and state restore.** A live `value` or `value`-attribute write updates the current score;
+later `defaultValue`/`default-value` mutations update the reset target without overwriting that
+live score. `form.reset()` restores the current default, drops any
 in-flight hover preview, and returns the control to pristine, so the `user-valid`/`user-invalid`
 states stop matching even though a required-and-unrated control is still `invalid`. Browser session
 restore (`formStateRestoreCallback`) reinstates the previously submitted numeric value; a
@@ -104,8 +110,8 @@ non-string restored state falls back to `0` rather than producing NaN geometry.
 `lr-rating:state(user-invalid)` is the one to paint red. Plain `invalid` matches a pristine
 `required` rating that has never been set.
 
-**CSS parts:** `base` (compatibility name for the slider-like control; use `rating`),
-`rating` (the `role="slider"` control; it is the same node as `base`), `star` (each rendered symbol), `star-fill` (the
+**CSS parts:** `base` (compatibility name for the presentational symbol row; use `rating`),
+`rating` (the presentational symbol row; it is the same node as `base`), `star` (each rendered symbol), `star-fill` (the
 filled overlay inside each symbol, clipped to that symbol's filled fraction — 0%, a partial
 percentage under a fractional `precision`, or 100%).
 
@@ -123,8 +129,9 @@ feeds the active `size` step, while `--symbol-spacing` remains the fallback for
 
 Pointer selection resolves the position within the clicked star and snaps upward to `precision`
 (with the physical fraction mirrored under RTL), so half/quarter-star precision applies to pointer
-input as well as keyboard/value updates. The semantic slider's base keeps a 40×40px minimum
-activation area even for the degenerate `max=0`/`max=1` cases; larger ratings naturally grow wider.
+input as well as keyboard/value updates. The host-owned slider's presentational symbol row keeps a
+40×40px minimum activation area even for the degenerate `max=0`/`max=1` cases; larger ratings
+naturally grow wider.
 
 ```html
 <lr-rating

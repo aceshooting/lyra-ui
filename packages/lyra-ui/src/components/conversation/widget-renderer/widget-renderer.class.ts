@@ -148,6 +148,7 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
   >();
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (
       !this.hasUpdated ||
       changed.has("tree") ||
@@ -199,7 +200,8 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
     }
   }
 
-  protected override updated(): void {
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     this.pruneElementCache();
   }
 

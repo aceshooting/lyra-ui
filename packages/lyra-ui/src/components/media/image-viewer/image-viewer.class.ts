@@ -255,9 +255,12 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     }
   }
 
-  zoomIn = (): void => this.frameEl?.zoomIn();
-  zoomOut = (): void => this.frameEl?.zoomOut();
-  resetZoom = (): void => this.frameEl?.resetZoom();
+  /** Increases the embedded pan/zoom scale by one configured step. */
+  zoomIn: () => void = (): void => this.frameEl?.zoomIn();
+  /** Decreases the embedded pan/zoom scale by one configured step. */
+  zoomOut: () => void = (): void => this.frameEl?.zoomOut();
+  /** Restores the embedded pan/zoom scale and translation. */
+  resetZoom: () => void = (): void => this.frameEl?.resetZoom();
 
   rotate(): void {
     this.rotation = ((this.safeRotation + 90) % 360) as ImageRotation;

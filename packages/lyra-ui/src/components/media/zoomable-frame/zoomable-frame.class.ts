@@ -329,6 +329,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
     if (
       changed.has('src') || changed.has('srcdoc') || changed.has('allowfullscreen') ||
       changed.has('loading') || changed.has('referrerpolicy') || changed.has('sandbox')
@@ -338,6 +339,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   }
 
   protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
     if (!changed.has('withThemeSync')) return;
     if (this.withThemeSync) this.syncTheme();
     else this.restoreTheme();

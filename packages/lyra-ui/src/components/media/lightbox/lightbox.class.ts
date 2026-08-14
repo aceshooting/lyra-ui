@@ -8,6 +8,7 @@ import { isAccessibilityVisible, nextId, srOnly } from '../../../internal/a11y.j
 import { closeIcon, chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { styles } from './lightbox.styles.js';
 import '../pan-zoom/pan-zoom.class.js';
 import type { LyraPanZoom } from '../pan-zoom/pan-zoom.class.js';
@@ -226,7 +227,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
    *  pattern (no other label source to arbitrate against here). */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
-  @state() private hasActionsSlot = false;
+  private readonly slotPresence = new SlotPresenceController(this);
   @state() private liveText = '';
 
   @query('lr-pan-zoom') private frameEl?: LyraPanZoom;
@@ -268,13 +269,15 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     this.emit('lr-index-change', { index: next });
   }
 
-  next = (): void => this.changeTo(this.currentIndex() + 1);
-  previous = (): void => this.changeTo(this.currentIndex() - 1);
+  /** Advances to the next image, respecting `loop`. */
+  next: () => void = (): void => this.changeTo(this.currentIndex() + 1);
+  /** Moves to the previous image, respecting `loop`. */
+  previous: () => void = (): void => this.changeTo(this.currentIndex() - 1);
 
   /** Jumps to a finite image index. Fractional values are truncated toward zero before
    *  clamping or loop wrapping, so `lr-index-change.detail.index` is always the rendered
    *  integer index. Non-finite values are no-ops. */
-  goTo = (index: number): void => this.changeTo(index);
+  goTo: (index: number) => void = (index: number): void => this.changeTo(index);
 
   /**
    * Close the lightbox and return focus to whatever had it before the lightbox opened. `reason`
@@ -313,9 +316,6 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (!this.hasUpdated) {
-      this.hasActionsSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
-    }
     if (changed.has('images') || changed.has('index')) {
       this.syncImages();
     }
@@ -468,10 +468,6 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     this.close('close-button');
   };
 
-  private onActionsSlotChange = (e: Event): void => {
-    this.hasActionsSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
-  };
-
   // RTL-aware, exactly mirroring <lr-carousel>'s onViewportKeyDown. Attached on part="panel"
   // itself so it sees keydowns bubbling from anywhere inside, including from within the embedded
   // <lr-pan-zoom>'s own shadow tree. Never conflicts with the frame's own +/-/0/=/_ zoom
@@ -527,8 +523,8 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
       >
         <div part="toolbar">
           ${this.showCounter && count > 0 ? html`<span part="counter">${positionText}</span>` : nothing}
-          <div part="actions" ?hidden=${!this.hasActionsSlot}>
-            <slot name="actions" @slotchange=${this.onActionsSlotChange}></slot>
+          <div part="actions" ?hidden=${!this.slotPresence.has('actions')}>
+            <slot name="actions"></slot>
           </div>
           <button part="close-button" type="button" aria-label=${this.localize('close')} @click=${this.onCloseButtonClick}>
             ${closeIcon()}

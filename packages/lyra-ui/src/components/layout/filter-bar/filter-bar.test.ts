@@ -521,8 +521,7 @@ describe("active-filter chips", () => {
     const el = (await fixture(
       html`<lr-filter-bar .filters=${basicFilters}></lr-filter-bar>`
     )) as LyraFilterBar;
-    expect(el.shadowRoot!.querySelector('[part="active-filters"]')).to.not
-      .exist;
+    expect(el.shadowRoot!.querySelector('[part="active-filters"]') === null).to.be.true;
     expect(el.hasActiveFilters).to.be.false;
   });
 
@@ -973,7 +972,7 @@ describe("loading", () => {
     const el = (await fixture(
       html`<lr-filter-bar .filters=${basicFilters}></lr-filter-bar>`
     )) as LyraFilterBar;
-    expect(el.shadowRoot!.querySelector('[part="status"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="status"]')) == null).to.be.true;
     el.loading = true;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="status"]')!.localName).to.equal(
@@ -1029,8 +1028,8 @@ describe("disabled", () => {
     expect(chip.removable).to.be.false;
     expect(chip.hasAttribute("removable")).to.be.false;
     await chip.updateComplete;
-    expect(chip.shadowRoot!.querySelector('[part="remove-button"]')).to.equal(
-      null
+    expect((chip.shadowRoot!.querySelector('[part="remove-button"]')) === (null)).to.equal(
+      true
     );
   });
 

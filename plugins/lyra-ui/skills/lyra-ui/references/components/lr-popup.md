@@ -29,15 +29,19 @@ focus return on top of it, use `lr-popover` instead.
 
 **Anchoring**, in precedence order: legacy `virtualAnchor` (an arbitrary rect — a canvas hit, chart
 datum, or selection range), mapped `anchor` (an `Element`, same-root id string, or Floating UI
-virtual element), `for` (a same-root id), then the first element assigned to the `anchor` slot.
+virtual element), `for` (a same-root id), then the first element assigned to the `anchor` slot. A
+disconnected element or dangling id falls through to the next source. Id insertion, removal,
+replacement and transfer, plus direct and forwarded slot changes, are tracked live.
 
 **Properties:**
-- `active: boolean = false` (reflected) — whether the popup renders and positions. Nothing else
-  changes when it flips.
+- `active: boolean = false` (reflected) — requests positioning and paint. It remains the caller's
+  intent when an anchor is temporarily unavailable; the popup and optional hover bridge stay
+  hidden and non-interactive until the currently resolved anchor has completed placement.
 - `anchor: Element | string | VirtualAnchor | null = null`, `for: string = ''` (reflected), and
   `virtualAnchor` (property only) — the non-slot anchors, in the precedence order above. For a
   plain virtual rect, omitted `width`/`height` default to zero, negative dimensions clamp to zero,
-  and any non-finite coordinate or dimension makes that rect inert so it cannot corrupt layout.
+  and any non-finite coordinate or dimension makes that highest-priority rect inert so it cannot
+  corrupt layout or paint stale popup chrome.
 - `placement: Placement = 'top'` (reflected) — the full Floating UI vocabulary, mirrored
   under RTL. The shared positioner's physical coordinates remain authoritative in either
   direction, so RTL never stretches a fixed-width popup against an opposite logical inset.
@@ -89,7 +93,8 @@ would disconnect positioning, animation, and the documented CSS parts. Read it t
 the live internal node.
 
 **Methods:** `reposition()` — recompute now. Rarely needed, since the popup already tracks scroll,
-resize and layout change; useful after moving a virtual anchor imperatively.
+resize, layout and live DOM-anchor identity changes; useful after moving a virtual anchor
+imperatively.
 
 **Events:** `lr-reposition` — `detail: { placement }`, the placement actually used after `flip`.
 

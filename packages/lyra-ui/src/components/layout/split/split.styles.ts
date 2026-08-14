@@ -31,6 +31,9 @@ export const styles = css`
     block-size: 100%;
   }
   ::slotted(*) {
+    /* Honest no-JS/first-hydration fallback before child count and live sizes can be observed.
+       Browser reconciliation writes a more specific inline flex value once available. */
+    flex: 1 1 0;
     min-inline-size: 0;
     max-inline-size: 100%;
     /* Direct panels own their overflow. The zero minimum lets a fixed-height

@@ -79,15 +79,21 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
 
   static override styles = [LyraElement.styles, styles];
 
+  /** Metric definitions shown as controls and used to format run values. */
   @property({ attribute: false }) metrics: RagEvaluationMetric[] = [];
+  /** Evaluation runs displayed in the trend chart and run history. */
   @property({ attribute: false }) runs: RagEvaluationRun[] = [];
+  /** Controlled id of the active metric; empty selects the first available metric. */
   @property({ attribute: 'metric-id' }) metricId = '';
   /** Controlled evaluation slice. An unavailable value is preserved and renders an explicit
    * localized state until the host changes it or supplies a matching run. */
   @property() slice = '';
+  /** Accessible dashboard heading; empty uses the localized default. */
   @property() label = '';
+  /** Whether a trend chart is rendered when an active metric and matching runs exist. */
   @property({ type: Boolean, attribute: 'show-chart', reflect: true, converter: trueDefaultBooleanConverter })
   showChart = true;
+  /** CSS block size forwarded to the composed trend chart. */
   @property({ attribute: 'chart-height' }) chartHeight = '220px';
 
   private get activeMetric(): RagEvaluationMetric | undefined {

@@ -14,11 +14,14 @@ import {
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { normalizeSize, type LyraSize, type LyraSizeStep } from '../../../internal/variants.js';
-import { hostAriaLabel } from '../../../internal/a11y.js';
 import { styles } from './rating.styles.js';
-import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { dispatchNativeEvent } from '../../../internal/native-event-relay.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
+import {
+  EXTERNAL_LABEL_HOST_SEMANTICS,
+  type ExternalLabelHostSemanticOperation,
+} from '../../../internal/form-control-labels.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_rating } from '../../../internal/default-strings.generated.js';
@@ -30,12 +33,13 @@ const DEFAULT_MAX = 5;
  *  `render()`'s `Array.from({ length: count })` below into an unbounded allocation. */
 const MAX_STARS = 100;
 const DEFAULT_PRECISION = 1;
+const MANAGED_ARIA_LABEL_ATTRIBUTE = 'data-lr-rating-managed-label';
 /** A `<= 0` precision would divide-by-zero when `setValue` snaps `next / precision`; keep it
  *  comfortably positive and no coarser than the star count itself. */
 const MIN_PRECISION = 0.01;
 
 /** Visual density of the rendered symbols, on the library's one size ladder. */
-export type LyraRatingSize = LyraSizeStep;
+export type LyraRatingSize = LyraSize;
 
 /** Which point of a hover gesture an `lr-hover` event describes. */
 export type LyraRatingHoverPhase = 'start' | 'move' | 'end';
@@ -84,9 +88,13 @@ function starSolid(): SVGTemplateResult {
  * contract assumes, so the mixin would force every consumer through string round-tripping for what
  * is natively a numeric score. The submitted entry is the clamped value stringified (`"0"` while
  * unrated), and `required` reports `valueMissing` until a rating above zero is set. As with a
- * native `<input>`, the `value` *content attribute* is the reset default — `form.reset()` restores
- * it — while the `value` IDL property is the live score and is deliberately not reflected. The
- * `default-value` compatibility attribute reaches that same reset default.
+ * native range-like controls and both mirrored rating elements, the `value` content attribute and
+ * IDL property control the live score. `defaultValue` / `default-value` independently own the form
+ * reset target, so changing `value` never silently rewrites what `form.reset()` restores.
+ *
+ * The host is the single focusable `role="slider"` owner and carries its value/name/state ARIA.
+ * The shadow symbol row is presentational chrome, so host ARIA customization cannot create a
+ * second competing slider.
  *
  * Deliberately no label/hint/error chrome: `label` here is an accessible-name override, not visible
  * label text. A rating is a row of symbols with no field frame of its own, so a consumer wanting a
@@ -99,23 +107,23 @@ function starSolid(): SVGTemplateResult {
  * @event lr-hover - The pointer entered, moved across, or left the symbols while the rating is
  * settable. `detail: { phase, value }`, where `value` is the rating that committing the current
  * pointer position would produce — enough to render a live description of what is being hovered.
- * @event focus - Native focus relayed once from the internal slider control.
- * @event blur - Native blur relayed once from the internal slider control.
+ * @event focus - The native focus event from the host-owned slider.
+ * @event blur - The native blur event from the host-owned slider.
  * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @event lr-invalid - The rating failed a validity check. Cancelable: calling
  * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
  * browser's own validation bubble so an app can present the failure its own way.
- * @method focus - Forwards focus to the internal slider control.
- * @method blur - Forwards blur to the internal slider control.
- * @method click - Forwards activation to the internal slider control.
+ * @method focus - Focuses the host-owned slider.
+ * @method blur - Blurs the host-owned slider.
+ * @method click - Activates the host unless disabled.
  * @method checkValidity - Returns whether the control currently satisfies its constraints.
  * @method reportValidity - Same as `checkValidity`, additionally showing the browser's validation UI.
  * @method setCustomValidity - Sets (or, with `''`, clears) a consumer-supplied validation error.
  * Survives intrinsic revalidation and a form reset; clearing it restores the computed validity
  * rather than forcing the control valid.
- * @csspart base - Compatibility name for the slider-like control; use `rating`.
- * @csspart rating - The slider-like rating control. It is the same node as `base`.
+ * @csspart base - Compatibility name for the presentational symbol row; use `rating`.
+ * @csspart rating - The presentational symbol row. It is the same node as `base`.
  * @csspart star - Each visual symbol.
  * @csspart star-fill - The filled overlay inside each symbol, clipped to that
  * symbol's filled fraction (0%, a partial percentage under a fractional
@@ -164,21 +172,22 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   static formAssociated = true;
   static override styles = [LyraElement.styles, styles];
 
+  static override get observedAttributes(): string[] {
+    return [...new Set([...super.observedAttributes, 'role'])];
+  }
+
   // Hand-written accessors (rather than plain reactive fields) so the host attribute, the
   // ElementInternals submission value, and validity are all recomputed synchronously on
   // assignment: native form APIs (`new FormData(form)`, `form.checkValidity()`) read them in the
   // same tick, long before Lit's async update cycle would have run.
   static override properties = {
     customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
-    value: { attribute: false, noAccessor: true },
+    value: { attribute: 'value', type: Number, noAccessor: true },
     defaultValue: {
-      attribute: 'value',
-      type: Number,
-      reflect: true,
-      useDefault: true,
+      attribute: false,
       noAccessor: true,
     },
-    max: { type: Number, reflect: true, noAccessor: true },
+    max: { type: Number, noAccessor: true },
     name: { reflect: true, noAccessor: true, converter: omittedEmptyStringConverter },
     required: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
@@ -186,23 +195,19 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
 
   @property({ type: Number }) precision = 1;
   @property({ type: Boolean, reflect: true }) readonly = false;
-  /** Accessible-name override taken straight from a host `aria-label` attribute. An explicitly
-   * empty host attribute is preserved instead of restoring a fallback name. */
-  @property({ attribute: 'aria-label' }) accessibleLabel = '';
+  /** Accessible-name property override. A host `aria-label` attribute has higher priority, and an
+   * explicitly empty host attribute is preserved instead of restoring a fallback name. */
+  @property({ attribute: false }) accessibleLabel = '';
   /** Accessible name for the whole control, used when the host carries no `aria-label`. Not
    *  rendered as visible text — a rating has no field frame of its own. */
   @property() label = '';
-  private _size: LyraRatingSize = 'm';
-  /** Visual density; rewrites `--lr-rating-size`. Upstream `small`/`medium`/`large` writes
-   * normalize to the canonical `s`/`m`/`l` read vocabulary. */
-  @property({ reflect: true })
-  get size(): LyraRatingSize {
-    return this._size;
-  }
-  set size(value: LyraSize) {
-    const old = this._size;
-    this._size = normalizeSize(value ?? 'm');
-    this.requestUpdate('size', old);
+  /** Visual density; rewrites `--lr-rating-size`. Valid upstream long-form sizes remain observable
+   * verbatim rather than being reflected back as a different token. */
+  @property({ reflect: true }) size: LyraRatingSize = 'm';
+  private get effectiveSize(): LyraSizeStep {
+    const value = this.size as string;
+    if (!['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large'].includes(value)) return 'm';
+    return normalizeSize(value as LyraSize);
   }
   /** Renders a consumer-supplied decorative symbol per position instead of the built-in star.
    * Its output cannot become a second focus or pointer target; interact with the rating control
@@ -244,6 +249,9 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
    *  mixin's own flag; this control drives `ElementInternals` directly (its value is a number, not
    *  the string that mixin assumes) so it has to track the flag itself. */
   private _hasInteracted = false;
+  private authorAriaLabel: string | null = null;
+  private syncingHostSemantics = false;
+  private externalLabelNameActive = false;
 
   constructor() {
     super();
@@ -255,11 +263,76 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     this.internals.setFormValue('0');
-    // `focusout` is the only blur signal observable on the host: native `blur` neither bubbles nor
-    // crosses a shadow boundary, so it can never reach here from the internal slider. Registered
+    // Retain `focusout` as an interaction signal for delegated/synthetic integration flows. The
+    // host's own native `blur` listener below marks real focus transitions directly. Registered
     // once, in the constructor, so a disconnect/reconnect cycle cannot stack duplicates.
     this.addEventListener('focusout', this.markInteracted);
+    this.addEventListener('keydown', this.onHostKeyDown as EventListener);
+    this.addEventListener('focus', this.onFocus);
+    this.addEventListener('blur', this.onBlur);
     this.syncValidityStates();
+  }
+
+  override attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
+    if (this.syncingHostSemantics && (name === 'aria-label' || name === 'role')) return;
+    super.attributeChangedCallback(name, oldValue, value);
+    if (name === 'aria-label') {
+      const managed = this.getAttribute(MANAGED_ARIA_LABEL_ATTRIBUTE);
+      const rehydratedManagedName = oldValue === null && managed !== null && managed === value;
+      this.authorAriaLabel = rehydratedManagedName ? null : value;
+      if (!rehydratedManagedName) {
+        this.syncingHostSemantics = true;
+        try {
+          this.removeAttribute(MANAGED_ARIA_LABEL_ATTRIBUTE);
+        } finally {
+          this.syncingHostSemantics = false;
+        }
+      }
+    }
+    if (name === 'role' && value !== 'slider') {
+      this.syncingHostSemantics = true;
+      try {
+        this.setAttribute('role', 'slider');
+      } finally {
+        this.syncingHostSemantics = false;
+      }
+    }
+  }
+
+  /** @internal Guarded label-name transactions for the host-owned role/focus surface. */
+  [EXTERNAL_LABEL_HOST_SEMANTICS](operation: ExternalLabelHostSemanticOperation): boolean | void {
+    if (operation.type === 'has-authored-name') return this.authorAriaLabel !== null;
+    if (operation.type === 'apply') {
+      this.externalLabelNameActive = true;
+      this.syncingHostSemantics = true;
+      try {
+        this.setAttribute(MANAGED_ARIA_LABEL_ATTRIBUTE, operation.name);
+        if (this.getAttribute('aria-label') !== operation.name) {
+          this.setAttribute('aria-label', operation.name);
+        }
+      } finally {
+        this.syncingHostSemantics = false;
+      }
+      return;
+    }
+
+    this.externalLabelNameActive = false;
+    this.syncingHostSemantics = true;
+    try {
+      if (this.getAttribute('aria-label') === operation.appliedName) {
+        if (operation.hadPrevious) {
+          const previous = operation.previous ?? '';
+          this.setAttribute(MANAGED_ARIA_LABEL_ATTRIBUTE, previous);
+          this.setAttribute('aria-label', previous);
+        } else {
+          this.removeAttribute(MANAGED_ARIA_LABEL_ATTRIBUTE);
+          this.removeAttribute('aria-label');
+        }
+      }
+    } finally {
+      this.syncingHostSemantics = false;
+    }
+    if (this.authorAriaLabel === null) this.syncHostSemantics();
   }
 
   /** The current rating. Clamped to `[0, max]` wherever it is read; the raw assignment is kept so
@@ -274,8 +347,8 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     this.syncFormValue();
     this.requestUpdate('value', old);
   }
-  /** Reflected current reset default; changing it never overwrites a dirty live rating. The
-   * `default-value` compatibility attribute reaches this same property.
+  /** Current reset default; changing it never overwrites a dirty live rating. The independently
+   * reflected `default-value` compatibility attribute reaches this same property.
    * @default 0 */
   get defaultValue(): number { return this._defaultValue; }
   set defaultValue(next: number | null) {
@@ -284,8 +357,8 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     this._defaultValue = next == null ? 0 : (typeof next === 'number' ? next : Number(next));
     this.reflectingDefaultValue = true;
     try {
-      if (next == null) this.removeAttribute('value');
-      else this.setAttribute('value', String(this._defaultValue));
+      if (next == null) this.removeAttribute('default-value');
+      else this.setAttribute('default-value', String(this._defaultValue));
     } finally {
       this.reflectingDefaultValue = false;
     }
@@ -446,6 +519,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     // `required`/`value` may already have arrived from markup; reflect validity from the start
     // rather than only after the first assignment.
     this.updateValidity();
+    this.syncHostSemantics();
   }
 
   override disconnectedCallback(): void {
@@ -614,41 +688,103 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     if (event.key === 'End') { event.preventDefault(); this.setValue(this.safeMax); }
   };
 
-  private get control(): HTMLElement | null {
-    return this.renderRoot.querySelector<HTMLElement>('[part~="base"]');
-  }
+  /** Real keyboard input targets the host semantic owner. Keeping the same handler on the
+   * presentational base supports synthetic integration events without handling a composed native
+   * event twice as it crosses the shadow boundary. */
+  private onHostKeyDown = (event: KeyboardEvent): void => {
+    if (event.composedPath()[0] === this) this.onKeyDown(event);
+  };
 
   override focus(options?: FocusOptions): void {
-    if (!this.effectiveDisabled) this.control?.focus(options);
+    if (!this.effectiveDisabled) super.focus(options);
   }
 
   override blur(): void {
-    this.control?.blur();
+    super.blur();
   }
 
   override click(): void {
-    if (!this.effectiveDisabled) this.control?.click();
+    if (!this.effectiveDisabled) super.click();
   }
 
   private onFocus = (event: FocusEvent): void => {
-    relayNativeEvent(this, event);
-    this.emit('lr-focus');
+    if (event.target === this) this.emit('lr-focus');
   };
 
   private onBlur = (event: FocusEvent): void => {
+    if (event.target !== this) return;
     this.markInteracted();
-    relayNativeEvent(this, event);
     this.emit('lr-blur');
   };
 
+  /**
+   * Captures a serialized author name before the managed fallback can replace it. Lit's browser
+   * upgrade invokes `attributeChangedCallback()` for an authored `aria-label`, but its server
+   * element renderer seeds template attributes on its host facade without that callback. The
+   * private marker is therefore the durable provenance signal shared by both paths: matching
+   * marker/text is our managed fallback, while unmarked (or mismatched) text belongs to the
+   * author, including an explicitly empty string.
+   */
+  private captureHostNameProvenance(): void {
+    if (this.externalLabelNameActive || this.authorAriaLabel !== null) return;
+    const current = this.getAttribute('aria-label');
+    if (current === null) return;
+    const managed = this.getAttribute(MANAGED_ARIA_LABEL_ATTRIBUTE);
+    if (managed === current) return;
+
+    this.authorAriaLabel = current;
+    if (managed === null) return;
+    this.syncingHostSemantics = true;
+    try {
+      this.removeAttribute(MANAGED_ARIA_LABEL_ATTRIBUTE);
+    } finally {
+      this.syncingHostSemantics = false;
+    }
+  }
+
+  private syncHostSemantics(): void {
+    this.captureHostNameProvenance();
+    const safeMax = this.safeMax;
+    const safeValue = this.safeValue;
+    const generatedLabel = this.accessibleLabel || this.label || this.localize('rating');
+    this.syncingHostSemantics = true;
+    try {
+      this.setAttribute('role', 'slider');
+      this.setAttribute('tabindex', this.effectiveDisabled ? '-1' : '0');
+      this.setAttribute('aria-valuemin', '0');
+      this.setAttribute('aria-valuemax', String(safeMax));
+      this.setAttribute('aria-valuenow', String(safeValue));
+      this.setAttribute('aria-valuetext', getNumberFormat(this.effectiveLocale).format(safeValue));
+      this.setAttribute('aria-disabled', this.effectiveDisabled ? 'true' : 'false');
+      this.setAttribute('aria-readonly', this.readonly ? 'true' : 'false');
+      this.setAttribute('aria-required', this.required ? 'true' : 'false');
+      this.setAttribute('data-effective-size', this.effectiveSize);
+      if (
+        !this.externalLabelNameActive &&
+        this.authorAriaLabel === null &&
+        this.getAttribute('aria-label') !== generatedLabel
+      ) {
+        this.setAttribute(MANAGED_ARIA_LABEL_ATTRIBUTE, generatedLabel);
+        this.setAttribute('aria-label', generatedLabel);
+      } else if (!this.externalLabelNameActive && this.authorAriaLabel === null) {
+        this.setAttribute(MANAGED_ARIA_LABEL_ATTRIBUTE, generatedLabel);
+      }
+    } finally {
+      this.syncingHostSemantics = false;
+    }
+  }
+
   protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
     // `disabled` can only change through its own setter; the fieldset path goes through
     // `formDisabledCallback`, and `readonly` is a plain reactive property — so a rating that
     // becomes non-settable mid-hover drops its preview here.
     if (changed.has('readonly') && !this.interactive) this.resetHover();
+    this.syncHostSemantics();
   }
 
   protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
     // `readonly` bars constraint validation, and unlike `disabled` it has no hand-written setter to
     // recompute from. It has to be recomputed *after* `update()` rather than in `willUpdate()`:
     // the platform reads the reflected `readonly` *attribute* when it answers
@@ -675,14 +811,8 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     // `max` shrank below the hovered position while the pointer was still down.
     const displayValue = this.hovering && this.interactive ? Math.min(this.hoverValue, safeMax) : safeValue;
     const count = Math.round(safeMax);
-    const controlLabel = hostAriaLabel(this) ?? (this.accessibleLabel || this.label || this.localize('rating'));
-    return html`<div part="base rating" role="slider" tabindex=${this.effectiveDisabled ? '-1' : '0'}
-      aria-label=${controlLabel}
-      aria-valuemin="0" aria-valuemax=${safeMax} aria-valuenow=${safeValue}
-      aria-valuetext=${getNumberFormat(this.effectiveLocale).format(safeValue)}
-      aria-disabled=${this.effectiveDisabled ? 'true' : 'false'} aria-readonly=${this.readonly ? 'true' : 'false'}
-      aria-required=${this.required ? 'true' : 'false'}
-      @click=${this.onClick} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}
+    return html`<div part="base rating" aria-hidden="true"
+      @click=${this.onClick} @keydown=${this.onKeyDown}
       @pointerenter=${this.onPointerEnter} @pointermove=${this.onPointerMove}
       @pointerleave=${this.onPointerEnd} @pointercancel=${this.onPointerEnd}>
       ${Array.from({ length: count }, (_, index) => {

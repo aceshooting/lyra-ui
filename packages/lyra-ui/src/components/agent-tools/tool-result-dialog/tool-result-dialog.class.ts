@@ -312,6 +312,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
   private readonly titleId = nextId('tool-result-dialog-title');
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
     }
@@ -327,6 +328,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
   // Runs after render so the manager can resolve the panel and its composed
   // focus targets, including controls projected through either slot.
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('open') && this.open) {
       this.overlay?.focusInitial();
     }

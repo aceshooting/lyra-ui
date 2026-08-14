@@ -107,7 +107,7 @@ it('renders schema.description as helper text under the field', async () => {
   expect(field(el, 'city').querySelector('[part="description"]')!.textContent).to.equal(
     'Where to look up the forecast.',
   );
-  expect(field(el, 'units').querySelector('[part="description"]')).to.be.null;
+  expect((field(el, 'units').querySelector('[part="description"]')) === null).to.be.true;
 });
 
 it('marks a required field without applying HTML nonempty semantics to the inner control', async () => {
@@ -248,7 +248,7 @@ it('emits lr-validity-change again once the required field is filled, and not on
 
 it('does not render an inline error until the field has been visited (focusout)', async () => {
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
-  expect(field(el, 'city').querySelector('[part="error"]')).to.be.null;
+  expect((field(el, 'city').querySelector('[part="error"]')) === null).to.be.true;
 
   field(el, 'city').dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
   await el.updateComplete;
@@ -307,7 +307,7 @@ it('announces newly visible validation errors once through the shared assertive 
 
 it('reportValidity() reveals inline errors immediately and returns overall validity', async () => {
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
-  expect(field(el, 'city').querySelector('[part="error"]')).to.be.null;
+  expect((field(el, 'city').querySelector('[part="error"]')) === null).to.be.true;
 
   expect(el.reportValidity()).to.be.false;
   await el.updateComplete;
@@ -849,7 +849,7 @@ it('contains enumerable getter failures without throwing from value assignment o
   expect(el.shadowRoot!.querySelector('[part="base"]')).to.exist;
 });
 
-it('renders a visible fallback note for a property type outside this phase\'s scope, instead of dropping it', async () => {
+it('renders a visible fallback note for an unsupported nested object property instead of dropping it', async () => {
   const weirdSchema = {
     type: 'object',
     properties: { nested: { type: 'object' } },

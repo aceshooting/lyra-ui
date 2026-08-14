@@ -756,8 +756,8 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
      * observed firing `formDisabledCallback` FIRST — at which point `this.disabled` (own) hadn't
      * been updated yet, so a before/after `effectiveDisabled` comparison alone sees a real
      * transition and redoes the exact work the setter is about to do anyway, once again risking
-     * the reentrant-update warning this file's `formDisabledCallback` doc comment describes
-     * (fr_asxOgk4UhNB07xevCWwFVQ). The flag itself is order-independent: it is set before the
+     * the reentrant-update warning this file's `formDisabledCallback` doc comment describes.
+     * The flag itself is order-independent: it is set before the
      * underlying native mutation runs, so every reaction the platform delivers for it — in any
      * order — observes it `true`, and it clears only once the whole synchronous reaction burst has
      * finished (the next microtask).
@@ -940,9 +940,9 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
     /**
      * Called by the browser whenever the FACE-computed disabled state changes — an ancestor
      * `<fieldset disabled>` toggling, but ALSO the element's own `disabled` content attribute
-     * being added or removed directly (confirmed via a captured stack trace: the platform enqueues
-     * this as a second, independent custom-element reaction to the very same attribute mutation
-     * that also drives the `disabled` property setter below). `_fieldsetDisabled` is tracked
+     * being added or removed directly. The platform enqueues this as a second, independent
+     * custom-element reaction to the same attribute mutation that also drives the `disabled`
+     * property setter below. `_fieldsetDisabled` is tracked
      * separately from the consumer's own `disabled` (see `effectiveDisabled`) — a native
      * `<input>`'s own `disabled` IDL property/attribute is never mutated by fieldset cascading, so
      * a consumer's explicit `disabled` must survive the fieldset re-enabling.
@@ -958,7 +958,7 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
      * echo of that same transition was pure redundant work, and, being a second call site, could
      * land inside a *different* in-flight update's `updated()`/`hostUpdated()` window and trip
      * Lit's dev-mode "scheduled an update after an update completed" warning for a render nothing
-     * observable ever needed (fr_asxOgk4UhNB07xevCWwFVQ).
+     * observable ever needed.
      */
     formDisabledCallback(fieldsetDisabled: boolean): void {
       if (this._reflectingDisabledAttribute) return;

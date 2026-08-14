@@ -235,7 +235,8 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
     }
   }
 
-  override firstUpdated(): void {
+  override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     // Fallback reconciliation for slot-forwarding / engines that don't fire
     // `slotchange` for content present at parse time -- same idiom as
     // `<lr-empty>`'s `firstUpdated`.

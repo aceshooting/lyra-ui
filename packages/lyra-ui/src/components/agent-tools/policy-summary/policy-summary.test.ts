@@ -45,7 +45,7 @@ describe('lr-policy-summary', () => {
   it('renders lr-empty when decisions is empty', async () => {
     const el = (await fixture(html`<lr-policy-summary></lr-policy-summary>`)) as LyraPolicySummary;
     expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
-    expect(el.shadowRoot!.querySelector('[part="base"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="base"]')) == null).to.be.true;
   });
 
   it('renders visible localized allow/deny/needs-review counts, never color-only', async () => {
@@ -137,7 +137,7 @@ describe('lr-policy-summary', () => {
     expect(detailsEl.textContent).to.include('Matched rule "no-pii-read"');
 
     const allowRow = rows.find((r) => r.getAttribute('data-state') === 'allow')!;
-    expect(allowRow.querySelector('[part="detail"]')).to.not.exist;
+    expect((allowRow.querySelector('[part="detail"]')) == null).to.be.true;
   });
 
   it('shrinks to a 320px allocation with a long label and explanation without horizontal overflow', async () => {

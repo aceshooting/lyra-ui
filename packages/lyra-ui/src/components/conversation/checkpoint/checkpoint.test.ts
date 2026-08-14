@@ -44,14 +44,14 @@ it('renders a formatted timestamp, overridable via formatTimestamp, unset for an
   const invalid = (await fixture(html`<lr-checkpoint></lr-checkpoint>`)) as LyraCheckpoint;
   invalid.timestamp = 'not-a-date';
   await invalid.updateComplete;
-  expect(invalid.shadowRoot!.querySelector('[part="timestamp"]')).to.not.exist;
+  expect((invalid.shadowRoot!.querySelector('[part="timestamp"]')) == null).to.be.true;
 });
 
 it('renders no restore button when restorable=false, as a plain marker', async () => {
   const el = (await fixture(html`<lr-checkpoint restorable="false"></lr-checkpoint>`)) as LyraCheckpoint;
   expect(el.restorable).to.be.false;
-  expect(el.shadowRoot!.querySelector('[part="restore-button"]')).to.not.exist;
-  expect(el.shadowRoot!.querySelector('[part="confirm-group"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="restore-button"]')) == null).to.be.true;
+  expect((el.shadowRoot!.querySelector('[part="confirm-group"]')) == null).to.be.true;
 });
 
 it('accepts confirm-restore="false" as a plain-HTML attribute string', async () => {
@@ -83,7 +83,7 @@ describe('restoring state', () => {
     button.click();
     await el.updateComplete;
     expect(fired).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="confirm-group"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="confirm-group"]')) == null).to.be.true;
   });
 
   it('dims the restore button with the shared disabled-opacity token', async () => {
@@ -122,7 +122,7 @@ describe('confirm flow (confirmRestore=true, the default)', () => {
     button.click();
     await el.updateComplete;
     expect(fired).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="restore-button"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="restore-button"]')) == null).to.be.true;
     const group = el.shadowRoot!.querySelector('[part="confirm-group"]') as HTMLElement;
     expect((group) != null).to.equal(true);
     expect(group.querySelector('[part="confirm-prompt"]')!.textContent!.trim()).to.equal(
@@ -150,7 +150,7 @@ describe('confirm flow (confirmRestore=true, the default)', () => {
     const event = await firing;
     expect((event as CustomEvent).detail).to.deep.equal({ checkpointId: 'ck_1', label: 'Before refactor' });
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="confirm-group"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="confirm-group"]')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="restore-button"]')).to.exist;
     await new Promise((resolve) => requestAnimationFrame(resolve));
     expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('restore-button');
@@ -167,7 +167,7 @@ describe('confirm flow (confirmRestore=true, the default)', () => {
     await el.updateComplete;
     await new Promise((r) => requestAnimationFrame(r));
     expect(fired).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="confirm-group"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="confirm-group"]')) == null).to.be.true;
     expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="restore-button"]'))).to.equal(true);
   });
 
@@ -179,7 +179,7 @@ describe('confirm flow (confirmRestore=true, the default)', () => {
     group.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     await el.updateComplete;
     await new Promise((r) => requestAnimationFrame(r));
-    expect(el.shadowRoot!.querySelector('[part="confirm-group"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="confirm-group"]')) == null).to.be.true;
     expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="restore-button"]'))).to.equal(true);
   });
 
@@ -197,7 +197,7 @@ describe('confirm flow (confirmRestore=true, the default)', () => {
     const outside = el.querySelector('#outside') as HTMLButtonElement;
     group.dispatchEvent(new FocusEvent('focusout', { relatedTarget: outside }));
     await checkpoint.updateComplete;
-    expect(checkpoint.shadowRoot!.querySelector('[part="confirm-group"]')).to.not.exist;
+    expect((checkpoint.shadowRoot!.querySelector('[part="confirm-group"]')) == null).to.be.true;
     // No forced refocus -- the browser's natural focus target (outside) is left alone.
     expect((checkpoint.shadowRoot!.activeElement) !== (checkpoint.shadowRoot!.querySelector('[part="restore-button"]'))).to.equal(true);
   });
@@ -239,7 +239,7 @@ describe('confirmRestore=false', () => {
     const event = await firing;
     expect((event as CustomEvent).detail).to.deep.equal({ checkpointId: 'ck_2', label: 'Snapshot' });
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="confirm-group"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="confirm-group"]')) == null).to.be.true;
   });
 });
 

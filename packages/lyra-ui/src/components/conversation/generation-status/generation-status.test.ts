@@ -84,7 +84,7 @@ it('hides the stop button entirely when show-stop is false', async () => {
   const el = (await fixture(
     html`<lr-generation-status .showStop=${false}></lr-generation-status>`,
   )) as LyraGenerationStatus;
-  expect(el.shadowRoot!.querySelector('[part="stop-button"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="stop-button"]')) == null).to.be.true;
 });
 
 it('turns the stop button off via the plain show-stop="false" attribute string, not just a .showStop property binding', async () => {
@@ -92,7 +92,7 @@ it('turns the stop button off via the plain show-stop="false" attribute string, 
     html`<lr-generation-status show-stop="false"></lr-generation-status>`,
   )) as LyraGenerationStatus;
   expect(el.showStop).to.be.false;
-  expect(el.shadowRoot!.querySelector('[part="stop-button"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="stop-button"]')) == null).to.be.true;
 });
 
 it('defaults show-stop to true when the attribute is entirely absent, and leaves it true for any other attribute spelling', async () => {

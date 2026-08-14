@@ -35,6 +35,90 @@ it('renders a themed badge and tag alias', async () => {
   await expect(el.querySelector('lr-badge')!).to.be.accessible();
 });
 
+it("owns status semantics on the badge host without creating a second semantic owner", async () => {
+  const el = (await fixture(
+    html`<lr-badge>Deployment complete</lr-badge>`
+  )) as LyraBadge;
+  expect(el.getAttribute("role")).to.equal("status");
+  expect(base(el).hasAttribute("role")).to.be.false;
+
+  el.setAttribute("role", "presentation");
+  expect(
+    el.getAttribute("role"),
+    "the component retains its one deliberate semantic role"
+  ).to.equal("status");
+  await expect(el).to.be.accessible();
+});
+
+it("keeps the host-only status contract on a hydration-shaped mount and reconnect", async () => {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const el = document.createElement("lr-badge") as LyraBadge;
+  el.attachShadow({ mode: "open" });
+  el.textContent = "Server status";
+  container.append(el);
+  await el.updateComplete;
+  expect(el.getAttribute("role")).to.equal("status");
+  expect(el.shadowRoot!.querySelectorAll('[role="status"]').length).to.equal(0);
+
+  el.remove();
+  container.append(el);
+  await el.updateComplete;
+  expect(el.getAttribute("role")).to.equal("status");
+});
+
+it("preserves every valid upstream variant and size spelling as the observable public value", async () => {
+  const el = (await fixture(html`
+    <lr-badge variant="primary" size="small">Migrated badge</lr-badge>
+  `)) as LyraBadge;
+
+  expect(el.variant).to.equal("primary");
+  expect(el.getAttribute("variant")).to.equal("primary");
+  expect(el.matches('[variant="primary"][size="small"]')).to.be.true;
+  expect(el.size).to.equal("small");
+  expect(el.getAttribute("size")).to.equal("small");
+  expect(el.dataset["effectiveVariant"]).to.equal("brand");
+  expect(el.dataset["effectiveSize"]).to.equal("s");
+
+  const canonical = (await fixture(html`
+    <lr-badge variant="brand" size="s">Canonical badge</lr-badge>
+  `)) as LyraBadge;
+  expect(getComputedStyle(base(el)).backgroundColor).to.equal(
+    getComputedStyle(base(canonical)).backgroundColor
+  );
+  expect(getComputedStyle(base(el)).fontSize).to.equal(
+    getComputedStyle(base(canonical)).fontSize
+  );
+
+  const mutations: string[] = [];
+  const observer = new MutationObserver((records) => {
+    mutations.push(
+      ...records.map(
+        (record) =>
+          (record.target as Element).getAttribute(record.attributeName!) ?? ""
+      )
+    );
+  });
+  observer.observe(el, {
+    attributes: true,
+    attributeFilter: ["variant", "size"],
+  });
+  el.variant = "primary";
+  el.size = "large";
+  await el.updateComplete;
+  await Promise.resolve();
+  observer.disconnect();
+
+  expect(el.variant).to.equal("primary");
+  expect(el.size).to.equal("large");
+  expect(el.dataset["effectiveSize"]).to.equal("l");
+  expect(el.outerHTML).to.contain('variant="primary"');
+  expect(el.outerHTML).to.contain('size="large"');
+  expect((el.cloneNode(true) as LyraBadge).getAttribute("size")).to.equal(
+    "large"
+  );
+  expect(mutations).to.include("large");
+});
+
 it('defaults size to "m" and offers the same 2xs-xl scale as its sibling lr-chip', async () => {
   const el = (await fixture(html`<lr-badge>Default</lr-badge>`)) as LyraBadge;
   expect(el.size).to.equal('m');

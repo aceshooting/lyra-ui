@@ -446,6 +446,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     setCustomState(this.internals, 'disabled', this.disabled);
     if (changed.has('page') || changed.has('pageSize') || changed.has('total')) {
       this.draftPage = this.pageCount === 0 ? '' : String(this.currentPage);
@@ -465,6 +466,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (!changed.has('page') || this.pendingFocusPage === undefined) return;
     const requestedPage = this.pendingFocusPage;
     const active = deepActiveElementIn(this.ownerDocument);

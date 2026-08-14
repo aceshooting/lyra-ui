@@ -24,8 +24,9 @@ detail?: string }`, with `PolicyDecisionCategory = 'guardrail' | 'permission' | 
 and `PolicyDecisionState = 'allow' | 'deny' | 'needs-review'` (all three exported here). `label` is
 host-supplied data rendered as-is, never localized (a rule name, or a tool name for `category:
 'tool'`). `explanation` is an **always-visible** plain-text reason — `state` is never conveyed by
-color alone; it tones the badge and callout as `allow` → success, `deny` → danger, `needs-review` →
-warning. `detail` is optional richer evidence (matched rule text, policy id) revealed through
+color alone; it tones the badge as `allow` → success, `deny` → danger, `needs-review` → warning,
+while the always-visible explanation remains plain text. `detail` is optional richer evidence
+(matched rule text, policy id) revealed through
 progressive disclosure. Controlled and never mutated — pass a new array to update it.
 
 **Events:** none. Read-only and display-only: this component never mutates a decision and offers no

@@ -53,7 +53,8 @@ or extra cells are never silently presented as a clean parse.
 `lr-highlight-activate` (`detail: { id }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
-`search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
+`search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `lr-text-select` is not part of this
+grid viewer's event contract; its registry capabilities advertise `textSelect: false`.
 
 **CSS parts:** `base` (a persistent `role="region"` named by the host `aria-label` or `name`, in
 every fetch state), `body`, `table`, `header-row`, `header-cell`, `data-row`, `cell`,

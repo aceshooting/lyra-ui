@@ -182,7 +182,7 @@ export const styles = css`
   /* Two selectors for one state, because the two render paths carry it differently. The native
      <button> path matches :disabled (from its own disabled attribute OR a fieldset cascade). The
      anchor path never can -- an <a> is not a form control, so :disabled cannot match it whatever
-     aria-disabled says -- and decision D8 renders a disabled link button as an href-less,
+     aria-disabled says -- and the disabled-link path renders an href-less,
      tabindex="-1", aria-disabled="true" anchor. Keying the second arm off the attribute the anchor
      DOES carry is what keeps the two modes looking the same; without it a disabled link rendered
      fully opaque with a pointer cursor, i.e. exactly like a working link that silently does

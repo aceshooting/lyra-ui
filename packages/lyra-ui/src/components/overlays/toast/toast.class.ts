@@ -20,7 +20,7 @@ export type ToastPlacement =
 export interface ToastCreateOptions {
   variant?: ToastVariant;
   duration?: number;
-  /** Item size. Long upstream spellings normalize through the created item's canonical setter. */
+  /** Item size. Long upstream spellings remain observable on the created item. */
   size?: LyraSize;
   withIcon?: boolean;
 }
@@ -36,7 +36,7 @@ export interface ToastCreateOptions {
  * @cssprop --width - Mapped alias for `--lr-toast-width`.
  * @cssprop [--lr-toast-gap=var(--lr-space-s)] - Gap between stacked items.
  * @cssprop [--lr-toast-width=var(--lr-size-28rem)] - Inline size of the stack, capped by the
- *   viewport minus the placement insets.
+ *   usable logical safe-area rectangle.
  * @cssprop [--lr-toast-accent-width=var(--lr-size-4px)] - Width of a slotted item's accent bar.
  *   Read by `<lr-toast-item>`'s own stylesheet, so set it on the item.
  * @cssprop [--lr-toast-accent-color=var(--lr-color-border)] - Accent bar / icon color of a slotted
@@ -86,7 +86,7 @@ export class LyraToast extends LyraElement {
   }
 
   /** Create and append a toast item programmatically; resolves to the item. Long size aliases in
-   * `options` normalize through the same setter as declarative toast items. */
+   * `options` remain observable just like declarative toast-item attributes. */
   async create(message: string, options: ToastCreateOptions = {}): Promise<LyraToastItem> {
     const itemTag = tag('toast-item');
     const ownerRegistry = this.ownerDocument.defaultView?.customElements;

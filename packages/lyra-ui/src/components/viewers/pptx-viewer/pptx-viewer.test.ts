@@ -85,7 +85,7 @@ describe('lr-pptx-viewer', () => {
   it('shows its persistent fidelity notice and idle state', async () => {
     const el = await fixture(html`<lr-pptx-viewer></lr-pptx-viewer>`);
     expect(el.shadowRoot!.querySelector('[part="notice"]')).to.exist;
-    expect(el.shadowRoot!.querySelector('[part="container"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="container"]')) == null).to.be.true;
     await expect(el).to.be.accessible();
   });
 
@@ -156,9 +156,9 @@ describe('lr-pptx-viewer', () => {
       // controls against a destroyed viewer.
       expect(fake.calls.destroy).to.equal(1);
       expect(
-        el.shadowRoot!.querySelector('[part="container"]'),
+        (el.shadowRoot!.querySelector('[part="container"]')) == null,
         'must not still render a container as if a presentation were mounted',
-      ).to.not.exist;
+      ).to.be.true;
 
       // The reconnect re-arms the mount, so the presentation comes back
       // rather than the viewer staying permanently blank.

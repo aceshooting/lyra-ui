@@ -231,6 +231,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('runs')) {
       this.orderedRunsCache = this.ordered();
       const rows = this.orderedRunsCache.rows;
@@ -246,6 +247,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
   }
 
   protected override updated(_changed: PropertyValues<this>): void {
+    super.updated(_changed);
     const limitText = this.renderRoot.querySelector('[part="limit"]')?.textContent?.trim() ?? '';
     if (!this.suppressNextLimitAnnouncement && limitText && limitText !== this.previousLimitText) {
       this.announcementSink?.announce(limitText);

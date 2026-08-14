@@ -64,7 +64,7 @@ it('does not clone hyphenated light-DOM custom elements into the SVG namespace',
     </lr-icon>
   `);
   await (el as LyraIcon).updateComplete;
-  expect(el.shadowRoot!.querySelector('svg > x-icon-test-node')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('svg > x-icon-test-node')) == null).to.be.true;
   expect(el.shadowRoot!.querySelector('svg > path')).to.exist;
 });
 

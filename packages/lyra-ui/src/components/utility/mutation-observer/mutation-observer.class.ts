@@ -68,6 +68,7 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (
       [
         'disabled',

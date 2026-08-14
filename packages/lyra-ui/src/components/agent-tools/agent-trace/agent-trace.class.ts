@@ -22,11 +22,11 @@ const KIND_ORDER: LyraSpan['kind'][] = ['agent', 'llm', 'tool', 'retriever', 'em
 /**
  * Maps each `LyraSpan.kind` onto the message key `<lr-trace-tree>`/`<lr-span-waterfall>` already
  * localize their own kind label through -- reused verbatim (not redefined with new wording) so a
- * translation registered for one of those components applies identically here. In the roadmap's
- * own vocabulary this component composes retrieval (`retriever` + `embedding`), tool (`tool`),
- * model (`llm`), and handoff (`agent`) spans; the filter itself operates one level more granular,
- * directly on `LyraSpan.kind`, so it never drifts from the exact field `<lr-trace-tree>` already
- * keys its own rendering off of.
+ * translation registered for one of those components applies identically here. This component
+ * composes retrieval (`retriever` + `embedding`), tool (`tool`), model (`llm`), and handoff
+ * (`agent`) spans; the filter itself operates one level more granular, directly on
+ * `LyraSpan.kind`, so it never drifts from the exact field `<lr-trace-tree>` already keys its own
+ * rendering off of.
  */
 const KIND_LABEL_KEY: Record<LyraSpan['kind'], string> = {
   agent: 'spanKindAgent',

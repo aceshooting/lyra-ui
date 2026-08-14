@@ -713,7 +713,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     // not fire for a keystroke that was aimed at the text being edited.
     else if (event.key === 'Backspace' && !this.draft && this.value.length && this.editingIndex < 0) { this.removeToken(this.value.length - 1); }
   };
-  // fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native control blurs it as plain platform
+  // Disabling a focused native control blurs it as plain platform
   // behavior (nothing to do with custom elements) -- that is not a real user interaction, so it
   // must not commit a pending draft or flip `touched`, which could otherwise reenter an in-flight
   // Lit update and trip its dev-mode "scheduled an update after an update completed" warning.

@@ -531,6 +531,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   // rely on them -- mirrors lr-dialog's/lr-widget's identical ordering
   // rationale.
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     this.syncSlottedItems();
     if (this.recoverInlineFocusAfterResponsiveClose) {
       this.recoverInlineFocusAfterResponsiveClose = false;

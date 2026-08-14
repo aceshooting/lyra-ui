@@ -22,7 +22,7 @@ it('shows the header (with no title rendered) when only actions content is prese
   )) as LyraResultCard;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
   expect(header.hasAttribute('hidden')).to.be.false;
-  expect(el.shadowRoot!.querySelector('[part="title"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="title"]')) == null).to.be.true;
 });
 
 it('hides the actions wrapper when empty, shows it once slotted, reacting to slotchange', async () => {
@@ -46,6 +46,23 @@ it('hides the actions wrapper when empty, shows it once slotted, reacting to slo
   expect(actions.hasAttribute('hidden')).to.be.true;
 });
 
+it('uses with-actions as an explicit first-render presence hint and restores the unset default', async () => {
+  const el = (await fixture(html`<lr-result-card with-actions>body</lr-result-card>`)) as LyraResultCard;
+  const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+  const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+
+  expect(el.withActions).to.be.true;
+  expect(header.hasAttribute('hidden')).to.be.false;
+  expect(actions.hasAttribute('hidden')).to.be.false;
+
+  el.removeAttribute('with-actions');
+  await el.updateComplete;
+
+  expect(el.withActions).to.be.false;
+  expect(header.hasAttribute('hidden')).to.be.true;
+  expect(actions.hasAttribute('hidden')).to.be.true;
+});
+
 it('keeps the header hidden->visible transition working for actions added after mount, with no title set', async () => {
   const el = (await fixture(html`<lr-result-card>body</lr-result-card>`)) as LyraResultCard;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
@@ -65,7 +82,7 @@ it('reacts to a title being set after initial mount, updating both the header vi
   const el = (await fixture(html`<lr-result-card>body</lr-result-card>`)) as LyraResultCard;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
   expect(header.hasAttribute('hidden'), 'starts untitled, so no header').to.be.true;
-  expect(el.shadowRoot!.querySelector('[part="title"]'), 'no title span while untitled').to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="title"]')) == null, 'no title span while untitled').to.be.true;
 
   el.title = 'Deployment result';
   await el.updateComplete;
@@ -83,7 +100,7 @@ it('reacts to a title being set after initial mount, updating both the header vi
   await el.updateComplete;
 
   expect(header.hasAttribute('hidden'), 'header hides again once title is cleared').to.be.true;
-  expect(el.shadowRoot!.querySelector('[part="title"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="title"]')) == null).to.be.true;
 });
 
 it('exposes the full title text on the truncating [part="title"] span via its own title attribute, scoped away from the host', async () => {

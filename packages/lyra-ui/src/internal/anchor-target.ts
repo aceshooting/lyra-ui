@@ -215,8 +215,7 @@ export function DocumentAnchorTarget(
      * own override's own catch (which reports a localized rendition-failure alert) keeps first and
      * only refusal of its own `applyAnchor()`'s throw. A catch anywhere inside
      * `performScrollToAnchor()` would run before that override's `super` call ever returns,
-     * making its own catch unreachable again -- the exact regression commit `df4dac87` introduced
-     * and `5565cfc6` reverted. See `performScrollToAnchor()`'s own doc comment.
+     * making its own catch unreachable. See `performScrollToAnchor()`'s own doc comment.
      */
     async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
       const generation = ++this.anchorGeneration;

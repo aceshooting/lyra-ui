@@ -20,30 +20,27 @@ export const styles = css`
   :host([variant]:not([variant='neutral'])) {
     --lr-toast-accent-color: var(--lr-color-fill-loud);
   }
-  :host([size='2xs']) {
+  :host([data-effective-size='2xs']) {
     --lr-toast-padding: var(--padding, var(--lr-space-2xs));
     --lr-toast-font-size: var(--lr-font-size-2xs);
   }
-  :host([size='xs']) {
+  :host([data-effective-size='xs']) {
     --lr-toast-padding: var(--padding, var(--lr-space-xs));
     --lr-toast-font-size: var(--lr-font-size-xs);
   }
-  :host([size='s']),
-  :host([size='small']) {
+  :host([data-effective-size='s']) {
     --lr-toast-padding: var(--padding, var(--lr-space-s));
     --lr-toast-font-size: var(--lr-font-size-md-sm);
   }
-  :host([size='m']),
-  :host([size='medium']) {
+  :host([data-effective-size='m']) {
     --lr-toast-padding: var(--padding, var(--lr-space-m));
     --lr-toast-font-size: var(--lr-font-size-m);
   }
-  :host([size='l']),
-  :host([size='large']) {
+  :host([data-effective-size='l']) {
     --lr-toast-padding: var(--padding, var(--lr-space-l));
     --lr-toast-font-size: var(--lr-font-size-lg);
   }
-  :host([size='xl']) {
+  :host([data-effective-size='xl']) {
     --lr-toast-padding: var(--padding, calc(var(--lr-space-l) * 1.5));
     --lr-toast-font-size: var(--lr-font-size-xl);
   }

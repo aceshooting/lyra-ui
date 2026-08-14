@@ -129,8 +129,8 @@ it('marks the decorative shape aria-hidden and renders three dots for the dots v
   expect((base) != null).to.equal(true);
   expect(base!.getAttribute('aria-hidden')).to.equal('true');
   expect(el.shadowRoot!.querySelectorAll('[part="dot"]').length).to.equal(3);
-  expect(el.shadowRoot!.querySelector('[part="pulse"]')).to.not.exist;
-  expect(el.shadowRoot!.querySelector('[part="cursor"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="pulse"]')) == null).to.be.true;
+  expect((el.shadowRoot!.querySelector('[part="cursor"]')) == null).to.be.true;
 });
 
 it('renders a single pulse element for the pulse variant', async () => {
@@ -139,7 +139,7 @@ it('renders a single pulse element for the pulse variant', async () => {
   )) as LyraTypingIndicator;
   expect(el.shadowRoot!.querySelectorAll('[part="dot"]').length).to.equal(0);
   expect(el.shadowRoot!.querySelector('[part="pulse"]')).to.exist;
-  expect(el.shadowRoot!.querySelector('[part="cursor"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="cursor"]')) == null).to.be.true;
 });
 
 it('renders a single cursor element for the cursor variant', async () => {
@@ -147,26 +147,26 @@ it('renders a single cursor element for the cursor variant', async () => {
     html`<lr-typing-indicator variant="cursor"></lr-typing-indicator>`,
   )) as LyraTypingIndicator;
   expect(el.shadowRoot!.querySelectorAll('[part="dot"]').length).to.equal(0);
-  expect(el.shadowRoot!.querySelector('[part="pulse"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="pulse"]')) == null).to.be.true;
   expect(el.shadowRoot!.querySelector('[part="cursor"]')).to.exist;
 });
 
 it('swaps the rendered shape when variant changes on an already-mounted instance', async () => {
   const el = (await fixture(html`<lr-typing-indicator></lr-typing-indicator>`)) as LyraTypingIndicator;
   expect(el.shadowRoot!.querySelectorAll('[part="dot"]').length).to.equal(3);
-  expect(el.shadowRoot!.querySelector('[part="pulse"]')).to.not.exist;
-  expect(el.shadowRoot!.querySelector('[part="cursor"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="pulse"]')) == null).to.be.true;
+  expect((el.shadowRoot!.querySelector('[part="cursor"]')) == null).to.be.true;
 
   el.variant = 'pulse';
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="dot"]').length).to.equal(0);
   expect(el.shadowRoot!.querySelector('[part="pulse"]')).to.exist;
-  expect(el.shadowRoot!.querySelector('[part="cursor"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="cursor"]')) == null).to.be.true;
 
   el.variant = 'cursor';
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="dot"]').length).to.equal(0);
-  expect(el.shadowRoot!.querySelector('[part="pulse"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="pulse"]')) == null).to.be.true;
   expect(el.shadowRoot!.querySelector('[part="cursor"]')).to.exist;
 });
 

@@ -577,7 +577,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     // here whenever this is that case. Marking `touched` for it was, depending on timing, capable
     // of reentering that same in-flight update and tripping Lit's dev-mode "scheduled an update
     // after an update completed" warning for a state flip nothing observable needed -- a disabled
-    // control is barred from validation regardless (fr_asxOgk4UhNB07xevCWwFVQ).
+    // control is barred from validation regardless.
     if (!this.effectiveDisabled) this.touched = true;
     this.emit('blur');
   };

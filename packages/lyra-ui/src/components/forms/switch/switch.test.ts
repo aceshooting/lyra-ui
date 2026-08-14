@@ -36,7 +36,7 @@ it('emits one cancelable lr-invalid alias when a validity check fails', async ()
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
-  expect(aliases[0].target).to.equal(el);
+  expect((aliases[0].target) === (el)).to.equal(true);
   expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
   expect(aliases[0].cancelable).to.be.true;
   // Nothing cancelled it, so the browser's own validation UI stays enabled.
@@ -77,7 +77,7 @@ it('exposes namespaced geometry custom properties', async () => {
 });
 
 it('keeps the thumb clearance symmetric when a consumer adds a border to the track part', async () => {
-  // Regression test for fr_uzXHxNgnJ2EEdOMKPxv3jQ: box-sizing: border-box (the library-wide
+  // Regression test: box-sizing: border-box (the library-wide
   // default) makes an author-added ::part(track) border eat into the padding box the thumb is
   // absolutely positioned against, but the thumb's own size/travel math is derived from the
   // track's DECLARED (border-box) dimensions -- so a border shrank the padding box the thumb sits
@@ -574,8 +574,8 @@ it('reflects aria-invalid on the inner switch only after the field has been inte
 });
 
 it('does not mark touched from a blur the browser forces when the control becomes disabled while focused', async () => {
-  // Regression test for the same underlying hazard as <lr-input>'s onBlur fix
-  // (fr_asxOgk4UhNB07xevCWwFVQ), reached through a different mechanism here: <lr-switch> is
+  // Regression test for the same underlying hazard as <lr-input>'s onBlur fix. It is reached
+  // through a different mechanism here: <lr-switch> is
   // form-associated (`static formAssociated = true`), so setting its `disabled` attribute makes
   // the browser's own form-associated-custom-element machinery treat the host as "actually
   // disabled" and run unfocusing steps against whatever inside the shadow tree currently holds

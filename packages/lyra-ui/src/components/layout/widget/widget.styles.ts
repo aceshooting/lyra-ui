@@ -152,7 +152,7 @@ export const styles = css`
     white-space: nowrap;
   }
   /* :where() zeroes the wrapped selector's specificity contribution, leaving only :hover itself,
-     mirroring lr-pagination's/lr-table's identical remediation for this exact selector shape --
+     mirroring lr-pagination's/lr-table's low-specificity rule for this exact selector shape --
      a consumer's own ::part(view-toggle):hover can win without !important. Colors route through
      scoped --lr-widget-view-toggle-hover-*, mirroring the [aria-pressed='true'] rule below, so a
      consumer can retint just the hover state without hijacking the shared brand-quiet/text tokens

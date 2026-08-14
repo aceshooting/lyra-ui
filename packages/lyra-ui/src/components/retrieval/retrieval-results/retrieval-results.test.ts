@@ -85,7 +85,7 @@ it('keeps the initial-load spinner semantic owner named after late host aria-lab
 
   expect(spinner != null).to.be.true;
   expect(spinnerLabel()).to.equal('Policy results');
-  expect(el.shadowRoot!.querySelector('[part="empty"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="empty"]')) == null).to.be.true;
 
   el.setAttribute('aria-label', 'Loading policy search results');
   await el.updateComplete;
@@ -106,7 +106,7 @@ it('renders a neutral error message and announces only later errors from light D
   const alert = el.shadowRoot!.querySelector('[part="error"]')!;
   expect(alert.getAttribute('role')).to.be.null;
   expect(alert.textContent).to.include('Retrieval failed');
-  expect(el.shadowRoot!.querySelector('[part="row"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="row"]')) == null).to.be.true;
   const sink = () => document.querySelector('[data-lr-live-region="assertive"]')!;
   expect(sink().children.length, 'initial content is not replayed as an announcement').to.equal(0);
 
@@ -231,7 +231,7 @@ it('stays in flat (non-virtualized) mode below the virtualizeAt threshold', asyn
   const el = (await fixture(html`<lr-retrieval-results></lr-retrieval-results>`)) as LyraRetrievalResults;
   el.chunks = chunks;
   await el.updateComplete;
-  expect(vlist(el)).to.not.exist;
+  expect((vlist(el)) == null).to.be.true;
   expect(flatRows(el).length).to.equal(3);
 });
 
@@ -487,7 +487,7 @@ describe('presentation', () => {
 
     el.presentation = 'compact';
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="metadata"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="metadata"]')) == null).to.be.true;
   });
 
   it('formats numeric metadata with the effective locale', async () => {
@@ -503,7 +503,7 @@ describe('presentation', () => {
     const el = (await fixture(html`<lr-retrieval-results></lr-retrieval-results>`)) as LyraRetrievalResults;
     el.chunks = [chunks[0]!];
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="metadata"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="metadata"]')) == null).to.be.true;
   });
 });
 
@@ -567,7 +567,7 @@ describe('pagination', () => {
     const el = (await fixture(html`<lr-retrieval-results has-more loading></lr-retrieval-results>`)) as LyraRetrievalResults;
     el.chunks = chunks;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="load-more"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="load-more"]')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="load-more-row"] [part="spinner"]')).to.exist;
   });
 
@@ -575,7 +575,7 @@ describe('pagination', () => {
     const el = (await fixture(html`<lr-retrieval-results></lr-retrieval-results>`)) as LyraRetrievalResults;
     el.chunks = chunks;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="load-more-row"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="load-more-row"]')) == null).to.be.true;
   });
 
   it('forwards has-more/loading to the internal virtual-list and re-emits its lr-load-more while virtualized', async () => {

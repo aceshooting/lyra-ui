@@ -77,7 +77,7 @@ it('lets each status-dot color be rethemed independently', async () => {
 
 it('renders a determinate progress bar only when progress is set', async () => {
   const el = (await fixture(html`<lr-flow-node></lr-flow-node>`)) as LyraFlowNode;
-  expect(el.shadowRoot!.querySelector('[part="progress"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="progress"]')) == null).to.be.true;
   el.progress = 40;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="progress"]')).to.exist;
@@ -145,7 +145,7 @@ it('header slot replaces the built-in heading row entirely', async () => {
   // slotted replacement -- an author stylesheet's unconditional `[part='header']{display:flex}`
   // rule always beats a `[hidden]` override at equal specificity/origin, so hiding via attribute
   // alone would leave both rows rendered.
-  expect(el.shadowRoot!.querySelector('[part="header"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="header"]')) == null).to.be.true;
   expect(el.shadowRoot!.querySelector('slot[name="header"]')).to.exist;
 });
 
@@ -161,7 +161,7 @@ it('a header child appended after the initial render still replaces the built-in
   await new Promise((r) => setTimeout(r, 0));
   await el.updateComplete;
 
-  expect(el.shadowRoot!.querySelector('[part="header"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="header"]')) == null).to.be.true;
   const slot = el.shadowRoot!.querySelector('slot[name="header"]') as HTMLSlotElement;
   const assigned = slot.assignedElements({ flatten: true });
   expect(assigned.length).to.equal(1);
@@ -280,7 +280,7 @@ describe('numeric guards', () => {
     const el = (await fixture(html`<lr-flow-node></lr-flow-node>`)) as LyraFlowNode;
     el.progress = Number.NaN;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="progress"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="progress"]')) == null).to.be.true;
   });
 
   it('clamps a negative durationMs to 0 instead of rendering a negative duration', async () => {

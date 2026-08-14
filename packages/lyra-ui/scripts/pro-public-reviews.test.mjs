@@ -348,16 +348,22 @@ test('origin-aware analyzer normalizations are comparison-only and narrowly scop
   const waTextarea = reviewedMappingNormalizations('wa-textarea');
 
   // Asserting the populated sections rather than a frozen key list keeps this review honest as the
-  // comparison-only schema grows: the claim is that these form-control mappings only ever carry
-  // analyzer equivalences, never a cancelability review or a method-return wildcard.
+  // comparison-only schema grows. These form-control mappings may carry exact type, default,
+  // ownership, reflection, and deprecation reviews, but never event-path, method-return, derived
+  // default, or CSS-default exceptions.
   const populated = (contract) => Object.keys(contract).filter((section) => contract[section].length > 0);
+  const reviewedFormControlSections = new Set([
+    'typeEquivalences',
+    'defaultEquivalences',
+    'inferredAttributeSuppressions',
+    'attributePropertyEquivalences',
+    'reflectionEquivalences',
+    'deprecationEquivalences',
+  ]);
   for (const contract of [slInput, slSelect, slTextarea, waInput, waTextarea]) {
     assert.deepEqual(Object.keys(contract), NORMALIZATION_SECTIONS);
     assert.deepEqual(
-      populated(contract).filter(
-        (section) =>
-          !['typeEquivalences', 'defaultEquivalences', 'inferredAttributeSuppressions'].includes(section),
-      ),
+      populated(contract).filter((section) => !reviewedFormControlSections.has(section)),
       [],
     );
   }
@@ -421,13 +427,13 @@ test('Lyra subclass normalization retains reviewed inherited property-only APIs 
   assert.deepEqual(normalized.attributes, []);
 });
 
-test('framework controller fields stay internal unless public metadata establishes a surface', () => {
+test('explicitly protected framework controller fields stay internal', () => {
   const normalized = normalizeDeclaration(
     {
       customElement: true,
       tagName: 'lr-controller-host',
       members: [
-        { kind: 'field', name: 'localize', readonly: true },
+        { kind: 'field', name: 'localize', readonly: true, privacy: 'protected' },
         { kind: 'field', name: 'parts', readonly: true, description: 'Public part-token API.' },
         { kind: 'field', name: 'valueInput', readonly: true, description: 'Public value input.' },
       ],
@@ -438,11 +444,11 @@ test('framework controller fields stay internal unless public metadata establish
   assert.deepEqual(
     normalized.properties.map(({ name }) => name),
     ['parts', 'valueInput'],
-    'readonly alone does not publish a framework-owned controller field',
+    'source visibility, rather than a controller-name heuristic, owns the public boundary',
   );
 });
 
-test('Lyra normalization retains documented form callbacks and property-only control members', () => {
+test('Lyra normalization retains directly authored lifecycle/form callbacks and property-only control members', () => {
   const normalized = normalizeDeclaration(
     {
       customElement: true,
@@ -453,7 +459,7 @@ test('Lyra normalization retains documented form callbacks and property-only con
         { kind: 'field', name: 'form', type: { text: 'HTMLFormElement | null' } },
         { kind: 'method', name: 'formStateRestoreCallback' },
         { kind: 'method', name: 'resetValidity' },
-        { kind: 'method', name: 'updateValidity' },
+        { kind: 'method', name: 'updateValidity', privacy: 'protected' },
         { kind: 'method', name: 'disconnectedCallback' },
       ],
     },
@@ -461,6 +467,10 @@ test('Lyra normalization retains documented form callbacks and property-only con
   );
 
   assert.deepEqual(normalized.properties.map(({ name }) => name), ['filter', 'form']);
-  assert.deepEqual(normalized.methods.map(({ name }) => name), ['formStateRestoreCallback', 'resetValidity']);
+  assert.deepEqual(
+    normalized.methods.map(({ name }) => name),
+    ['disconnectedCallback', 'formStateRestoreCallback', 'resetValidity'],
+    'direct non-private lifecycle methods remain governed while protected implementation hooks do not',
+  );
   assert.deepEqual(normalized.attributes.map(({ name }) => name), ['form']);
 });

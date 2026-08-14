@@ -200,6 +200,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   private testIdCounts = new Map<string, number>();
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('suites')) {
       const anyRunning = this.suites.some((suite) => suite.tests.some((t) => t.status === 'running'));
       if (this.previouslyRunning && !anyRunning) {
@@ -214,7 +215,8 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     }
   }
 
-  protected override updated(): void {
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (this.pendingCompletionAnnouncement !== null) {
       const text = this.pendingCompletionAnnouncement;
       this.pendingCompletionAnnouncement = null;

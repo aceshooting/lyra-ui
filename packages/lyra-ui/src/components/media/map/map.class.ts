@@ -266,11 +266,18 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     new ThemeWatcher(this, () => this.refreshThemePaint());
   }
 
+  /** Initial and controlled map center as `[longitude, latitude]`. */
   @property({ type: Array }) center: [number, number] = [0, 0];
+  /** Initial and controlled map zoom level. */
   @property({ type: Number }) zoom = 2;
+  /** MapLibre style URL or peer-neutral style specification. Production callers should override
+   * the OpenStreetMap demonstration style used by default. */
   @property({ attribute: false }) mapStyle: LyraMapStyleSpecification | string = DEFAULT_STYLE;
+  /** Entries rendered in the optional map legend. */
   @property({ attribute: false }) legend: LegendEntry[] = [];
+  /** Optional GeoJSON choropleth layer and value-to-color configuration. */
   @property({ attribute: false }) choropleth?: ChoroplethLayer;
+  /** Point markers rendered over the map. */
   @property({ attribute: false }) markers: MapMarker[] = [];
   /** Additive GeoJSON layers rendered alongside the choropleth/markers -- each entry becomes a
    *  source plus fill/line/circle layers. Defaults empty (zero behavior change). */

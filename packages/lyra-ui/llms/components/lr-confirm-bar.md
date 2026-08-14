@@ -33,8 +33,7 @@ component on activation and host-writable (an externally-resolved decision rende
 emits nothing). `variant: ConfirmBarVariant = 'neutral'` (reflected) — `'neutral' | 'danger'`, a
 genuine two-member subset of the library-wide `LyraVariant` vocabulary (spelled as an `Extract` of
 it, so the two can never drift): a confirmation is either routine or destructive, and
-`brand`/`success`/`warning` have no meaning for a proposal awaiting a yes/no. The exported alias
-`ConfirmBarTone` is retained as a name for the same union. `compact: boolean = false`
+`brand`/`success`/`warning` have no meaning for a proposal awaiting a yes/no. `compact: boolean = false`
 (reflected) — collapses the bar from a stacked `display: block` card into a single tightly-padded
 inline row, for a confirmation that has to live inside an existing container: a table cell, a card's
 action row, a toolbar. The host becomes `inline-flex`, and the narrow-allocation `@container`

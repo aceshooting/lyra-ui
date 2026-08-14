@@ -68,7 +68,7 @@ export const LyraButtonTrigger: Story = {
 function onSurfaceClick(e: MouseEvent): void {
   const surface = e.currentTarget as HTMLElement;
   const popover = surface.parentElement!.querySelector('lr-popover') as LyraPopover;
-  // showAt() anchors to an arbitrary point instead of a slotted trigger -- exactly the contract a
+  // showAt() anchors to an arbitrary point with no DOM interaction owner -- exactly the contract a
   // canvas/SVG surface like lr-graph composes with (see llms-full.txt for a node-click example).
   popover.showAt({ x: e.clientX, y: e.clientY });
 }
@@ -79,7 +79,7 @@ export const VirtualAnchor: Story = {
     docs: {
       description: {
         story:
-          'Instead of a slotted `trigger`, `showAt({ x, y })` anchors the popover to an arbitrary rectangle -- here, the point clicked inside the surface below. Escape or an outside click still dismisses it, same as a trigger-based popover.',
+          'Instead of a DOM anchor, `showAt({ x, y })` anchors the popover to an arbitrary rectangle -- here, the point clicked inside the surface below. The virtual anchor wins positioning and has no DOM interaction/ARIA owner. Escape or an outside click still dismisses it.',
       },
     },
   },
@@ -120,16 +120,21 @@ export const Arrow: Story = {
 };
 
 export const ExternalAnchor: Story = {
+  name: 'Interaction ownership and external positioning',
   parameters: {
     docs: {
       description: {
         story:
-          '`for` positions the popup against any element in the same root, while the slotted trigger keeps owning the click and the ARIA relationship. `skidding` slides the popup along the anchor edge.',
+          'A slotted trigger wins click and ARIA ownership. With no slotted trigger, a live HTML `for` target owns both; the first example demonstrates that shape. In the second, `for` changes positioning while the slotted trigger remains the owner. Direct `.anchor` is positioning-only, and `showAt()` has no DOM owner. `skidding` slides the popup along the anchor edge.',
       },
     },
   },
   render: (_args, context) => html`
     <div style="display: flex; flex-direction: column; gap: 2rem;">
+      <button id="popover-external-owner">This external button opens and owns the popover</button>
+      <lr-popover for="popover-external-owner">
+        <p>The live HTML <code>for</code> target owns click and generated ARIA because no trigger is slotted.</p>
+      </lr-popover>
       <div id="popover-external-anchor" style="padding: 0.5rem; border: 1px dashed var(--lr-color-border);">
         The popup is positioned against this box
       </div>

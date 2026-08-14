@@ -73,6 +73,7 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
   private refocusAfterUpdate = false;
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('suggestions')) {
       const previous = changed.get('suggestions') as ChatSuggestion[] | undefined;
       const activeId = previous?.[this.activeIndex]?.id;
@@ -86,7 +87,8 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
     }
   }
 
-  protected override updated(): void {
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (!this.refocusAfterUpdate) return;
     this.refocusAfterUpdate = false;
     this.focusChip(this.activeIndex);

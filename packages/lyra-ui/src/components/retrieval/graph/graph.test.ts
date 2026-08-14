@@ -198,7 +198,7 @@ it('shows a loading skeleton and aria-busy while d3 loads, then swaps to the svg
   });
 
   expect(el.getAttribute('aria-busy')).to.equal('false');
-  expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('lr-skeleton')) == null).to.be.true;
   expect((el.shadowRoot!.querySelector('svg')) != null).to.equal(true);
 });
 
@@ -920,7 +920,7 @@ it('applies a per-node GraphNode.color as the actual rendered fill', async () =>
   expect(getComputedStyle(coloredEl).fill).to.not.equal(getComputedStyle(defaultEl).fill);
 });
 
-describe('node typing (J1)', () => {
+describe('node typing', () => {
   const nodeTypes = [
     { id: 'person', label: 'Person', shape: 'square' as const },
     { id: 'doc', label: 'Document', color: '#112233', shape: 'diamond' as const },
@@ -1053,7 +1053,7 @@ describe('node typing (J1)', () => {
   });
 });
 
-describe('drawn edge labels (J2)', () => {
+describe('drawn edge labels', () => {
   const labeledLinks = [{ source: 'a', target: 'b', label: 'cites' }];
 
   async function mountLabeled(showEdgeLabels = true): Promise<LyraGraph> {
@@ -1070,7 +1070,7 @@ describe('drawn edge labels (J2)', () => {
 
   it('defaults showEdgeLabels to false and renders no link-label text', async () => {
     const el = await mountLabeled(false);
-    expect(el.shadowRoot!.querySelector('[part="link-label"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="link-label"]')) == null).to.be.true;
   });
 
   it('draws a link-label per labeled link when showEdgeLabels is set, aria-hidden and text-anchor middle', async () => {
@@ -1090,7 +1090,7 @@ describe('drawn edge labels (J2)', () => {
     await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    expect(el.shadowRoot!.querySelector('[part="link-label"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="link-label"]')) == null).to.be.true;
   });
 
   it('hides all edge labels below edgeLabelMinZoom via a data-edge-labels-hidden toggle on the zoomed g, without a Lit re-render', async () => {
@@ -1170,7 +1170,7 @@ describe('drawn edge labels (J2)', () => {
     // repositioning the label on every subsequent tick (e.g. a node drag) forever. See this
     // file's nodeEls regression test above for the analogous nodeTypes-only case.
     const el = await mountLabeled(false);
-    expect(el.shadowRoot!.querySelector('[part="link-label"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="link-label"]')) == null).to.be.true;
 
     el.showEdgeLabels = true;
     await el.updateComplete;
@@ -1188,7 +1188,7 @@ describe('drawn edge labels (J2)', () => {
   });
 });
 
-describe('expand affordance (J3)', () => {
+describe('expand affordance', () => {
   it('dblclick on a node emits exactly one lr-node-expand after two lr-node-click events, and stops propagation', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
@@ -1278,7 +1278,7 @@ describe('expand affordance (J3)', () => {
     expect(indicator.getAttribute('transform')).to.match(/^translate\(-?\d+(\.\d+)?,-?\d+(\.\d+)?\)$/);
   });
 
-  it('wraps expandable node spoken text via graphExpandableItem, composing with the J1 typed wrap', async () => {
+  it('wraps expandable node spoken text via graphExpandableItem, composing with the typed-node label', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodeTypes = [{ id: 'doc', label: 'Document' }];
     el.nodes = [{ id: 'a', label: 'A', type: 'doc', expandable: true }];
@@ -1350,7 +1350,7 @@ describe('expand affordance (J3)', () => {
   });
 });
 
-describe('focus & fit (J4 camera)', () => {
+describe('focus and camera fit', () => {
   async function mountWide(): Promise<LyraGraph> {
     const el = (await fixture(
       html`<lr-graph width="800" height="600" min-zoom="0.1" max-zoom="8"></lr-graph>`,
@@ -1561,7 +1561,7 @@ describe('focus & fit (J4 camera)', () => {
   });
 });
 
-describe('selection (J4)', () => {
+describe('selection', () => {
   async function mountSelectable(mode: 'single' | 'multiple'): Promise<LyraGraph> {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.selectionMode = mode;
@@ -1733,7 +1733,7 @@ describe('selection (J4)', () => {
   });
 });
 
-describe('type filtering (J5)', () => {
+describe('type filtering', () => {
   const typedFilterNodes = [
     { id: 'a', label: 'A', type: 'person' },
     { id: 'b', label: 'B', type: 'doc' },
@@ -1918,7 +1918,7 @@ describe('type filtering (J5)', () => {
     });
     // The controlled selectedNodeIds array is untouched by the component -- it's the host's to own.
     expect(el.selectedNodeIds).to.deep.equal(['a']);
-    expect(el.shadowRoot!.querySelector('[data-selected]')).to.be.null; // hidden node can't render selected
+    expect((el.shadowRoot!.querySelector('[data-selected]')) === null).to.be.true; // hidden node can't render selected
 
     el.hiddenTypes = [];
     await el.updateComplete;
@@ -1941,7 +1941,7 @@ describe('type filtering (J5)', () => {
   });
 });
 
-describe('community hulls (J6)', () => {
+describe('community hulls', () => {
   const communityNodes = [
     { id: 'a', label: 'A', communityId: 'team-1' },
     { id: 'b', label: 'B', communityId: 'team-1' },
@@ -1999,7 +1999,7 @@ describe('community hulls (J6)', () => {
     await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    expect(el.shadowRoot!.querySelector('[part="hull"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="hull"]')) == null).to.be.true;
   });
 
   it('renders one hull per community, membership = union of memberIds and matching communityId', async () => {
@@ -2023,7 +2023,7 @@ describe('community hulls (J6)', () => {
     await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 0, undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    expect(el.shadowRoot!.querySelector('[part="hull"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="hull"]')) == null).to.be.true;
   });
 
   it('a 1-member community draws a degenerate (zero-length) hull path', async () => {
@@ -2123,7 +2123,7 @@ describe('community hulls (J6)', () => {
   });
 });
 
-describe('layered layout (J7)', () => {
+describe('layered layout', () => {
   const chainLinks = [
     { source: 'a', target: 'b' },
     { source: 'b', target: 'c' },
@@ -2303,7 +2303,7 @@ describe('canvas renderer — static draw', () => {
     const el = await mountCanvas();
     expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
     expect((el.shadowRoot!.querySelector('svg')) == null).to.equal(true);
-    expect(el.shadowRoot!.querySelector('[part="node"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="node"]')) == null).to.be.true;
   });
 
   it('sizes the backing store to CSS size * devicePixelRatio', async () => {
@@ -2396,9 +2396,10 @@ describe('canvas renderer — static draw', () => {
     expect(scene.dimmedOpacity).to.equal(0);
   });
 
-  // Canvas counterpart of "renders a '+' expand-indicator only for nodes with expandable: true"
-  // (J3, SVG-only today) -- renderer="canvas" has no per-node DOM to query [part="expand-indicator"]
-  // against, so this asserts the same expandable-only gating via the drawn canvasScene instead.
+  // Canvas counterpart of "renders a '+' expand-indicator only for nodes with expandable: true".
+  // The expand indicator is SVG-only today: renderer="canvas" has no per-node DOM to query
+  // for [part="expand-indicator"], so this asserts the same expandable-only gating via the drawn
+  // canvasScene instead.
   it('feeds only expandable: true nodes into the drawn canvas scene as expand indicators', async () => {
     const el = (await fixture(
       html`<lr-graph renderer="canvas" width="400" height="300" style="width:400px;height:300px"></lr-graph>`,
@@ -2418,7 +2419,7 @@ describe('canvas renderer — static draw', () => {
   });
 
   // Canvas counterpart of "existing graph usage unaffected: no expandable set ... renders no
-  // indicator" (J3, SVG-only today).
+  // indicator", which is SVG-only today.
   it('existing canvas usage unaffected: no expandable nodes draw zero expand indicators', async () => {
     const el = await mountCanvas();
     (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
@@ -2764,7 +2765,7 @@ it('rejects url paint servers from node, type, link, and community colors', asyn
   ).to.equal('');
 });
 
-it('wires up d3-drag on each node (draggable, per the Interfaces spec)', async () => {
+it('wires up d3-drag on each draggable node', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -2776,7 +2777,7 @@ it('wires up d3-drag on each node (draggable, per the Interfaces spec)', async (
   expect(select(nodeEl).on('mousedown.drag')).to.be.a('function');
 });
 
-it('wires up d3-zoom pan/zoom on the svg (per the Interfaces spec)', async () => {
+it('wires up d3-zoom pan/zoom on the svg', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -3577,7 +3578,7 @@ describe('dimming (adjacency highlight)', () => {
     const el = await mountDimmable();
     expect(el.dimmedNodeIds).to.deep.equal([]);
     expect(el.dimmedLinkIds).to.deep.equal([]);
-    expect(el.shadowRoot!.querySelector('[data-dimmed]')).to.be.null;
+    expect((el.shadowRoot!.querySelector('[data-dimmed]')) === null).to.be.true;
   });
 
   it('applies data-dimmed to a matching node, not to an unmatched one', async () => {
@@ -3646,10 +3647,9 @@ describe('dimming (adjacency highlight)', () => {
 });
 
 // ---------------------------------------------------------------------------------------------
-// Coverage gap-fill: targeted tests for previously-uncovered lines/
-// branches in graph.class.ts and graph-canvas.ts, added without touching production code. Grouped
+// Targeted edge-case tests for graph.class.ts and graph-canvas.ts. Grouped
 // by area; each test exercises real, reachable behavior (a genuine event/gesture, or -- matching
-// this file's own established convention for private internals, see e.g. the J1 nodeEls-cache
+// this file's own established convention for private internals, see e.g. the nodeEls-cache
 // regression test above -- a direct call to a private helper when there's no reasonable way to
 // reach it purely through public DOM events).
 
@@ -4699,7 +4699,7 @@ describe('coverage: drawn edge label declutter gate (onTick, real ticks)', () =>
       timeout: NODE_COUNT_TIMEOUT,
     });
     await aTimeout(100); // let at least one real tick run onTick()'s edge-label loop
-    expect(el.shadowRoot!.querySelector('[part="link-label"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="link-label"]')) == null).to.be.true;
   });
 
   it('hides a drawn edge label once its measured width exceeds the length-declutter gate (visibility toggle)', async () => {
@@ -5103,7 +5103,7 @@ describe('coverage: announcement-sink re-sync and camera/color-resolution edge c
   });
 });
 
-describe('coverage: canvas pointer/hover edge cases (batch 2)', () => {
+describe('coverage: canvas pointer and hover edge cases', () => {
   it('redrawPickCanvas/hitTest/nodeAtCanvasPoint/updateCanvasTooltip no-op when there is no canvas surface at all (svg renderer)', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
@@ -5607,7 +5607,7 @@ describe('coverage: selection and keyboard edge cases', () => {
   });
 });
 
-describe('coverage: remaining branch gaps (batch 3)', () => {
+describe('coverage: remaining branch gaps', () => {
 
   it('tweenCamera jumps in a single frame (t=1) when --lr-transition-base resolves to a non-positive duration', async () => {
     const el = (await fixture(html`<lr-graph width="200" height="200"></lr-graph>`)) as LyraGraph;
@@ -5992,10 +5992,9 @@ describe('styling', () => {
   });
 });
 
-// Regression coverage for the lifecycle-optional-peer-missing-fails-silently defect class --
-// when the optional `d3` peers fail to load, <lr-graph> must fail closed into a visible,
-// accessible visible error state plus a light-DOM assertive announcement instead of leaving a
-// permanently blank surface.
+// A missing optional D3 peer must fail closed during lifecycle-driven initialization. When the
+// optional `d3` peers fail to load, <lr-graph> must render a visible, accessible error state plus
+// a light-DOM assertive announcement instead of leaving a permanently blank surface.
 describe('optional d3 peer failure', () => {
   it('renders a visible, accessible error state instead of a blank surface when the d3 peers fail to load', async () => {
     // Deliberately not using fixture(): loadLibrary must be overridden *before* the element ever

@@ -476,12 +476,12 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
    * Silent, like the native method: it updates `value`, the submitted form value, and validity,
    * but emits no `input`/`change`. A stepper *button* is a user edit and emits them itself.
    */
-  stepUp(steps = 1): void {
+  stepUp(steps: number = 1): void {
     this.applyStep('up', steps);
   }
 
   /** Decrementing counterpart of `stepUp()`, with the same signature and the same silence. */
-  stepDown(steps = 1): void {
+  stepDown(steps: number = 1): void {
     this.applyStep('down', steps);
   }
 
@@ -675,7 +675,7 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     // Marking `touched` for it was, depending on timing, capable of reentering that same in-flight
     // update and tripping Lit's dev-mode "scheduled an update after an update completed" warning
     // for a state flip nothing observable needed -- a disabled control is barred from validation
-    // regardless (fr_asxOgk4UhNB07xevCWwFVQ).
+    // regardless.
     if (!this.effectiveDisabled) this.touched = true;
     relayNativeEvent(this, event);
     this.emit('lr-blur');

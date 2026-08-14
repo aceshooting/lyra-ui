@@ -129,6 +129,7 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
   private resolvedLazy?: { def: ToolRendererDefinition; resolved: ToolRendererDefinition };
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (
       !this.hasUpdated ||
       changed.has('toolName') ||

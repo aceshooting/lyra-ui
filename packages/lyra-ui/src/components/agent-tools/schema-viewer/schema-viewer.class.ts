@@ -136,6 +136,7 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
   }
 
   protected override updated(_changed: PropertyValues<this>): void {
+    super.updated(_changed);
     const nodeText = this.renderRoot.querySelector('[part="limit"]')?.textContent?.trim() ?? '';
     const issueText = this.renderRoot.querySelector('[part="issue-limit"]')?.textContent?.trim() ?? '';
     if (!this.suppressNextLimitAnnouncement) {

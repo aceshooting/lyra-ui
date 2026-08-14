@@ -482,7 +482,7 @@ describe('lr-video public contract', () => {
       const standard = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
       expect(button(standard, 'play') !== null).to.be.true;
       expect(button(standard, 'fullscreen') !== null).to.be.true;
-      expect(standard.shadowRoot!.querySelector('[data-control="rate"]')).to.equal(null);
+      expect((standard.shadowRoot!.querySelector('[data-control="rate"]')) === (null)).to.equal(true);
       expect((button(standard, 'picture-in-picture')) === (null)).to.equal(true);
       const full = await fixture<LyraVideo>(html`<lr-video controls="full"></lr-video>`);
       expect(full.shadowRoot!.querySelector('[data-control="rate"]') !== null).to.be.true;
@@ -490,7 +490,7 @@ describe('lr-video public contract', () => {
       const none = await fixture<LyraVideo>(html`
         <lr-video controls="none" poster="https://example.test/poster.jpg"></lr-video>
       `);
-      expect(none.shadowRoot!.querySelector('[part="controls-overlay"]')).to.equal(null);
+      expect((none.shadowRoot!.querySelector('[part="controls-overlay"]')) === (null)).to.equal(true);
       expect(none.shadowRoot!.querySelector('[part="poster-overlay"]') !== null).to.be.true;
       Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, value: false });
       Object.defineProperty(document, 'pictureInPictureEnabled', { configurable: true, value: false });
@@ -776,7 +776,7 @@ describe('lr-video public contract', () => {
       await aTimeout(0);
       const internal = el as unknown as { thumbnailCues: unknown[] };
       expect(internal.thumbnailCues.length).to.equal(0);
-      expect(el.shadowRoot!.querySelector('[part="thumbnail"]')).to.equal(null);
+      expect((el.shadowRoot!.querySelector('[part="thumbnail"]')) === (null)).to.equal(true);
     } finally {
       window.fetch = originalFetch;
     }
@@ -845,7 +845,7 @@ describe('lr-video public contract', () => {
     track.dispatchEvent(new Event('cuechange'));
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="caption"]')?.textContent).to.equal('Hello world');
-    expect(el.shadowRoot!.querySelector('[part="controls-overlay"]')).to.equal(null);
+    expect((el.shadowRoot!.querySelector('[part="controls-overlay"]')) === (null)).to.equal(true);
     await expect(el).to.be.accessible();
   });
 
@@ -1446,7 +1446,7 @@ describe('lr-video control surface', () => {
     await el.updateComplete;
     timeline.dispatchEvent(new PointerEvent('pointerleave', { bubbles: true }));
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="thumbnail"]')).to.equal(null);
+    expect((el.shadowRoot!.querySelector('[part="thumbnail"]')) === (null)).to.equal(true);
   });
 });
 
@@ -1708,7 +1708,7 @@ describe('lr-video coverage gap-filling', () => {
     expect(el.duration).to.equal(0);
     expect(el.currentTime).to.equal(0);
     await aTimeout(0);
-    expect(el.shadowRoot!.querySelector('[part="caption"]')).to.equal(null);
+    expect((el.shadowRoot!.querySelector('[part="caption"]')) === (null)).to.equal(true);
     expect((el as unknown as { captionTracks: unknown[] }).captionTracks.length).to.equal(0);
   });
 

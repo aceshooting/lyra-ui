@@ -108,9 +108,9 @@ it('renders a marker on cells whose item sets marker: true, and none otherwise',
   el.categories = categories;
   await el.updateComplete;
   const cells = [...el.shadowRoot!.querySelectorAll('[part="cell"]')] as HTMLElement[];
-  expect(cells[0].querySelector('[part="marker"]')).to.not.exist;
+  expect((cells[0].querySelector('[part="marker"]')) == null).to.be.true;
   expect(cells[1].querySelector('[part="marker"]')).to.exist;
-  expect(cells[2].querySelector('[part="marker"]')).to.not.exist;
+  expect((cells[2].querySelector('[part="marker"]')) == null).to.be.true;
 });
 
 it('is a labeled list whose items expose their individual details', async () => {
@@ -420,7 +420,7 @@ describe('category legend', () => {
     await el.updateComplete;
     expect(el.showLegend).to.be.false;
     expect(el.hasAttribute('show-legend')).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="legend"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="legend"]')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('list');
     expect(el.shadowRoot!.querySelectorAll('[part="cell"]')).to.have.length(3);
   });
@@ -531,7 +531,7 @@ describe('marker legend entry', () => {
     expect(entries.length).to.equal(4); // 3 categories + the marker row
     const last = entries[3]!;
     expect(last.querySelector('[part="legend-marker-swatch"]')).to.exist;
-    expect(last.querySelector('[part="legend-swatch"]')).to.not.exist;
+    expect((last.querySelector('[part="legend-swatch"]')) == null).to.be.true;
     expect(last.querySelector('[part="legend-label"]')!.textContent!.trim()).to.equal('Subagent');
     // ...and only the marker row carries it.
     expect(el.shadowRoot!.querySelectorAll('[part="legend-marker-swatch"]').length).to.equal(1);
@@ -543,10 +543,10 @@ describe('marker legend entry', () => {
     el.categories = categories;
     await el.updateComplete;
     expect(el.markerLabel).to.equal(undefined);
-    expect(el.shadowRoot!.querySelector('[part="legend-marker-swatch"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="legend-marker-swatch"]')) == null).to.be.true;
     const legend = el.shadowRoot!.querySelector('[part="legend"]')!;
     expect(legend.querySelectorAll('[part="legend-item"]')).to.have.length(2);
-    expect(legend.querySelector('[part="legend-marker-swatch"]')).to.not.exist;
+    expect((legend.querySelector('[part="legend-marker-swatch"]')) == null).to.be.true;
   });
 
   it('reproduces the cell marker treatment: a neutral chip with a bottom bar in the marker color', async () => {
@@ -612,7 +612,7 @@ describe('marker legend entry', () => {
 
   it('renders no legend at all when markerLabel is set but showLegend is off', async () => {
     const el = await strip(html`<lr-sequence-strip marker-label="Subagent"></lr-sequence-strip>`);
-    expect(el.shadowRoot!.querySelector('[part="legend"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="legend"]')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.contain('Subagent: 1');
   });
 

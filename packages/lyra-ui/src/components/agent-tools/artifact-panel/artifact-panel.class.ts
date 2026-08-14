@@ -1,3 +1,4 @@
+import type { PropertyValues } from 'lit';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -124,7 +125,8 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
 
   @state() private hasCodeSlot = false;
 
-  protected override willUpdate(): void {
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasCodeSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'code');
       if (!this.hasCodeSlot && this.view === 'code') this.view = 'preview';

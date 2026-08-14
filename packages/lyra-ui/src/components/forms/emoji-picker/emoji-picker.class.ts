@@ -280,6 +280,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.syncGeometryProbe();
     // Re-arms the geometry sensor after a reconnect; the cache is deliberately kept across the
     // disconnect, so the first delivery here still re-renders if the tokens moved while detached.
     this.observeGeometryProbe();
@@ -338,6 +339,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   private gridResizeObserverDocument?: Document;
   private geometryProbe?: { root: HTMLElement; item: HTMLElement; gap: HTMLElement; row: HTMLElement };
   private geometryCache?: EmojiPickerGeometry;
+  private liveGeometryReady = false;
   private geometryObserver?: ResizeObserver;
   private geometryObserverDocument?: Document;
   private geometryObserverRoot?: HTMLElement;
@@ -414,10 +416,11 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     return this.geometryCache;
   }
 
-  /** Creates the measurement probe the first time the windowed path needs it. Runs before
-   *  `render()` so the very first windowed render already measures real pixels. */
+  /** Resolves first-render geometry in a browser-only mount. The permanent probe is emitted by
+   * `render()` so SSR and hydration own the same declarative nodes; this temporary box exists only
+   * long enough to cache used pixels before the first browser render, then is removed. */
   private syncGeometryProbe(): void {
-    if (this.geometryProbe || !this.isVirtualized) return;
+    if (this.geometryProbe || !this.isVirtualized || !this.ownerDocument) return;
     const makeProbe = (name: string): HTMLDivElement => {
       const probe = this.ownerDocument.createElement('div');
       probe.dataset['probe'] = name;
@@ -431,7 +434,45 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     root.append(item, gap, row);
     this.renderRoot.append(root);
     this.geometryProbe = { root, item, gap, row };
+    // Force and retain used geometry while the temporary boxes participate in layout; render()
+    // consumes this cache after the boxes have been removed.
+    this.geometry();
+    root.remove();
+    this.geometryProbe = undefined;
+  }
+
+  /** Adopts render()'s permanent declarative probe after the update and arms its invalidation
+   * observer. On hydration, a non-default CSS override corrects on the next animation frame so the
+   * server-owned tree has already completed its identity-preserving first reuse pass. */
+  private bindRenderedGeometryProbe(): void {
+    const root = this.renderRoot?.querySelector<HTMLElement>('[data-probe="root"]');
+    const item = root?.querySelector<HTMLElement>('[data-probe="item"]');
+    const gap = root?.querySelector<HTMLElement>('[data-probe="gap"]');
+    const row = root?.querySelector<HTMLElement>('[data-probe="row"]');
+    if (!root || !item || !gap || !row) return;
+    if (this.geometryProbe?.root === root) {
+      this.observeGeometryProbe();
+      return;
+    }
+    const prior = this.geometryCache ?? {
+      itemSize: ITEM_SIZE_FALLBACK,
+      gap: GAP_FALLBACK,
+      rowHeight: VIRTUAL_ROW_HEIGHT_FALLBACK,
+    };
+    this.geometryProbe = { root, item, gap, row };
+    this.geometryCache = undefined;
+    const next = this.geometry();
+    this.liveGeometryReady = true;
     this.observeGeometryProbe();
+    if (
+      prior.itemSize !== next.itemSize ||
+      prior.gap !== next.gap ||
+      prior.rowHeight !== next.rowHeight
+    ) {
+      this.ownerDocument.defaultView?.requestAnimationFrame(() => {
+        if (this.isConnected && this.geometryProbe?.root === root) this.requestUpdate();
+      });
+    }
   }
 
   /** The probe boxes double as the change sensor: anything that can move the geometry -- a token
@@ -522,7 +563,9 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
    *  flex-wrap column count is fluid (container width, emoji font metrics). */
   private columnsPerRow(): number {
     if (this.isVirtualized) {
-      const grid = this.renderRoot.querySelector<HTMLElement>('[part="grid"]');
+      const grid = this.liveGeometryReady
+        ? this.renderRoot?.querySelector<HTMLElement>('[part="grid"]')
+        : undefined;
       const width = grid?.clientWidth ?? 0;
       const { itemSize, gap } = this.geometry();
       return Math.min(MAX_VIRTUAL_COLUMNS, Math.max(1, Math.floor((Math.max(width, itemSize) + gap) / (itemSize + gap))));
@@ -607,7 +650,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     // already reads true here whenever this is that case. Marking `touched` for it was, depending
     // on timing, capable of reentering that same in-flight update and tripping Lit's dev-mode
     // "scheduled an update after an update completed" warning for a state flip nothing observable
-    // needed -- a disabled control is barred from validation regardless (fr_asxOgk4UhNB07xevCWwFVQ).
+    // needed -- a disabled control is barred from validation regardless.
     if (!this.effectiveDisabled) this.touched = true;
     this.emit('blur');
   };
@@ -738,7 +781,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   }
 
   private syncGridObserver(): void {
-    const grid = this.renderRoot.querySelector<HTMLElement>('[part="grid"]');
+    const grid = this.renderRoot?.querySelector<HTMLElement>('[part="grid"]');
     const virtualized = this.isVirtualized;
     const ownerDocument = this.ownerDocument;
     if (
@@ -787,15 +830,20 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (this.isVirtualized && this.geometryProbe) this.geometryCache = undefined;
     this.syncGeometryProbe();
     if (!this.hasUpdated) {
-      this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
-      this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
-      this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
+      this.seedFirstRenderState(() => {
+        this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
+        this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
+        this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
+      });
     }
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    this.bindRenderedGeometryProbe();
     this.syncGridObserver();
     if (!changed.has('queryText') && !changed.has('groups')) {
       this.restorePendingGridFocus();
@@ -901,7 +949,9 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   private renderVirtualRows(): TemplateResult {
     const rows = this.virtualRows();
     const rowHeight = this.geometry().rowHeight;
-    const grid = this.renderRoot.querySelector<HTMLElement>('[part="grid"]');
+    const grid = this.liveGeometryReady
+      ? this.renderRoot?.querySelector<HTMLElement>('[part="grid"]')
+      : undefined;
     const viewportHeight = grid?.clientHeight || 256;
     const start = Math.max(0, Math.floor(this.virtualScrollTop / rowHeight) - 3);
     const end = Math.min(rows.length, Math.ceil((this.virtualScrollTop + viewportHeight) / rowHeight) + 3);
@@ -986,6 +1036,11 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
         <div part="error" id=${this.errorId} ?hidden=${!hasError}>
           ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
         </div>
+      </div>
+      <div data-probe="root" aria-hidden="true">
+        <div data-probe="item"></div>
+        <div data-probe="gap"></div>
+        <div data-probe="row"></div>
       </div>
     `;
   }

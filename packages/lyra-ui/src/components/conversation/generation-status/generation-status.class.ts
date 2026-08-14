@@ -290,6 +290,7 @@ export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventM
   // component already active correctly seeds `elapsedMs` with no separate
   // first-update special case needed.
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('active') && this.active) {
       if (this.validStartedAt == null) this.fallbackStartMs = Date.now();
       this.elapsedMs = this.computeElapsedMs();
@@ -312,6 +313,7 @@ export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventM
   // property write), so it belongs in `updated()`, unlike the `elapsedMs`
   // computation above.
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('active')) {
       if (this.active) this.startTicker();
       else this.stopTicker();

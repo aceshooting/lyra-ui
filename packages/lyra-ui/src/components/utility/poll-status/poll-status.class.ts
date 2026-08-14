@@ -117,6 +117,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('nextInMs')) {
       if (this.nextInMs != null) {
         // A NaN/negative nextInMs (a bad attribute, or a stray programmatic assignment) must not
@@ -146,6 +147,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     const wasMounting = this.isMounting;
     this.isMounting = false;
     if (changed.has('nextInMs')) {

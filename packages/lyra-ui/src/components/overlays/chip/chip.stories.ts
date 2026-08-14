@@ -70,6 +70,23 @@ export const Removable: Story = {
   `,
 };
 
+export const Disabled: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`disabled` reaches the active native control in both interaction modes, blocks focus and activation, and suppresses selection/removal requests.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+      <lr-chip variant="brand" toggleable disabled>Disabled toggle</lr-chip>
+      <lr-chip variant="danger" removable disabled>Disabled remove</lr-chip>
+    </div>
+  `,
+};
+
 export const WithIcon: Story = {
   name: 'With a leading icon/dot',
   render: () => html`

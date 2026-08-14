@@ -25,6 +25,7 @@
 #   ./scripts/ci.sh --platform-matrix
 set -euo pipefail
 cd "$(dirname "$0")/.."
+CI_SH_ROOT="$PWD"
 
 # GitHub Actions sets this for every job. Several tools change their behavior
 # when running in CI, so make the local run use the same setting.
@@ -150,10 +151,14 @@ run_with_toolchain() {
   local node_bin="$1"
   local pnpm_bin="$2"
   shift 2
-  # pnpm's shebang resolves `node` through PATH. Put the selected Node first,
-  # and disable pnpm's packageManager self-reexec just like the platform job.
-  PATH="$(dirname "$node_bin"):$PATH" \
+  # Lifecycle scripts can invoke `pnpm` again. The proxy reapplies the selected
+  # package manager on every nested invocation; pnpm serializes a false boolean
+  # config value as an empty environment variable, which otherwise re-enables
+  # packageManager switching in the child process.
+  PATH="$CI_SH_ROOT/scripts/ci-bin:$(dirname "$node_bin"):$PATH" \
+    CI_SH_SELECTED_PNPM_BIN="$pnpm_bin" \
     CI=true npm_config_manage_package_manager_versions=false \
+    npm_config_scripts_prepend_node_path=false \
     "$pnpm_bin" "$@"
 }
 

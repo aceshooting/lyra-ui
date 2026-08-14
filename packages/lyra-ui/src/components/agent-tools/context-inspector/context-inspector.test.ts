@@ -20,8 +20,8 @@ it('renders the empty state when segments is empty (the default), with no meter/
   const el = (await fixture(html`<lr-context-inspector></lr-context-inspector>`)) as LyraContextInspector;
   expect(el.segments).to.deep.equal([]);
   expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
-  expect(el.shadowRoot!.querySelector('lr-context-meter')).to.not.exist;
-  expect(el.shadowRoot!.querySelector('[part="toolbar"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('lr-context-meter')) == null).to.be.true;
+  expect((el.shadowRoot!.querySelector('[part="toolbar"]')) == null).to.be.true;
 });
 
 it('maps segments/total/label onto the embedded lr-context-meter', async () => {
@@ -59,7 +59,7 @@ it('renders a citation badge only for segments carrying a citation, numbered seq
   ];
   await el.updateComplete;
   const rows = el.shadowRoot!.querySelectorAll('[part="segment"]');
-  expect(rows[0]!.querySelector('lr-citation-badge')).to.not.exist;
+  expect((rows[0]!.querySelector('lr-citation-badge')) == null).to.be.true;
   const badge1 = rows[1]!.querySelector('lr-citation-badge')!;
   expect(badge1.getAttribute('source-id')).to.equal('doc-1');
   expect(badge1.getAttribute('index')).to.equal('1');
@@ -88,7 +88,7 @@ it('renders a truncation-boundary marker only for truncated segments, with omitt
   ];
   await el.updateComplete;
   const rows = [...el.shadowRoot!.querySelectorAll('[part="segment"]')];
-  expect(rows[0]!.querySelector('[part="truncation-boundary"]')).to.not.exist;
+  expect((rows[0]!.querySelector('[part="truncation-boundary"]')) == null).to.be.true;
   expect(rows[1]!.querySelector('[part="truncation-boundary"]')!.textContent).to.equal('Truncated');
   expect(rows[2]!.querySelector('[part="truncation-boundary"]')!.textContent).to.include('40');
 });

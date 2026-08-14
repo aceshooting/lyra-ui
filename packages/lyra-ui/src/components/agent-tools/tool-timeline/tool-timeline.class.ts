@@ -15,9 +15,9 @@ import { LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_
 
 
 /**
- * One entry in a `<lr-tool-timeline>`. Extends `ToolInvocation` (`src/ai/types.ts`) with exactly
- * the timeline-specific fields the roadmap calls for that a bare invocation record doesn't carry
- * on its own: when the call ran (`startedAt`/`endedAt`, from which duration is derived), how many
+ * One entry in a `<lr-tool-timeline>`. Extends `ToolInvocation` (`src/ai/types.ts`) with the
+ * timeline-specific fields a bare invocation record doesn't carry on its own: when the call ran
+ * (`startedAt`/`endedAt`, from which duration is derived), how many
  * times it was retried before landing on its current `status`, which of its `args`/`result`/
  * `error` fields should render masked, and a human-in-the-loop approval decision. The inherited
  * `ToolInvocation` fields still assign directly onto `<lr-tool-call-chip>`/`<lr-tool-result-view>`
@@ -222,6 +222,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('entries') && this.reviewingEntryId !== undefined) {
       const still = this.entries.find((entry) => entry.id === this.reviewingEntryId);
       if (!still || !(still.needsApproval && still.approved === undefined)) {

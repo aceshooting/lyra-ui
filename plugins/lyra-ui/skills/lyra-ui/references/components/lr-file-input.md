@@ -6,7 +6,8 @@
 - **Class** `LyraFileInput`, also available unregistered from `@aceshooting/lyra-ui/components/media/file-input/file-input.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecations** none
+- **Deprecated part** `base` since `8.2.3`; use part `::part(file-input)`; removal not before `10.0.0` — The file-input part names the interactive picker surface; base remains on that same node during the compatibility window.
+- **Deprecated part** `label` since `8.2.3`; use part `::part(form-control-label)`; removal not before `10.0.0` — The form-control-label part follows the shared form-control vocabulary; label remains on that same node during the compatibility window.
 - **Optional peers** none
 - **Themeable via** 22 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

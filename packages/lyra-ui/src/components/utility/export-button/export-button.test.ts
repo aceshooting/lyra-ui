@@ -163,7 +163,7 @@ it('rejects open state when there is no format menu and emits no show event', as
   await el.updateComplete;
   expect(el.open).to.be.false;
   expect(el.hasAttribute('open')).to.be.false;
-  expect(el.shadowRoot!.querySelector('[part="menu"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="menu"]')) == null).to.be.true;
   expect(shows).to.equal(0);
 });
 

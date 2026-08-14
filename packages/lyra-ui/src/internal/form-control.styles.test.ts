@@ -25,7 +25,7 @@ describe('the shared required marker', () => {
 
   it('renders on lr-file-input, which shipped no marker of any kind before', async () => {
     const el = await fixture(html`<lr-file-input label="Docs" required></lr-file-input>`);
-    expect(markerFor(el, '[part="form-control-label"]').content).to.contain('*');
+    expect(markerFor(el, '[part~="form-control-label"]').content).to.contain('*');
   });
 
   it('renders on lr-known-date, which attaches it to the legend box', async () => {

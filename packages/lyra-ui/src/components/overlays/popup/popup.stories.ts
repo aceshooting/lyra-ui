@@ -162,6 +162,14 @@ export const HoverBridge: StoryObj = {
 
 export const ExternalAnchor: StoryObj = {
   name: 'Anchored by id (for)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`active` remains the requested state if this same-root id is temporarily absent. The popup stays hidden until a live target is positioned, and automatically follows later insertion, removal, replacement, or id transfer.',
+      },
+    },
+  },
   render: () => html`
     <div style="padding: 4rem;">
       <button id="popup-external-anchor">Elsewhere in the tree</button>

@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   activateOverlay,
   collectFocusableElements,
+  type OverlayDeactivateOptions,
   type OverlayHandle,
 } from '../../../internal/overlay-manager.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -315,6 +316,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
       this.detectLightDomChrome();
@@ -331,6 +333,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   // Runs after render so the manager can resolve the panel and its composed
   // focus targets, including controls projected through either slot.
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('open') && this.open && this.isConnected && this.modalSurface) {
       this.enterTopLayer();
       this.focusInitial();
@@ -722,8 +725,8 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     if (this.externalModalDepth > 0) this.overlay.suspend();
   }
 
-  protected deactivateOverlay(): void {
-    this.overlay?.deactivate();
+  protected deactivateOverlay(options?: OverlayDeactivateOptions): void {
+    this.overlay?.deactivate(options);
     this.overlay = undefined;
   }
 

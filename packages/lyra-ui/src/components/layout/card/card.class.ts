@@ -166,6 +166,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   private contentObserverGeneration = 0;
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasHeaderSlot = Array.from(this.children).some(
         (el) => el.getAttribute("slot") === "header"

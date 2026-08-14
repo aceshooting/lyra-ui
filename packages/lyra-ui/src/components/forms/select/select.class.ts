@@ -1372,8 +1372,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     // becomes disabled -- plain HTML behavior, not specific to custom elements) is not a real
     // user interaction and must not mark the field touched: depending on exact timing, doing so
     // could reenter an in-flight Lit update and trip Lit's dev-mode "scheduled an update after an
-    // update completed" warning. See fr_asxOgk4UhNB07xevCWwFVQ (same fix as `<lr-input>`'s
-    // `onBlur`).
+    // update completed" warning. This is the same fix as `<lr-input>`'s `onBlur`.
     if (!this.effectiveDisabled) {
       this.touched = true;
       this.hasInteracted = true;

@@ -121,7 +121,7 @@ it('resolves to inline in mode="auto" on a viewport wider than the breakpoint (t
   )) as LyraResponsivePanel;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   expect(panel.hasAttribute("role")).to.be.false;
-  expect(el.shadowRoot!.querySelector('[part="backdrop"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="backdrop"]')) == null).to.be.true;
 });
 
 it('forces the overlay presentation regardless of viewport width when mode="overlay"', async () => {
@@ -145,7 +145,7 @@ it("forces the inline presentation even at a breakpoint that would otherwise res
   )) as LyraResponsivePanel;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   expect(panel.hasAttribute("role")).to.be.false;
-  expect(el.shadowRoot!.querySelector('[part="backdrop"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="backdrop"]')) == null).to.be.true;
 });
 
 it("uses a real matchMedia query against mobile-breakpoint: an absurdly large breakpoint resolves auto mode to overlay", async () => {

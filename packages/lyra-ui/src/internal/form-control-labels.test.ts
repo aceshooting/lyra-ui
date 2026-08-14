@@ -1,7 +1,9 @@
 import { expect } from '@open-wc/testing';
 import type { ReactiveControllerHost } from 'lit';
 import {
+  EXTERNAL_LABEL_HOST_SEMANTICS,
   ExternalLabelController,
+  type ExternalLabelHostSemanticOperation,
   type ExternalLabelHost,
 } from './form-control-labels.js';
 import { tag } from './prefix.js';
@@ -198,9 +200,11 @@ describe('external FACE label contract', () => {
       const { container, control, label } = mountFace(testCase);
       try {
         await settle(control);
+        const hostOwnsSemantics = EXTERNAL_LABEL_HOST_SEMANTICS in control;
         const expectedName = label.textContent ?? '';
         const namedTargets = composedElements(control).filter(
-          (element) => element !== control && element.getAttribute('aria-label') === expectedName,
+          (element) => (hostOwnsSemantics ? element === control : element !== control)
+            && element.getAttribute('aria-label') === expectedName,
         );
         expect(namedTargets.length, 'the role owner receives the external label name').to.be.greaterThan(0);
 
@@ -208,7 +212,8 @@ describe('external FACE label contract', () => {
         control.setAttribute('aria-label', hostName);
         await settle(control);
         const hostNamedTargets = composedElements(control).filter(
-          (element) => element !== control && element.getAttribute('aria-label') === hostName,
+          (element) => (hostOwnsSemantics ? element === control : element !== control)
+            && element.getAttribute('aria-label') === hostName,
         );
         expect(hostNamedTargets.length, 'host aria-label takes precedence on the role owner').to.be.greaterThan(0);
 
@@ -220,9 +225,14 @@ describe('external FACE label contract', () => {
         }
         label.click();
         await settle(control);
+        const active = deepestActiveElement();
         expect(
-          isComposedDescendant(control, deepestActiveElement()),
-          'label activation focuses a semantic descendant',
+          hostOwnsSemantics
+            ? active === control
+            : active !== control && isComposedDescendant(control, active),
+          hostOwnsSemantics
+            ? 'label activation focuses the opted-in semantic host'
+            : 'label activation focuses a semantic descendant',
         ).to.be.true;
       } finally {
         container.remove();
@@ -597,6 +607,61 @@ describe('external FACE label contract', () => {
     } finally {
       controller.hostDisconnected();
       frame.remove();
+    }
+  });
+
+  it('names and activates a form control whose host owns its role and focus', async () => {
+    const host = document.createElement('div') as ExternalLabelHost & ReactiveControllerHost & {
+      authoredName: string | null;
+      externalName: string | null;
+      [EXTERNAL_LABEL_HOST_SEMANTICS](operation: ExternalLabelHostSemanticOperation): boolean | void;
+    };
+    host.authoredName = null;
+    host.externalName = null;
+    host[EXTERNAL_LABEL_HOST_SEMANTICS] = (operation) => {
+      if (operation.type === 'has-authored-name') return host.authoredName !== null;
+      if (operation.type === 'apply') {
+        host.externalName = operation.name;
+        host.setAttribute('aria-label', operation.name);
+        return;
+      }
+      host.externalName = null;
+      if (host.getAttribute('aria-label') !== operation.appliedName) return;
+      if (operation.hadPrevious) host.setAttribute('aria-label', operation.previous ?? '');
+      else host.removeAttribute('aria-label');
+    };
+    host.tabIndex = 0;
+    host.id = `external-label-control-${++nextFixtureId}`;
+    host.setAttribute('aria-label', 'Generated fallback');
+    const label = document.createElement('label');
+    label.htmlFor = host.id;
+    label.textContent = 'External host label';
+    const controller = new ExternalLabelController(host);
+    document.body.append(label, host);
+    try {
+      controller.hostConnected();
+      expect(host.getAttribute('aria-label')).to.equal('External host label');
+      label.click();
+      await Promise.resolve();
+      expect(document.activeElement === host).to.be.true;
+
+      label.remove();
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(host.getAttribute('aria-label')).to.equal('Generated fallback');
+
+      document.body.append(label);
+      controller.hostUpdated();
+      expect(host.getAttribute('aria-label')).to.equal('External host label');
+      host.authoredName = 'Authored override';
+      host.setAttribute('aria-label', host.authoredName);
+      controller.hostUpdated();
+      expect(host.getAttribute('aria-label')).to.equal('Authored override');
+      expect(host.externalName).to.equal(null);
+    } finally {
+      controller.hostDisconnected();
+      label.remove();
+      host.remove();
     }
   });
 });

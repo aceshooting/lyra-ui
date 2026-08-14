@@ -326,7 +326,10 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.syncTabs();
+    // Lit's server custom-element model cannot expose light-DOM children. During hydration keep
+    // the deterministic native-slot fallback for the first pass, then enhance it into tabs once
+    // real assignment is observable; an ordinary browser-only mount still syncs immediately.
+    this.seedFirstRenderState(this.syncTabs);
     // Each child carries its own individual `slot` attribute (one named slot
     // per tab, unlike lr-split's single default-slot-of-many-panels) -- a
     // brand-new tab's name has no matching `<slot>` to fire `slotchange` on
@@ -1016,7 +1019,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     // DOM node (and any focus on it) attached to that same tab across
     // additions/removals anywhere in the list.
     return html`
-      <slot hidden></slot>
+      <slot ?hidden=${this.tabs.length > 0}></slot>
       <div part="base tab-group">
         <div part="nav">
           ${this.renderScrollControl('start')}

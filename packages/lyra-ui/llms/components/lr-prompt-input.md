@@ -39,8 +39,9 @@ PromptQueueItem[] = []` (all attribute: false); `model: string = ''`; `voice: st
 
 `PromptSuggestion` extends `MentionItem { id, label, description?, icon? }` with optional
 `insertText` (defaults to `label`). `PromptInputAttachment` extends `DocumentRef { id, name,
-mimeType?, uri?, version? }` with `file?`, `size?`, attachment-chip `status?`, and numeric
-`progress?`.
+mimeType?, uri?, version? }` with `file?`, `bytes?` (forwarded to the attachment chip's byte-count
+contract), attachment-chip `status?`, and numeric `progress?`. The former `size?` spelling was
+removed in 9.0.0.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the composed chat input;
 `select()` selects its native text surface. `click()` is inert while disabled. `input:

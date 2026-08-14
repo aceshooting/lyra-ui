@@ -105,7 +105,7 @@ it('does not render the empty state once nodes has at least one entry', async ()
   const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
   el.nodes = [{ id: 'a' }] as FlowNode[];
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="empty"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="empty"]')) == null).to.be.true;
   expect(el.shadowRoot!.querySelector('[part="viewport"]')).to.exist;
 });
 
@@ -416,8 +416,7 @@ it('uses owner CSS escaping and an exact-id fallback for adopted keyboard, drag,
   }
 });
 
-// Compile-time only: proves the shared shapes this task exports match what later tasks in this
-// plan rely on. Never executed.
+// Compile-time only: proves the shared exported shapes used by later feature tests. Never executed.
 function _typeCheck(edge: FlowEdge): void {
   void edge.sourceHandle;
   void edge.targetHandle;
@@ -518,7 +517,7 @@ describe('static rendering', () => {
       await el.updateComplete;
       el.nodes = [{ id: 'a' }];
       await el.updateComplete;
-      expect(el.querySelector('[node-id="b"]')).to.not.exist;
+      expect((el.querySelector('[node-id="b"]')) == null).to.be.true;
     } finally {
       console.warn = originalWarn;
     }
@@ -542,7 +541,7 @@ describe('static rendering', () => {
     el.edges = [{ id: 'a-ghost', source: 'a', target: 'ghost' }];
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="stub"]')).to.exist;
-    expect(el.shadowRoot!.querySelector('[part="edge"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="edge"]')) == null).to.be.true;
   });
 
   it('drops an edge whose source resolves to no node', async () => {
@@ -550,8 +549,8 @@ describe('static rendering', () => {
     el.nodes = nodes;
     el.edges = [{ id: 'ghost-a', source: 'ghost', target: 'a' }];
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="edge"]')).to.not.exist;
-    expect(el.shadowRoot!.querySelector('[part="stub"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="edge"]')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part="stub"]')) == null).to.be.true;
   });
 
   it('forwards a host aria-label to the viewport region, falling back to a node/edge-count summary', async () => {
@@ -648,7 +647,7 @@ describe('static rendering', () => {
     expect(el.querySelector('[node-id="b"]')).to.exist;
     el.nodes = [{ id: 'a' }];
     await el.updateComplete;
-    expect(el.querySelector('[node-id="b"]')).to.not.exist;
+    expect((el.querySelector('[node-id="b"]')) == null).to.be.true;
   });
 
   it('skips pushing props for a node whose card was removed independently of nodes', async () => {
@@ -674,8 +673,7 @@ describe('auto-layout', () => {
     const wrapper = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
     // Chromium's CSSOM canonicalizes a `translate()` transform's serialized form with a space after
     // each comma regardless of how it was set (Lit's literal `translate(${x}px,${y}px)` attribute
-    // string included) -- corrected from the plan brief's literal no-space expectation to match the
-    // Compare coordinates rather than engine-specific CSSOM serialization.
+    // string included). Compare coordinates rather than engine-specific CSSOM serialization.
     expect(transformCoordinates(wrapper.style.transform)).to.deep.equal([40, 40]);
   });
 
@@ -1447,12 +1445,8 @@ describe('node drag', () => {
     wrapper.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'ArrowRight', ctrlKey: true, bubbles: true, cancelable: true }),
     );
-    // Deviation from the plan brief's literal expected value (`{ id: 'a', position: { x: 48, y: 40 } }`):
-    // same class of fix as the keyboard-connect test above -- the `LyraFlowCanvasEventMap` type for
-    // `lr-node-move` (Slice A) and the sibling pointer-drag test just above both require `previous`
-    // on every emission, and `nudgeNode()`'s own implementation code (as given by the brief)
-    // deliberately computes and includes it. The brief's literal assertion omitting `previous` here
-    // looks like the same kind of authoring slip, so the expectation is corrected to match.
+    // `LyraFlowCanvasEventMap` and the sibling pointer-drag test require `previous` on every
+    // lr-node-move emission, and `nudgeNode()` deliberately computes and includes it.
     expect(detail).to.deep.equal({ id: 'a', position: { x: 48, y: 40 }, previous: { x: 40, y: 40 } });
   });
 
@@ -1568,7 +1562,7 @@ describe('connect gesture', () => {
     const outputHandle = makeHandle('output', 'out');
     wrapperA.appendChild(outputHandle);
     outputHandle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, clientY: 0, bubbles: true, composed: true }));
-    expect(el.shadowRoot!.querySelector('[part="connection-line"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="connection-line"]')) == null).to.be.true;
   });
 
   it('a live locked transition retires an active pointer connect without committing', async () => {
@@ -1673,15 +1667,11 @@ describe('connect gesture', () => {
     el.addEventListener('lr-connect', (e) => (detail = (e as CustomEvent).detail));
     controlA.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true }));
     controlA.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
-    // Deviation from the plan brief's literal expected value (`{ source: 'a', target: 'b' }`): the
-    // brief's own `commitKeyboardConnect()` implementation code, the `LyraFlowCanvasEventMap` type
-    // (Slice A: `'lr-connect': CustomEvent<{ source; target; sourceHandle; targetHandle }>`), the
+    // `commitKeyboardConnect()`, the `LyraFlowCanvasEventMap` type
+    // (`'lr-connect': CustomEvent<{ source; target; sourceHandle; targetHandle }>`), the
     // class JSDoc (`@event lr-connect - detail: { source, target, sourceHandle, targetHandle }`),
     // and the pointer-gesture connect test just above all agree the emitted detail always carries
-    // `sourceHandle`/`targetHandle`. The brief's literal keyboard-gesture assertion omitting those
-    // two keys looks like an authoring slip inconsistent with its own contract, so the expectation
-    // is corrected here to match the (deliberately handle-computing) implementation instead of
-    // weakening the event's detail shape to satisfy the narrower literal text.
+    // `sourceHandle`/`targetHandle`, so the keyboard gesture asserts the complete event contract.
     expect(detail).to.deep.equal({ source: 'a', target: 'b', sourceHandle: 'out', targetHandle: 'in' });
   });
 
@@ -1964,7 +1954,7 @@ describe('connect gesture', () => {
     // pointerup: the ghost connection line must go away and the gesture must not stay armed.
     window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1 }));
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="connection-line"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="connection-line"]')) == null).to.be.true;
 
     // A later unrelated pointerup over a valid input handle must not commit against stale state.
     inputHandle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 200, clientY: 0, bubbles: true, composed: true }));

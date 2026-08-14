@@ -27,16 +27,26 @@ with `anchorKinds: ['region']` only — no text selection is bound.
 `<lr-pan-zoom>` as its own `.minZoom`/`.maxZoom`/`.zoomStep`, which does the actual
 clamping/normalizing; same names/defaults as `<lr-lightbox>`'s identical trio, both wrapping the
 same pan/zoom surface — `rotation: 0 | 90 | 180 | 270 = 0`
-(reflected), and `annotatable: boolean = false` (reflected).
+(reflected), and `annotatable: boolean = false` (reflected). The inherited anchor-target surface is
+`highlights: LyraHighlight[] = []` (property only; reassign after mutation),
+`activeHighlightId: string | null = null` (attribute `active-highlight-id`),
+`anchor: LyraAnchor | string | null = null` (property only), and readonly
+`anchorKinds: readonly LyraAnchorKind[] = ['region']`.
 
 **Methods:** `rotate()` advances `rotation` by 90°. `zoomIn()`, `zoomOut()`, and `resetZoom()` adjust
-the embedded pan-zoom surface's zoom.
+the embedded pan-zoom surface's zoom. `scrollToAnchor(target: LyraAnchor | string):
+Promise<boolean>` resolves a `region` anchor (or a highlight id) after the image loads, reports
+whether it resolved, and makes an id-addressed match active; the complete image is already inside
+the pan/zoom viewport, so no additional page scroll is needed.
 
 **Events:** `lr-load` (`detail: { naturalWidth, naturalHeight }`), `lr-zoom-change` (`detail: {
 zoom }`), `lr-rotation-change` (`detail: { rotation }`), `lr-fit-change` (`detail: { fit }`),
 `lr-highlight-activate` (`detail: { id }`), `lr-annotation-create` (`detail: { anchor }`, kind
 `'region'`), `lr-anchor-result` (`detail: { found }`), and `lr-render-error` (`detail: { error
 }`).
+
+`lr-text-select` is not part of this raster viewer's event contract because it binds no selectable
+text.
 
 **CSS parts:** `base`, `toolbar`, `fit-control`, `rotate-button`, `annotate-toggle`, `frame` (the
 embedded `lr-pan-zoom`), `image-wrapper`, `image`, `highlight-layer`, `highlight` (carries

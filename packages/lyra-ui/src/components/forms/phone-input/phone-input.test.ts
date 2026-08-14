@@ -374,7 +374,7 @@ it('bridges focus and blur from the shadow input to host-observable events', asy
 });
 
 it('does not mark touched from a blur caused by the control itself becoming disabled', async () => {
-  // Regression test for fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native form control forces
+  // Regression test: disabling a focused native form control forces
   // the browser to blur it -- plain platform behavior, nothing to do with custom elements. That is
   // not a real user interaction, so it must not mark the field touched; unconditionally doing so
   // could reenter an in-flight Lit update and trip Lit's dev-mode "scheduled an update after an
@@ -932,7 +932,7 @@ it('synthesizes a single country row from default-country when no countries or a
   expect(select.options[0]!.value).to.equal('LU');
   // The synthesized row has no calling code, so the "+NN" prefix span is
   // omitted entirely rather than rendering an empty "+".
-  expect(el.shadowRoot!.querySelector('[part="calling-code"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="calling-code"]')) == null).to.be.true;
 });
 
 it('falls back to the raw code when Intl.DisplayNames rejects a malformed synthesized country code', async () => {
@@ -1258,7 +1258,7 @@ it('renders no flag markup while flags stays off', async () => {
     <lr-phone-input label="Mobile" default-country="LU" .adapter=${adapter}></lr-phone-input>
   `)) as LyraPhoneInput;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="flag"]')).to.equal(null);
+  expect((el.shadowRoot!.querySelector('[part="flag"]')) === (null)).to.equal(true);
 });
 
 it('flags renders a decorative compact lr-flag for the selection and keeps it in sync with country changes', async () => {
@@ -1283,7 +1283,7 @@ it('flags renders a decorative compact lr-flag for the selection and keeps it in
 it('flags without any selectable country renders no flag element', async () => {
   const el = (await fixture(html`<lr-phone-input label="Mobile" flags></lr-phone-input>`)) as LyraPhoneInput;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="flag"]')).to.equal(null);
+  expect((el.shadowRoot!.querySelector('[part="flag"]')) === (null)).to.equal(true);
 });
 
 it('is accessible with flags enabled', async () => {

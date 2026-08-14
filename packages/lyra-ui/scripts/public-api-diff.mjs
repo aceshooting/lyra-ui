@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import {
   existsSync,
   mkdtempSync,
@@ -205,10 +206,12 @@ function eventCancelability(event) {
 }
 
 function addEntry(entries, id, surface, semantic, value, label = id) {
+  const entry = { surface, semantic, value, label };
   if (entries.has(id)) {
+    if (JSON.stringify(entries.get(id)) === JSON.stringify(entry)) return;
     throw new Error(`Duplicate normalized public API entry: ${id}`);
   }
-  entries.set(id, { surface, semantic, value, label });
+  entries.set(id, entry);
 }
 
 function addPresence(entries, id, surface, label = id) {
@@ -503,11 +506,13 @@ function normalizeExports(exportsValue, entries, packageFiles = []) {
     .map((file) => `./${String(file).replace(/^\.\//, '').replaceAll(path.sep, '/')}`)
     .sort();
   const wildcardExpansions = [];
+  const targets = new Map();
 
   const addTarget = (specifier, condition, value, label = `${specifier} (${condition})`) => {
     const id = `package-export:${specifier}:${condition}`;
     if (!entries.has(id)) {
       addEntry(entries, id, 'package-export', 'target', value, label);
+      targets.set(id, { specifier, condition, target: value });
     }
   };
 
@@ -516,6 +521,15 @@ function normalizeExports(exportsValue, entries, packageFiles = []) {
     const [targetPrefix, targetSuffix] = target.split('*');
     for (const packageFile of normalizedPackageFiles) {
       if (!packageFile.startsWith(targetPrefix) || !packageFile.endsWith(targetSuffix)) continue;
+      // Broad runtime wildcards also match the declaration siblings that happen to be packed.
+      // Those are type authorities for the `.js` route, not a second supported `.d.ts` import
+      // surface. Explicit `types` wildcard conditions remain eligible.
+      if (
+        !condition.split('.').includes('types')
+        && /\.d\.[cm]?ts$/u.test(packageFile)
+      ) {
+        continue;
+      }
       const captured = packageFile.slice(
         targetPrefix.length,
         packageFile.length - targetSuffix.length || undefined,
@@ -550,8 +564,15 @@ function normalizeExports(exportsValue, entries, packageFiles = []) {
       return;
     }
     if (value && typeof value === 'object') {
-      for (const key of Object.keys(value).sort()) {
+      const keys = Object.keys(value);
+      for (const key of keys) {
         walk(specifier, value[key], [...conditions, key]);
+      }
+      if (keys.length > 1) {
+        const orderId = `package-export:${specifier}:${conditions.join('.') || 'root'}:condition-order`;
+        if (!entries.has(orderId)) {
+          addEntry(entries, orderId, 'package-export', 'order', keys, `${specifier} condition order`);
+        }
       }
     }
   };
@@ -559,16 +580,26 @@ function normalizeExports(exportsValue, entries, packageFiles = []) {
   if (typeof exportsValue === 'string' || Array.isArray(exportsValue)) {
     walk('.', exportsValue);
     addWildcardExpansions();
-    return;
+    return [...targets.values()];
   }
-  for (const specifier of Object.keys(exportsValue ?? {}).sort()) {
-    walk(specifier, exportsValue[specifier]);
+  const rootKeys = Object.keys(exportsValue ?? {});
+  if (rootKeys.length > 0 && rootKeys.every((key) => !key.startsWith('.'))) {
+    // Node's conditional-main sugar: an object whose keys are all conditions is the `.` export,
+    // not a collection of bare package specifiers named `types`, `import`, or `default`.
+    walk('.', exportsValue);
+  } else {
+    for (const specifier of rootKeys.sort()) {
+      walk(specifier, exportsValue[specifier]);
+    }
   }
   addWildcardExpansions();
+  return [...targets.values()];
 }
 
 function normalizedFileKey(file) {
-  return String(file).replace(/^\.\//, '').replaceAll('\\', '/');
+  return path.posix
+    .normalize(String(file).replaceAll('\\', '/'))
+    .replace(/^\.\//, '');
 }
 
 function nodeText(module, node) {
@@ -588,6 +619,7 @@ function propertyName(node, module) {
 function declarationName(node, module) {
   if (!node) return undefined;
   if (node.type === 'VariableDeclarator') return propertyName(node.id, module);
+  if (node.type === 'TSModuleDeclaration') return entityNameParts(node.id)[0];
   return propertyName(node.id, module);
 }
 
@@ -609,11 +641,304 @@ function declarationRecords(node, module) {
   return name ? [{ node, name }] : [];
 }
 
-function parseDeclarationModule(file, source) {
+function symbolPathKey(parts) {
+  return JSON.stringify(parts);
+}
+
+const MODULE_NAMESPACE_SEGMENT = '\0module';
+const ANONYMOUS_DEFAULT_SEGMENT = '\0default';
+
+function rememberSymbol(module, parts, record) {
+  const key = symbolPathKey(parts);
+  const records = module.symbols.get(key) ?? [];
+  records.push({ ...record, path: parts });
+  module.symbols.set(key, records);
+  if (parts.length === 1) {
+    const topLevel = module.declarations.get(parts[0]) ?? [];
+    topLevel.push({ ...record, path: parts });
+    module.declarations.set(parts[0], topLevel);
+  }
+}
+
+function ensureNamespace(module, parts, node) {
+  const key = symbolPathKey(parts);
+  const namespace = module.namespaces.get(key) ?? {
+    path: parts,
+    records: [],
+    members: new Map(),
+  };
+  if (node && !namespace.records.some((record) => record.node === node)) {
+    namespace.records.push({ node, name: parts.at(-1), path: parts });
+  }
+  module.namespaces.set(key, namespace);
+  return namespace;
+}
+
+function exposeNamespaceMember(module, parentPath, exportedName, binding) {
+  const namespace = ensureNamespace(module, parentPath);
+  namespace.members.set(exportedName, binding);
+}
+
+function indexDeclaration(module, declaration, context = [], exported = false) {
+  if (!declaration) return [];
+  if (declaration.type === 'TSModuleDeclaration') {
+    const ownParts = entityNameParts(declaration.id);
+    if (ownParts.length === 0) return [];
+    const fullPath = [...context, ...ownParts];
+    for (let index = 0; index < ownParts.length; index += 1) {
+      const namespacePath = [...context, ...ownParts.slice(0, index + 1)];
+      ensureNamespace(
+        module,
+        namespacePath,
+        index === ownParts.length - 1 ? declaration : undefined,
+      );
+      if ((index > 0 || exported) && namespacePath.length > 1) {
+        exposeNamespaceMember(
+          module,
+          namespacePath.slice(0, -1),
+          namespacePath.at(-1),
+          { kind: 'value', localPath: namespacePath },
+        );
+      }
+    }
+    if (declaration.body?.type === 'TSModuleBlock') {
+      for (const statement of declaration.body.body ?? []) {
+        if (statement.type === 'ExportNamedDeclaration') {
+          if (statement.declaration) {
+            indexDeclaration(module, statement.declaration, fullPath, true);
+          } else {
+            for (const specifier of statement.specifiers ?? []) {
+              const exportedName = propertyName(specifier.exported, module);
+              const localName = propertyName(specifier.local, module);
+              if (!exportedName || !localName) continue;
+              exposeNamespaceMember(module, fullPath, exportedName, {
+                kind:
+                  statement.exportKind === 'type' || specifier.exportKind === 'type'
+                    ? 'type'
+                    : 'value',
+                localPath: [...fullPath, localName],
+                source: statement.source?.value ?? null,
+              });
+            }
+          }
+        } else if (statement.type === 'ExportAllDeclaration') {
+          // Namespace export-stars are rare in declaration output. Keep the explicit namespace
+          // alias form resolvable; plain stars are represented on external modules below.
+          const exportedName = propertyName(statement.exported, module);
+          if (exportedName) {
+            exposeNamespaceMember(module, fullPath, exportedName, {
+              kind: statement.exportKind === 'type' ? 'type' : 'value',
+              local: '*',
+              source: statement.source.value,
+            });
+          }
+        } else {
+          indexDeclaration(module, statement, fullPath, false);
+        }
+      }
+    } else if (declaration.body?.type === 'TSModuleDeclaration') {
+      indexDeclaration(module, declaration.body, fullPath, true);
+    }
+    return [{ name: ownParts[0], path: [...context, ownParts[0]], node: declaration }];
+  }
+
+  const indexed = [];
+  for (const record of declarationRecords(declaration, module)) {
+    const parts = [...context, record.name];
+    rememberSymbol(module, parts, record);
+    if (exported && context.length > 0) {
+      exposeNamespaceMember(module, context, record.name, {
+        kind: declarationKind(record.node),
+        localPath: parts,
+      });
+    }
+    indexed.push({ ...record, path: parts });
+  }
+  return indexed;
+}
+
+function augmentationModuleName(module, node) {
+  if (node.global || node.kind === 'global') return 'global';
+  if (node.id?.type === 'Literal' && typeof node.id.value === 'string') return node.id.value;
+  return undefined;
+}
+
+function augmentationDeclarations(module) {
+  const declarations = [];
+  const visit = (node, moduleName, namespace = []) => {
+    if (!node) return;
+    if (node.type === 'TSModuleDeclaration') {
+      const augmentation = augmentationModuleName(module, node);
+      const nextModule = augmentation ?? moduleName;
+      const nextNamespace = augmentation
+        ? []
+        : [...namespace, ...entityNameParts(node.id)];
+      if (node.body?.type === 'TSModuleBlock') {
+        for (const statement of node.body.body ?? []) {
+          visit(
+            statement.type === 'ExportNamedDeclaration' ? statement.declaration : statement,
+            nextModule,
+            nextNamespace,
+          );
+        }
+      } else {
+        visit(node.body, nextModule, nextNamespace);
+      }
+      return;
+    }
+    if (!moduleName) return;
+    for (const record of declarationRecords(node, module)) {
+      declarations.push({
+        moduleName,
+        namespace,
+        resolved: {
+          module,
+          records: [record],
+          path: [`augmentation:${moduleName}`, ...namespace, record.name],
+        },
+      });
+    }
+  };
+  module.body.forEach((statement) => visit(statement, undefined));
+  return declarations;
+}
+
+function nodePositionKey(node) {
+  return node && Number.isInteger(node.start) && Number.isInteger(node.end)
+    ? `${node.start}:${node.end}`
+    : undefined;
+}
+
+function leftmostEntityIdentifier(node) {
+  if (!node) return undefined;
+  if (node.type === 'Identifier') return node;
+  if (node.type === 'TSQualifiedName') return leftmostEntityIdentifier(node.left);
+  if (node.type === 'MemberExpression' && !node.computed) {
+    return leftmostEntityIdentifier(node.object);
+  }
+  return undefined;
+}
+
+/** Record alpha-equivalent names for every TypeScript type binder. Names are keyed by AST
+ * position, not by spelling, so a nested binder may shadow an outer binder without conflating the
+ * two. The depth/index pair is deterministic across spelling-only edits. */
+function collectTypeBinderNames(module) {
+  const canonical = new Map();
+  const resolveBinder = (scopes, name) => {
+    for (let index = scopes.length - 1; index >= 0; index -= 1) {
+      if (scopes[index].has(name)) return scopes[index].get(name);
+    }
+    return undefined;
+  };
+  const rememberReference = (entity, scopes) => {
+    const identifier = leftmostEntityIdentifier(entity);
+    const replacement = identifier && resolveBinder(scopes, identifier.name);
+    const key = nodePositionKey(identifier);
+    if (replacement && key) canonical.set(key, replacement);
+  };
+  const inferParameters = (node, output = []) => {
+    if (!node || typeof node !== 'object') return output;
+    if (node.type === 'TSInferType' && node.typeParameter) output.push(node.typeParameter);
+    for (const [key, child] of Object.entries(node)) {
+      if (key === 'type' || key === 'start' || key === 'end') continue;
+      if (Array.isArray(child)) child.forEach((item) => inferParameters(item, output));
+      else inferParameters(child, output);
+    }
+    return output;
+  };
+  const binderScope = (parameters, depth) => {
+    const scope = new Map();
+    for (const [index, parameter] of parameters.entries()) {
+      const name = propertyName(parameter.name, module);
+      if (!name) continue;
+      const replacement = `T${depth}_${index}`;
+      scope.set(name, replacement);
+      const key = nodePositionKey(parameter.name);
+      if (key) canonical.set(key, replacement);
+    }
+    return scope;
+  };
+  const visit = (value, scopes = [], handledTypeParameters = false) => {
+    if (!value || typeof value !== 'object') return;
+
+    if (value.type === 'TSConditionalType') {
+      visit(value.checkType, scopes);
+      const parameters = inferParameters(value.extendsType);
+      const scope = binderScope(parameters, scopes.length);
+      visit(value.extendsType, [...scopes, scope]);
+      visit(value.trueType, [...scopes, scope]);
+      visit(value.falseType, scopes);
+      return;
+    }
+
+    if (value.type === 'TSMappedType') {
+      visit(value.constraint, scopes);
+      const parameter = { name: value.key };
+      const scope = binderScope([parameter], scopes.length);
+      visit(value.nameType, [...scopes, scope]);
+      visit(value.typeAnnotation, [...scopes, scope]);
+      return;
+    }
+
+    let activeScopes = scopes;
+    const parameters = handledTypeParameters ? [] : value.typeParameters?.params ?? [];
+    if (parameters.length > 0) {
+      const scope = binderScope(parameters, scopes.length);
+      activeScopes = [...scopes, scope];
+      for (const parameter of parameters) {
+        visit(parameter.constraint, activeScopes);
+        visit(parameter.default, activeScopes);
+      }
+    }
+
+    if (value.type === 'TSTypeReference') rememberReference(value.typeName, activeScopes);
+    else if (value.type === 'TSInterfaceHeritage' || value.type === 'TSClassImplements') {
+      rememberReference(value.expression, activeScopes);
+    } else if (value.type === 'ClassDeclaration') {
+      rememberReference(value.superClass, activeScopes);
+    }
+
+    for (const [key, child] of Object.entries(value)) {
+      if (key === 'type' || key === 'start' || key === 'end' || key === 'typeParameters') continue;
+      if (Array.isArray(child)) child.forEach((item) => visit(item, activeScopes));
+      else visit(child, activeScopes);
+    }
+  };
+  module.body.forEach((statement) => visit(statement));
+  return canonical;
+}
+
+function parseDeclarationModule(file, source, { publicGraph = false } = {}) {
   const parsed = parseSync(file, source, { lang: 'ts', sourceType: 'module' });
   if (parsed.errors.length > 0) {
     const details = parsed.errors.map((error) => error.message ?? String(error)).join('\n');
     throw new SyntaxError(`${file} could not be parsed:\n${details}`);
+  }
+  if (publicGraph) {
+    const explicitlyUnsupported = parsed.program.body.find((statement) =>
+      statement.type === 'TSNamespaceExportDeclaration'
+        || statement.type === 'TSExportAssignment');
+    if (explicitlyUnsupported) {
+      throw new SyntaxError(
+        `Unsupported public declaration form in ${file}: ${explicitlyUnsupported.type}.`,
+      );
+    }
+    const isExternalModule = parsed.program.body.some((statement) =>
+      statement.type === 'ImportDeclaration'
+        || statement.type === 'ExportNamedDeclaration'
+        || statement.type === 'ExportDefaultDeclaration'
+        || statement.type === 'ExportAllDeclaration');
+    const unsupportedGlobalScriptStatement = !isExternalModule
+      && parsed.program.body.find((statement) =>
+        statement.type !== 'EmptyStatement'
+          && !(statement.type === 'TSModuleDeclaration'
+            && statement.id?.type === 'Literal'
+            && typeof statement.id.value === 'string'));
+    if (unsupportedGlobalScriptStatement) {
+      throw new SyntaxError(
+        `Unsupported public declaration form in ${file}: global-script ${unsupportedGlobalScriptStatement.type}.`,
+      );
+    }
   }
   const module = {
     file,
@@ -622,16 +947,22 @@ function parseDeclarationModule(file, source) {
     declarations: new Map(),
     directExports: new Map(),
     exportStars: [],
+    moduleReferences: [],
+    externalReExports: [],
     imports: new Map(),
-  };
-  const rememberDeclaration = (record) => {
-    const records = module.declarations.get(record.name) ?? [];
-    records.push(record);
-    module.declarations.set(record.name, records);
+    canonicalTypeNames: new Map(),
+    symbols: new Map(),
+    namespaces: new Map(),
+    binderNames: new Map(),
+    resolveImportSource: undefined,
+    resolveImportedTypeName: undefined,
+    resolveImportTypeIdentity: undefined,
+    augmentations: [],
   };
 
   for (const statement of module.body) {
     if (statement.type === 'ImportDeclaration') {
+      module.moduleReferences.push(statement.source.value);
       for (const specifier of statement.specifiers ?? []) {
         const local = propertyName(specifier.local, module);
         if (!local) continue;
@@ -641,24 +972,27 @@ function parseDeclarationModule(file, source) {
             ? '*'
             : propertyName(specifier.imported, module);
         module.imports.set(local, { imported, source: statement.source.value });
+        if (imported) {
+          module.canonicalTypeNames.set(local, imported === '*' ? '$namespace' : imported);
+        }
       }
       continue;
     }
 
-    const wrapper = statement.type === 'ExportNamedDeclaration' ? statement : undefined;
-    const declaration = wrapper?.declaration ?? statement;
-    for (const record of declarationRecords(declaration, module)) {
-      rememberDeclaration(record);
-      if (wrapper) {
+    if (statement.type === 'ExportNamedDeclaration' && statement.declaration) {
+      const records = indexDeclaration(module, statement.declaration, [], true);
+      for (const record of records) {
         module.directExports.set(record.name, {
-          local: record.name,
+          kind:
+            statement.exportKind === 'type'
+              ? 'type'
+              : declarationKind(record.node),
+          localPath: record.path,
           source: null,
-          kind: wrapper.exportKind === 'type' ? 'type' : declarationKind(record.node),
         });
       }
-    }
-
-    if (statement.type === 'ExportNamedDeclaration' && !statement.declaration) {
+    } else if (statement.type === 'ExportNamedDeclaration') {
+      if (statement.source) module.moduleReferences.push(statement.source.value);
       for (const specifier of statement.specifiers ?? []) {
         const exported = propertyName(specifier.exported, module);
         const local = propertyName(specifier.local, module);
@@ -671,8 +1005,48 @@ function parseDeclarationModule(file, source) {
               ? 'type'
               : 'value',
         });
+        if (statement.source && !String(statement.source.value).startsWith('.')) {
+          module.externalReExports.push({
+            exported,
+            imported: local,
+            kind:
+              statement.exportKind === 'type' || specifier.exportKind === 'type'
+                ? 'type'
+                : 'value',
+            source: statement.source.value,
+            mode: 'named',
+          });
+        }
+      }
+    } else if (statement.type === 'ExportDefaultDeclaration') {
+      const declaration = statement.declaration;
+      if (declaration?.type === 'Identifier') {
+        module.directExports.set('default', {
+          local: declaration.name,
+          source: null,
+          kind: 'value',
+        });
+      } else if (declaration) {
+        const name = declarationName(declaration, module);
+        if (name) {
+          indexDeclaration(module, declaration);
+          module.directExports.set('default', {
+            localPath: [name],
+            source: null,
+            kind: declarationKind(declaration),
+          });
+        } else {
+          const record = { node: declaration, name: 'default' };
+          rememberSymbol(module, [ANONYMOUS_DEFAULT_SEGMENT], record);
+          module.directExports.set('default', {
+            localPath: [ANONYMOUS_DEFAULT_SEGMENT],
+            source: null,
+            kind: declarationKind(declaration),
+          });
+        }
       }
     } else if (statement.type === 'ExportAllDeclaration') {
+      module.moduleReferences.push(statement.source.value);
       if (statement.exported) {
         const exported = propertyName(statement.exported, module);
         if (exported) {
@@ -680,6 +1054,16 @@ function parseDeclarationModule(file, source) {
             local: '*',
             source: statement.source.value,
             kind: statement.exportKind === 'type' ? 'type' : 'value',
+            namespace: true,
+          });
+        }
+        if (!String(statement.source.value).startsWith('.')) {
+          module.externalReExports.push({
+            exported: propertyName(statement.exported, module),
+            imported: '*',
+            kind: statement.exportKind === 'type' ? 'type' : 'value',
+            source: statement.source.value,
+            mode: 'namespace',
           });
         }
       } else {
@@ -687,9 +1071,22 @@ function parseDeclarationModule(file, source) {
           source: statement.source.value,
           kind: statement.exportKind === 'type' ? 'type' : 'value',
         });
+        if (!String(statement.source.value).startsWith('.')) {
+          module.externalReExports.push({
+            exported: '*',
+            imported: '*',
+            kind: statement.exportKind === 'type' ? 'type' : 'value',
+            source: statement.source.value,
+            mode: 'star',
+          });
+        }
       }
+    } else {
+      indexDeclaration(module, statement);
     }
   }
+  module.binderNames = collectTypeBinderNames(module);
+  module.augmentations = augmentationDeclarations(module);
   return module;
 }
 
@@ -716,7 +1113,36 @@ function declarationGraph(filesValue) {
     const key = normalizedFileKey(file);
     if (!files.has(key)) return undefined;
     if (!moduleCache.has(key)) {
-      moduleCache.set(key, parseDeclarationModule(key, files.get(key)));
+      const module = parseDeclarationModule(key, files.get(key), { publicGraph: true });
+      module.resolveImportSource = (source) => resolveDeclarationFile(files, key, source);
+      module.resolveImportedTypeName = (localName, position) => {
+        const containingNamespaces = [...module.namespaces.values()]
+          .filter((namespace) => namespace.records.some(({ node }) =>
+            node.start <= position && position <= node.end))
+          .sort((left, right) => right.path.length - left.path.length);
+        if (containingNamespaces.some((namespace) =>
+          resolveLocalDeclaration(module, [...namespace.path, localName]))) {
+          return localName;
+        }
+        const imported = module.imports.get(localName);
+        if (!imported || imported.imported === '*') return undefined;
+        const target = resolveDeclarationFile(files, key, imported.source);
+        const resolved = target
+          ? resolveExportDeclaration(graph, target, imported.imported)
+          : undefined;
+        return resolved?.path?.at(-1) ?? resolved?.records[0]?.name;
+      };
+      module.resolveImportTypeIdentity = (source, qualifier) => {
+        const target = resolveDeclarationFile(files, key, source);
+        if (!target) return undefined;
+        const resolved = qualifier.length > 0
+          ? resolveQualifiedExportDeclaration(graph, target, qualifier)
+          : resolveModuleNamespace(graph, target);
+        return resolved
+          ? { file: resolved.module.file, qualifier: resolved.moduleNamespace ? [] : resolved.path }
+          : { file: target, qualifier };
+      };
+      moduleCache.set(key, module);
     }
     return moduleCache.get(key);
   };
@@ -743,7 +1169,57 @@ function declarationGraph(filesValue) {
     }
     return table;
   };
-  return { files, getModule, getExports };
+  const graph = {
+    files,
+    getModule,
+    getExports,
+    declarationSurfaceCache: new Map(),
+    declarationContractCache: new Map(),
+    dependencyContractCache: new Map(),
+    dependencyEdgeDefinitions: new Map(),
+    dependencyIdCache: new Map(),
+    dependencyDefinitions: new Map(),
+    contractIdCache: new Map(),
+    contractDefinitions: new Map(),
+    referencedTypeCache: new Map(),
+    typeDependencyCache: new Map(),
+    moduleDependencyCache: new Map(),
+    directDependencyCache: new Map(),
+  };
+  return graph;
+}
+
+function resolveLocalDeclaration(module, pathParts) {
+  const key = symbolPathKey(pathParts);
+  const records = module.symbols.get(key) ?? [];
+  const namespace = module.namespaces.get(key);
+  if (records.length === 0 && !namespace) return undefined;
+  const mergedRecords = [...records];
+  for (const record of namespace?.records ?? []) {
+    if (!mergedRecords.some((candidate) => candidate.node === record.node)) {
+      mergedRecords.push(record);
+    }
+  }
+  return {
+    module,
+    records: mergedRecords,
+    path: pathParts,
+    namespace: Boolean(namespace),
+    namespaceEntry: namespace,
+  };
+}
+
+function resolveModuleNamespace(graph, file) {
+  const module = graph.getModule(file);
+  return module
+    ? {
+      module,
+      records: [],
+      path: [MODULE_NAMESPACE_SEGMENT],
+      namespace: true,
+      moduleNamespace: true,
+    }
+    : undefined;
 }
 
 function resolveExportDeclaration(graph, file, exportedName, seen = new Set()) {
@@ -756,18 +1232,79 @@ function resolveExportDeclaration(graph, file, exportedName, seen = new Set()) {
 
   if (binding.source) {
     const target = resolveDeclarationFile(graph.files, module.file, binding.source);
-    return target
-      ? resolveExportDeclaration(graph, target, binding.local, seen)
-      : undefined;
+    if (!target) return undefined;
+    if (binding.namespace || binding.local === '*') return resolveModuleNamespace(graph, target);
+    const resolved = resolveExportDeclaration(graph, target, binding.local, seen);
+    if (resolved) {
+      module.canonicalTypeNames.set(
+        exportedName,
+        resolved.path?.at(-1) ?? resolved.records[0]?.name ?? binding.local,
+      );
+    }
+    return resolved;
   }
-  const records = module.declarations.get(binding.local);
-  if (records?.length) return { module, records };
+  const localPath = binding.localPath ?? (binding.local ? [binding.local] : undefined);
+  const local = localPath && resolveLocalDeclaration(module, localPath);
+  if (local) return local;
   const imported = module.imports.get(binding.local);
   if (!imported || imported.imported === '*') return undefined;
   const target = resolveDeclarationFile(graph.files, module.file, imported.source);
-  return target
-    ? resolveExportDeclaration(graph, target, imported.imported, seen)
+  if (!target) return undefined;
+  const resolved = resolveExportDeclaration(graph, target, imported.imported, seen);
+  if (resolved) {
+    module.canonicalTypeNames.set(
+      binding.local,
+      resolved.path?.at(-1) ?? resolved.records[0]?.name ?? imported.imported,
+    );
+  }
+  return resolved;
+}
+
+function namespaceMemberBindings(graph, resolved) {
+  if (!resolved?.namespace) return [];
+  if (resolved.moduleNamespace) {
+    return [...graph.getExports(resolved.module.file)]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([name, binding]) => ({ name, binding, moduleExport: true }));
+  }
+  return [...(resolved.namespaceEntry?.members ?? [])]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([name, binding]) => ({ name, binding, moduleExport: false }));
+}
+
+function resolveNamespaceMember(graph, resolved, memberName, seen = new Set()) {
+  const member = namespaceMemberBindings(graph, resolved)
+    .find((candidate) => candidate.name === memberName);
+  if (!member) return undefined;
+  if (member.moduleExport) {
+    return resolveExportDeclaration(graph, resolved.module.file, memberName, seen);
+  }
+  const { binding } = member;
+  if (binding.source) {
+    const target = resolveDeclarationFile(graph.files, resolved.module.file, binding.source);
+    if (!target) return undefined;
+    if (binding.local === '*') return resolveModuleNamespace(graph, target);
+    return resolveExportDeclaration(graph, target, binding.local ?? memberName, seen);
+  }
+  return binding.localPath
+    ? resolveLocalDeclaration(resolved.module, binding.localPath)
     : undefined;
+}
+
+function resolveQualifiedDeclaration(graph, resolved, memberParts, seen = new Set()) {
+  let current = resolved;
+  for (const memberName of memberParts) {
+    current = resolveNamespaceMember(graph, current, memberName, seen);
+    if (!current) return undefined;
+  }
+  return current;
+}
+
+function resolveQualifiedExportDeclaration(graph, file, qualifierParts) {
+  if (qualifierParts.length === 0) return resolveModuleNamespace(graph, file);
+  const [head, ...tail] = qualifierParts;
+  const root = resolveExportDeclaration(graph, file, head);
+  return root ? resolveQualifiedDeclaration(graph, root, tail) : undefined;
 }
 
 function unwrapTypeAnnotation(node) {
@@ -775,18 +1312,127 @@ function unwrapTypeAnnotation(node) {
 }
 
 function typeNodeText(module, node) {
-  const text = nodeText(module, unwrapTypeAnnotation(node));
-  return text || 'unknown';
+  return normalizeType(canonicalNodeText(module, unwrapTypeAnnotation(node)) || 'unknown');
+}
+
+function entityNameParts(node) {
+  if (!node) return [];
+  if (node.type === 'Identifier') return [node.name];
+  if (node.type === 'TSQualifiedName') {
+    return [...entityNameParts(node.left), ...entityNameParts(node.right)];
+  }
+  if (node.type === 'MemberExpression' && !node.computed) {
+    return [...entityNameParts(node.object), ...entityNameParts(node.property)];
+  }
+  return [];
+}
+
+/** Canonicalize imported identifiers only where the TypeScript AST says they are type/entity
+ * references. A textual replacement also rewrites string literal types and property keys that
+ * merely happen to share an import alias, creating false breaking changes. */
+function canonicalNodeText(module, node, includeUnresolvedImportAuthority = true) {
+  if (!node) return '';
+  const replacements = new Map();
+  for (const [key, value] of module.binderNames) {
+    const [start, end] = key.split(':').map(Number);
+    if (start >= node.start && end <= node.end) {
+      replacements.set(key, { start, end, value });
+    }
+  }
+  const seen = new Set();
+  const rememberEntity = (entity) => {
+    if (!entity || typeof entity !== 'object') return;
+    if (entity.type === 'Identifier') {
+      const canonical = module.binderNames.get(nodePositionKey(entity))
+        ?? module.resolveImportedTypeName?.(entity.name, entity.start)
+        ?? (includeUnresolvedImportAuthority
+          ? (() => {
+            const imported = module.imports.get(entity.name);
+            return imported
+              ? `import(${JSON.stringify(imported.source)}).${imported.imported}`
+              : undefined;
+          })()
+          : undefined)
+        ?? module.canonicalTypeNames.get(entity.name);
+      if (canonical && canonical !== entity.name) {
+        replacements.set(nodePositionKey(entity), {
+          start: entity.start,
+          end: entity.end,
+          value: canonical,
+        });
+      }
+      return;
+    }
+    if (entity.type === 'TSQualifiedName') {
+      rememberEntity(entity.left);
+      return;
+    }
+    if (entity.type === 'MemberExpression' && !entity.computed) {
+      rememberEntity(entity.object);
+    }
+  };
+  const visit = (value) => {
+    if (!value || typeof value !== 'object' || seen.has(value)) return;
+    seen.add(value);
+    if (value.type === 'TSTypeReference') rememberEntity(value.typeName);
+    else if (value.type === 'TSInterfaceHeritage' || value.type === 'TSClassImplements') {
+      rememberEntity(value.expression);
+    } else if (value.type === 'TSTypeQuery') rememberEntity(value.exprName);
+    else if (value.type === 'ClassDeclaration') rememberEntity(value.superClass);
+    if (value.type === 'TSImportType') {
+      const source = value.source;
+      const qualifierParts = entityNameParts(value.qualifier);
+      const identity = module.resolveImportTypeIdentity?.(source?.value, qualifierParts);
+      const target = identity?.file ?? module.resolveImportSource?.(source?.value);
+      if (target && source) {
+        replacements.set(nodePositionKey(source), {
+          start: source.start,
+          end: source.end,
+          value: JSON.stringify(target),
+        });
+      }
+      if (identity && value.qualifier) {
+        replacements.set(nodePositionKey(value.qualifier), {
+          start: value.qualifier.start,
+          end: value.qualifier.end,
+          value: identity.qualifier.join('.'),
+        });
+      }
+      visit(value.typeArguments);
+      return;
+    }
+    for (const [key, child] of Object.entries(value)) {
+      if (key === 'type' || key === 'start' || key === 'end') continue;
+      if (Array.isArray(child)) child.forEach(visit);
+      else visit(child);
+    }
+  };
+  visit(node);
+  const source = nodeText(module, node);
+  if (replacements.size === 0) return source;
+  let output = '';
+  let cursor = node.start;
+  for (const replacement of [...replacements.values()].sort((left, right) =>
+    left.start - right.start)) {
+    output += module.source.slice(cursor, replacement.start);
+    output += replacement.value;
+    cursor = replacement.end;
+  }
+  output += module.source.slice(cursor, node.end);
+  return output;
 }
 
 function normalizeTypeParameters(module, node) {
   return (node?.typeParameters?.params ?? []).map((parameter) => ({
-    name: propertyName(parameter.name, module) ?? 'T',
+    name:
+      module.binderNames.get(nodePositionKey(parameter.name))
+      ?? propertyName(parameter.name, module)
+      ?? 'T',
     constraint: parameter.constraint
-      ? normalizeType(nodeText(module, parameter.constraint))
+      ? normalizeType(canonicalNodeText(module, parameter.constraint))
       : null,
     default: parameter.default
-      ? normalizeType(nodeText(module, parameter.default))
+      ? normalizeType(canonicalNodeText(module, parameter.default))
       : null,
     in: Boolean(parameter.in),
     out: Boolean(parameter.out),
@@ -807,7 +1453,7 @@ function typeParameterSignature(parameters) {
 }
 
 function normalizeParameterNode(module, parameter) {
-  return normalizeParameterText(nodeText(module, parameter) || 'value: unknown');
+  return normalizeParameterText(canonicalNodeText(module, parameter) || 'value: unknown');
 }
 
 function memberDescriptor(module, member) {
@@ -889,10 +1535,32 @@ function addMemberSurfaces(entries, base, surface, label, module, members) {
   }
 }
 
-function addDeclarationSurface(entries, base, surface, label, resolved) {
+function addDeclarationSurface(entries, base, surface, label, resolved, graph) {
   const { module, records } = resolved;
   const nodes = records.map((record) => record.node);
-  const primary = nodes[0];
+  const primary = nodes.find((node) => node.type !== 'TSModuleDeclaration');
+  if (resolved.namespace && graph) {
+    addEntry(
+      entries,
+      `${base}:namespace`,
+      surface,
+      'shape',
+      true,
+      label,
+    );
+    for (const { name, binding } of namespaceMemberBindings(graph, resolved)) {
+      const memberBase = `${base}:namespace-member:${name}`;
+      addPresence(entries, memberBase, surface, `${label}.${name}`);
+      addEntry(
+        entries,
+        `${memberBase}:kind`,
+        surface,
+        'shape',
+        binding.kind ?? 'value',
+        `${label}.${name}`,
+      );
+    }
+  }
   if (!primary) return;
   const kind = primary.type === 'TSInterfaceDeclaration'
     ? 'interface'
@@ -918,7 +1586,7 @@ function addDeclarationSurface(entries, base, surface, label, resolved) {
     );
     const heritage = nodes
       .flatMap((node) => node.extends ?? [])
-      .map((item) => normalizeType(nodeText(module, item)))
+      .map((item) => normalizeType(canonicalNodeText(module, item)))
       .sort();
     addEntry(entries, `${base}:extends`, surface, 'heritage', heritage, label);
     addMemberSurfaces(
@@ -955,7 +1623,8 @@ function addDeclarationSurface(entries, base, surface, label, resolved) {
     const heritage = primary.superClass
       ? [
         normalizeType(
-          `${nodeText(module, primary.superClass)}${nodeText(module, primary.superTypeArguments)}`,
+          `${canonicalNodeText(module, primary.superClass)}` +
+            `${canonicalNodeText(module, primary.superTypeArguments)}`,
         ),
       ]
       : [];
@@ -1035,30 +1704,27 @@ function normalizeFrameworkDeclarations(framework, text, entries) {
   }
 }
 
-function leftmostTypeName(node) {
-  if (!node) return undefined;
-  if (node.type === 'Identifier') return node.name;
-  if (node.type === 'TSQualifiedName') return leftmostTypeName(node.left);
-  return undefined;
-}
-
-function referencedTypeNames(records) {
+function referencedTypeNames(module, records) {
   const names = new Set();
   const seen = new Set();
   const visit = (value) => {
     if (!value || typeof value !== 'object' || seen.has(value)) return;
     seen.add(value);
     if (value.type === 'TSTypeReference') {
-      const name = leftmostTypeName(value.typeName);
+      const identifier = leftmostEntityIdentifier(value.typeName);
+      if (module.binderNames.has(nodePositionKey(identifier))) return;
+      const name = entityNameParts(value.typeName).join('.');
       if (name) names.add(name);
     } else if (value.type === 'TSInterfaceHeritage') {
-      const name = leftmostTypeName(value.expression);
+      const identifier = leftmostEntityIdentifier(value.expression);
+      if (module.binderNames.has(nodePositionKey(identifier))) return;
+      const name = entityNameParts(value.expression).join('.');
       if (name) names.add(name);
     } else if (value.type === 'TSTypeQuery') {
-      const name = leftmostTypeName(value.exprName);
+      const name = entityNameParts(value.exprName).join('.');
       if (name) names.add(name);
     } else if (value.type === 'ClassDeclaration') {
-      const name = leftmostTypeName(value.superClass);
+      const name = entityNameParts(value.superClass).join('.');
       if (name) names.add(name);
       visit(value.typeParameters);
       visit(value.superTypeArguments);
@@ -1079,63 +1745,400 @@ function referencedTypeNames(records) {
   return [...names].sort();
 }
 
-function resolveTypeDependency(graph, module, localName) {
-  const records = module.declarations.get(localName);
-  if (records?.length) return { module, records };
+function referencedImportTypes(records) {
+  const references = [];
+  const seenNodes = new Set();
+  const seenReferences = new Set();
+  const visit = (value) => {
+    if (!value || typeof value !== 'object' || seenNodes.has(value)) return;
+    seenNodes.add(value);
+    if (value.type === 'TSImportType') {
+      const source = value.source?.value;
+      const qualifier = entityNameParts(value.qualifier);
+      if (typeof source === 'string') {
+        const key = `${source}#${qualifier.join('.')}`;
+        if (!seenReferences.has(key)) {
+          seenReferences.add(key);
+          references.push({ source, qualifier });
+        }
+      }
+    }
+    if (value.type === 'ClassDeclaration') {
+      visit(value.typeParameters);
+      visit(value.superClass);
+      visit(value.superTypeArguments);
+      (value.implements ?? []).forEach(visit);
+      for (const member of value.body?.body ?? []) {
+        if (member.accessibility === 'private' || member.key?.type === 'PrivateIdentifier') continue;
+        visit(member);
+      }
+      return;
+    }
+    for (const [key, child] of Object.entries(value)) {
+      if (key === 'type' || key === 'start' || key === 'end') continue;
+      if (Array.isArray(child)) child.forEach(visit);
+      else visit(child);
+    }
+  };
+  records.forEach(({ node }) => visit(node));
+  return references.sort((left, right) =>
+    left.source.localeCompare(right.source)
+      || left.qualifier.join('.').localeCompare(right.qualifier.join('.')));
+}
+
+function moduleExportDependencies(graph, file) {
+  const key = normalizedFileKey(file);
+  if (!graph.moduleDependencyCache.has(key)) {
+    const resolved = resolveModuleNamespace(graph, key);
+    graph.moduleDependencyCache.set(key, resolved ? [{ resolved, suffix: '' }] : []);
+  }
+  return graph.moduleDependencyCache.get(key);
+}
+
+function resolveScopedLocalDeclaration(module, ownerPath, referenceParts) {
+  const namespacePath = ownerPath?.[0] === MODULE_NAMESPACE_SEGMENT
+    ? []
+    : (ownerPath ?? []).slice(0, -1);
+  for (let length = namespacePath.length; length >= 0; length -= 1) {
+    const resolved = resolveLocalDeclaration(
+      module,
+      [...namespacePath.slice(0, length), ...referenceParts],
+    );
+    if (resolved) return resolved;
+  }
+  return undefined;
+}
+
+function resolveTypeDependencies(graph, owner, referenceName) {
+  const { module } = owner;
+  const [localName, ...memberParts] = String(referenceName).split('.');
+  const local = resolveScopedLocalDeclaration(
+    module,
+    owner.path,
+    [localName, ...memberParts],
+  );
+  if (local) return [{ resolved: local, suffix: '' }];
+
   const imported = module.imports.get(localName);
-  if (!imported || imported.imported === '*') return undefined;
-  const target = resolveDeclarationFile(graph.files, module.file, imported.source);
-  return target
-    ? resolveExportDeclaration(graph, target, imported.imported)
-    : undefined;
+  if (imported) {
+    const target = resolveDeclarationFile(graph.files, module.file, imported.source);
+    if (!target) return [];
+    if (imported.imported === '*') {
+      if (memberParts.length === 0) return moduleExportDependencies(graph, target);
+      const resolved = resolveQualifiedExportDeclaration(graph, target, memberParts);
+      return resolved ? [{ resolved, suffix: '' }] : [];
+    }
+    const importedRoot = resolveExportDeclaration(graph, target, imported.imported);
+    const resolved = importedRoot
+      ? resolveQualifiedDeclaration(graph, importedRoot, memberParts)
+      : undefined;
+    return resolved ? [{ resolved, suffix: '' }] : [];
+  }
+
+  return [];
 }
 
 function declarationIdentity(resolved) {
-  return `${resolved.module.file}#${resolved.records
-    .map(({ node }) => `${node.start}:${node.end}`)
-    .sort()
-    .join(',')}`;
+  const pathParts = resolved.path?.length > 0
+    ? resolved.path
+    : resolved.records.map(({ name, node }) =>
+      name ?? declarationName(node, resolved.module) ?? declarationKind(node));
+  return `${resolved.module.file}#${JSON.stringify(pathParts)}`;
 }
 
-function addReachableTypeSurfaces(
-  entries,
-  base,
-  surface,
-  graph,
-  resolved,
-  ancestry = new Set([declarationIdentity(resolved)]),
-) {
-  for (const localName of referencedTypeNames(resolved.records)) {
-    const dependency = resolveTypeDependency(graph, resolved.module, localName);
-    if (!dependency) continue;
-    const identity = declarationIdentity(dependency);
-    if (ancestry.has(identity)) continue;
-    const dependencyBase = `${base}:dependency:${localName}`;
-    addPresence(entries, dependencyBase, surface, `${localName} (reachable from ${base})`);
-    addDeclarationSurface(
+/** Materializing one declaration surface walks every public member and normalizes every nested
+ * type. Granular routes intentionally expose the same class/type through several registration,
+ * class, family, and wildcard paths, so doing that work independently per route grows into
+ * gigabytes. Cache a base-independent template by declaration identity. */
+function declarationSurfaceTemplate(graph, resolved) {
+  const identity = declarationIdentity(resolved);
+  let template = graph.declarationSurfaceCache.get(identity);
+  if (!template) {
+    const templateEntries = new Map();
+    addDeclarationSurface(templateEntries, '$', 'declaration-template', '$', resolved, graph);
+    template = [...templateEntries.entries()];
+    graph.declarationSurfaceCache.set(identity, template);
+  }
+  return template;
+}
+
+function addCachedDeclarationSurface(entries, base, surface, label, graph, resolved) {
+  const template = declarationSurfaceTemplate(graph, resolved);
+  for (const [templateId, entry] of template) {
+    const suffix = templateId.slice(1);
+    const projectedLabel = entry.label === '$'
+      ? label
+      : entry.label.startsWith('$')
+        ? `${base}${entry.label.slice(1)}`
+        : entry.label;
+    addEntry(
       entries,
-      dependencyBase,
+      `${base}${suffix}`,
       surface,
-      localName,
-      dependency,
-    );
-    addReachableTypeSurfaces(
-      entries,
-      dependencyBase,
-      surface,
-      graph,
-      dependency,
-      new Set(ancestry).add(identity),
+      entry.semantic,
+      entry.value,
+      projectedLabel,
     );
   }
 }
 
-function normalizeNamedExports(declarations, entries) {
-  const filesValue = { ...(declarations.files ?? {}) };
+/** Store granular declaration details as one compact, route-namespaced contract. This retains
+ * additive-vs-breaking member classification while avoiding hundreds of duplicated Map entries
+ * for every `.js`/`.d.ts` alias of the same declaration. Contract objects are cached and shared
+ * in memory across routes; only their stable route entry is duplicated. */
+function declarationContractValue(graph, resolved) {
+  const identity = declarationIdentity(resolved);
+  if (!graph.declarationContractCache.has(identity)) {
+    const contract = Object.fromEntries(
+      declarationSurfaceTemplate(graph, resolved).map(([templateId, entry]) => [
+        templateId.slice(1),
+        { semantic: entry.semantic, value: entry.value },
+      ]),
+    );
+    graph.declarationContractCache.set(identity, contract);
+  }
+  return graph.declarationContractCache.get(identity);
+}
+
+function declarationContractReference(graph, resolved) {
+  const identity = declarationIdentity(resolved);
+  if (!graph.contractIdCache.has(identity)) {
+    const contract = declarationContractValue(graph, resolved);
+    graph.contractIdCache.set(
+      identity,
+      registerDeclarationContract(graph, identity, contract),
+    );
+  }
+  return graph.contractIdCache.get(identity);
+}
+
+function registerDeclarationContract(graph, identity, contract) {
+  const serialized = JSON.stringify(contract);
+  const id = createHash('sha256').update(serialized).digest('hex');
+  const existing = graph.contractDefinitions.get(id);
+  if (existing && JSON.stringify(existing) !== serialized) {
+    throw new Error(`Declaration contract digest collision for ${identity}.`);
+  }
+  graph.contractDefinitions.set(id, contract);
+  return id;
+}
+
+function mergedDeclarationContract(graph, resolvedDeclarations) {
+  const declarationsByIdentity = new Map();
+  for (const resolved of resolvedDeclarations) {
+    const identity = declarationIdentity(resolved);
+    const merged = declarationsByIdentity.get(identity) ?? { ...resolved, records: [] };
+    merged.records.push(...resolved.records);
+    declarationsByIdentity.set(identity, merged);
+  }
+  const entries = new Map();
+  for (const resolved of [...declarationsByIdentity.values()].sort((left, right) =>
+    declarationIdentity(left).localeCompare(declarationIdentity(right)))) {
+    for (const [id, entry] of Object.entries(declarationContractValue(graph, resolved))) {
+      const existing = entries.get(id);
+      if (existing && JSON.stringify(existing) !== JSON.stringify(entry)) {
+        if (
+          id === ':extends'
+          && existing.semantic === 'heritage'
+          && entry.semantic === 'heritage'
+          && Array.isArray(existing.value)
+          && Array.isArray(entry.value)
+        ) {
+          entries.set(id, {
+            ...existing,
+            value: [...new Set([...existing.value, ...entry.value])].sort(),
+          });
+          continue;
+        }
+        throw new Error(`Conflicting merged public declaration entry: ${id}`);
+      }
+      entries.set(id, entry);
+    }
+  }
+  return Object.fromEntries([...entries].sort(([left], [right]) => left.localeCompare(right)));
+}
+
+function addCompactDeclarationSurface(entries, base, surface, label, graph, resolved) {
+  addEntry(
+    entries,
+    `${base}:contract`,
+    surface,
+    'declaration-contract-ref',
+    declarationContractReference(graph, resolved),
+    label,
+  );
+}
+
+function cachedReferencedTypeNames(graph, resolved) {
+  const identity = declarationIdentity(resolved);
+  if (!graph.referencedTypeCache.has(identity)) {
+    graph.referencedTypeCache.set(
+      identity,
+      referencedTypeNames(
+        resolved.module,
+        resolved.records.filter(({ node }) => node.type !== 'TSModuleDeclaration'),
+      ),
+    );
+  }
+  return graph.referencedTypeCache.get(identity);
+}
+
+function cachedImportTypeReferences(graph, resolved) {
+  const identity = declarationIdentity(resolved);
+  const key = `${identity}:import-types`;
+  if (!graph.referencedTypeCache.has(key)) {
+    graph.referencedTypeCache.set(
+      key,
+      referencedImportTypes(
+        resolved.records.filter(({ node }) => node.type !== 'TSModuleDeclaration'),
+      ),
+    );
+  }
+  return graph.referencedTypeCache.get(key);
+}
+
+function canonicalDependencyReference(resolved) {
+  return `declaration:${declarationIdentity(resolved)}`;
+}
+
+function canonicalImportTypeReference(resolved) {
+  return `declaration:${declarationIdentity(resolved)}`;
+}
+
+function resolveImportTypeDependencies(graph, module, reference) {
+  const target = resolveDeclarationFile(graph.files, module.file, reference.source);
+  if (!target) return [];
+  if (reference.qualifier.length === 0) return moduleExportDependencies(graph, target);
+  const resolved = resolveQualifiedExportDeclaration(graph, target, reference.qualifier);
+  return resolved ? [{ resolved, suffix: '' }] : [];
+}
+
+function cachedTypeDependencies(graph, resolved, referenceName) {
+  const key = `${declarationIdentity(resolved)}#${referenceName}`;
+  if (!graph.typeDependencyCache.has(key)) {
+    graph.typeDependencyCache.set(key, resolveTypeDependencies(graph, resolved, referenceName));
+  }
+  return graph.typeDependencyCache.get(key);
+}
+
+function directDependencyRecords(graph, resolved) {
+  const rootIdentity = declarationIdentity(resolved);
+  if (!graph.directDependencyCache.has(rootIdentity)) {
+    const candidates = [
+      ...namespaceMemberBindings(graph, resolved).map(({ name }) => {
+        const dependency = resolveNamespaceMember(graph, resolved, name);
+        return {
+          dependencies: dependency ? [{ resolved: dependency, suffix: '' }] : [],
+          namespaceMember: name,
+        };
+      }),
+      ...cachedReferencedTypeNames(graph, resolved).map((localName) => ({
+        dependencies: cachedTypeDependencies(graph, resolved, localName),
+      })),
+      ...cachedImportTypeReferences(graph, resolved).map((importType) => ({
+        dependencies: resolveImportTypeDependencies(graph, resolved.module, importType),
+      })),
+    ];
+    const dependencies = new Map();
+    for (const candidate of candidates) {
+      for (const dependency of candidate.dependencies) {
+        const targetReference = candidate.namespaceMember
+          ? `namespace-member:${candidate.namespaceMember}`
+          : candidate.importType
+            ? canonicalImportTypeReference(dependency.resolved)
+            : canonicalDependencyReference(dependency.resolved);
+        const reference = dependency.suffix
+          ? `${targetReference}.${dependency.suffix}`
+          : targetReference;
+        const key = `${reference}#${declarationIdentity(dependency.resolved)}`;
+        dependencies.set(key, { reference, resolved: dependency.resolved });
+      }
+    }
+    graph.directDependencyCache.set(
+      rootIdentity,
+      [...dependencies.values()].sort((left, right) =>
+        left.reference.localeCompare(right.reference)
+          || declarationIdentity(left.resolved).localeCompare(declarationIdentity(right.resolved))),
+    );
+  }
+  return graph.directDependencyCache.get(rootIdentity);
+}
+
+function dependencyEdgeReference(graph, value) {
+  const serialized = JSON.stringify(value);
+  const id = createHash('sha256').update(serialized).digest('hex');
+  const existing = graph.dependencyEdgeDefinitions.get(id);
+  if (existing && existing !== serialized) {
+    throw new Error('Dependency edge digest collision.');
+  }
+  graph.dependencyEdgeDefinitions.set(id, serialized);
+  return id;
+}
+
+/** Returns the deterministic edge-digest closure for every declaration reachable from one public
+ * root. Each declaration identity is visited once, so cycles terminate and diamond graphs do not
+ * emit one copy per path. Only fixed-size edge digests survive the traversal: retaining every
+ * expanded closure for every granular route otherwise duplicates hundreds of megabytes. */
+function reachableContractValue(graph, resolved) {
+  const rootIdentity = declarationIdentity(resolved);
+  const contracts = new Set();
+  const visited = new Set();
+  const queue = [resolved];
+  for (let index = 0; index < queue.length; index += 1) {
+    const current = queue[index];
+    const identity = declarationIdentity(current);
+    if (visited.has(identity)) continue;
+    visited.add(identity);
+    const ownerContract = declarationContractReference(graph, current);
+    for (const dependency of directDependencyRecords(graph, current)) {
+      const targetIdentity = declarationIdentity(dependency.resolved);
+      const targetContract = declarationContractReference(graph, dependency.resolved);
+      contracts.add(dependencyEdgeReference(graph, [
+        identity,
+        ownerContract,
+        dependency.reference,
+        targetIdentity,
+        targetContract,
+      ]));
+      if (!visited.has(targetIdentity)) {
+        queue.push(dependency.resolved);
+      }
+    }
+  }
+  return [...contracts].sort();
+}
+
+function reachableContractReference(graph, resolved) {
+  const rootIdentity = declarationIdentity(resolved);
+  if (!graph.dependencyIdCache.has(rootIdentity)) {
+    const contract = reachableContractValue(graph, resolved);
+    const serialized = JSON.stringify(contract);
+    const id = createHash('sha256').update(serialized).digest('hex');
+    const existing = graph.dependencyDefinitions.get(id);
+    if (existing && existing.edgeCount !== contract.length) {
+      throw new Error(`Dependency contract digest collision for ${rootIdentity}.`);
+    }
+    graph.dependencyDefinitions.set(id, { edgeCount: contract.length });
+    graph.dependencyContractCache.set(rootIdentity, { edgeCount: contract.length, id });
+    graph.dependencyIdCache.set(rootIdentity, id);
+  }
+  return graph.dependencyIdCache.get(rootIdentity);
+}
+
+function addReachableTypeSurfaces(entries, base, surface, graph, resolved) {
+  addEntry(
+    entries,
+    `${base}:dependencies`,
+    surface,
+    'dependency-contract-ref',
+    reachableContractReference(graph, resolved),
+    `${base} reachable declaration contract`,
+  );
+}
+
+function normalizeNamedExports(declarations, entries, graph) {
   const entryFile = normalizedFileKey(declarations.namedEntry ?? 'dist/lyra.d.ts');
-  if (typeof declarations.named === 'string') filesValue[entryFile] = declarations.named;
-  if (!filesValue[entryFile]) return;
-  const graph = declarationGraph(filesValue);
+  if (!graph?.files.has(entryFile)) return;
   const exportTable = graph.getExports(entryFile);
   for (const [name, binding] of [...exportTable].sort(([left], [right]) =>
     left.localeCompare(right))) {
@@ -1148,8 +2151,182 @@ function normalizeNamedExports(declarations, entries) {
     const base = `named-export:${name}`;
     addEntry(entries, base, 'named-export', 'export', { kind }, name);
     if (resolved) {
-      addDeclarationSurface(entries, base, 'named-export', name, resolved);
+      addCachedDeclarationSurface(entries, base, 'named-export', name, graph, resolved);
       addReachableTypeSurfaces(entries, base, 'named-export', graph, resolved);
+    }
+  }
+}
+
+function declarationFileForTarget(graph, target) {
+  if (typeof target !== 'string') return undefined;
+  const normalized = normalizedFileKey(target);
+  const candidates = [normalized];
+  if (/\.mjs$/.test(normalized)) {
+    candidates.push(normalized.replace(/\.mjs$/, '.d.mts'), normalized.replace(/\.mjs$/, '.d.ts'));
+  } else if (/\.cjs$/.test(normalized)) {
+    candidates.push(normalized.replace(/\.cjs$/, '.d.cts'), normalized.replace(/\.cjs$/, '.d.ts'));
+  } else if (/\.js$/.test(normalized)) {
+    candidates.push(normalized.replace(/\.js$/, '.d.ts'));
+  }
+  return candidates.find((candidate) => graph.files.has(candidate));
+}
+
+function declarationVariants(exportTargets, graph) {
+  const targetsBySpecifier = new Map();
+  for (const record of exportTargets) {
+    const records = targetsBySpecifier.get(record.specifier) ?? [];
+    records.push(record);
+    targetsBySpecifier.set(record.specifier, records);
+  }
+  const variants = [];
+  for (const [specifier, records] of [...targetsBySpecifier].sort(([left], [right]) =>
+    left.localeCompare(right))) {
+    const byFile = new Map();
+    for (const record of records) {
+      const entryFile = declarationFileForTarget(graph, record.target);
+      if (!entryFile) continue;
+      const variant = byFile.get(entryFile) ?? { entryFile, conditions: [], specifier };
+      variant.conditions.push(record.condition);
+      byFile.set(entryFile, variant);
+    }
+    const fileVariants = [...byFile.values()].sort((left, right) =>
+      left.entryFile.localeCompare(right.entryFile));
+    for (const variant of fileVariants) {
+      const canonicalCondition = [...variant.conditions].sort((left, right) => {
+        const leftTypes = left.split('.').includes('types') ? 1 : 0;
+        const rightTypes = right.split('.').includes('types') ? 1 : 0;
+        return rightTypes - leftTypes || left.localeCompare(right);
+      })[0];
+      variants.push({
+        ...variant,
+        condition: fileVariants.length > 1 ? canonicalCondition : undefined,
+      });
+    }
+  }
+  return variants;
+}
+
+/** Normalizes the declaration graph behind every supported non-root package subpath. Package
+ * export target presence alone cannot detect a breaking signature change while the pathname stays
+ * stable. Keep each declaration namespaced by its public specifier so two routes may intentionally
+ * export different views of the same local name without colliding. */
+function normalizeSubpathDeclarations(exportTargets, entries, graph) {
+  if (!graph) return;
+  for (const variant of declarationVariants(exportTargets, graph)) {
+    const conditionNamespace = variant.condition ? `:${variant.condition}` : '';
+    const exportTable = graph.getExports(variant.entryFile);
+    for (const [name, binding] of [...exportTable].sort(([left], [right]) =>
+      left.localeCompare(right))) {
+      const resolved = resolveExportDeclaration(graph, variant.entryFile, name);
+      const resolvedKind = resolved?.records.every(({ node }) => declarationKind(node) === 'type')
+        ? 'type'
+        : 'value';
+      const kind = binding.kind === 'type' || resolvedKind === 'type' ? 'type' : 'value';
+      const base = `subpath-export:${variant.specifier}${conditionNamespace}:${name}`;
+      addEntry(entries, base, 'subpath-export', 'export', { kind }, `${variant.specifier} ${name}`);
+      if (resolved) {
+        addCompactDeclarationSurface(
+          entries,
+          base,
+          'subpath-export',
+          `${variant.specifier} ${name}`,
+          graph,
+          resolved,
+        );
+        addReachableTypeSurfaces(entries, base, 'subpath-export', graph, resolved);
+      }
+    }
+  }
+}
+
+function normalizeAugmentations(exportTargets, entries, graph) {
+  if (!graph) return;
+  for (const variant of declarationVariants(exportTargets, graph)) {
+    const reachableFiles = new Set();
+    const queue = [variant.entryFile];
+    for (let index = 0; index < queue.length; index += 1) {
+      const file = queue[index];
+      if (reachableFiles.has(file)) continue;
+      reachableFiles.add(file);
+      const module = graph.getModule(file);
+      for (const reference of module?.moduleReferences ?? []) {
+        const target = resolveDeclarationFile(graph.files, file, reference);
+        if (target && !reachableFiles.has(target)) queue.push(target);
+      }
+    }
+    const grouped = new Map();
+    for (const file of [...reachableFiles].sort()) {
+      const module = graph.getModule(file);
+      if (!module) continue;
+      for (const augmentation of module.augmentations) {
+        const record = augmentation.resolved.records[0];
+        const key = JSON.stringify([
+          augmentation.moduleName,
+          augmentation.namespace,
+          record?.name ?? 'declaration',
+        ]);
+        const group = grouped.get(key) ?? {
+          moduleName: augmentation.moduleName,
+          namespace: augmentation.namespace,
+          resolvedDeclarations: [],
+        };
+        group.resolvedDeclarations.push(augmentation.resolved);
+        grouped.set(key, group);
+      }
+    }
+    for (const augmentation of [...grouped.values()].sort((left, right) =>
+      left.moduleName.localeCompare(right.moduleName)
+        || left.namespace.join('.').localeCompare(right.namespace.join('.'))
+        || declarationIdentity(left.resolvedDeclarations[0])
+          .localeCompare(declarationIdentity(right.resolvedDeclarations[0])))) {
+      const record = augmentation.resolvedDeclarations[0].records[0];
+      const base = [
+        'augmentation',
+        variant.specifier,
+        ...(variant.condition ? [variant.condition] : []),
+        JSON.stringify(augmentation.moduleName),
+        ...augmentation.namespace,
+        record?.name ?? 'declaration',
+      ].join(':');
+      addPresence(entries, base, 'augmentation', base);
+      const contract = mergedDeclarationContract(graph, augmentation.resolvedDeclarations);
+      addEntry(
+        entries,
+        `${base}:contract`,
+        'augmentation',
+        'declaration-contract-ref',
+        registerDeclarationContract(graph, base, contract),
+        base,
+      );
+    }
+  }
+}
+
+function normalizeExternalReExports(exportTargets, entries, graph) {
+  if (!graph) return;
+  for (const variant of declarationVariants(exportTargets, graph)) {
+    const module = graph.getModule(variant.entryFile);
+    for (const authority of [...(module?.externalReExports ?? [])].sort((left, right) =>
+      JSON.stringify(left).localeCompare(JSON.stringify(right)))) {
+      const base = [
+        'external-re-export',
+        variant.specifier,
+        ...(variant.condition ? [variant.condition] : []),
+        authority.mode,
+        authority.exported,
+      ].join(':');
+      addEntry(
+        entries,
+        base,
+        'external-re-export',
+        'authority',
+        {
+          source: authority.source,
+          imported: authority.imported,
+          kind: authority.kind,
+        },
+        `${variant.specifier} external ${authority.mode} re-export`,
+      );
     }
   }
 }
@@ -1159,14 +2336,23 @@ export function normalizePublicApi({ packageJson, manifest, declarations = {} })
     throw new Error('Public API input requires packageJson.name and packageJson.version.');
   }
   const entries = new Map();
-  normalizeExports(packageJson.exports, entries, declarations.packageFiles);
+  const exportTargets = normalizeExports(packageJson.exports, entries, declarations.packageFiles);
+  const declarationFiles = { ...(declarations.files ?? {}) };
+  const namedEntry = normalizedFileKey(declarations.namedEntry ?? 'dist/lyra.d.ts');
+  if (typeof declarations.named === 'string') declarationFiles[namedEntry] = declarations.named;
+  const graph = Object.keys(declarationFiles).length > 0
+    ? declarationGraph(declarationFiles)
+    : undefined;
   // Published manifests before v8 flattened standard superclass surfaces into every subclass,
   // while the compact v8 representation stores them once on the resolvable base declaration.
   // Compare effective public surfaces, not those two byte-level encodings; expansion is
   // idempotent for an already-flattened manifest because subclass entries override inherited
   // entries by public name.
   normalizeManifest(expandManifestInheritance(manifest), entries);
-  normalizeNamedExports(declarations, entries);
+  normalizeNamedExports(declarations, entries, graph);
+  normalizeSubpathDeclarations(exportTargets, entries, graph);
+  normalizeAugmentations(exportTargets, entries, graph);
+  normalizeExternalReExports(exportTargets, entries, graph);
   for (const framework of ['react', 'vue', 'svelte']) {
     if (typeof declarations[framework] === 'string') {
       normalizeFrameworkDeclarations(framework, declarations[framework], entries);
@@ -1176,6 +2362,14 @@ export function normalizePublicApi({ packageJson, manifest, declarations = {} })
     packageName: packageJson.name,
     version: packageJson.version,
     entries: Object.fromEntries([...entries].sort(([left], [right]) => left.localeCompare(right))),
+    contracts: Object.fromEntries(
+      [...(graph?.contractDefinitions ?? [])].sort(([left], [right]) =>
+        left.localeCompare(right)),
+    ),
+    dependencies: Object.fromEntries(
+      [...(graph?.dependencyDefinitions ?? [])].sort(([left], [right]) =>
+        left.localeCompare(right)),
+    ),
   };
 }
 
@@ -1183,7 +2377,32 @@ function sameValue(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-function changedBump(entry, before, after) {
+function declarationContractBump(before, after) {
+  let bump = 'none';
+  const ids = new Set([...Object.keys(before ?? {}), ...Object.keys(after ?? {})]);
+  for (const id of ids) {
+    const beforeEntry = before?.[id];
+    const afterEntry = after?.[id];
+    if (!beforeEntry) bump = maxBump(bump, 'minor');
+    else if (!afterEntry) return 'major';
+    else if (!sameValue(beforeEntry.value, afterEntry.value)) {
+      bump = maxBump(
+        bump,
+        changedBump(afterEntry, beforeEntry.value, afterEntry.value),
+      );
+    }
+  }
+  return bump;
+}
+
+function changedBump(entry, before, after, baseline, current) {
+  if (entry.semantic === 'declaration-contract-ref') {
+    const beforeContract = baseline?.contracts?.[before];
+    const afterContract = current?.contracts?.[after];
+    if (!beforeContract || !afterContract) return 'major';
+    return declarationContractBump(beforeContract, afterContract);
+  }
+  if (entry.semantic === 'dependency-contract-ref') return 'major';
   if (entry.semantic === 'type' && isTypeWidening(before, after)) return 'minor';
   if (entry.semantic === 'optional' && before === false && after === true) return 'minor';
   if (entry.semantic === 'readonly' && before === true && after === false) return 'minor';
@@ -1230,7 +2449,7 @@ export function diffPublicApi(baseline, current) {
       changes.push({
         id,
         surface: afterEntry.surface,
-        bump: changedBump(afterEntry, beforeEntry.value, afterEntry.value),
+        bump: changedBump(afterEntry, beforeEntry.value, afterEntry.value, baseline, current),
         kind: 'changed',
         before: beforeEntry.value,
         after: afterEntry.value,

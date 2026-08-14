@@ -171,6 +171,10 @@ export const NORMALIZATION_SECTIONS = [
   'unknownMethodReturnTypes',
   'cancelabilityEquivalences',
   'cancelabilityPathAdditions',
+  'attributePropertyEquivalences',
+  'reflectionEquivalences',
+  'cssDefaultEquivalences',
+  'deprecationEquivalences',
 ];
 
 // Cancelability is a summary label over every path that emits an event, ordered by how much veto
@@ -580,6 +584,11 @@ function isInternalMethod(member, ecosystem) {
   if (member.kind !== 'method' || member.static || member.privacy === 'private' || member.privacy === 'protected') {
     return true;
   }
+  // As with fields, a directly-authored Lyra method is public TypeScript API unless its source
+  // explicitly says otherwise. Naming heuristics (`on*`, `*Callback`, lifecycle names) must not
+  // silently erase a callable member from effective governance; implementation hooks belong
+  // behind `private`/`protected` in source.
+  if (ecosystem === 'lyra' && !member.inheritedFrom) return false;
   if (INTERNAL_METHOD_NAMES.has(member.name)) return true;
   if (/^(?:handle|on|_)[A-Z_]/.test(member.name) && !PUBLIC_METHOD_NAMES.has(member.name)) return true;
   if (/Callback$/.test(member.name) && !PUBLIC_METHOD_NAMES.has(member.name)) return true;
@@ -592,6 +601,10 @@ function isInternalMethod(member, ecosystem) {
 
 function isPublicField(member, attributeNames, ecosystem) {
   if (member.kind !== 'field' || member.static || member.privacy === 'private' || member.privacy === 'protected') return false;
+  // TypeScript visibility, not a naming convention or analyzer-description accident, owns Lyra's
+  // directly-authored API boundary. Underscore/framework-controller fields must be declared
+  // private/protected in source if they are implementation detail.
+  if (ecosystem === 'lyra' && !member.inheritedFrom) return true;
   if (/^_/.test(member.name)) return false;
   if (
     FRAMEWORK_CONTROLLER_FIELDS.has(member.name) &&
@@ -682,7 +695,7 @@ function normalizeAttributes(declaration, publicFields, ecosystem) {
         type: textOf(attribute.parsedType || attribute.type || field?.type),
         reflects: field?.reflects === true,
         inferred: attribute.inferred === true || (ecosystem === 'shoelace' && declared.length === 0),
-        deprecated: attribute.deprecated || field?.deprecated || null,
+        deprecated: attribute.deprecation || attribute.deprecated || field?.deprecation || field?.deprecated || null,
         hasDefault: hasOwn(attribute, 'default') || Boolean(field && hasOwn(field, 'default')),
       };
       if (normalized.hasDefault) normalized.default = canonicalDefault(hasOwn(attribute, 'default') ? attribute.default : field.default);
@@ -700,7 +713,7 @@ function normalizeProperties(publicFields) {
         type: textOf(member.parsedType || member.type),
         readonly: member.readonly === true,
         reflects: member.reflects === true,
-        deprecated: member.deprecated || null,
+        deprecated: member.deprecation || member.deprecated || null,
         hasDefault: hasOwn(member, 'default'),
       };
       if (normalized.hasDefault) normalized.default = canonicalDefault(member.default);
@@ -726,7 +739,15 @@ function normalizeMethods(members, ecosystem) {
     grouped.set(member.name, current);
   }
   return [...grouped]
-    .map(([name, overloads]) => ({ name, overloads: [...overloads.values()] }))
+    .map(([name, overloads]) => {
+      const declaration = members.find((member) => member.kind === 'method' && member.name === name);
+      const deprecated = declaration?.deprecation || declaration?.deprecated || null;
+      return {
+        name,
+        overloads: [...overloads.values()],
+        ...(deprecated ? { deprecated } : {}),
+      };
+    })
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -734,7 +755,7 @@ function normalizeNamed(entries) {
   return sortByName(
     (entries ?? []).map((entry) => ({
       name: entry.name ?? '',
-      deprecated: entry.deprecated || null,
+      deprecated: entry.deprecation || entry.deprecated || null,
     })),
   );
 }
@@ -747,7 +768,7 @@ function normalizeCssProperties(entries, tagName = 'custom element') {
       }
       const normalized = {
         name: entry.name,
-        deprecated: entry.deprecated || null,
+        deprecated: entry.deprecation || entry.deprecated || null,
         hasDefault: hasOwn(entry, 'default'),
       };
       if (normalized.hasDefault) normalized.default = canonicalDefault(entry.default);
@@ -820,10 +841,12 @@ function eventConstructor(type) {
 function normalizeEvents(entries, ecosystem) {
   return sortByName(
     (entries ?? []).map((entry) => {
+      const deprecated = entry.deprecation || entry.deprecated || null;
       const normalized = {
         name: entry.name,
         type: textOf(entry.type),
         cancelable: eventCancelabilityFromDescription(entry.description, ecosystem, entry.name),
+        ...(deprecated ? { deprecated } : {}),
       };
       const constructor = eventConstructor(entry.type);
       const bubbles = eventFlag(
@@ -1019,6 +1042,83 @@ function normalizedExpectedDefault(normalizations, memberKind, member, upstreamD
     (entry) => entry.memberKind === memberKind && entry.member === member && entry.upstream === upstreamDefault,
   );
   return rule ? rule.target : upstreamDefault;
+}
+
+function reviewedAttributeProperty(normalizations, attribute, upstreamProperty, targetProperty) {
+  return (normalizations.attributePropertyEquivalences ?? []).some(
+    (entry) =>
+      entry.attribute === attribute &&
+      entry.upstream === upstreamProperty &&
+      entry.target === targetProperty,
+  );
+}
+
+function reviewedReflection(normalizations, memberKind, member, upstreamReflects, targetReflects) {
+  return (normalizations.reflectionEquivalences ?? []).some(
+    (entry) =>
+      entry.memberKind === memberKind &&
+      entry.member === member &&
+      entry.upstream === upstreamReflects &&
+      entry.target === targetReflects,
+  );
+}
+
+function reviewedCssDefault(normalizations, member, upstreamEntry, targetEntry) {
+  return (normalizations.cssDefaultEquivalences ?? []).some(
+    (entry) =>
+      entry.member === member &&
+      entry.upstreamHasDefault === upstreamEntry.hasDefault &&
+      (!entry.upstreamHasDefault || entry.upstream === upstreamEntry.default) &&
+      entry.targetHasDefault === targetEntry.hasDefault &&
+      (!entry.targetHasDefault || entry.target === targetEntry.default),
+  );
+}
+
+function deprecationReplacement(value) {
+  if (value && typeof value === 'object') {
+    const replacement = value.replacement;
+    if (!replacement || typeof replacement !== 'object') return null;
+    // A replacement can carry a required value as well as a member name (`canvas="auto"`).
+    // Preserve that executable spelling when it is a direct attribute/property usage, while
+    // host-CSS and selector examples normalize to the public replacement member itself.
+    const usage = typeof replacement.usage === 'string' ? replacement.usage.trim() : '';
+    const assignment = /^([a-z][a-z0-9-]*)\s*=\s*["'][^"']+["']$/iu.exec(usage);
+    if (assignment?.[1] === replacement.name) return usage.replace(/\s+/gu, '');
+    return typeof replacement.name === 'string' && replacement.name ? replacement.name : null;
+  }
+  if (typeof value !== 'string') return null;
+  return /\buse\s+(?:the\s+)?`([^`]+)`/iu.exec(value)?.[1] ??
+    // The negative lookahead prevents generic prose such as "use the part named after the
+    // component" from being misread as a replacement literally named `the`.
+    /\buse\s+(?:the\s+)?(?!the\b)([a-z][a-z0-9-]*)\s+(?:part|property|attribute|slot|method)\b/iu.exec(value)?.[1] ??
+    null;
+}
+
+function reviewedDeprecation(
+  normalizations,
+  section,
+  member,
+  upstreamDeprecated,
+  upstreamReplacement,
+  targetDeprecated,
+  targetReplacement,
+) {
+  return (normalizations.deprecationEquivalences ?? []).some(
+    (entry) =>
+      entry.section === section &&
+      entry.member === member &&
+      entry.upstreamDeprecated === upstreamDeprecated &&
+      entry.upstreamReplacement === upstreamReplacement &&
+      entry.targetDeprecated === targetDeprecated &&
+      entry.targetReplacement === targetReplacement,
+  );
+}
+
+function rewriteDeprecationReplacement(replacement, rewrites) {
+  if (replacement === null) return null;
+  const assignment = /^([a-z][a-z0-9-]*)(=.*)$/iu.exec(replacement);
+  if (assignment) return `${rewrites.get(assignment[1]) || assignment[1]}${assignment[2]}`;
+  return rewrites.get(replacement) || replacement;
 }
 
 function reviewedDerivedDefault(normalizations, memberKind, member, upstreamDefault, candidate) {
@@ -1479,6 +1579,16 @@ export function compareMappedSurfaces(upstream, target, { upstreamPrefix, rewrit
   const propertyRewrites = new Map((rewrites.properties ?? []).map((entry) => [entry.from, entry.to]));
   const eventRewrites = new Map((rewrites.events ?? []).map((entry) => [entry.from, entry.to]));
   const methodRewrites = new Map((rewrites.methods ?? []).map((entry) => [entry.from, entry.to]));
+  const sectionDeprecationRewrites = new Map([
+    ['attributes', attributeRewrites],
+    ['properties', propertyRewrites],
+    ['events', eventRewrites],
+    ['methods', methodRewrites],
+    ...['slots', 'parts', 'cssProperties', 'cssStates'].map((section) => [
+      section,
+      new Map((rewrites[section] ?? []).map((entry) => [entry.from, entry.to])),
+    ]),
+  ]);
   const unknownMethodReturnTypes = new Set(
     (normalizations.unknownMethodReturnTypes ?? []).map((entry) => entry.method),
   );
@@ -1492,6 +1602,40 @@ export function compareMappedSurfaces(upstream, target, { upstreamPrefix, rewrit
       .map((attribute) => attribute.property)
       .filter(Boolean),
   );
+  const compareDeprecation = (section, upstreamMember, targetMember) => {
+    const upstreamDeprecated = Boolean(upstreamMember.deprecated);
+    const targetDeprecated = Boolean(targetMember.deprecated);
+    const upstreamReplacement = deprecationReplacement(upstreamMember.deprecated);
+    const targetReplacement = deprecationReplacement(targetMember.deprecated);
+    const expectedReplacement = rewriteDeprecationReplacement(
+      upstreamReplacement,
+      sectionDeprecationRewrites.get(section) ?? new Map(),
+    );
+    const mismatch = upstreamDeprecated !== targetDeprecated ||
+      (upstreamDeprecated && targetDeprecated && expectedReplacement !== targetReplacement);
+    if (
+      mismatch &&
+      !reviewedDeprecation(
+        normalizations,
+        section,
+        upstreamMember.name,
+        upstreamDeprecated,
+        upstreamReplacement,
+        targetDeprecated,
+        targetReplacement,
+      )
+    ) {
+      drift.push({
+        code: upstreamDeprecated === targetDeprecated
+          ? 'deprecation-replacement-mismatch'
+          : 'deprecation-mismatch',
+        section,
+        member: upstreamMember.name,
+        expected: upstreamDeprecated ? expectedReplacement ?? true : false,
+        actual: targetDeprecated ? targetReplacement ?? true : false,
+      });
+    }
+  };
 
   for (const attribute of upstream.attributes ?? []) {
     if (Object.hasOwn(MIGRATION_ATTRIBUTE_EXCLUSIONS, attribute.name)) continue;
@@ -1537,7 +1681,34 @@ export function compareMappedSurfaces(upstream, target, { upstreamPrefix, rewrit
         actual: candidate.type,
       });
     }
-    if (attribute.reflects === true && candidate.reflects !== true) {
+    const expectedProperty = propertyRewrites.get(attribute.property) || attribute.property;
+    if (
+      expectedProperty !== candidate.property &&
+      !reviewedAttributeProperty(
+        normalizations,
+        attribute.name,
+        attribute.property,
+        candidate.property,
+      )
+    ) {
+      drift.push({
+        code: 'attribute-property-mismatch',
+        section: 'attributes',
+        member: attribute.name,
+        expected: expectedProperty,
+        actual: candidate.property,
+      });
+    }
+    if (
+      attribute.reflects !== candidate.reflects &&
+      !reviewedReflection(
+        normalizations,
+        'attribute',
+        attribute.name,
+        attribute.reflects,
+        candidate.reflects,
+      )
+    ) {
       drift.push({
         code: 'reflection-mismatch',
         section: 'attributes',
@@ -1561,6 +1732,7 @@ export function compareMappedSurfaces(upstream, target, { upstreamPrefix, rewrit
         actual: candidate.hasDefault ? candidate.default : null,
       });
     }
+    compareDeprecation('attributes', attribute, candidate);
   }
 
   for (const property of upstream.properties ?? []) {
@@ -1582,6 +1754,7 @@ export function compareMappedSurfaces(upstream, target, { upstreamPrefix, rewrit
           actual: hasOwn(candidate, 'readonly') ? candidate.readonly : null,
         });
       }
+      if (candidate) compareDeprecation('properties', property, candidate);
       continue;
     }
     if (!candidate) pushMissing(drift, 'missing-property', 'properties', property.name);
@@ -1600,7 +1773,16 @@ export function compareMappedSurfaces(upstream, target, { upstreamPrefix, rewrit
           actual: candidate.type,
         });
       }
-      if (property.reflects === true && candidate.reflects !== true) {
+      if (
+        property.reflects !== candidate.reflects &&
+        !reviewedReflection(
+          normalizations,
+          'property',
+          property.name,
+          property.reflects,
+          candidate.reflects,
+        )
+      ) {
         drift.push({
           code: 'reflection-mismatch',
           section: 'properties',
@@ -1619,6 +1801,7 @@ export function compareMappedSurfaces(upstream, target, { upstreamPrefix, rewrit
         });
       }
       const expectedDefault = normalizedExpectedDefault(normalizations, 'property', property.name, property.default);
+      compareDeprecation('properties', property, candidate);
       if (
         !property.hasDefault ||
         (candidate.hasDefault && candidate.default === expectedDefault) ||
@@ -1641,11 +1824,35 @@ export function compareMappedSurfaces(upstream, target, { upstreamPrefix, rewrit
     ['cssProperties', 'missing-css-property'],
     ['cssStates', 'missing-css-state'],
   ]) {
-    const targetNames = new Set((target[section] ?? []).map((entry) => entry.name));
+    const targetEntries = new Map((target[section] ?? []).map((entry) => [entry.name, entry]));
     const sectionRewrites = new Map((rewrites[section] ?? []).map((entry) => [entry.from, entry.to]));
     for (const entry of upstream[section] ?? []) {
       const expectedName = sectionRewrites.get(entry.name) || entry.name;
-      if (!targetNames.has(expectedName)) pushMissing(drift, code, section, entry.name);
+      const candidate = targetEntries.get(expectedName);
+      if (!candidate) {
+        pushMissing(drift, code, section, entry.name);
+        continue;
+      }
+      if (section === 'cssProperties') {
+        const defaultsMatch =
+          entry.hasDefault === candidate.hasDefault &&
+          (!entry.hasDefault || entry.default === candidate.default);
+        if (
+          !defaultsMatch &&
+          !reviewedCssDefault(normalizations, entry.name, entry, candidate)
+        ) {
+          drift.push({
+            code: 'css-default-mismatch',
+            section,
+            member: entry.name,
+            expectedHasDefault: entry.hasDefault,
+            expected: entry.hasDefault ? entry.default : null,
+            actualHasDefault: candidate.hasDefault,
+            actual: candidate.hasDefault ? candidate.default : null,
+          });
+        }
+      }
+      compareDeprecation(section, entry, candidate);
     }
   }
 
@@ -1672,6 +1879,7 @@ export function compareMappedSurfaces(upstream, target, { upstreamPrefix, rewrit
         actual: candidate.overloads,
       });
     }
+    if (candidate) compareDeprecation('methods', method, candidate);
   }
 
   for (const event of upstream.events ?? []) {
@@ -1727,6 +1935,7 @@ export function compareMappedSurfaces(upstream, target, { upstreamPrefix, rewrit
           actual: hasOwn(candidate, field) ? candidate[field] : null,
         });
       }
+      compareDeprecation('events', event, candidate);
     }
   }
 
@@ -1889,6 +2098,141 @@ export function validateMappingNormalizations(mapping, { upstream, target } = {}
     if (!NORMALIZATION_SECTIONS.includes(section)) {
       findings.push(`${mapping.upstreamTag}: unknown normalization section ${section}`);
     }
+  }
+
+  const attributeRewrites = new Map((mapping.rewrites?.attributes ?? []).map((entry) => [entry.from, entry.to]));
+  const propertyRewrites = new Map((mapping.rewrites?.properties ?? []).map((entry) => [entry.from, entry.to]));
+  const seenAttributeProperties = new Set();
+  for (const rule of normalizations.attributePropertyEquivalences ?? []) {
+    const valid =
+      typeof rule?.attribute === 'string' && Boolean(rule.attribute) &&
+      typeof rule.upstream === 'string' && Boolean(rule.upstream) &&
+      typeof rule.target === 'string' && Boolean(rule.target) &&
+      Object.keys(rule).length === 3;
+    if (!valid) {
+      findings.push(`${mapping.upstreamTag}: invalid normalizations.attributePropertyEquivalences rule`);
+      continue;
+    }
+    if (seenAttributeProperties.has(rule.attribute)) {
+      findings.push(`${mapping.upstreamTag}: duplicate attribute-property normalization ${rule.attribute}`);
+    }
+    seenAttributeProperties.add(rule.attribute);
+    const source = (upstream?.attributes ?? []).find((entry) => entry.name === rule.attribute);
+    const targetName = attributeRewrites.get(rule.attribute) || rule.attribute;
+    const candidate = (target?.attributes ?? []).find((entry) => entry.name === targetName);
+    if (!source) findings.push(`${mapping.upstreamTag}: dangling upstream attribute-property normalization ${rule.attribute}`);
+    else if (source.property !== rule.upstream) findings.push(`${mapping.upstreamTag}: stale upstream attribute-property normalization ${rule.attribute}`);
+    if (!candidate) findings.push(`${mapping.upstreamTag}: dangling target attribute-property normalization ${rule.attribute}`);
+    else if (candidate.property !== rule.target) findings.push(`${mapping.upstreamTag}: stale target attribute-property normalization ${rule.attribute}`);
+    else if ((propertyRewrites.get(rule.upstream) || rule.upstream) === rule.target) {
+      findings.push(`${mapping.upstreamTag}: stale equivalent attribute-property normalization ${rule.attribute}`);
+    }
+  }
+
+  const seenReflections = new Set();
+  for (const rule of normalizations.reflectionEquivalences ?? []) {
+    const valid =
+      ['attribute', 'property'].includes(rule?.memberKind) &&
+      typeof rule.member === 'string' && Boolean(rule.member) &&
+      typeof rule.upstream === 'boolean' && typeof rule.target === 'boolean' &&
+      rule.upstream !== rule.target && Object.keys(rule).length === 4;
+    if (!valid) {
+      findings.push(`${mapping.upstreamTag}: invalid normalizations.reflectionEquivalences rule`);
+      continue;
+    }
+    const key = `${rule.memberKind}:${rule.member}`;
+    if (seenReflections.has(key)) findings.push(`${mapping.upstreamTag}: duplicate reflection normalization ${key}`);
+    seenReflections.add(key);
+    const section = rule.memberKind === 'attribute' ? 'attributes' : 'properties';
+    const rewrites = rule.memberKind === 'attribute' ? attributeRewrites : propertyRewrites;
+    const source = (upstream?.[section] ?? []).find((entry) => entry.name === rule.member);
+    const candidate = (target?.[section] ?? []).find((entry) => entry.name === (rewrites.get(rule.member) || rule.member));
+    if (!source) findings.push(`${mapping.upstreamTag}: dangling upstream reflection normalization ${key}`);
+    else if (source.reflects !== rule.upstream) findings.push(`${mapping.upstreamTag}: stale upstream reflection normalization ${key}`);
+    if (!candidate) findings.push(`${mapping.upstreamTag}: dangling target reflection normalization ${key}`);
+    else if (candidate.reflects !== rule.target) findings.push(`${mapping.upstreamTag}: stale target reflection normalization ${key}`);
+  }
+
+  const seenCssDefaults = new Set();
+  for (const rule of normalizations.cssDefaultEquivalences ?? []) {
+    const expectedKeys = new Set(['member', 'upstreamHasDefault', 'targetHasDefault']);
+    if (rule?.upstreamHasDefault === true) expectedKeys.add('upstream');
+    if (rule?.targetHasDefault === true) expectedKeys.add('target');
+    const keys = rule && typeof rule === 'object' ? Object.keys(rule) : [];
+    const valid = typeof rule?.member === 'string' && Boolean(rule.member) &&
+      typeof rule.upstreamHasDefault === 'boolean' &&
+      typeof rule.targetHasDefault === 'boolean' &&
+      (rule.upstreamHasDefault !== true || isReviewedScalar(rule.upstream)) &&
+      (rule.targetHasDefault !== true || isReviewedScalar(rule.target)) &&
+      keys.length === expectedKeys.size && keys.every((key) => expectedKeys.has(key)) &&
+      (rule.upstreamHasDefault !== rule.targetHasDefault ||
+        (rule.upstreamHasDefault && rule.upstream !== rule.target));
+    if (!valid) {
+      findings.push(`${mapping.upstreamTag}: invalid normalizations.cssDefaultEquivalences rule`);
+      continue;
+    }
+    if (seenCssDefaults.has(rule.member)) findings.push(`${mapping.upstreamTag}: duplicate CSS-default normalization ${rule.member}`);
+    seenCssDefaults.add(rule.member);
+    const source = (upstream?.cssProperties ?? []).find((entry) => entry.name === rule.member);
+    const targetName = new Map((mapping.rewrites?.cssProperties ?? []).map((entry) => [entry.from, entry.to])).get(rule.member) || rule.member;
+    const candidate = (target?.cssProperties ?? []).find((entry) => entry.name === targetName);
+    if (!source) findings.push(`${mapping.upstreamTag}: dangling upstream CSS-default normalization ${rule.member}`);
+    else if (source.hasDefault !== rule.upstreamHasDefault ||
+      (rule.upstreamHasDefault && source.default !== rule.upstream)) {
+      findings.push(`${mapping.upstreamTag}: stale upstream CSS-default normalization ${rule.member}`);
+    }
+    if (!candidate) findings.push(`${mapping.upstreamTag}: dangling target CSS-default normalization ${rule.member}`);
+    else if (candidate.hasDefault !== rule.targetHasDefault ||
+      (rule.targetHasDefault && candidate.default !== rule.target)) {
+      findings.push(`${mapping.upstreamTag}: stale target CSS-default normalization ${rule.member}`);
+    }
+  }
+
+  const seenDeprecations = new Set();
+  for (const rule of normalizations.deprecationEquivalences ?? []) {
+    const valid = ['attributes', 'properties', 'slots', 'events', 'parts', 'cssProperties', 'cssStates', 'methods'].includes(rule?.section) &&
+      typeof rule.member === 'string' && Boolean(rule.member) &&
+      typeof rule.upstreamDeprecated === 'boolean' &&
+      (rule.upstreamReplacement === null || typeof rule.upstreamReplacement === 'string') &&
+      typeof rule.targetDeprecated === 'boolean' &&
+      (rule.targetReplacement === null || typeof rule.targetReplacement === 'string') &&
+      Object.keys(rule).length === 6;
+    if (!valid) {
+      findings.push(`${mapping.upstreamTag}: invalid normalizations.deprecationEquivalences rule`);
+      continue;
+    }
+    const key = `${rule.section}:${rule.member}`;
+    if (seenDeprecations.has(key)) findings.push(`${mapping.upstreamTag}: duplicate deprecation normalization ${key}`);
+    seenDeprecations.add(key);
+    const sectionRewrites = new Map((mapping.rewrites?.[rule.section] ?? []).map((entry) => [entry.from, entry.to]));
+    const targetName = sectionRewrites.get(rule.member) || rule.member;
+    const source = (upstream?.[rule.section] ?? []).find((entry) => entry.name === rule.member);
+    const candidate = (target?.[rule.section] ?? []).find((entry) => entry.name === targetName);
+    if (!source) {
+      findings.push(`${mapping.upstreamTag}: dangling upstream deprecation normalization ${key}`);
+      continue;
+    }
+    if (!candidate) {
+      findings.push(`${mapping.upstreamTag}: dangling target deprecation normalization ${key}`);
+      continue;
+    }
+    const sourceDeprecated = Boolean(source.deprecated);
+    const sourceReplacement = deprecationReplacement(source.deprecated);
+    const targetDeprecated = Boolean(candidate.deprecated);
+    const targetReplacement = deprecationReplacement(candidate.deprecated);
+    if (
+      sourceDeprecated !== rule.upstreamDeprecated ||
+      sourceReplacement !== rule.upstreamReplacement
+    ) findings.push(`${mapping.upstreamTag}: stale upstream deprecation normalization ${key}`);
+    if (
+      targetDeprecated !== rule.targetDeprecated ||
+      targetReplacement !== rule.targetReplacement
+    ) findings.push(`${mapping.upstreamTag}: stale target deprecation normalization ${key}`);
+    const expectedReplacement = rewriteDeprecationReplacement(sourceReplacement, sectionRewrites);
+    if (
+      sourceDeprecated === targetDeprecated &&
+      expectedReplacement === targetReplacement
+    ) findings.push(`${mapping.upstreamTag}: stale equivalent deprecation normalization ${key}`);
   }
 
   const seenTypes = new Set();

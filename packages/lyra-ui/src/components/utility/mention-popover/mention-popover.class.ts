@@ -328,6 +328,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   @state() private _ownsFocus = false;
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     this._isFirstUpdate = !this.hasUpdated;
     // A fresh query or candidate set re-highlights the top match, mirroring
     // how a filtering text field's own suggestion list re-anchors to the
@@ -354,6 +355,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('open')) {
       if (this.open) {
         this.reposition();

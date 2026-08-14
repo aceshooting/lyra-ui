@@ -9,13 +9,21 @@ const meta: Meta = {
   parameters: {
     docs: {
       description: {
-        component: 'Click a button to fire a toast via the `toast()` helper — the ergonomic entry point that lazily mounts one `<lr-toast>` region per placement on `document.body`.',
+        component: 'Click a button to fire a toast via the `toast()` helper — the ergonomic entry point that lazily mounts one `<lr-toast>` region per placement on `document.body`. All six logical placements stay inside the usable safe-area rectangle, including centered placements with asymmetric inline insets.',
       },
     },
   },
 };
 export default meta;
 type Story = StoryObj;
+
+export const Default: Story = {
+  render: () => html`
+    <lr-toast placement="top-center">
+      <lr-toast-item duration="0" variant="success">Saved successfully.</lr-toast-item>
+    </lr-toast>
+  `,
+};
 
 export const Triggers: Story = {
   render: () => html`
@@ -63,7 +71,7 @@ export const AliasSizes: Story = {
     docs: {
       description: {
         story:
-          '`toast()` and `LyraToast.create()` accept `small`, `medium`, and `large`; the created item normalizes them to canonical `s`, `m`, and `l` reads.',
+          '`toast()` and `LyraToast.create()` accept `small`, `medium`, and `large`; the created item preserves those public spellings while privately mapping them to the same rendered sizes as `s`, `m`, and `l`.',
       },
     },
   },
@@ -128,6 +136,14 @@ const placements: ToastPlacement[] = [
 ];
 
 export const Placements: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Start/end follow the document direction. Center placements use the midpoint of the usable safe-area rectangle rather than the physical viewport midpoint.',
+      },
+    },
+  },
   render: () => html`
     <div style="display:flex; flex-wrap:wrap; gap:1rem;">
       ${placements.map(

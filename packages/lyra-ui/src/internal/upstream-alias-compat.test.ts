@@ -75,23 +75,26 @@ describe('pinned upstream write aliases', () => {
     }
   });
 
-  it('normalizes badge and tag variants while preserving their rendered treatment', async () => {
+  it('preserves badge and tag variant spellings while sharing their rendered treatment', async () => {
     const primary = await fixture<LyraBadge>(html`<lr-badge variant="primary">Primary</lr-badge>`);
     const brand = await fixture<LyraBadge>(html`<lr-badge variant="brand">Brand</lr-badge>`);
-    expect(primary.variant).to.equal('brand');
+    expect(primary.variant).to.equal('primary');
+    expect(primary.getAttribute('variant')).to.equal('primary');
+    expect(primary.getAttribute('data-effective-variant')).to.equal('brand');
     expect(getComputedStyle(primary).getPropertyValue('--lr-color-fill-loud').trim()).to.equal(
       getComputedStyle(brand).getPropertyValue('--lr-color-fill-loud').trim(),
     );
 
     const tag = await fixture<LyraTag>(html`<lr-tag variant="text">Text</lr-tag>`);
-    expect(tag.variant).to.equal('neutral');
-    expect(tag.hasAttribute('data-upstream-text-variant')).to.be.true;
+    expect(tag.variant).to.equal('text');
+    expect(tag.getAttribute('variant')).to.equal('text');
+    expect(tag.getAttribute('data-effective-variant')).to.equal('neutral');
     const surface = tag.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
     expect(getComputedStyle(surface).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
     expect(getComputedStyle(surface).borderTopColor).to.equal('rgba(0, 0, 0, 0)');
   });
 
-  it('maps long size aliases to the same rendered tiers and canonical reads', async () => {
+  it('preserves long size aliases while mapping them to the same rendered tiers', async () => {
     const cases = [
       ['small', 's'],
       ['medium', 'm'],
@@ -101,20 +104,24 @@ describe('pinned upstream write aliases', () => {
     for (const [alias, canonical] of cases) {
       const tag = await fixture<LyraTag>(html`<lr-tag size=${alias}>Alias</lr-tag>`);
       const canonicalTag = await fixture<LyraTag>(html`<lr-tag size=${canonical}>Canonical</lr-tag>`);
-      expect(tag.size, `tag ${alias} read`).to.equal(canonical);
+      expect(tag.size, `tag ${alias} read`).to.equal(alias);
+      expect(tag.getAttribute('size'), `tag ${alias} reflection`).to.equal(alias);
+      expect(tag.getAttribute('data-effective-size'), `tag ${alias} effective size`).to.equal(canonical);
       expect(getComputedStyle(tag.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!).minHeight)
         .to.equal(getComputedStyle(canonicalTag.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!).minHeight);
 
       const rating = await fixture<LyraRating>(html`<lr-rating size=${alias}></lr-rating>`);
       const canonicalRating = await fixture<LyraRating>(html`<lr-rating size=${canonical}></lr-rating>`);
-      expect(rating.size, `rating ${alias} read`).to.equal(canonical);
+      expect(rating.size, `rating ${alias} read`).to.equal(alias);
+      expect(rating.getAttribute('size'), `rating ${alias} reflection`).to.equal(alias);
       expect(getComputedStyle(rating).getPropertyValue('--lr-rating-size').trim()).to.equal(
         getComputedStyle(canonicalRating).getPropertyValue('--lr-rating-size').trim(),
       );
 
       const toast = await fixture<LyraToastItem>(html`<lr-toast-item size=${alias}>Alias</lr-toast-item>`);
       const canonicalToast = await fixture<LyraToastItem>(html`<lr-toast-item size=${canonical}>Canonical</lr-toast-item>`);
-      expect(toast.size, `toast ${alias} read`).to.equal(canonical);
+      expect(toast.size, `toast ${alias} read`).to.equal(alias);
+      expect(toast.getAttribute('size'), `toast ${alias} reflection`).to.equal(alias);
       expect(getComputedStyle(toast.shadowRoot!.querySelector<HTMLElement>('[part~="toast-item"]')!).paddingTop)
         .to.equal(getComputedStyle(canonicalToast.shadowRoot!.querySelector<HTMLElement>('[part~="toast-item"]')!).paddingTop);
     }
@@ -124,7 +131,8 @@ describe('pinned upstream write aliases', () => {
       duration: 0,
       size: 'large',
     });
-    expect(createdToast.size).to.equal('l');
+    expect(createdToast.size).to.equal('large');
+    expect(createdToast.getAttribute('size')).to.equal('large');
   });
 
   it('clears split snap with undefined and runs structural date validators', async () => {

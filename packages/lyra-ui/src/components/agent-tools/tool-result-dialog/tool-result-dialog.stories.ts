@@ -45,8 +45,9 @@ print(sum(range(1, 101)))</pre
       <div slot="preview" label="Preview" style="padding:0.75rem 0;">
         <code>sum = 5050</code>
       </div>
-      <lr-json-viewer slot="json" label="JSON" .data=${runPythonOutput} style="display:block;padding:0.75rem 0;">
-      </lr-json-viewer>
+      <div slot="json" label="JSON" style="padding:0.75rem 0;">
+        <lr-json-viewer .data=${runPythonOutput} style="display:block;"></lr-json-viewer>
+      </div>
       <pre slot="raw" label="Raw" style="margin:0;padding:0.75rem 0;white-space:pre-wrap;">
 ${JSON.stringify(runPythonOutput, null, 2)}</pre
       >

@@ -761,7 +761,7 @@ describe('lr-knowledge-graph-explorer', () => {
   it('renders lr-path-strip only when path is non-empty', async () => {
     const el = (await fixture(html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="path"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="path"]')) == null).to.be.true;
     el.path = [{ kind: 'node', node: { id: 'marie', label: 'Marie Curie' } }];
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="path"]')).to.exist;

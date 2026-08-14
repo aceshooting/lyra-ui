@@ -322,6 +322,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   private previousStatusKind?: AgentStatusKind;
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasHeaderSlot = this.hasSlotted('header');
       this.hasSummarySlot = this.hasSlotted('summary');
@@ -344,6 +345,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   };
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('run')) this.handleRunChange();
   }
 

@@ -48,7 +48,7 @@ describe('lr-eval-result', () => {
     const el = (await fixture(html`<lr-eval-result></lr-eval-result>`)) as LyraEvalResult;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.equal('No data');
-    expect(el.shadowRoot!.querySelector('[part="grid"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="grid"]')) == null).to.be.true;
   });
 
   it('resolves the empty-state message through a .strings override, proving the localize() wiring reaches the DOM', async () => {
@@ -163,7 +163,7 @@ describe('lr-eval-result', () => {
     const diffView = el.shadowRoot!.querySelector('[part="diff-view"]') as HTMLElement & { oldText: string; newText: string; layout: string };
     expect(diffView.layout).to.equal('unified');
     expect(diffView.oldText).to.equal(diffView.newText);
-    expect(el.shadowRoot!.querySelector('[part="diff-labels"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="diff-labels"]')) == null).to.be.true;
   });
 
   it('degrades gracefully when selected-run-id or baseline-run-id references a run that does not exist', async () => {
@@ -178,8 +178,8 @@ describe('lr-eval-result', () => {
     )) as LyraEvalResult;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="grid"]')).to.exist;
-    expect(el.shadowRoot!.querySelector('[part="review"]')).to.not.exist;
-    expect(el.shadowRoot!.querySelector('[part="diff-view"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="review"]')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part="diff-view"]')) == null).to.be.true;
   });
 
   it('renders correctly under dir="rtl"', async () => {

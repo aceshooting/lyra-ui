@@ -10,12 +10,12 @@ const row = 'display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center';
 export const Default: StoryObj = { render: () => html`<lr-tag variant="brand">Example tag</lr-tag>` };
 
 export const Removable: StoryObj = {
-  name: 'Removable (self-removes unless vetoed)',
+  name: 'Removable (controlled notification)',
   parameters: {
     docs: {
       description: {
         story:
-          '`with-remove` is the Lyra spelling; Shoelace markup can use its `removable` alias. Both render the same button, which exports `remove-button` and `remove-button__base` part names.',
+          '`with-remove` is the Lyra spelling; Shoelace markup can use its `removable` alias. Either attribute enables one shared state. Activation emits a noncancelable `lr-remove` notification and leaves the tag connected so consumer state owns removal.',
       },
     },
   },
@@ -26,14 +26,13 @@ export const Removable: StoryObj = {
   </div>`,
 };
 
-export const RemovalVetoed: StoryObj = {
-  name: 'Removal vetoed by the consumer',
+export const ConsumerOwnedRemoval: StoryObj = {
+  name: 'Removal owned by consumer state',
   render: () => html`<div
     style=${row}
     @lr-remove=${(event: Event) => {
-      // preventDefault() keeps the tag mounted so the consumer's own state owns the removal.
-      event.preventDefault();
-      (event.target as HTMLElement).setAttribute('variant', 'warning');
+      // In an application this is where the backing collection is updated.
+      (event.target as HTMLElement).remove();
     }}
   >
     <lr-tag with-remove>Try removing me</lr-tag>

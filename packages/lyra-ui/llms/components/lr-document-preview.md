@@ -74,6 +74,9 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
   internal `<lr-pan-zoom>`. `false` (the default) preserves the exact pre-`zoomable` DOM — an
   inline thumbnail (e.g. in a chat stream) must not unexpectedly grow a focusable zoom-chrome
   viewport; an inspection surface opts in.
+- `suppressDownload: boolean = false` (attribute: false) — omits the generic fallback's download
+  action when a composing shell already owns that action. This is property-only composition state;
+  it does not suppress inline preview rendering.
 - `highlights: LyraHighlight[] = []` (attribute: false) — display-only `region` highlights painted
   over the image-format preview; ignored for the `text`/`generic` formats. A rectangle renders only
   when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative.

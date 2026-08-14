@@ -43,6 +43,9 @@ available for renderer output that exposes DOM text.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
   DOMRect[] }`) — fired after a selection ends inside the rendered presentation.
 
+`lr-highlight-activate` is not part of this viewer's event contract: painted renderer-text
+highlights are passive and cannot be activated.
+
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base` (the named region with explicit `aria-busy="true"|"false"`), `header`, `name`,

@@ -43,6 +43,10 @@ export const styles = css`
     --lr-chip-radius: var(--lr-radius-pill);
   }
 
+  :host([disabled]) {
+    opacity: var(--lr-opacity-disabled);
+  }
+
   :host([size='3xs']) {
     --lr-chip-font-size: var(--lr-font-size-3xs);
     --lr-chip-padding-block: 0;
@@ -131,7 +135,7 @@ export const styles = css`
     -webkit-tap-highlight-color: transparent;
     transition: background-color var(--lr-transition-fast);
   }
-  :host([toggleable]:not([removable])) [part='base']:hover {
+  :host([toggleable]:not([removable]):not([disabled])) [part='base']:hover {
     background: color-mix(in srgb, var(--lr-chip-accent) 8%, var(--lr-chip-bg));
   }
   /* Pressed deepens the hover's own accent wash to the shared --lr-color-mix-active share --
@@ -141,7 +145,7 @@ export const styles = css`
      shared partner follows the page text and would wash the variant's hue out at the exact moment
      of the click. :active matches here even though the actual button is [part='toggle-button']
      stretched over the base, because :active applies to the activated element's ancestors too. */
-  :host([toggleable]:not([removable])) [part='base']:active {
+  :host([toggleable]:not([removable]):not([disabled])) [part='base']:active {
     background: color-mix(in srgb, var(--lr-chip-accent) var(--lr-color-mix-active), var(--lr-chip-bg));
   }
   [part='toggle-button']:focus-visible {
@@ -215,6 +219,9 @@ export const styles = css`
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
   }
+  [part='toggle-button']:disabled {
+    cursor: not-allowed;
+  }
 
   /* The interactive hit target meets the shared minimum tappable size (same --lr-icon-button-size
      floor as lr-swatch-picker's [part='swatch']/lr-token-input's [part='remove']), while the
@@ -244,7 +251,7 @@ export const styles = css`
     -webkit-tap-highlight-color: transparent;
     transition: background-color var(--lr-transition-fast);
   }
-  [part='remove-button']:hover {
+  [part='remove-button']:not(:disabled):hover {
     background: color-mix(in srgb, currentColor 16%, transparent);
   }
   /* Pressed lays the shared --lr-color-mix-active share of currentColor over the hover's own
@@ -255,12 +262,15 @@ export const styles = css`
      point the opposite way from the hover on a non-neutral chip. The hover value is restated
      rather than referenced because it is a literal here, not a public custom property (unlike
      <lr-tag>'s --lr-tag-remove-hover-background). */
-  [part='remove-button']:active {
+  [part='remove-button']:not(:disabled):active {
     background: color-mix(in srgb, currentColor var(--lr-color-mix-active), color-mix(in srgb, currentColor 16%, transparent));
   }
   [part='remove-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part='remove-button']:disabled {
+    cursor: not-allowed;
   }
   [part='remove-button'] svg {
     display: block;

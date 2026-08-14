@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { LyraPopover } from './popover.class.js';
 import type { LyraTooltip } from './tooltip.class.js';
 import type { LyraDropdown } from './dropdown.class.js';
@@ -8,6 +8,566 @@ import './tooltip.js';
 import './dropdown.js';
 import '../../forms/button/button.js';
 import '../../forms/icon-button/icon-button.js';
+
+describe('effective arrow layout', () => {
+  const popup = (el: Element): HTMLElement => el.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+
+  it('keeps a default popover arrow visible while moving scrolling to its content', async () => {
+    const el = await fixture<LyraPopover>(html`
+      <lr-popover open
+        ><button slot="trigger">Open</button>
+        <p>Details</p></lr-popover
+      >
+    `);
+    const surface = popup(el);
+    const content = el.shadowRoot!.querySelector<HTMLElement>('[part~="content"]')!;
+
+    expect(surface.querySelectorAll('[part~="arrow"]').length).to.equal(1);
+    expect(getComputedStyle(surface).overflow).to.equal('visible');
+    expect(getComputedStyle(content).overflow).to.equal('auto');
+  });
+
+  it('keeps non-arrow popover and dropdown surfaces bounded', async () => {
+    const popover = await fixture<LyraPopover>(html`
+      <lr-popover open arrow="false"
+        ><button slot="trigger">Open</button>
+        <p>Details</p></lr-popover
+      >
+    `);
+    const dropdown = await fixture<LyraDropdown>(html`
+      <lr-dropdown open><button slot="trigger">Open</button><button>Action</button></lr-dropdown>
+    `);
+
+    expect(popup(popover).querySelectorAll('[part~="arrow"]').length).to.equal(0);
+    expect(getComputedStyle(popup(popover)).overflow).to.equal('auto');
+    expect(popup(dropdown).querySelectorAll('[part~="arrow"]').length).to.equal(0);
+    expect(getComputedStyle(popup(dropdown)).overflow).to.equal('auto');
+  });
+
+  it('uses the effective tooltip arrow state for overflow', async () => {
+    const withArrow = await fixture<LyraTooltip>(html`
+      <lr-tooltip open><button slot="trigger">Help</button>Explanation</lr-tooltip>
+    `);
+    const withoutArrow = await fixture<LyraTooltip>(html`
+      <lr-tooltip open without-arrow><button slot="trigger">Help</button>Explanation</lr-tooltip>
+    `);
+
+    expect(popup(withArrow).querySelectorAll('[part~="arrow"]').length).to.equal(1);
+    expect(getComputedStyle(popup(withArrow)).overflow).to.equal('visible');
+    expect(popup(withoutArrow).querySelectorAll('[part~="arrow"]').length).to.equal(0);
+    expect(getComputedStyle(popup(withoutArrow)).overflowY).to.equal('auto');
+  });
+});
+
+it('keeps an open orphan popover hidden until a live trigger is assigned', async () => {
+  const el = await fixture<LyraPopover>(html`<lr-popover open><p>Details</p></lr-popover>`);
+  const surface = el.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+  expect(surface.hasAttribute('data-hidden')).to.equal(true);
+  expect(getComputedStyle(surface).pointerEvents).to.equal('none');
+
+  const trigger = document.createElement('button');
+  trigger.slot = 'trigger';
+  trigger.textContent = 'Open';
+  el.append(trigger);
+  await el.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+  expect(surface.hasAttribute('data-hidden')).to.equal(false);
+});
+
+it('keeps an open popover on its direct anchor when its slotted trigger is removed', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <button id="anchor">Anchor</button>
+      <lr-popover open
+        ><button slot="trigger">Trigger</button>
+        <p>Details</p></lr-popover
+      >
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraPopover>('lr-popover')!;
+  el.anchor = wrapper.querySelector('#anchor');
+  await el.updateComplete;
+
+  el.querySelector('[slot="trigger"]')!.remove();
+  await el.updateComplete;
+  expect(el.open).to.equal(true);
+});
+
+it('force-closes a popover when its sole connected direct anchor is removed despite a hide veto', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <button id="sole-popover-anchor">Anchor</button>
+      <lr-popover style="--show-duration: 0ms; --hide-duration: 0ms"><p>Details</p></lr-popover>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraPopover>('lr-popover')!;
+  const anchor = wrapper.querySelector<HTMLElement>('#sole-popover-anchor')!;
+  el.anchor = anchor;
+  await el.updateComplete;
+  await el.show();
+  el.addEventListener('lr-hide', (event) => event.preventDefault());
+
+  anchor.remove();
+  await waitUntil(() => !el.open);
+  expect(el.open).to.equal(false);
+  expect(el.hasAttribute('open')).to.equal(false);
+});
+
+it('force-closes a tooltip when its sole connected direct anchor is removed despite a hide veto', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <button id="sole-tooltip-anchor">Anchor</button>
+      <lr-tooltip manual style="--lr-transition-fast: 0ms">Helpful description</lr-tooltip>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+  const anchor = wrapper.querySelector<HTMLElement>('#sole-tooltip-anchor')!;
+  el.anchor = anchor;
+  await el.updateComplete;
+  await el.show();
+  el.addEventListener('lr-hide', (event) => event.preventDefault());
+
+  anchor.remove();
+  await waitUntil(() => !el.open);
+  expect(el.open).to.equal(false);
+  expect(el.hasAttribute('open')).to.equal(false);
+});
+
+it('force-closes a popover when its direct anchor property is cleared or replaced by a disconnected element', async () => {
+  for (const replacement of ['cleared', 'disconnected'] as const) {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <button id="property-popover-anchor">Anchor</button>
+        <lr-popover style="--show-duration: 0ms; --hide-duration: 0ms"><p>Details</p></lr-popover>
+      </div>
+    `);
+    const el = wrapper.querySelector<LyraPopover>('lr-popover')!;
+    el.anchor = wrapper.querySelector<HTMLElement>('#property-popover-anchor')!;
+    await el.updateComplete;
+    await el.show();
+    el.addEventListener('lr-hide', (event) => event.preventDefault());
+
+    el.anchor = replacement === 'cleared' ? null : document.createElement('button');
+    const updateSettledWithoutFollowup = await el.updateComplete;
+    expect(updateSettledWithoutFollowup, replacement).to.equal(true);
+    await waitUntil(() => !el.open);
+    expect(el.open, replacement).to.equal(false);
+    expect(el.hasAttribute('open'), replacement).to.equal(false);
+  }
+});
+
+it('force-closes a tooltip when its direct anchor property is cleared or replaced by a disconnected element', async () => {
+  for (const replacement of ['cleared', 'disconnected'] as const) {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <button id="property-tooltip-anchor">Anchor</button>
+        <lr-tooltip manual style="--lr-transition-fast: 0ms">Helpful description</lr-tooltip>
+      </div>
+    `);
+    const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+    el.anchor = wrapper.querySelector<HTMLElement>('#property-tooltip-anchor')!;
+    await el.updateComplete;
+    await el.show();
+    el.addEventListener('lr-hide', (event) => event.preventDefault());
+
+    el.anchor = replacement === 'cleared' ? null : document.createElement('button');
+    const updateSettledWithoutFollowup = await el.updateComplete;
+    expect(updateSettledWithoutFollowup, replacement).to.equal(true);
+    await waitUntil(() => !el.open);
+    expect(el.open, replacement).to.equal(false);
+    expect(el.hasAttribute('open'), replacement).to.equal(false);
+  }
+});
+
+it('repositions an open popover to its slotted fallback when a direct anchor is removed', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <button id="popover-primary-anchor" style="position: fixed; left: 250px; top: 20px">Anchor</button>
+      <lr-popover placement="bottom-start" distance="0" style="--show-duration: 0ms; --hide-duration: 0ms">
+        <button slot="trigger" style="position: fixed; left: 10px; top: 80px">Trigger</button>
+        <p>Details</p>
+      </lr-popover>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraPopover>('lr-popover')!;
+  const anchor = wrapper.querySelector<HTMLElement>('#popover-primary-anchor')!;
+  const surface = el.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+  el.anchor = anchor;
+  await el.updateComplete;
+  await el.show();
+  await waitUntil(() => !surface.hasAttribute('data-hidden'));
+  const anchoredLeft = surface.getBoundingClientRect().left;
+
+  anchor.remove();
+  await waitUntil(() => Math.abs(surface.getBoundingClientRect().left - anchoredLeft) > 100);
+  expect(el.open).to.equal(true);
+  expect(surface.hasAttribute('data-hidden')).to.equal(false);
+});
+
+it('repositions an open tooltip to its for fallback when a direct anchor is removed', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <button id="tooltip-primary-anchor" style="position: fixed; left: 250px; top: 20px">Anchor</button>
+      <button id="tooltip-for-fallback" style="position: fixed; left: 10px; top: 80px">Fallback</button>
+      <lr-tooltip
+        manual
+        for="tooltip-for-fallback"
+        hoist
+        placement="bottom-start"
+        distance="0"
+        style="--lr-transition-fast: 0ms"
+        >Helpful description</lr-tooltip
+      >
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+  const anchor = wrapper.querySelector<HTMLElement>('#tooltip-primary-anchor')!;
+  const fallback = wrapper.querySelector<HTMLElement>('#tooltip-for-fallback')!;
+  const surface = el.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+  el.anchor = anchor;
+  await el.updateComplete;
+  await el.show();
+  await waitUntil(() => !surface.hasAttribute('data-hidden'));
+  const anchoredLeft = surface.getBoundingClientRect().left;
+
+  anchor.remove();
+  await waitUntil(() => Math.abs(surface.getBoundingClientRect().left - anchoredLeft) > 100);
+  expect(el.open).to.equal(true);
+  expect(fallback.hasAttribute('aria-describedby')).to.equal(true);
+});
+
+it('repositions an open popover to its slotted fallback when its direct anchor property becomes unavailable', async () => {
+  for (const replacement of ['cleared', 'disconnected'] as const) {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <button id="property-popover-primary" style="position: fixed; left: 250px; top: 20px">Anchor</button>
+        <lr-popover placement="bottom-start" distance="0" style="--show-duration: 0ms; --hide-duration: 0ms">
+          <button slot="trigger" style="position: fixed; left: 10px; top: 80px">Trigger</button>
+          <p>Details</p>
+        </lr-popover>
+      </div>
+    `);
+    const el = wrapper.querySelector<LyraPopover>('lr-popover')!;
+    const surface = el.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+    el.anchor = wrapper.querySelector<HTMLElement>('#property-popover-primary')!;
+    await el.updateComplete;
+    await el.show();
+    await waitUntil(() => !surface.hasAttribute('data-hidden'));
+    const anchoredLeft = surface.getBoundingClientRect().left;
+
+    el.anchor = replacement === 'cleared' ? null : document.createElement('button');
+    await waitUntil(() => Math.abs(surface.getBoundingClientRect().left - anchoredLeft) > 100);
+    expect(el.open, replacement).to.equal(true);
+    expect(surface.hasAttribute('data-hidden'), replacement).to.equal(false);
+  }
+});
+
+it('repositions an open tooltip to its for fallback when its direct anchor property becomes unavailable', async () => {
+  for (const replacement of ['cleared', 'disconnected'] as const) {
+    const fallbackId = `property-tooltip-fallback-${replacement}`;
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <button id="property-tooltip-primary" style="position: fixed; left: 250px; top: 20px">Anchor</button>
+        <button id=${fallbackId} style="position: fixed; left: 10px; top: 80px">Fallback</button>
+        <lr-tooltip
+          manual
+          for=${fallbackId}
+          hoist
+          placement="bottom-start"
+          distance="0"
+          style="--lr-transition-fast: 0ms"
+          >Helpful description</lr-tooltip
+        >
+      </div>
+    `);
+    const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+    const fallback = wrapper.querySelector<HTMLElement>(`#${fallbackId}`)!;
+    const surface = el.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+    el.anchor = wrapper.querySelector<HTMLElement>('#property-tooltip-primary')!;
+    await el.updateComplete;
+    await el.show();
+    await waitUntil(() => !surface.hasAttribute('data-hidden'));
+    const anchoredLeft = surface.getBoundingClientRect().left;
+
+    el.anchor = replacement === 'cleared' ? null : document.createElement('button');
+    await waitUntil(() => Math.abs(surface.getBoundingClientRect().left - anchoredLeft) > 100);
+    expect(el.open, replacement).to.equal(true);
+    expect(fallback.hasAttribute('aria-describedby'), replacement).to.equal(true);
+  }
+});
+
+it('rebinds and hides a for-target tooltip as the referenced element is replaced and removed', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="position: relative">
+      <button id="anchor" style="position: fixed; left: 20px; top: 20px">Anchor</button>
+      <lr-tooltip manual open for="anchor">Help</lr-tooltip>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+  el.addEventListener('lr-hide', (event) => event.preventDefault());
+  const surface = el.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+  await waitUntil(() => !surface.hasAttribute('data-hidden'));
+  const firstLeft = surface.getBoundingClientRect().left;
+
+  const replacement = document.createElement('button');
+  replacement.id = 'anchor';
+  replacement.textContent = 'Replacement';
+  replacement.style.cssText = 'position: fixed; left: 200px; top: 20px';
+  wrapper.querySelector('#anchor')!.replaceWith(replacement);
+  await waitUntil(() => Math.abs(surface.getBoundingClientRect().left - firstLeft) > 100);
+
+  replacement.remove();
+  await waitUntil(() => !el.open);
+  expect(surface.hasAttribute('data-hidden')).to.equal(true);
+  expect(getComputedStyle(surface).pointerEvents).to.equal('none');
+});
+
+it('closes from an enabled data-popover close action and honors a hide veto', async () => {
+  const el = await fixture<LyraPopover>(html`
+    <lr-popover open style="--show-duration: 0ms; --hide-duration: 0ms">
+      <button slot="trigger">Open</button>
+      <button id="close" data-popover="close"><span>Close</span></button>
+    </lr-popover>
+  `);
+  const close = el.querySelector<HTMLButtonElement>('#close')!;
+  el.addEventListener('lr-hide', (event) => event.preventDefault(), {
+    once: true,
+  });
+  close.querySelector('span')!.click();
+  await el.updateComplete;
+  expect(el.open).to.equal(true);
+
+  close.click();
+  await el.updateComplete;
+  expect(el.open).to.equal(false);
+});
+
+it('uses a for target as the popover interaction and ARIA owner when no trigger is slotted', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <button id="external">External trigger</button>
+      <lr-popover for="external"><p>Details</p></lr-popover>
+    </div>
+  `);
+  const trigger = wrapper.querySelector<HTMLButtonElement>('#external')!;
+  const el = wrapper.querySelector<LyraPopover>('lr-popover')!;
+  await el.updateComplete;
+
+  expect(trigger.getAttribute('aria-haspopup')).to.equal('dialog');
+  expect(trigger.getAttribute('aria-expanded')).to.equal('false');
+  trigger.click();
+  await el.updateComplete;
+  expect(el.open).to.equal(true);
+  expect(trigger.getAttribute('aria-expanded')).to.equal('true');
+
+  const replacement = document.createElement('button');
+  replacement.id = 'external';
+  replacement.textContent = 'Replacement';
+  trigger.replaceWith(replacement);
+  await waitUntil(() => replacement.getAttribute('aria-haspopup') === 'dialog');
+  expect(trigger.hasAttribute('aria-haspopup')).to.equal(false);
+});
+
+it('uses a for target as the tooltip interaction and description owner', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <button id="external-help">External help</button>
+      <lr-tooltip for="external-help" show-delay="0">Helpful description</lr-tooltip>
+    </div>
+  `);
+  const trigger = wrapper.querySelector<HTMLButtonElement>('#external-help')!;
+  const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+  await el.updateComplete;
+
+  trigger.focus();
+  await el.updateComplete;
+  expect(el.open).to.equal(true);
+  expect(trigger.getAttribute('aria-describedby')).to.match(/^lr-tooltip-description-/);
+
+  trigger.dispatchEvent(new FocusEvent('blur', { relatedTarget: document.body }));
+  await el.updateComplete;
+  expect(el.open).to.equal(false);
+});
+
+it('gives a slotted trigger interaction and ARIA ownership over for and direct anchors', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <button id="popover-for-owner">Popover for target</button>
+      <button id="popover-direct-anchor">Popover direct anchor</button>
+      <lr-popover for="popover-for-owner">
+        <button id="popover-slotted-owner" slot="trigger">Popover slotted trigger</button>
+        <p>Details</p>
+      </lr-popover>
+      <button id="tooltip-for-owner">Tooltip for target</button>
+      <button id="tooltip-direct-anchor">Tooltip direct anchor</button>
+      <lr-tooltip for="tooltip-for-owner" show-delay="0">
+        <button id="tooltip-slotted-owner" slot="trigger">Tooltip slotted trigger</button>
+        Helpful description
+      </lr-tooltip>
+    </div>
+  `);
+  const popover = wrapper.querySelector<LyraPopover>('lr-popover')!;
+  const popoverFor = wrapper.querySelector<HTMLButtonElement>('#popover-for-owner')!;
+  const popoverAnchor = wrapper.querySelector<HTMLButtonElement>('#popover-direct-anchor')!;
+  const popoverTrigger = wrapper.querySelector<HTMLButtonElement>('#popover-slotted-owner')!;
+  popover.anchor = popoverAnchor;
+  await popover.updateComplete;
+
+  expect(popoverFor.hasAttribute('aria-haspopup')).to.equal(false);
+  expect(popoverAnchor.hasAttribute('aria-haspopup')).to.equal(false);
+  expect(popoverTrigger.getAttribute('aria-haspopup')).to.equal('dialog');
+  popoverFor.click();
+  popoverAnchor.click();
+  expect(popover.open).to.equal(false);
+  popoverTrigger.click();
+  await popover.updateComplete;
+  expect(popover.open).to.equal(true);
+
+  const tooltip = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+  const tooltipFor = wrapper.querySelector<HTMLButtonElement>('#tooltip-for-owner')!;
+  const tooltipAnchor = wrapper.querySelector<HTMLButtonElement>('#tooltip-direct-anchor')!;
+  const tooltipTrigger = wrapper.querySelector<HTMLButtonElement>('#tooltip-slotted-owner')!;
+  tooltip.anchor = tooltipAnchor;
+  await tooltip.updateComplete;
+
+  tooltipFor.focus();
+  tooltipAnchor.focus();
+  await tooltip.updateComplete;
+  expect(tooltip.open).to.equal(false);
+  expect(tooltipFor.hasAttribute('aria-describedby')).to.equal(false);
+  expect(tooltipAnchor.hasAttribute('aria-describedby')).to.equal(false);
+  tooltipTrigger.focus();
+  await tooltip.updateComplete;
+  expect(tooltip.open).to.equal(true);
+  expect(tooltipTrigger.hasAttribute('aria-describedby')).to.equal(true);
+});
+
+it('removes DOM-trigger ownership while showAt owns popover and tooltip interaction', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <lr-popover style="--show-duration: 0ms; --hide-duration: 0ms">
+        <button id="virtual-popover-trigger" slot="trigger">Popover trigger</button>
+        <p>Details</p>
+      </lr-popover>
+      <lr-tooltip show-delay="0" style="--lr-transition-fast: 0ms">
+        <button id="virtual-tooltip-trigger" slot="trigger">Tooltip trigger</button>
+        Helpful description
+      </lr-tooltip>
+    </div>
+  `);
+  const popover = wrapper.querySelector<LyraPopover>('lr-popover')!;
+  const popoverTrigger = wrapper.querySelector<HTMLButtonElement>('#virtual-popover-trigger')!;
+  const tooltip = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+  const tooltipTrigger = wrapper.querySelector<HTMLButtonElement>('#virtual-tooltip-trigger')!;
+
+  popover.showAt({ x: 40, y: 40 });
+  tooltip.showAt({ x: 80, y: 80 });
+  await popover.updateComplete;
+  await tooltip.updateComplete;
+  expect(popover.open).to.equal(true);
+  expect(tooltip.open).to.equal(true);
+  expect(popoverTrigger.hasAttribute('aria-haspopup')).to.equal(false);
+  expect(popoverTrigger.hasAttribute('aria-expanded')).to.equal(false);
+  expect(tooltipTrigger.hasAttribute('aria-describedby')).to.equal(false);
+
+  popoverTrigger.click();
+  tooltipTrigger.dispatchEvent(new FocusEvent('blur'));
+  await popover.updateComplete;
+  await tooltip.updateComplete;
+  expect(popover.open).to.equal(true);
+  expect(tooltip.open).to.equal(true);
+});
+
+it('tracks popover for-target id loss, gain, and transfer without DOM insertion', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <button id="popover-id-owner">First owner</button>
+      <button id="popover-id-candidate">Second owner</button>
+      <button id="popover-id-transfer">Transfer owner</button>
+      <lr-popover for="popover-id-owner" style="--show-duration: 0ms; --hide-duration: 0ms">
+        <p>Details</p>
+      </lr-popover>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraPopover>('lr-popover')!;
+  const first = wrapper.querySelector<HTMLButtonElement>('#popover-id-owner')!;
+  const second = wrapper.querySelector<HTMLButtonElement>('#popover-id-candidate')!;
+  const transfer = wrapper.querySelector<HTMLButtonElement>('#popover-id-transfer')!;
+
+  first.click();
+  await el.updateComplete;
+  expect(el.open).to.equal(true);
+  first.removeAttribute('id');
+  await waitUntil(() => !el.open && !first.hasAttribute('aria-haspopup'));
+  expect(el.hasAttribute('open')).to.equal(false);
+
+  second.id = 'popover-id-owner';
+  await waitUntil(() => second.getAttribute('aria-haspopup') === 'dialog');
+  second.click();
+  await el.updateComplete;
+  expect(el.open).to.equal(true);
+
+  second.id = 'popover-id-retired';
+  transfer.id = 'popover-id-owner';
+  await waitUntil(() => transfer.getAttribute('aria-expanded') === 'true' && !second.hasAttribute('aria-haspopup'));
+  expect(el.open).to.equal(true);
+});
+
+it('tracks tooltip for-target id loss, gain, and transfer without DOM insertion', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <button id="tooltip-id-owner">First owner</button>
+      <button id="tooltip-id-candidate">Second owner</button>
+      <button id="tooltip-id-transfer">Transfer owner</button>
+      <lr-tooltip for="tooltip-id-owner" show-delay="0" style="--lr-transition-fast: 0ms">
+        Helpful description
+      </lr-tooltip>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+  const first = wrapper.querySelector<HTMLButtonElement>('#tooltip-id-owner')!;
+  const second = wrapper.querySelector<HTMLButtonElement>('#tooltip-id-candidate')!;
+  const transfer = wrapper.querySelector<HTMLButtonElement>('#tooltip-id-transfer')!;
+
+  first.focus();
+  await el.updateComplete;
+  expect(el.open).to.equal(true);
+  first.removeAttribute('id');
+  await waitUntil(() => !el.open && !first.hasAttribute('aria-describedby'));
+  expect(el.hasAttribute('open')).to.equal(false);
+
+  second.id = 'tooltip-id-owner';
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  await el.show();
+  await waitUntil(() => second.hasAttribute('aria-describedby'));
+
+  second.id = 'tooltip-id-retired';
+  transfer.id = 'tooltip-id-owner';
+  await waitUntil(() => transfer.hasAttribute('aria-describedby') && !second.hasAttribute('aria-describedby'));
+  expect(el.open).to.equal(true);
+});
+
+it('ignores disabled close actions and closes only the nearest nested popover', async () => {
+  const outer = await fixture<LyraPopover>(html`
+    <lr-popover open style="--show-duration: 0ms; --hide-duration: 0ms">
+      <button slot="trigger">Outer</button>
+      <button id="disabled-close" data-popover="close" disabled>Disabled close</button>
+      <lr-popover open style="--show-duration: 0ms; --hide-duration: 0ms">
+        <button slot="trigger">Inner</button>
+        <button id="inner-close" data-popover="close">Close inner</button>
+      </lr-popover>
+    </lr-popover>
+  `);
+  outer.querySelector<HTMLButtonElement>('#disabled-close')!.click();
+  await outer.updateComplete;
+  expect(outer.open).to.equal(true);
+
+  const inner = outer.querySelector<LyraPopover>('lr-popover')!;
+  outer.querySelector<HTMLButtonElement>('#inner-close')!.click();
+  await inner.updateComplete;
+  expect(inner.open).to.equal(false);
+  expect(outer.open).to.equal(true);
+});
 
 it('opens a popover from its slotted trigger and wires dialog semantics', async () => {
   const el = await fixture(html`
@@ -851,6 +1411,39 @@ it('routes a single Escape press to only the topmost of two nested showAt()-open
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
   await outer.updateComplete;
   expect(outer.open, 'a second Escape press closes the next overlay down the stack').to.be.false;
+});
+
+it('routes Escape from a focused lower tooltip trigger to a newer showAt tooltip', async () => {
+  const lower = (await fixture(html`
+    <lr-tooltip show-delay="0">
+      <button id="lower-tooltip-trigger" slot="trigger">Lower trigger</button>
+      Lower description
+    </lr-tooltip>
+  `)) as LyraTooltip;
+  const upper = (await fixture(html`<lr-tooltip>Upper description</lr-tooltip>`)) as LyraTooltip;
+  const trigger = lower.querySelector<HTMLButtonElement>('#lower-tooltip-trigger')!;
+  trigger.focus();
+  await waitUntil(() => lower.open);
+
+  upper.showAt({ x: 50, y: 50 });
+  await upper.updateComplete;
+  expect(document.activeElement?.id).to.equal('lower-tooltip-trigger');
+  expect(lower.open).to.equal(true);
+  expect(upper.open).to.equal(true);
+
+  trigger.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'Escape',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
+  await lower.updateComplete;
+  await upper.updateComplete;
+
+  expect(upper.open).to.equal(false);
+  expect(lower.open).to.equal(true);
+  expect(document.activeElement?.id).to.equal('lower-tooltip-trigger');
 });
 
 it('keeps stack ownership and top-overlay focus when an underlying popover is re-anchored with showAt()', async () => {
@@ -1961,7 +2554,7 @@ describe('mapped popover and tooltip compatibility', () => {
     trigger.dispatchEvent(new FocusEvent('focus'));
     await el.updateComplete;
     expect(el.open).to.equal(false);
-    expect(el.shadowRoot!.querySelector('[part~="arrow"]')).to.equal(null);
+    expect((el.shadowRoot!.querySelector('[part~="arrow"]')) === (null)).to.equal(true);
 
     el.disabled = false;
     el.withoutArrow = false;

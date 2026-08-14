@@ -45,7 +45,7 @@ interface ResolvedCellHighlight {
   parsed: ParsedCellRange;
 }
 
-export interface LyraCsvViewerEventMap extends LyraAnchorTargetEventMap {
+export interface LyraCsvViewerEventMap extends Omit<LyraAnchorTargetEventMap, 'lr-text-select'> {
   'lr-render-error': CustomEvent<{ error: unknown }>;
   /** Fired whenever the search query, match count, or active match index changes, from
    *  `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. */

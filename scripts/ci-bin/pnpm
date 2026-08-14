@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+
+: "${CI_SH_SELECTED_PNPM_BIN:?selected pnpm executable is required}"
+
+exec env \
+  npm_config_manage_package_manager_versions=false \
+  npm_config_scripts_prepend_node_path=false \
+  "$CI_SH_SELECTED_PNPM_BIN" "$@"

@@ -38,7 +38,7 @@ it('renders each item label and optional detail text', async () => {
   expect(rows[1]!.querySelector('[part="item-detail"]')!.textContent!.trim()).to.equal(
     'Searching for recent changelog entries',
   );
-  expect(rows[0]!.querySelector('[part="item-detail"]')).to.not.exist;
+  expect((rows[0]!.querySelector('[part="item-detail"]')) == null).to.be.true;
 });
 
 it('renders one nested [part="item"] row per child, at depth 1, inside [part="item-children"]', async () => {
@@ -84,7 +84,7 @@ it('ignores grandchildren (nesting beyond one level) and warns once', async () =
       },
     ];
     const el = (await fixture(html`<lr-task-list .items=${deep}></lr-task-list>`)) as LyraTaskList;
-    expect(el.shadowRoot!.querySelector('[part="item"][data-id="grandchild"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="item"][data-id="grandchild"]')) == null).to.be.true;
     expect(calls.some((args) => String(args[0]).includes('grandchild'))).to.be.true;
   } finally {
     console.warn = originalWarn;

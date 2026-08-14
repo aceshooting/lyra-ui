@@ -1454,8 +1454,7 @@ it("supports silent programmatic pin/visibility changes and user menu events", a
   expect(element.getColumnPin("name")).to.equal("left");
   expect(element.getColumnPin("missing")).to.equal(false);
   expect(header(element, "name").dataset.pin).to.equal("left");
-  expect(element.shadowRoot!.querySelector('[data-column-id="team"]')).to.not
-    .exist;
+  expect(element.shadowRoot!.querySelector('[data-column-id="team"]') === null).to.be.true;
 
   element.pinColumn("name", false);
   element.toggleColumn("team", true);
@@ -2851,12 +2850,11 @@ it("aborts pending work and resets transient menus across disconnect and reconne
   element.dataSource = null;
   parent.append(element);
   await element.updateComplete;
-  expect(element.shadowRoot!.querySelector('[part="filter-panel"]')).to.not
-    .exist;
-  expect(element.shadowRoot!.querySelector('[role="menu"]')).to.not.exist;
+  expect(element.shadowRoot!.querySelector('[part="filter-panel"]') === null).to.be.true;
+  expect((element.shadowRoot!.querySelector('[role="menu"]')) == null).to.be.true;
   expect(
-    element.shadowRoot!.querySelector('[part="columns-menu"] [role="group"]')
-  ).to.not.exist;
+    (element.shadowRoot!.querySelector('[part="columns-menu"] [role="group"]')) == null
+  ).to.be.true;
   await expect(element).to.be.accessible();
 });
 
@@ -3001,7 +2999,7 @@ it("reorders columns through header drag and drop", async () => {
   expect(detail.columnOrder).to.deep.equal(["team", "score", "name"]);
   expect(detail.finished).to.equal(true);
   await element.updateComplete;
-  expect(element.shadowRoot!.querySelector('[part="drag-ghost"]')).to.not.exist;
+  expect((element.shadowRoot!.querySelector('[part="drag-ghost"]')) == null).to.be.true;
 });
 
 it("refuses to start a header drag for a column that cannot move", async () => {
@@ -3020,7 +3018,7 @@ it("refuses to start a header drag for a column that cannot move", async () => {
   header(element, "name").dispatchEvent(dragStart);
   await element.updateComplete;
   expect(dragStart.defaultPrevented).to.equal(true);
-  expect(element.shadowRoot!.querySelector('[part="drag-ghost"]')).to.not.exist;
+  expect((element.shadowRoot!.querySelector('[part="drag-ghost"]')) == null).to.be.true;
 });
 
 it("ignores a header drop onto the same column or from an unknown source", async () => {
@@ -3066,7 +3064,7 @@ it("ignores a header drop onto the same column or from an unknown source", async
 
   expect(moves).to.equal(0);
   expect(element.columnOrder).to.deep.equal([]);
-  expect(element.shadowRoot!.querySelector('[part="drag-ghost"]')).to.not.exist;
+  expect((element.shadowRoot!.querySelector('[part="drag-ghost"]')) == null).to.be.true;
 });
 
 it("clears the drag ghost when a header drag ends without a drop", async () => {
@@ -3091,7 +3089,7 @@ it("clears the drag ghost when a header drag ends without a drop", async () => {
     new DragEvent("dragend", { bubbles: true })
   );
   await element.updateComplete;
-  expect(element.shadowRoot!.querySelector('[part="drag-ghost"]')).to.not.exist;
+  expect((element.shadowRoot!.querySelector('[part="drag-ghost"]')) == null).to.be.true;
 });
 
 it("renders grouped rows with aggregates and group-level selection", async () => {
@@ -3228,7 +3226,7 @@ it("falls back to a temporary textarea when the async clipboard is unavailable",
   expect(copied).to.equal(
     "Ada\tCompiler\t7\nLin\tRuntime\t10\nGrace\tCompiler\t9"
   );
-  expect(document.body.querySelector(":scope > textarea")).to.not.exist;
+  expect((document.body.querySelector(":scope > textarea")) == null).to.be.true;
 });
 
 it("copies and raises a context menu from the grid keyboard contract", async () => {
@@ -3404,10 +3402,10 @@ it("pins, unpins, and hides a column from the per-column menu", async () => {
   });
   await element.updateComplete;
   expect(
-    element.shadowRoot!.querySelector(
+    (element.shadowRoot!.querySelector(
       '[part~="header-cell"][data-column-id="name"]'
-    )
-  ).to.not.exist;
+    )) == null
+  ).to.be.true;
 });
 
 it("omits the visibility checkbox for a column that cannot be hidden", async () => {
@@ -3427,10 +3425,8 @@ it("omits the visibility checkbox for a column that cannot be hidden", async () 
     .querySelector<HTMLButtonElement>('[part="column-menu-button"]')!
     .click();
   await element.updateComplete;
-  expect(header(element, "name").querySelector('[role="menuitemcheckbox"]')).to
-    .not.exist;
-  expect(header(element, "name").querySelector('[role="menuitem"]')).to.not
-    .exist;
+  expect((header(element, "name").querySelector('[role="menuitemcheckbox"]')) == null).to.be.true;
+  expect(header(element, "name").querySelector('[role="menuitem"]') === null).to.be.true;
 });
 
 it("selects a range of descendant rows with a shift-click", async () => {
@@ -3768,7 +3764,7 @@ it("renders plain rows when a grouped field names no column", async () => {
       .data=${rows}
     ></lr-data-grid>
   `);
-  expect(element.shadowRoot!.querySelector('[part~="group-row"]')).to.not.exist;
+  expect((element.shadowRoot!.querySelector('[part~="group-row"]')) == null).to.be.true;
   expect(dataCells(element).length).to.equal(9);
   element.expandAllRows();
   await element.updateComplete;

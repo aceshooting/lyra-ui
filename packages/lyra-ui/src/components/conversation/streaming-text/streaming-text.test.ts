@@ -364,7 +364,7 @@ describe('markdown heuristic memoization', () => {
     el.streaming = true;
     await el.updateComplete;
 
-    expect(el.shadowRoot!.querySelector('lr-markdown')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('lr-markdown')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('.plain')).to.exist;
   });
 });
@@ -375,7 +375,7 @@ describe('markdown auto-detection and rendering mode', () => {
       html`<lr-streaming-text .content=${'just some ordinary sentence, nothing special.'}></lr-streaming-text>`,
     )) as LyraStreamingText;
     expect(el.shadowRoot!.querySelector('.plain')).to.exist;
-    expect(el.shadowRoot!.querySelector('lr-markdown')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('lr-markdown')) == null).to.be.true;
   });
 
   it('auto-detects Markdown syntax and routes it through lr-markdown', async () => {
@@ -383,7 +383,7 @@ describe('markdown auto-detection and rendering mode', () => {
       html`<lr-streaming-text .content=${'# Heading\n\nSome **bold** text.'}></lr-streaming-text>`,
     )) as LyraStreamingText;
     expect(el.shadowRoot!.querySelector('lr-markdown')).to.exist;
-    expect(el.shadowRoot!.querySelector('.plain')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('.plain')) == null).to.be.true;
   });
 
   it('markdown=true forces Markdown rendering even for plain-looking content', async () => {
@@ -397,7 +397,7 @@ describe('markdown auto-detection and rendering mode', () => {
     const el = (await fixture(
       html`<lr-streaming-text markdown="false" .content=${'# Heading with **bold**'}></lr-streaming-text>`,
     )) as LyraStreamingText;
-    expect(el.shadowRoot!.querySelector('lr-markdown')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('lr-markdown')) == null).to.be.true;
     expect(plainText(el)).to.equal('# Heading with **bold**');
   });
 
@@ -432,7 +432,7 @@ describe('looksLikeMarkdown()', () => {
 describe('cursor', () => {
   it('renders no cursor part while not streaming', async () => {
     const el = (await fixture(html`<lr-streaming-text .content=${'hi'}></lr-streaming-text>`)) as LyraStreamingText;
-    expect(el.shadowRoot!.querySelector('[part="cursor"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="cursor"]')) == null).to.be.true;
   });
 
   it('renders a decorative (aria-hidden) cursor part while streaming', async () => {

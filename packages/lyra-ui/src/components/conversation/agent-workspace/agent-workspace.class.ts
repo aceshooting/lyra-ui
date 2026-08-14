@@ -283,7 +283,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
                 .selectedIds=${this.selectedRetrievalIds}
                 .loading=${this.retrievalLoading}
                 .hasMore=${this.retrievalHasMore}
-                .error=${this.retrievalError}
+                .errorText=${this.retrievalError}
                 @lr-select=${this.onRetrievalSelect}
               ></lr-retrieval-results>
             </section>`

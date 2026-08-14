@@ -145,7 +145,7 @@ it('the timestamp slot wins outright over the timestamp property -- the internal
   `)) as LyraTimelineItem;
   const timestampPart = el.shadowRoot!.querySelector('[part="timestamp"]') as HTMLElement;
   expect(timestampPart.hidden).to.be.false;
-  expect(timestampPart.querySelector('lr-relative-time')).to.not.exist;
+  expect((timestampPart.querySelector('lr-relative-time')) == null).to.be.true;
   const slot = timestampPart.querySelector('slot[name="timestamp"]') as HTMLSlotElement;
   expect(slot.assignedElements({ flatten: true })).to.have.length(1);
 });

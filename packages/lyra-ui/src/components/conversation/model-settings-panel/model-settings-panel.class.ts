@@ -176,6 +176,7 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
   };
 
   protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
     if (
       changed.has('temperature') ||
       changed.has('temperatureMin') ||

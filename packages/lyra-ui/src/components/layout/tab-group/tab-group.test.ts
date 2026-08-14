@@ -439,7 +439,7 @@ it('a direct-child sibling with slot="<id>-icon" renders as that tab\'s leading 
   // icon wrapper's aria-hidden excludes its slotted content from the name.
   expect(buttons[0].textContent).to.include("Input");
   // A tab with no matching `<id>-icon` sibling renders no icon wrapper at all.
-  expect(buttons[1].querySelector('[part="tab-icon"]')).to.be.null;
+  expect((buttons[1].querySelector('[part="tab-icon"]')) === null).to.be.true;
 
   await expect(el).to.be.accessible();
 });

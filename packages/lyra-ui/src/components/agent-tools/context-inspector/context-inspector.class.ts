@@ -118,10 +118,16 @@ export interface LyraContextInspectorEventMap
  * @event lr-copy - `detail: { text }`, surfaced by the embedded `lr-copy-button` copying the
  *   assembled context text (every segment's `label` + `text`, in order). Bubbles + composed
  *   already; not re-emitted, so exactly one event reaches a host listener.
+ * @event lr-error - A clipboard write failed in the embedded copy control.
+ * @event lr-copy-error - The embedded copy control's compatibility error event for the same
+ *   clipboard failure.
  * @event lr-export - `detail: { format }`, surfaced by the embedded `lr-export-button`, one row
  *   per segment. Cancelable — see that component's own contract for substituting a
  *   server-generated export.
  * @event lr-export-complete - `detail: { format }`, fired after a non-cancelled export completes.
+ * @event lr-export-error - The embedded export control could not complete the requested export.
+ * @event lr-show - The embedded export format menu opened.
+ * @event lr-hide - The embedded export format menu closed.
  * @event lr-citation-activate - `detail: { sourceId, index }`, surfaced by a segment's embedded
  *   `lr-citation-badge` — the "jump to this source" signal a host wires to scrolling/highlighting
  *   the matching `lr-source-card`.

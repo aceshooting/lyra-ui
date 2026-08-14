@@ -123,6 +123,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   private nodesByPath = new Map<string, FileTreeNode>();
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('nodes')) {
       this.nodesByPath = new Map();
       const index = (list: FileTreeNode[]) => {

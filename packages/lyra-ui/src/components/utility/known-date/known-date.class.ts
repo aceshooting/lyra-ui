@@ -908,7 +908,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     if (staysInsideControl) return;
     // A field's own `?disabled=${this.effectiveDisabled}` binding turning true force-blurs it if
     // it was focused -- a platform reaction to disablement, not a user interaction, so it must not
-    // mark the control touched (fr_asxOgk4UhNB07xevCWwFVQ).
+    // mark the control touched.
     if (!this.effectiveDisabled) this.touched = true;
     this.emit('blur');
   };

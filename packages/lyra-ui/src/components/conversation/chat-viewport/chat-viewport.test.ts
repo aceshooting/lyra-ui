@@ -688,7 +688,7 @@ describe('jump pill', () => {
     )) as LyraChatViewport;
     await el.updateComplete;
     await nextFrame();
-    expect(el.shadowRoot!.querySelector('[part="jump-pill"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="jump-pill"]')) == null).to.be.true;
 
     el.follow = false;
     await el.updateComplete;
@@ -767,7 +767,7 @@ describe('unread divider (slotted mode)', () => {
     )) as LyraChatViewport;
     await el.updateComplete;
     await nextFrame();
-    expect(el.shadowRoot!.querySelector('[part="unread-divider"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="unread-divider"]')) == null).to.be.true;
     // `null` is the one true "disabled" sentinel -- confirmed untouched by the clamping in the
     // next test, which normalizes every other (non-null) value to a safe non-negative integer.
     expect(el.unreadStartIndex).to.equal(null);

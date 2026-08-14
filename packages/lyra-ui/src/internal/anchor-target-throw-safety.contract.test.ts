@@ -14,15 +14,14 @@ import type { LyraAnchorTarget } from './anchor-target.js';
  * result" -- it must resolve to a boolean and emit `lr-anchor-result`, never reject silently. A
  * per-viewer `applyAnchor()` override throwing (a bug, a synchronous DOM exception, an unhandled
  * peer-library error) used to break that contract for every adopter except `lr-ebook-viewer`,
- * which self-remediates via its own `scrollToAnchor()` override (see `ebook-viewer.test.ts`'s
+ * which handles failures via its own `scrollToAnchor()` override (see `ebook-viewer.test.ts`'s
  * "scrollToAnchor (ebook)" suite). A blanket try/catch around every `applyAnchor()` call site was
- * tried once (commit `df4dac87`) and reverted (`5565cfc6`) because it made that override's own
- * catch -- which reports a localized rendition-failure alert -- unreachable.
+ * rejected because it makes that override's own catch -- which reports a localized
+ * rendition-failure alert -- unreachable.
  *
- * This test proves the fix for the OTHER ~13 adopters without duplicating a near-identical test
- * into each of their own files (the original spec's own "one shared/parameterized test, not just
- * an instance test" instruction, mirrored by `viewer-owner-fetch.test.ts`'s own
- * multi-tag-parameterized pattern). It deliberately runs against real production adopter classes
+ * This parameterized test covers the other adopters without duplicating a near-identical test in
+ * every component file, following `viewer-owner-fetch.test.ts`'s multi-tag pattern. It deliberately
+ * runs against real production adopter classes
  * (not just `anchor-target.test.ts`'s internal stub) via a temporary prototype monkeypatch of
  * `applyAnchor()`, restored after each case. `lr-ebook-viewer` is deliberately NOT a scenario
  * here -- it overrides `scrollToAnchor()` itself and must keep resolving through its own catch,

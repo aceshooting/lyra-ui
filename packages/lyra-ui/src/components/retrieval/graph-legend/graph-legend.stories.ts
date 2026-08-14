@@ -18,13 +18,29 @@ const types = (): LyraGraphLegendType[] => [
 ];
 
 export const Default: Story = {
-  render: () => html`
-    <lr-graph-legend
-      .types=${types()}
-      .counts=${{ person: 12, org: 4, place: 7 }}
-      @lr-visibility-change=${(e: CustomEvent<{ hiddenTypes: string[] }>) => console.log(e.detail)}
-    ></lr-graph-legend>
-  `,
+  render: () => {
+    const reportVisibility = (event: CustomEvent<{ hiddenTypes: string[] }>) => {
+      const feedback = (event.currentTarget as HTMLElement).parentElement?.querySelector(
+        '[data-visibility-feedback]',
+      );
+      if (!feedback) return;
+      feedback.textContent = event.detail.hiddenTypes.length
+        ? `Hidden types: ${event.detail.hiddenTypes.join(', ')}`
+        : 'All types are visible.';
+    };
+    return html`
+      <div>
+        <lr-graph-legend
+          .types=${types()}
+          .counts=${{ person: 12, org: 4, place: 7 }}
+          @lr-visibility-change=${reportVisibility}
+        ></lr-graph-legend>
+        <!-- The component already announces each toggle through its shared live-region sink. This
+             separate text is visible state feedback, deliberately not a second live region. -->
+        <p data-visibility-feedback>All types are visible.</p>
+      </div>
+    `;
+  },
 };
 
 export const WithHiddenType: Story = {

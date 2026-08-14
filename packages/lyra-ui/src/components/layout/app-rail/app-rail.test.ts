@@ -952,7 +952,7 @@ describe('resizable', () => {
   it('renders no resizer when resizable is false (default)', async () => {
     const el = (await fixture(html`<lr-app-rail></lr-app-rail>`)) as LyraAppRail;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="resizer"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="resizer"]')) == null).to.be.true;
   });
 
   it('renders a resizer with role="separator" and correct aria bounds only in \'full\' mode', async () => {
@@ -983,7 +983,7 @@ describe('resizable', () => {
   it('does not render a resizer in icon-only or mobile mode even when resizable', async () => {
     const el = (await fixture(html`<lr-app-rail resizable mode="icon-only"></lr-app-rail>`)) as LyraAppRail;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="resizer"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="resizer"]')) == null).to.be.true;
   });
 
   it('emits a cancelable resize request before the existing non-cancelable committed resize event', async () => {

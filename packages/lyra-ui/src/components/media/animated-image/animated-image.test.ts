@@ -104,7 +104,7 @@ describe('default render / freeze-frame state', () => {
   it('defaults to not playing; once loaded, canvas is exposed and image is aria-hidden', async () => {
     const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
     expect(el.playing).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="control-box"]')).to.be.null;
+    expect((el.shadowRoot!.querySelector('[part="control-box"]')) === null).to.be.true;
 
     await loaded(el);
 
@@ -136,7 +136,7 @@ describe('default render / freeze-frame state', () => {
 
     el.src = '';
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="control-box"]')).to.be.null;
+    expect((el.shadowRoot!.querySelector('[part="control-box"]')) === null).to.be.true;
 
     await loaded(el);
     expect(el.shadowRoot!.querySelector('[part="control-box"]')).to.not.be.null;
@@ -219,7 +219,7 @@ describe('lr-error', () => {
     el.src = BROKEN_DATA_URI;
     await errorEvent;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="control-box"]')).to.be.null;
+    expect((el.shadowRoot!.querySelector('[part="control-box"]')) === null).to.be.true;
   });
 
   it('fires for a src that fails safeMediaSrc(), with no request ever attempted', async () => {
@@ -230,7 +230,7 @@ describe('lr-error', () => {
     await el.updateComplete;
     const img = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;
     expect(img.hasAttribute('src')).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="control-box"]')).to.be.null;
+    expect((el.shadowRoot!.querySelector('[part="control-box"]')) === null).to.be.true;
   });
 });
 

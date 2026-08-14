@@ -258,6 +258,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   private pendingFocusId: string | null = null;
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (changed.has('reorderable') && !this.reorderable) this.clearPendingReorder();
     if (changed.has('items')) {
       for (const item of this.items) {
@@ -274,6 +275,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     const wasMounting = this.isMounting;
     this.isMounting = false;
     if (changed.has('items')) {

@@ -346,6 +346,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     const rebuildKeys = [
       'name',
       'keyframes',

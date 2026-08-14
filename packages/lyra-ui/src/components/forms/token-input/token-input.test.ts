@@ -178,7 +178,7 @@ it('discards an uncommitted draft on blur while disabled instead of adding it', 
 });
 
 it('does not mark touched from a blur the platform forces when the control becomes disabled while focused', async () => {
-  // Regression test for fr_asxOgk4UhNB07xevCWwFVQ: disabling a focused native control blurs it as
+  // Regression test: disabling a focused native control blurs it as
   // plain platform behavior (nothing to do with custom elements specifically) -- that blur is not a
   // real user interaction and must not flip `touched`, which could otherwise reenter an in-flight
   // Lit update and trip its dev-mode "scheduled an update after an update completed" warning.
@@ -1855,7 +1855,7 @@ it('renders the required marker from the shared themeable rule, not a literal sp
   await el.updateComplete;
   const label = el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement;
   expect(getComputedStyle(label, '::after').content).to.contain('*');
-  expect(label.querySelector('span[aria-hidden]'), 'no hand-rolled glyph element').to.equal(null);
+  expect((label.querySelector('span[aria-hidden]')) === (null), 'no hand-rolled glyph element').to.equal(true);
 
   el.style.setProperty('--lr-form-control-required-content', "''");
   await el.updateComplete;

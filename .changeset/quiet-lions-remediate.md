@@ -2,8 +2,9 @@
 "@aceshooting/lyra-ui": minor
 ---
 
-Remediate the confirmed findings of a full-library review sweep. Every change is additive: no public
-member was removed or renamed, no default value or attribute polarity changed.
+Add cross-component accessibility, correctness, localization, theming, performance, and API
+capabilities. Every change is additive: no public member was removed or renamed, no default value
+or attribute polarity changed.
 
 Accessibility and announcements:
 

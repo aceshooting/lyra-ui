@@ -397,8 +397,8 @@ describe('the file property', () => {
 describe('status accents and progress', () => {
   it('shows nothing in the progress/spinner slot while not uploading', async () => {
     const el = (await fixture(html`<lr-attachment-chip status="pending"></lr-attachment-chip>`)) as LyraAttachmentChip;
-    expect(el.shadowRoot!.querySelector('[part="progress"]')).to.not.exist;
-    expect(el.shadowRoot!.querySelector('[part="spinner"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="progress"]')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part="spinner"]')) == null).to.be.true;
   });
 
   it('renders an indeterminate spinner while uploading with no meaningful progress', async () => {
@@ -409,7 +409,7 @@ describe('status accents and progress', () => {
     expect((spinner) != null).to.equal(true);
     expect(spinner.getAttribute('role')).to.equal(null);
     expect(spinner.getAttribute('aria-hidden')).to.equal('true');
-    expect(el.shadowRoot!.querySelector('[part="progress"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="progress"]')) == null).to.be.true;
   });
 
   it('exposes a themeable spinner duration and stops the ambient loop for reduced motion', async () => {
@@ -436,7 +436,7 @@ describe('status accents and progress', () => {
     expect(bar.getAttribute('aria-valuenow')).to.equal('42');
     expect(bar.getAttribute('aria-valuemin')).to.equal('0');
     expect(bar.getAttribute('aria-valuemax')).to.equal('100');
-    expect(el.shadowRoot!.querySelector('[part="spinner"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="spinner"]')) == null).to.be.true;
   });
 
   it('clamps an out-of-range progress value into [0, 100]', async () => {
@@ -451,13 +451,13 @@ describe('status accents and progress', () => {
     const negative = (await fixture(
       html`<lr-attachment-chip name="a.zip" status="uploading" .progress=${-10}></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
-    expect(negative.shadowRoot!.querySelector('[part="progress"]')).to.not.exist;
+    expect((negative.shadowRoot!.querySelector('[part="progress"]')) == null).to.be.true;
     expect(negative.shadowRoot!.querySelector('[part="spinner"]')).to.exist;
 
     const nan = (await fixture(
       html`<lr-attachment-chip name="a.zip" status="uploading" .progress=${NaN}></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
-    expect(nan.shadowRoot!.querySelector('[part="progress"]')).to.not.exist;
+    expect((nan.shadowRoot!.querySelector('[part="progress"]')) == null).to.be.true;
     expect(nan.shadowRoot!.querySelector('[part="spinner"]')).to.exist;
     const spinner = nan.shadowRoot!.querySelector('[part="spinner"]')!;
     expect(spinner.getAttribute('role')).to.equal(null);
@@ -602,7 +602,7 @@ describe('status accents and progress', () => {
 describe('retry affordance', () => {
   it('only renders while status="error"', async () => {
     const pending = (await fixture(html`<lr-attachment-chip status="pending"></lr-attachment-chip>`)) as LyraAttachmentChip;
-    expect(pending.shadowRoot!.querySelector('[part="retry-button"]')).to.not.exist;
+    expect((pending.shadowRoot!.querySelector('[part="retry-button"]')) == null).to.be.true;
 
     const error = (await fixture(html`<lr-attachment-chip status="error"></lr-attachment-chip>`)) as LyraAttachmentChip;
     expect(error.shadowRoot!.querySelector('[part="retry-button"]')).to.exist;

@@ -13,6 +13,23 @@ const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const binName = (name) => (process.platform === 'win32' ? `${name}.cmd` : name);
 
 const uiPackageJson = JSON.parse(await readFile(join(uiPackage, 'package.json'), 'utf8'));
+const granularBundleBudgets = JSON.parse(
+  await readFile(join(uiPackage, 'scripts', 'bundle-budgets.json'), 'utf8'),
+);
+if (
+  typeof granularBundleBudgets !== 'object' ||
+  granularBundleBudgets === null ||
+  Array.isArray(granularBundleBudgets)
+) {
+  throw new TypeError('The granular bundle-budget authority must be a JSON object.');
+}
+const BUTTON_GRANULAR_ENTRY = 'dist/components/forms/button/button.js';
+const buttonGranularBudgetKilobytes = granularBundleBudgets[BUTTON_GRANULAR_ENTRY];
+if (!Number.isSafeInteger(buttonGranularBudgetKilobytes) || buttonGranularBudgetKilobytes <= 0) {
+  throw new TypeError(
+    `The granular bundle-budget authority must define ${BUTTON_GRANULAR_ENTRY} as a positive integer KiB ceiling.`,
+  );
+}
 const optionalPeers = Object.keys(uiPackageJson.peerDependencies ?? {})
   .filter((name) => uiPackageJson.peerDependenciesMeta?.[name]?.optional === true)
   .sort();
@@ -36,39 +53,36 @@ const optionalPeerFamilyTags = componentInventory.components
 // tags. Imperative helpers register the exact elements they need only when the helper is invoked.
 const rootHelperRegisteredTags = [];
 
-// Keep the aggregate barrel budget as an auditable sum rather than an unexplained moving ceiling.
-// The reviewed baseline remains fixed; the named allowances cover the stable-root expansion and
-// the behavior repairs described on `bundleEntries.core` below.
+// Keep the aggregate barrel budget as an inspectable sum rather than an unexplained moving ceiling.
+// The established baseline remains fixed; named allowances describe the capabilities whose
+// implementation weight is documented on `bundleEntries.core` below.
 const coreRawBudget = {
-  reviewedBaselineBytes: 3_700_000,
+  establishedBaselineBytes: 3_700_000,
   stableRootRegistrationAllowanceBytes: 200_000,
-  reviewedRemediationAllowanceBytes: 35_000,
-  batchFourRemediationAllowanceBytes: 10_000,
-  fullReviewRecoveryAllowanceBytes: 10_000,
-  // The 2026-08-12 full-sweep review's batches 2+3 (27 instances: accessible-name-override
-  // presence fixes across 8 viewers/lr-menu/lr-swatch-picker/lr-reorder-list, hit-area floors,
-  // :focus-visible pairing across 7 agent-tools/media components, selected-state declaration-order
-  // fixes, disabled-hover guards, plus the unrelated lr-graph reference-vs-value selection-
-  // comparison fix) measured 3867.1 KiB raw, ~4.8 KiB past the previous 3862.3 KiB ceiling. Named
-  // separately with headroom for the remaining batches (4-10, ~155 more instances) still queued in
-  // the same remediation, on the same evidence prior re-baselines used: granular per-entry gzip
-  // budgets and the button canary stayed green, so this is aggregate implementation weight from
-  // real fixes, not an optional-peer leak.
-  fullSweepBatch2Batch3AllowanceBytes: 25_000,
-  // The same 2026-08-12 full-sweep review's remaining batches (6, 7, 8, 9a-9d and the batch-10
-  // integration pass -- 90 further confirmed instances) measured 3917.6 KiB raw, ~30.9 KiB past the
-  // 3886.7 KiB ceiling the batch-2+3 term established. Unlike the earlier terms this one is not
-  // only CSS/JSDoc weight: those batches added real opt-in capability -- per-box lr-box-plot
-  // keyboard/pointer interactivity plus the shared chart forced-colors encoding module it shares
-  // with lr-lite-chart, lr-xml-viewer host-supplied highlights, lr-context-meter's legend,
-  // lr-node-palette reordering, lr-retrieval-results custom grouping, lr-terminal compact/frame
-  // chrome, and host focus/blur/click forwarding across five media components. Audited on the same
-  // evidence prior re-baselines used: every granular per-entry gzip budget and the `button` canary
-  // stayed green, and check-side-effects/the peer-inclusive exclusion graphs still externalize all
-  // 29 optional peers, so this is aggregate implementation weight from reviewed fixes rather than a
-  // dependency leak. This remediation is complete, so the term is sized for the measurement rather
-  // than for further batches.
-  fullSweepBatch6Batch10AllowanceBytes: 40_000,
+  crossComponentContractAllowanceBytes: 35_000,
+  boundedDataResilienceAllowanceBytes: 10_000,
+  interactionAccessibilityAllowanceBytes: 10_000,
+  // Accessible-name precedence across viewers and controls, hit-area floors, focus-visible pairing,
+  // selected-state declaration ordering, disabled-hover guards, and lr-graph value-based selection
+  // increased the measured bundle to 3867.1 KiB raw, about 4.8 KiB beyond the previous 3862.3 KiB
+  // ceiling. Granular per-entry gzip budgets and the button canary stayed green, so this is Lyra
+  // implementation weight rather than an optional-peer leak.
+  accessibilityStyleCorrectionAllowanceBytes: 25_000,
+  // Per-box chart interactivity, shared forced-colors chart encoding, host-supplied XML highlights,
+  // the context-meter legend, node-palette reordering, retrieval-result grouping, terminal chrome,
+  // and media host focus/blur/click forwarding increased the measured bundle to 3917.6 KiB raw,
+  // about 30.9 KiB beyond the preceding 3886.7 KiB ceiling. Every granular per-entry gzip budget
+  // and the button canary stayed green, and the peer-exclusion graph still externalizes all 29
+  // optional peers. The term therefore records aggregate opt-in capability weight, not a dependency
+  // leak, and is sized to the completed implementation rather than speculative future growth.
+  featureCapabilityAllowanceBytes: 40_000,
+  // Live overlay-anchor identity and interaction ownership, placement-ready focus, host-owned
+  // form-label semantics, progressive slot-presence hydration, and deterministic timer retry
+  // behavior increased the exact packed aggregate from 4,015,834 B to 4,037,334 B: 21,500 B raw
+  // and 5,035 B gzip. The production graph still reports zero eager and zero bundled optional
+  // peers, while every granular gzip budget and the button canary remain green. This narrowly
+  // rounded term records the shared implementation weight and leaves 7,666 B of aggregate headroom.
+  overlayHydrationContractAllowanceBytes: 25_000,
 };
 
 const bundleEntries = {
@@ -87,25 +101,25 @@ const bundleEntries = {
     // import is not lost -- it is now the `rootBarrel` entry below, where "collapses to nothing"
     // is the assertion rather than an unnoticed hole.
     //
-    // The release ceiling deliberately retains the previously reviewed 3,400,000 B aggregate
+    // The release ceiling deliberately retains the established 3,400,000 B aggregate
     // baseline instead of re-baselining to the current measurement. The only added term is the
-    // named stable-root registration allowance audited below, keeping future aggregate growth
+    // named stable-root registration allowance validated below, keeping future aggregate growth
     // visible while the `button` gzip canary remains the tighter foreign-dependency signal.
     //
-    // History below is the pre-8.0.0 audit trail from when this entry measured the side-effectful
+    // History below records pre-8.0.0 measurements from when this entry measured the side-effectful
     // root barrel. It is kept because the growth it records is the same aggregate implementation
     // weight the entry still measures, just reached through `all.js` now.
     //
-    // Raised from 2_250_000 after the 2026-07-20 review-sweep fixes: 422 component fixes across
-    // 171 directories each added real code (boolean-attribute converters, fail-closed peer-error
-    // branches, :hover rules, forwarded native properties), pushing the barrel ~17 KiB past the
+    // Raised from 2_250_000 after 422 component corrections across 171 directories added real code
+    // (boolean-attribute converters, fail-closed peer-error branches, :hover rules, forwarded
+    // native properties), pushing the barrel ~17 KiB past the
     // old ceiling. Deliberately re-baselined rather than waived -- the `button` gzip canary below
     // stayed green through the same change, which is the signal that no foreign dependency leaked
     // into the shared eager graph; only the barrel's own aggregate implementation weight moved.
     //
-    // Raised from 2_500_000 after the 2026-07-23 full-repository remediation added validated
-    // behavior and accessibility contracts across the existing component set. The packed bundle
-    // measured 2488.8 KiB across the same 20 output files, while the granular gzip budgets and
+    // Raised from 2_500_000 after validated behavior and accessibility contracts expanded across
+    // the existing component set. The packed bundle measured 2488.8 KiB across the same 20 output
+    // files, while the granular gzip budgets and
     // single-button canary remained green, ruling out an accidentally eager optional peer.
     //
     // Raised from 2_800_000 for 8.0.0, the first run of this check since that work landed. The
@@ -119,7 +133,7 @@ const bundleEntries = {
     // graph still reaches only `lit`, its directive subpaths and `@floating-ui/dom` -- every
     // optional peer stays behind a dynamic `import()`. Only lyra's own aggregate weight moved.
     //
-    // The completion pass then made nine intentional root registrations reachable: alert,
+    // The registration-set expansion then made nine intentional root registrations reachable: alert,
     // data-grid, flag, native-time-input, page, pan-zoom, split-panel, video, and video-playlist.
     // Ten obsolete/duplicate registration imports left at the same time, so a tag/import-count
     // multiplier would model this change incorrectly (the root import count fell 269 -> 268).
@@ -135,33 +149,34 @@ const bundleEntries = {
     // Floating UI beyond Lyra itself. This is aggregate implementation weight, not an optional-
     // peer leak.
     //
-    // Raised from 3_400_000 for the 8.0.0 completion pass's final hardening sweep, which touched
-    // every existing component (824 files, no new tag added) without moving the registration
-    // count. Measured 3794.5 KiB (3,794,490 B) raw across 7 output files with optional peers
+    // Raised from 3_400_000 after 8.0.0 expanded contracts across every existing component
+    // (824 files, no new tag added) without moving the registration count. Measured 3794.5 KiB
+    // (3,794,490 B) raw across 7 output files with optional peers
     // externalized; this run's own peer-graph diagnostic reported zero eager or physically-bundled
     // optional peers, the same evidence prior re-baselines used to rule out a foreign-dependency
     // leak. Combined with the unchanged 200,000 B root-registration allowance, the new ceiling
     // leaves ~2.8% headroom over the measured bundle.
     //
     // The root fixture measured 3,931,759 B (3839.6 KiB) across the same 268 registrations,
-    // with no eager optional peer. Batch 4's bounded data alternatives, nonfatal feature
+    // with no eager optional peer. Bounded data alternatives, nonfatal feature
     // warnings, transcript hardening, and layout/accessibility repairs raise the exact packed
     // measurement to 3849.1 KiB without introducing a peer or registration. The named 10,000 B
-    // Batch 4's 10,000 B allowance left roughly 3.5 KiB of headroom for that reviewed
-    // implementation growth without relaxing any granular consumer budget. The recovered
-    // full-review batch adds the documented interactive-state, accessibility, and media fixes
+    // allowance left roughly 3.5 KiB of headroom for that implementation growth without relaxing
+    // any granular consumer budget. The interaction, accessibility, and media contracts add their
+    // documented implementation weight
     // without introducing a registration or optional peer; the packed measurement is now
     // 3858.5 KiB. Its separately named 10,000 B allowance raises this aggregate ceiling to
     // 3862.3 KiB, retaining about 3.8 KiB of headroom while the granular consumer budgets remain
     // unchanged.
     maxRawBytes:
-      coreRawBudget.reviewedBaselineBytes +
+      coreRawBudget.establishedBaselineBytes +
       coreRawBudget.stableRootRegistrationAllowanceBytes +
-      coreRawBudget.reviewedRemediationAllowanceBytes +
-      coreRawBudget.batchFourRemediationAllowanceBytes +
-      coreRawBudget.fullReviewRecoveryAllowanceBytes +
-      coreRawBudget.fullSweepBatch2Batch3AllowanceBytes +
-      coreRawBudget.fullSweepBatch6Batch10AllowanceBytes,
+      coreRawBudget.crossComponentContractAllowanceBytes +
+      coreRawBudget.boundedDataResilienceAllowanceBytes +
+      coreRawBudget.interactionAccessibilityAllowanceBytes +
+      coreRawBudget.accessibilityStyleCorrectionAllowanceBytes +
+      coreRawBudget.featureCapabilityAllowanceBytes +
+      coreRawBudget.overlayHydrationContractAllowanceBytes,
   },
   // The other half of the registration split, and the reason the `core` budget above could move to
   // `all.js` without losing coverage: a bare `import '@aceshooting/lyra-ui'` must still collapse to
@@ -186,8 +201,8 @@ const bundleEntries = {
   // more sensitive to a foreign dependency's low-entropy-relative-to-its-size bytes landing in an
   // otherwise tiny, highly-compressible bundle.
   //
-  // This is the approved release target, backed by per-component English catalog slices and the
-  // lean base token sheet. Raised from 30 KiB after the full-review remediation added two real
+  // This is the release target backed by per-component English catalog slices and the lean base
+  // token sheet. Raised from 30 KiB after adding two real
   // button contracts: composed-click cancellation for submit/reset default actions and the
   // minimum-target/long-content containment styles. The packed graph still reports zero eager or
   // bundled optional peers, and this now agrees with the independently enforced granular hard
@@ -195,7 +210,7 @@ const bundleEntries = {
   // second ceiling. It is intentionally not a measured-current-plus-headroom rebaseline.
   button: {
     fixture: 'core',
-    maxGzipBytes: 31 * 1024,
+    maxGzipBytes: buttonGranularBudgetKilobytes * 1024,
   },
   // Retention canaries rather than size budgets: these entries are imported only for side effects,
   // so the assertions in runBundle prove a production tree-shaker kept the shipped CSS asset and

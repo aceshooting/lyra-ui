@@ -269,7 +269,7 @@ describe('tree upstream-compatible selection and lazy lifecycle', () => {
 
     lazy.expand();
     const request = await requested;
-    expect(request.detail.item).to.equal(lazy);
+    expect((request.detail.item) === (lazy)).to.equal(true);
     expect(lazy.loading).to.be.true;
 
     el.data = [
@@ -280,7 +280,7 @@ describe('tree upstream-compatible selection and lazy lifecycle', () => {
       },
     ];
     await el.updateComplete;
-    expect(el.querySelector('lr-tree-item')).to.equal(lazy);
+    expect((el.querySelector('lr-tree-item')) === (lazy)).to.equal(true);
     expect(lazy.loading).to.be.false;
     expect(lazy.expanded).to.be.true;
     expect(lazy.getChildrenItems().map((item) => item.nodeLabel)).to.eql(['Loaded']);

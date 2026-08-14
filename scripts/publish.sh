@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Interactive release script for the @aceshooting/lyra-* workspace packages.
 # This is the canonical release entry point; there is intentionally no root-level
-# ./publish.sh wrapper. Run .claude/commands/publish.md first, including the
-# docs:build and docs:check-show-code gates.
+# ./publish.sh wrapper. Follow the release checklist below, including the docs:build and
+# docs:check-show-code gates.
 #
 # Packages under packages/* are versioned and released independently, driven
 # entirely by pending changesets in .changeset/. Steps: ensure main is clean

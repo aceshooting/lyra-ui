@@ -1,11 +1,12 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property } from 'lit/decorators.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import {
   isAccessibilityVisible,
 } from '../../../internal/accessibility-visibility.js';
 import { composedAccessibilityText } from '../../../internal/announcement-text.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import type { LyraAppearance, LyraSize, LyraVariant } from '../../../internal/variants.js';
 import { contextualSizes, contextualVariants } from '../../../internal/contextual-vocabulary.styles.js';
 import { styles } from './callout.styles.js';
@@ -113,8 +114,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
 
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) open = true;
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
-  @state() private hasIcon = false;
-  @state() private hasHeading = false;
+  private readonly slotPresence = new SlotPresenceController(this);
   private liveActive = false;
   private connectionGeneration = 0;
   private politeSink?: AnnouncementSink;
@@ -298,20 +298,14 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     const event = this.emit('lr-close', undefined, { cancelable: true });
     if (!event.defaultPrevented) this.open = false;
   };
-  private onSlotChange = (event: Event): void => {
-    const slot = event.target as HTMLSlotElement;
-    const present = slot.assignedElements({ flatten: true }).length > 0;
-    if (slot.name === 'icon') this.hasIcon = present;
-    if (slot.name === 'heading') this.hasHeading = present;
-  };
   override render(): TemplateResult {
     if (!this.open) return html``;
     const label = this.resolvedAccessibleLabel() || undefined;
     return html`<div part="base" role=${label ? 'group' : nothing}
       aria-label=${label || nothing}>
-      <span part="icon" ?hidden=${!this.hasIcon}><slot name="icon" @slotchange=${this.onSlotChange}></slot></span>
+      <span part="icon" ?hidden=${!this.slotPresence.has('icon')}><slot name="icon"></slot></span>
       <div part="content">
-        <div part="heading" ?hidden=${!this.heading && !this.hasHeading}>${this.heading}<slot name="heading" @slotchange=${this.onSlotChange}></slot></div>
+        <div part="heading" ?hidden=${!this.heading && !this.slotPresence.has('heading')}>${this.heading}<slot name="heading"></slot></div>
         <div part="message"><slot></slot></div>
       </div>
       <button type="button" part="close-button" ?hidden=${!this.closable} aria-label=${this.localize('close')} @click=${this.close}><span part="close-icon" aria-hidden="true">×</span></button>

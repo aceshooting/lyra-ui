@@ -41,6 +41,11 @@ A small bordered card shell. Purely visual, with no state of its own beyond slot
   `<lr-tool-result-view>`'s own chrome) doesn't double it. Plain controls only the chrome; compact
   padding and gaps still apply when both are set. The exported alias `ResultCardAppearance` is
   retained as a name for the same union.
+- `withActions: boolean = false` (attribute `with-actions`, reflected) — explicit first-render
+  presence hint for the `actions` slot. Client-only markup normally does not need it because the
+  component detects assigned actions during upgrade; set it before both server and browser first
+  render when an actions-only header must be present in the no-JavaScript response and reused by
+  hydration.
 
 **Events:** none.
 

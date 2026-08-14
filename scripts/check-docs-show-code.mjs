@@ -4,6 +4,7 @@ import { createServer } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { findUnexpectedDiagnostics, structuralDocsFailure } from './docs-diagnostics.mjs';
 
 const args = new Map(
   process.argv.slice(2).flatMap((arg) => {
@@ -15,7 +16,10 @@ const configuredUrl = args.get('url') ?? process.env.DOCS_URL;
 let localServer;
 let baseUrl = configuredUrl;
 if (!baseUrl) {
-  const staticRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../storybook-static');
+  const staticRoot = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    process.env.STORYBOOK_STATIC_DIR ?? '../storybook-static',
+  );
   const mimeTypes = {
     '.css': 'text/css',
     '.html': 'text/html; charset=utf-8',
@@ -91,16 +95,25 @@ async function tolerateNavigation(page, step) {
  */
 async function inspectDoc(context, doc) {
   const page = await context.newPage();
-  const diagnostics = { console: [], pageErrors: [], requests: [], navigations: [] };
+  const diagnostics = { console: [], pageErrors: [], requests: [], responses: [], navigations: [] };
   const navigationRequests = [];
   const onConsole = (message) => {
     if (message.type() === 'warning' || message.type() === 'error') {
-      diagnostics.console.push({ type: message.type(), text: message.text() });
+      diagnostics.console.push({
+        type: message.type(),
+        text: message.text(),
+        url: message.location().url,
+      });
     }
   };
   const onPageError = (error) => diagnostics.pageErrors.push(String(error));
   const onRequestFailed = (request) =>
     diagnostics.requests.push({ url: request.url(), error: request.failure()?.errorText ?? 'unknown' });
+  const onResponse = (response) => {
+    if (response.status() >= 400) {
+      diagnostics.responses.push({ url: response.url(), status: response.status() });
+    }
+  };
   const onRequest = (request) => {
     // Only real document loads count — Storybook's own same-document history updates are not the
     // page replacing itself, and this list is what makes a self-reload visible in the summary.
@@ -115,6 +128,7 @@ async function inspectDoc(context, doc) {
   page.on('console', onConsole);
   page.on('pageerror', onPageError);
   page.on('requestfailed', onRequestFailed);
+  page.on('response', onResponse);
   page.on('request', onRequest);
 
   let clicked = 0;
@@ -167,18 +181,37 @@ async function inspectDoc(context, doc) {
     }
 
     const remaining = await tolerateNavigation(page, () => showCode().count());
+    const expandedSwitches = () => anySwitch().filter({ hasText: 'Hide code' });
+    const expandedControls = await tolerateNavigation(page, () => expandedSwitches().count());
+    const sourceTexts = await tolerateNavigation(page, () =>
+      expandedSwitches().evaluateAll((controls) =>
+        controls.map((control) => {
+          const sourceId = control.getAttribute('aria-controls');
+          return sourceId ? (document.getElementById(sourceId)?.textContent ?? '') : '';
+        }),
+      ),
+    );
     diagnostics.navigations = navigationRequests.slice(1);
     // A page that never stops mounting controls, or one whose control never flips out of the
     // "Show code" state and is therefore clicked forever, is as broken as one left unexpanded.
-    const failure =
-      remaining > 0
-        ? `${remaining} Show code control(s) remained visible`
-        : clicked >= MAX_CLICKS
-          ? `click cap of ${MAX_CLICKS} controls reached without the page settling`
-          : idlePolls < QUIET_POLLS
-            ? `page never settled within ${STABILISE_BUDGET_MS}ms (${clicked} control(s) clicked)`
-            : undefined;
-    return { ...doc, clicked, remaining, failure, diagnostics };
+    const failure = structuralDocsFailure({
+      clicked,
+      remaining,
+      expandedControls,
+      sourceTexts,
+      settled: idlePolls >= QUIET_POLLS,
+      reachedClickCap: clicked >= MAX_CLICKS,
+      requiresControls: doc.importPath.includes('/src/components/'),
+    });
+    return {
+      ...doc,
+      clicked,
+      remaining,
+      expandedControls,
+      sourceBlocks: sourceTexts.length,
+      failure,
+      diagnostics,
+    };
   } catch (error) {
     diagnostics.navigations = navigationRequests.slice(1);
     return { ...doc, clicked, remaining: null, failure: String(error), diagnostics };
@@ -186,6 +219,7 @@ async function inspectDoc(context, doc) {
     page.off('console', onConsole);
     page.off('pageerror', onPageError);
     page.off('requestfailed', onRequestFailed);
+    page.off('response', onResponse);
     page.off('request', onRequest);
     await page.close().catch(() => {});
   }
@@ -205,7 +239,7 @@ const entries = await indexPage.evaluate(() =>
 await indexPage.close();
 const docs = Object.values(entries.entries)
   .filter((entry) => entry.type === 'docs')
-  .map(({ id, title }) => ({ id, title }));
+  .map(({ id, title, importPath }) => ({ id, title, importPath }));
 const end = endArg === undefined ? docs.length - 1 : Number(endArg);
 const selected = docs.slice(start, end + 1);
 const results = new Array(selected.length);
@@ -233,8 +267,12 @@ const diagnosticPages = results.filter(
     result.diagnostics.console.length ||
     result.diagnostics.pageErrors.length ||
     result.diagnostics.requests.length ||
+    result.diagnostics.responses.length ||
     result.diagnostics.navigations.length,
 );
+const diagnosticFailures = results
+  .map((result) => ({ ...result, unexpectedDiagnostics: findUnexpectedDiagnostics(result) }))
+  .filter((result) => result.unexpectedDiagnostics.length > 0);
 const summary = {
   url: baseUrl,
   range: [start, end],
@@ -245,7 +283,8 @@ const summary = {
   clicked: results.reduce((total, result) => total + result.clicked, 0),
   structuralFailures,
   diagnosticPages,
+  diagnosticFailures,
 };
 
 console.log(JSON.stringify(summary, null, 2));
-process.exitCode = structuralFailures.length ? 1 : 0;
+process.exitCode = structuralFailures.length || diagnosticFailures.length ? 1 : 0;

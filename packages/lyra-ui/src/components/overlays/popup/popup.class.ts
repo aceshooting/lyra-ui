@@ -15,6 +15,7 @@ import {
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from '../overlay/overlay-arrow.js';
+import { observeOverlayAnchorIdentity } from '../overlay/overlay-shared.js';
 import { styles } from './popup.styles.js';
 
 export type {
@@ -24,6 +25,7 @@ export type {
   PlaceFlipFallbackStrategy,
   PlaceStrategy,
   PlaceSync,
+  VirtualAnchor,
 };
 
 /** Shared boundary vocabulary exposed by the mapped popup primitive. */
@@ -56,6 +58,13 @@ const PLACEMENTS: ReadonlySet<string> = new Set([
 const AUTO_SIZE_AXES: ReadonlySet<string> = new Set(['horizontal', 'vertical', 'both']);
 const SYNC_AXES: ReadonlySet<string> = new Set(['width', 'height', 'both']);
 
+interface ResolvedPopupAnchor {
+  /** The reference passed to Floating UI. Plain rects are normalized into a virtual element. */
+  target: Element | VirtualAnchor;
+  /** Stable identity used to reject a stale async placement after the source has been replaced. */
+  identity: object;
+}
+
 export interface LyraPopupEventMap {
   'lr-reposition': CustomEvent<{ placement: Placement }>;
 }
@@ -80,8 +89,7 @@ export interface LyraPopupEventMap {
  * `auto-size-padding` instead of the shared `padding`.
  *
  * @customElement lr-popup
- * @slot anchor - The element to position against. Ignored when `anchor`, `for`, or
- * `virtualAnchor` is set.
+ * @slot anchor - The fallback element to position against when no higher-priority source resolves.
  * @slot - The floating content.
  * @event lr-reposition - Emitted after each recomputation. `detail: { placement }` carries the
  * placement actually used, which `flip` may have changed.
@@ -109,7 +117,7 @@ export interface LyraPopupEventMap {
 export class LyraPopup extends LyraElement<LyraPopupEventMap> {
   static override styles = [LyraElement.styles, styles];
 
-  /** Whether the popup is rendered and positioned. Nothing else changes when it flips. */
+  /** Requests positioning and paint. The surface remains hidden until a live anchor is placed. */
   @property({ type: Boolean, reflect: true }) active = false;
 
   /**
@@ -121,7 +129,7 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
 
   /** Element, same-root id string, or Floating UI-compatible virtual element to position against.
    *  Takes precedence over `for` and the anchor slot; `virtualAnchor` remains the highest-priority
-   *  Lyra compatibility path. */
+   *  Lyra compatibility path. A disconnected element or dangling id falls through. */
   @property() anchor: LyraPopupAnchor | null = null;
 
   /** Preferred placement. `flip`/`shift` may override it; the result is reported by `lr-reposition`. */
@@ -141,7 +149,7 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
   @property({ type: Number }) skidding = 0;
 
   /** Flip to the opposite side when the preferred one does not fit. */
-  @property({ type: Boolean, reflect: true }) flip = false;
+  @property({ type: Boolean }) flip = false;
 
   /**
    * Space-delimited placements `flip` tries, in order, instead of just the opposite side —
@@ -159,7 +167,7 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
 
   /** Shared clipping boundary. `viewport` ignores clipping ancestors; `scroll` uses them. The
    *  separate flip/shift/auto-size boundaries below override this value one middleware at a time. */
-  @property({ reflect: true }) boundary: LyraPopupBoundary = 'viewport';
+  @property() boundary: LyraPopupBoundary = 'viewport';
 
   /** Element(s) `flip` measures overflow against, instead of the popup's clipping ancestors. */
   @property({ attribute: false }) flipBoundary: PlaceBoundary | null = null;
@@ -168,7 +176,7 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
   @property({ type: Number, attribute: 'flip-padding' }) flipPadding = 0;
 
   /** Shift along the anchor's edge to stay within the viewport. */
-  @property({ type: Boolean, reflect: true }) shift = false;
+  @property({ type: Boolean }) shift = false;
 
   /** Element(s) `shift` measures overflow against, instead of the popup's clipping ancestors. */
   @property({ attribute: false }) shiftBoundary: PlaceBoundary | null = null;
@@ -200,10 +208,10 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
    * travelling between them never leaves both at once. Purely geometric — this element owns no
    * hover policy of its own; the component built on top reads the hover.
    */
-  @property({ type: Boolean, attribute: 'hover-bridge', reflect: true }) hoverBridge = false;
+  @property({ type: Boolean, attribute: 'hover-bridge' }) hoverBridge = false;
 
   /** Render an arrow that points at the anchor. */
-  @property({ type: Boolean, reflect: true }) arrow = false;
+  @property({ type: Boolean }) arrow = false;
 
   /** Where the arrow sits along the popup's edge. `anchor` tracks the anchor's centre. */
   @property({ attribute: 'arrow-placement' }) arrowPlacement: LyraArrowPlacement = 'anchor';
@@ -233,13 +241,31 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
   @query('[part="anchor"]') private anchorSlotWrapper!: HTMLElement;
 
   private stopPlacing?: () => void;
+  private stopAnchorIdentityObservation?: () => void;
+  private anchorPositioned = false;
+  private placingAnchorIdentity?: object;
+  private positionedAnchorIdentity?: object;
   private resolvedPlacement: Placement = 'top';
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.addEventListener('slotchange', this.onForwardedAnchorSlotChange);
+    this.syncAnchorIdentityObservation();
+    // Reparenting the same active instance does not schedule a Lit update, but it changes both
+    // same-root id resolution and Floating UI's containing-block/scroll-ancestor subscriptions.
+    if (this.hasUpdated && this.active) this.reposition();
+  }
+
   override disconnectedCallback(): void {
-    super.disconnectedCallback();
+    this.removeEventListener('slotchange', this.onForwardedAnchorSlotChange);
+    this.stopAnchorIdentityObservation?.();
+    this.stopAnchorIdentityObservation = undefined;
     // Transient positioning state never survives a detach: autoUpdate holds listeners on the
     // anchor's scroll ancestors, and a re-attached element re-resolves its anchor from scratch.
     this.teardown();
+    this.positionedAnchorIdentity = undefined;
+    this.setPositioned(false);
+    super.disconnectedCallback();
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -252,12 +278,24 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
   /** Recomputes the position now. Rarely needed — the popup already tracks scroll, resize and
    *  layout change — but a consumer that moved a virtual anchor imperatively can force a pass. */
   reposition(): void {
+    this.syncAnchorIdentityObservation();
+    const anchor = this.isConnected && this.active ? this.resolveAnchor() : null;
+    const previousIdentity = this.placingAnchorIdentity ?? this.positionedAnchorIdentity;
     this.teardown();
-    if (!this.isConnected || !this.active || !this.popup) return;
-    const anchor = this.resolveAnchor();
-    if (!anchor) return;
+    if (!this.isConnected || !this.active || !this.popup || !anchor) {
+      this.positionedAnchorIdentity = undefined;
+      this.setPositioned(false);
+      return;
+    }
+    if (anchor.identity !== previousIdentity) {
+      // MutationObserver callbacks run before the next paint. Hide the old origin/target
+      // synchronously, then reveal only after the replacement has real coordinates.
+      this.positionedAnchorIdentity = undefined;
+      this.setPositioned(false);
+    }
+    this.placingAnchorIdentity = anchor.identity;
     const arrowPadding = Math.max(0, finiteNumber(this.arrowPadding, 0));
-    this.stopPlacing = place(anchor, this.popup, {
+    this.stopPlacing = place(anchor.target, this.popup, {
       placement: rtlAwarePlacement(this.placement, this),
       strategy: this.strategy === 'absolute' ? 'absolute' : 'fixed',
       offset: finiteNumber(this.distance, 0),
@@ -283,6 +321,14 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
       arrowPadding,
       hoverBridge: this.hoverBridge ? this.hoverBridgeElement : undefined,
       onPlaced: ({ placement, arrow }) => {
+        const currentAnchor = this.resolveAnchor();
+        if (!this.isConnected || !this.active || currentAnchor?.identity !== anchor.identity) {
+          this.setPositioned(false);
+          return;
+        }
+        this.placingAnchorIdentity = undefined;
+        this.positionedAnchorIdentity = anchor.identity;
+        this.setPositioned(true);
         // Upstream exposes these two read-only compatibility properties without a prefix. Write
         // them from the token-backed internal measurement rather than declaring an unprefixed
         // design value in component CSS (which the repository style policy correctly rejects).
@@ -329,40 +375,105 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
   private teardown(): void {
     this.stopPlacing?.();
     this.stopPlacing = undefined;
+    this.placingAnchorIdentity = undefined;
   }
 
-  private resolveAnchor(): Element | VirtualAnchor | null {
+  private resolveAnchor(): ResolvedPopupAnchor | null {
     if (this.virtualAnchor) {
       const candidate = this.virtualAnchor as VirtualAnchor;
-      if (typeof candidate.getBoundingClientRect === 'function') return candidate;
+      if (typeof candidate.getBoundingClientRect === 'function') {
+        return { target: candidate, identity: candidate };
+      }
       const rect = this.virtualAnchor as { x: number; y: number; width?: number; height?: number };
       const width = rect.width ?? 0;
       const height = rect.height ?? 0;
       if (![rect.x, rect.y, width, height].every(Number.isFinite)) return null;
-      return virtualAnchorFromRect({
-        x: rect.x,
-        y: rect.y,
-        width: Math.max(0, width),
-        height: Math.max(0, height),
-      });
+      return {
+        target: virtualAnchorFromRect({
+          x: rect.x,
+          y: rect.y,
+          width: Math.max(0, width),
+          height: Math.max(0, height),
+        }),
+        identity: rect,
+      };
     }
     if (this.anchor) {
       if (typeof this.anchor === 'string') {
         const root = this.getRootNode() as Document | ShadowRoot;
         const target = root.getElementById?.(this.anchor) ?? null;
-        if (target) return target;
+        if (target) return { target, identity: target };
       } else if (typeof this.anchor.getBoundingClientRect === 'function') {
-        return this.anchor;
+        if (!this.isElementAnchor(this.anchor) || this.anchor.isConnected) {
+          return { target: this.anchor, identity: this.anchor };
+        }
       }
     }
     if (this.for) {
       const root = this.getRootNode() as Document | ShadowRoot;
       const target = root.getElementById?.(this.for) ?? null;
-      if (target) return target;
+      if (target) return { target, identity: target };
     }
     const slot = this.anchorSlotWrapper?.querySelector('slot');
-    return (slot as HTMLSlotElement | null)?.assignedElements({ flatten: true })[0] ?? null;
+    const target = (slot as HTMLSlotElement | null)?.assignedElements({ flatten: true })[0] ?? null;
+    return target?.isConnected ? { target, identity: target } : null;
   }
+
+  private isElementAnchor(anchor: Element | VirtualAnchor): anchor is Element {
+    const candidate = anchor as Element;
+    const ElementCtor = candidate.ownerDocument?.defaultView?.Element;
+    return ElementCtor ? candidate instanceof ElementCtor : candidate.nodeType === 1;
+  }
+
+  private syncAnchorIdentityObservation(): void {
+    this.stopAnchorIdentityObservation?.();
+    this.stopAnchorIdentityObservation = undefined;
+    if (!this.isConnected || !this.active || this.virtualAnchor) return;
+
+    const directAnchor =
+      this.anchor && typeof this.anchor !== 'string' && this.isElementAnchor(this.anchor)
+        ? this.anchor
+        : undefined;
+    const observesHostRoot = typeof this.anchor === 'string' || Boolean(this.for) || Boolean(directAnchor);
+    if (!observesHostRoot) return;
+
+    const onIdentityChange = (): void => {
+      const nextIdentity = this.resolveAnchor()?.identity;
+      const currentIdentity = this.placingAnchorIdentity ?? this.positionedAnchorIdentity;
+      if (nextIdentity !== currentIdentity) this.reposition();
+    };
+    const observedRoots = new Set<Node>([this]);
+    if (directAnchor && directAnchor.getRootNode() !== this.getRootNode()) {
+      observedRoots.add(directAnchor.isConnected ? directAnchor : directAnchor.ownerDocument);
+    }
+    const cleanups = [...observedRoots].map((root) =>
+      observeOverlayAnchorIdentity(root, onIdentityChange));
+    this.stopAnchorIdentityObservation = () => {
+      for (const cleanup of cleanups) cleanup();
+    };
+  }
+
+  private setPositioned(positioned: boolean): void {
+    this.anchorPositioned = positioned;
+    const paints = this.active && positioned;
+    const awaitsPosition = this.active && !positioned;
+    this.popup?.toggleAttribute('data-active', paints);
+    this.popup?.toggleAttribute('data-awaits-position', awaitsPosition);
+    this.hoverBridgeElement?.toggleAttribute('data-active', paints);
+  }
+
+  private readonly onAnchorSlotChange = (): void => {
+    if (!this.active) return;
+    const nextIdentity = this.resolveAnchor()?.identity;
+    const currentIdentity = this.placingAnchorIdentity ?? this.positionedAnchorIdentity;
+    if (nextIdentity !== currentIdentity) this.reposition();
+  };
+
+  /** A forwarding slot is a light-DOM child of the popup, so its non-composed `slotchange` event
+   *  reaches the host but not the shadow-owned anchor slot listener below. */
+  private readonly onForwardedAnchorSlotChange = (event: Event): void => {
+    if ((event.target as Element | null)?.localName === 'slot') this.onAnchorSlotChange();
+  };
 
   /** The resolved side lives in the part name, never as an attribute after `::part()` — that
    *  selector shape silently never matches. */
@@ -379,10 +490,12 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
 
   override render(): TemplateResult {
     const side = this.resolvedPlacement.split('-')[0];
+    const paints = this.active && this.anchorPositioned;
+    const awaitsPosition = this.active && !this.anchorPositioned;
     return html`
-      ${this.hoverBridge ? html`<span part="hover-bridge" ?data-active=${this.active}></span>` : nothing}
-      <span part="anchor"><slot name="anchor"></slot></span>
-      <div part="popup ${side}" ?data-active=${this.active}>
+      ${this.hoverBridge ? html`<span part="hover-bridge" ?data-active=${paints}></span>` : nothing}
+      <span part="anchor"><slot name="anchor" @slotchange=${this.onAnchorSlotChange}></slot></span>
+      <div part="popup ${side}" ?data-active=${paints} ?data-awaits-position=${awaitsPosition}>
         <slot></slot>
         ${this.arrow ? html`<span part="arrow arrow-${side}"></span>` : nothing}
       </div>

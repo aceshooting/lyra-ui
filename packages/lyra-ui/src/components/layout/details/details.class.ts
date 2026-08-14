@@ -178,7 +178,8 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
     super.disconnectedCallback();
   }
 
-  override firstUpdated(): void {
+  override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
     // Reconcile initially-open markup after every sibling has had a chance to upgrade. The last
     // open disclosure in document order wins, matching native named details grouping.
     if (this._open) this.closeNamedPeers();

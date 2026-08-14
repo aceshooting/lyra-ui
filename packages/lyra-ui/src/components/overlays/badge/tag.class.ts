@@ -1,11 +1,12 @@
 import { html, nothing, type PropertyValues } from 'lit';
-import { property, query, state } from 'lit/decorators.js';
+import { query, state } from 'lit/decorators.js';
 import {
   bindAccessibleTextObserver,
   composedAccessibleVisibleText,
 } from '../../../internal/accessibility-visibility.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { closeIcon } from '../../../internal/icons.js';
+import type { LyraVariant } from '../../../internal/variants.js';
 import { variants } from '../../../internal/variants.styles.js';
 import { LyraBadge, type BadgeVariant } from './badge.class.js';
 import { styles as badgeStyles } from './badge.styles.js';
@@ -20,23 +21,24 @@ export interface LyraTagEventMap {
   'lr-remove': CustomEvent<undefined>;
 }
 
+/** Badge tones plus Shoelace's tag-only plain-text treatment. */
+export type TagVariant = BadgeVariant | 'text';
+
 /** `<lr-tag>` — the compact badge treatment with tag semantics: the same `variant`/`size`/
  * `appearance`/`pill`/`attention` surface as `<lr-badge>`, plus an optional remove affordance for
  * a tag standing in for a dismissible selection, filter, or keyword.
  *
- * Unlike `<lr-chip>` (a deliberately controlled component that only ever announces a remove
- * request), a removable tag removes *itself* on activation. `lr-remove` is the veto point for
- * that: cancel it with `preventDefault()` to keep the tag mounted and own the removal from your
- * own state instead.
+ * Like `<lr-chip>`, removal is controlled: activating the remove action emits one notification and
+ * leaves the tag connected. The consumer updates its own source state and removes the tag.
  *
  * @customElement lr-tag
  * @slot - Tag content. A removable tag keeps its action name synchronized with visible accessible
  * label text through forwarding slots.
  * @slot start - Content placed before the label, typically an icon.
  * @slot end - Content placed after the label, typically an icon.
- * @event lr-remove - The remove button was activated (click, or Enter/Space while focused —
- * native `<button>` behavior). Cancelable: `preventDefault()` keeps the tag in the DOM, otherwise
- * the tag removes itself. Only rendered, and therefore only fired, while `withRemove` or its
+ * @event lr-remove - Noncancelable notification that the remove button was activated (click, or
+ * Enter/Space while focused — native `<button>` behavior). The consumer owns the state update and
+ * DOM removal. Only rendered, and therefore only fired, while `withRemove` or its
  * Shoelace-compatible `removable` alias is set. The event's `target` is the tag.
  * @csspart base - The tag surface.
  * @csspart start - Wrapper around the `start` slot. Hidden entirely while empty.
@@ -52,7 +54,7 @@ export interface LyraTagEventMap {
  * @status stable
  * @since 4.0.0
  */
-export class LyraTag extends LyraBadge<LyraTagEventMap> {
+export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -64,32 +66,63 @@ export class LyraTag extends LyraBadge<LyraTagEventMap> {
 
   static override styles = [LyraElement.styles, variants, badgeStyles, tagStyles];
 
-  private upstreamTextVariant = false;
+  static override properties = {
+    withRemove: { attribute: 'with-remove', type: Boolean, noAccessor: true },
+    removable: { attribute: 'removable', type: Boolean, noAccessor: true },
+  };
 
-  /** Adds Shoelace's `text` variant write spelling. It renders as a neutral plain tag while the
-   * public read value remains Lyra's canonical `neutral` semantic palette. */
-  override get variant(): BadgeVariant {
-    return super.variant;
-  }
-  override set variant(value: BadgeVariant | 'primary' | 'text') {
-    const text = value === 'text';
-    const textChanged = text !== this.upstreamTextVariant;
-    this.upstreamTextVariant = text;
-    super.variant = text ? 'neutral' : value;
-    if (textChanged) this.requestUpdate();
+  protected override get semanticRole(): null {
+    return null;
   }
 
-  /** Renders the remove affordance. */
-  @property({ attribute: 'with-remove', type: Boolean, reflect: true }) withRemove = false;
+  protected override get effectiveVariant(): LyraVariant {
+    return this.variant === 'text' ? 'neutral' : super.effectiveVariant;
+  }
 
-  /** Shoelace-compatible alias for `withRemove`. */
-  @property({ type: Boolean })
+  private removeEnabled = false;
+  private changingRemoveAliasAttribute = false;
+
+  /** Renders the remove affordance. Either mirrored attribute enables the shared state; assigning
+   * false through either property clears both attributes so the write reads back truthfully. */
+  get withRemove(): boolean {
+    return this.removeEnabled;
+  }
+  set withRemove(next: boolean) {
+    this.setRemoveEnabled(Boolean(next), 'with-remove');
+  }
+
+  /** Shoelace-compatible alias for `withRemove`, backed by the same authority. */
   get removable(): boolean {
-    return this.withRemove;
+    return this.removeEnabled;
   }
   set removable(next: boolean) {
-    const old = this.withRemove;
-    this.withRemove = Boolean(next);
+    this.setRemoveEnabled(Boolean(next), 'removable');
+  }
+
+  override attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
+    const isRemoveAlias = name === 'with-remove' || name === 'removable';
+    if (isRemoveAlias) this.changingRemoveAliasAttribute = true;
+    try {
+      super.attributeChangedCallback(name, oldValue, value);
+    } finally {
+      if (isRemoveAlias) this.changingRemoveAliasAttribute = false;
+    }
+  }
+
+  private setRemoveEnabled(next: boolean, preferredAttribute: 'with-remove' | 'removable'): void {
+    const old = this.removeEnabled;
+    if (this.changingRemoveAliasAttribute) {
+      this.removeEnabled = this.hasAttribute('with-remove') || this.hasAttribute('removable');
+    } else if (next) {
+      this.setAttribute(preferredAttribute, '');
+      this.removeEnabled = true;
+    } else {
+      this.removeAttribute('with-remove');
+      this.removeAttribute('removable');
+      this.removeEnabled = false;
+    }
+    if (old === this.removeEnabled) return;
+    this.requestUpdate('withRemove', old);
     this.requestUpdate('removable', old);
   }
 
@@ -106,7 +139,8 @@ export class LyraTag extends LyraBadge<LyraTagEventMap> {
     const target = event.target as Element | null;
     if (target?.nodeType !== 1 || target.localName !== 'slot') return;
     this.bindLabelObserverTargets();
-    if (this.withRemove) this.recomputeLabelText();
+    if (!this.withRemove) return;
+    this.updateBrowserDerivedState(() => this.recomputeLabelText());
   };
 
   override connectedCallback(): void {
@@ -137,7 +171,7 @@ export class LyraTag extends LyraBadge<LyraTagEventMap> {
     }
     this.labelObserver ??= new MutationObserverCtor(() => {
       this.bindLabelObserverTargets();
-      this.recomputeLabelText();
+      this.updateBrowserDerivedState(() => this.recomputeLabelText());
     });
     this.bindLabelObserverTargets();
   }
@@ -182,8 +216,7 @@ export class LyraTag extends LyraBadge<LyraTagEventMap> {
   }
 
   private onRemoveClick = (): void => {
-    const event = this.emit('lr-remove', undefined, { cancelable: true });
-    if (!event.defaultPrevented) this.remove();
+    this.emit('lr-remove');
   };
 
   // Only ever present while `withRemove` -- see renderTrailing() below.
@@ -197,7 +230,6 @@ export class LyraTag extends LyraBadge<LyraTagEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    this.toggleAttribute('data-upstream-text-variant', this.upstreamTextVariant);
     if (changed.has('withRemove')) {
       this.syncLabelObserver();
       if (this.withRemove && this.hasUpdated) this.recomputeLabelText();

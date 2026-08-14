@@ -1,14 +1,31 @@
 import { createServer } from 'node:http';
 import { readFile, readdir, stat } from 'node:fs/promises';
-import { extname, join, normalize, sep } from 'node:path';
+import { extname, join, normalize, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import axe from 'axe-core';
 import { FAMILY_LABELS } from '../.storybook/story-indexer.js';
+import { findUnexpectedDiagnostics } from './docs-diagnostics.mjs';
+import {
+  buildStorybookDocsAuditPlan,
+  collectStoryOwners,
+  findStoryOwnershipFailures,
+  manifestTagNames,
+  resolveStoryOwnerDocs,
+} from './storybook-contracts.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const staticRoot = join(root, 'storybook-static');
+const staticRoot = resolve(root, process.env.STORYBOOK_STATIC_DIR ?? 'storybook-static');
 const indexPath = join(staticRoot, 'index.json');
+const manifestPath = join(root, 'packages/lyra-ui/custom-elements.json');
+const requestedDocsAuditConcurrency = Number(process.env.STORYBOOK_DOCS_AUDIT_CONCURRENCY ?? 4);
+const docsAuditConcurrency = Math.min(
+  8,
+  Math.max(
+    1,
+    Number.isFinite(requestedDocsAuditConcurrency) ? Math.trunc(requestedDocsAuditConcurrency) : 4,
+  ),
+);
 
 // WCAG 2.2 SC 1.4.3 relative luminance, over the `rgb(r, g, b)` strings getComputedStyle returns.
 // packages/lyra-ui/scripts/check-contrast.mjs has the same formula, but it reads hex out of the
@@ -112,7 +129,11 @@ async function serve(request, response) {
   try {
     const fileStat = await stat(filePath);
     if (!fileStat.isFile()) throw new Error('not a file');
-    response.writeHead(200, { 'content-type': mimeTypes[extname(filePath)] ?? 'application/octet-stream' });
+    const headers = { 'content-type': mimeTypes[extname(filePath)] ?? 'application/octet-stream' };
+    if (relativePath.startsWith('assets/')) {
+      headers['cache-control'] = 'public, max-age=31536000, immutable';
+    }
+    response.writeHead(200, headers);
     response.end(await readFile(filePath));
   } catch {
     response.writeHead(404).end('Not found');
@@ -129,19 +150,33 @@ async function listen(server) {
   return `http://127.0.0.1:${address.port}`;
 }
 
+async function componentStoryFiles(directory) {
+  const files = [];
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const child = join(directory, entry.name);
+    if (entry.isDirectory()) files.push(...(await componentStoryFiles(child)));
+    else if (entry.name.endsWith('.stories.ts')) files.push(child);
+  }
+  return files;
+}
+
 let currentStoryId;
 
 async function waitForStory(page, baseUrl, id, viewport, theme = 'light') {
   currentStoryId = id;
-  await page.setViewportSize(viewport);
-  const url = `${baseUrl}/iframe.html?id=${id}&viewMode=story&globals=theme:${theme}`;
-  await page.goto(url.toString(), { waitUntil: 'domcontentloaded', timeout: 20_000 });
-  await page.waitForFunction(
-    () => Boolean(document.querySelector('#storybook-root')?.firstElementChild),
-    undefined,
-    { timeout: 15_000 },
-  );
-  await page.waitForTimeout(150);
+  try {
+    await page.setViewportSize(viewport);
+    const url = `${baseUrl}/iframe.html?id=${id}&viewMode=story&globals=theme:${theme}`;
+    await page.goto(url.toString(), { waitUntil: 'domcontentloaded', timeout: 20_000 });
+    await page.waitForFunction(
+      () => Boolean(document.querySelector('#storybook-root')?.firstElementChild),
+      undefined,
+      { timeout: 15_000 },
+    );
+    await page.waitForTimeout(150);
+  } catch (error) {
+    throw new Error(`${id} did not render: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 async function waitForDocs(page, baseUrl, id, theme = 'dark') {
@@ -206,6 +241,11 @@ async function expectSelector(page, id, selector) {
   if (count === 0) throw new Error(`${id} did not render ${selector}`);
 }
 
+async function waitForCheckedStory(page, baseUrl, id, viewport, theme = 'light') {
+  await waitForStory(page, baseUrl, id, viewport, theme);
+  await expectSelector(page, id, storyChecks.get(id));
+}
+
 // A few new-family viewers (notebook-viewer, thread-list) delegate row rendering to the internal
 // `lr-virtual-list`, which needs a ResizeObserver-driven layout pass (beyond `waitForStory`'s own
 // settle window) before the windowed row count is final. Poll instead of guessing a fixed delay.
@@ -220,60 +260,43 @@ async function waitForLocatorCount(locator, predicate, timeoutMs = 5000) {
   throw new Error(`timed out waiting for locator count (last seen: ${last})`);
 }
 
-async function auditComponentDocs(browser, baseUrl, entries) {
-  const matrices = [
-    { name: 'desktop', width: 980, height: 760, direction: 'ltr' },
-    { name: 'narrow', width: 390, height: 800, direction: 'ltr' },
-    { name: 'narrow-rtl', width: 390, height: 800, direction: 'rtl' },
-  ];
-  const work = matrices.flatMap((matrix) => entries.map((entry) => ({ entry, matrix })));
+async function auditComponentDocs(context, baseUrl, entries) {
+  const work = buildStorybookDocsAuditPlan(entries);
   const failures = [];
   let cursor = 0;
 
   async function worker() {
-    const auditPage = await browser.newPage({ deviceScaleFactor: 1 });
     while (true) {
       const index = cursor;
       cursor += 1;
       if (index >= work.length) break;
 
-      const { entry, matrix } = work[index];
-      const browserErrors = [];
-      const isExpectedRequestFailure = (url) => {
-        const parsed = new URL(url);
-        return (
-          parsed.hostname === 'tile.openstreetmap.org' ||
-          parsed.hostname === 'example.invalid' ||
-          (entry.id === 'animatedimage--docs' &&
-            parsed.pathname.endsWith('/does-not-exist-lr-animated-image.gif'))
-        );
-      };
-      const isIgnorableError = (text) =>
-        /tile\.openstreetmap\.org/.test(text) ||
-        (entry.id === 'map--docs' && /Failed to fetch/.test(text));
-      const onPageError = (error) => {
-        const text = String(error);
-        if (!isIgnorableError(text)) browserErrors.push(`pageerror: ${text}`);
-      };
+      // Keep navigation/session state page-scoped. The surrounding BrowserContext still shares
+      // immutable assets, but a preload-reload guard or late diagnostic cannot leak into the next
+      // owner and be misattributed there.
+      const auditPage = await context.newPage();
+      const { entry: ownedDoc, matrices } = work[index];
+      const { entry, expectedTag } = ownedDoc;
+      const diagnostics = { console: [], pageErrors: [], requests: [], responses: [], navigations: [] };
+      const onPageError = (error) => diagnostics.pageErrors.push(String(error));
       const onConsole = (message) => {
-        if (
-          (message.type() !== 'error' && !isHydrationWarning(message)) ||
-          isIgnorableError(message.text()) ||
-          /Failed to load resource: net::ERR_|Failed to load resource.*404/.test(message.text())
-        ) {
-          return;
+        if (message.type() === 'warning' || message.type() === 'error') {
+          diagnostics.console.push({
+            type: message.type(),
+            text: message.text(),
+            url: message.location().url,
+          });
         }
-        browserErrors.push(`console: ${message.text()}`);
       };
-      const onRequestFailed = (request) => {
-        if (isExpectedRequestFailure(request.url())) return;
-        browserErrors.push(
-          `request failed: ${request.url()} (${request.failure()?.errorText ?? 'unknown error'})`,
-        );
-      };
+      const onRequestFailed = (request) =>
+        diagnostics.requests.push({
+          url: request.url(),
+          error: request.failure()?.errorText ?? 'unknown error',
+        });
       const onResponse = (response) => {
-        if (response.status() < 400 || isExpectedRequestFailure(response.url())) return;
-        browserErrors.push(`HTTP ${response.status()}: ${response.url()}`);
+        if (response.status() >= 400) {
+          diagnostics.responses.push({ url: response.url(), status: response.status() });
+        }
       };
       auditPage.on('pageerror', onPageError);
       auditPage.on('console', onConsole);
@@ -281,138 +304,173 @@ async function auditComponentDocs(browser, baseUrl, entries) {
       auditPage.on('response', onResponse);
 
       try {
-        await auditPage.setViewportSize({ width: matrix.width, height: matrix.height });
+        await auditPage.setViewportSize({ width: matrices[0].width, height: matrices[0].height });
         await auditPage.goto(
-          `${baseUrl}/iframe.html?id=${encodeURIComponent(entry.id)}&viewMode=docs&globals=theme:dark;direction:${matrix.direction}`,
+          `${baseUrl}/iframe.html?id=${encodeURIComponent(entry.id)}&viewMode=docs&globals=theme:dark;direction:ltr`,
           { waitUntil: 'domcontentloaded', timeout: 20_000 },
         );
         await auditPage.waitForSelector('.sbdocs-wrapper', { timeout: 15_000 });
         await auditPage.waitForTimeout(120);
 
-        const layout = await auditPage.evaluate(async () => {
-          const updatePromises = [...document.querySelectorAll('*')]
-            .filter(
-              (element) =>
-                element.localName.startsWith('lr-') &&
-                typeof element.updateComplete?.then === 'function',
-            )
-            .map((element) => element.updateComplete.catch(() => undefined));
-          await Promise.all(updatePromises);
+        for (const matrix of matrices) {
+          await auditPage.setViewportSize({ width: matrix.width, height: matrix.height });
+          await auditPage.evaluate((direction) => {
+            document.documentElement.dir = direction;
+            document.documentElement.dataset.lyraDirection = direction;
+          }, matrix.direction);
 
-          // Storybook's Docs page applies some layout-affecting CSS -- notably the ArgsTable's
-          // horizontal-scroll wrapper -- asynchronously, after custom elements finish updating.
-          // A page whose ArgsTable is unusually wide relative to its scroller (little margin
-          // before that wrapper's overflow-x is actually applied) can get measured mid-reflow
-          // under CI's tighter CPU budget, producing a false "document width exceeds" failure
-          // even though the wrapper ends up correctly scoped a frame or two later. Wait for
-          // document.documentElement.scrollWidth to stop moving across consecutive animation
-          // frames instead of trusting a snapshot taken at a fixed, content-agnostic delay.
-          let lastScrollWidth = document.documentElement.scrollWidth;
-          let stableFrames = 0;
-          const settleDeadline = performance.now() + 1000;
-          while (stableFrames < 3 && performance.now() < settleDeadline) {
-            await new Promise((resolve) => requestAnimationFrame(resolve));
-            const currentScrollWidth = document.documentElement.scrollWidth;
-            if (currentScrollWidth === lastScrollWidth) {
-              stableFrames += 1;
-            } else {
-              stableFrames = 0;
-              lastScrollWidth = currentScrollWidth;
+          const layout = await auditPage.evaluate(async (ownedTag) => {
+            // Let the root direction mutation and ResizeObserver delivery reach components before
+            // collecting their update promises. The width-settle loop below then covers late Docs
+            // table layout just as it did when every matrix used a separate navigation.
+            await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            const updatePromises = [...document.querySelectorAll('*')]
+              .filter(
+                (element) =>
+                  element.localName.startsWith('lr-') &&
+                  typeof element.updateComplete?.then === 'function',
+              )
+              .map((element) => element.updateComplete.catch(() => undefined));
+            await Promise.all(updatePromises);
+
+            // Storybook's Docs page applies some layout-affecting CSS -- notably the ArgsTable's
+            // horizontal-scroll wrapper -- asynchronously, after custom elements finish updating.
+            // A page whose ArgsTable is unusually wide relative to its scroller (little margin
+            // before that wrapper's overflow-x is actually applied) can get measured mid-reflow
+            // under CI's tighter CPU budget, producing a false "document width exceeds" failure
+            // even though the wrapper ends up correctly scoped a frame or two later. Wait for
+            // document.documentElement.scrollWidth to stop moving across consecutive animation
+            // frames instead of trusting a snapshot taken at a fixed, content-agnostic delay.
+            let lastScrollWidth = document.documentElement.scrollWidth;
+            let stableFrames = 0;
+            const settleDeadline = performance.now() + 1000;
+            while (stableFrames < 3 && performance.now() < settleDeadline) {
+              await new Promise((resolve) => requestAnimationFrame(resolve));
+              const currentScrollWidth = document.documentElement.scrollWidth;
+              if (currentScrollWidth === lastScrollWidth) {
+                stableFrames += 1;
+              } else {
+                stableFrames = 0;
+                lastScrollWidth = currentScrollWidth;
+              }
             }
-          }
 
-          const apiTables = [...document.querySelectorAll('table.docblock-argstable')].map((table) => {
-            const scroller = table.parentElement;
-            return {
-              tableWidth: Math.round(table.getBoundingClientRect().width),
-              scrollerClientWidth: scroller?.clientWidth ?? 0,
-              scrollerScrollWidth: scroller?.scrollWidth ?? 0,
-              scrollerOverflowX: scroller ? getComputedStyle(scroller).overflowX : '',
-            };
-          });
-          const openFrames = [...document.querySelectorAll('.docs-story [open]')]
-            .filter((element) => element.localName.startsWith('lr-'))
-            .map((element) => {
-              const canvas = element.closest('.docs-story');
-              const preview = element.closest('.sbdocs-preview');
-              const zoomWrapper = canvas?.querySelector(
-                ':scope > div:has(> .innerZoomElementWrapper)',
-              );
+            const apiTables = [...document.querySelectorAll('table.docblock-argstable')].map((table) => {
+              const scroller = table.parentElement;
               return {
-                tag: element.localName,
-                canvasOverflow: canvas ? getComputedStyle(canvas).overflow : '',
-                previewOverflow: preview ? getComputedStyle(preview).overflow : '',
-                zoomTransform: zoomWrapper ? getComputedStyle(zoomWrapper).transform : '',
+                tableWidth: Math.round(table.getBoundingClientRect().width),
+                scrollerClientWidth: scroller?.clientWidth ?? 0,
+                scrollerScrollWidth: scroller?.scrollWidth ?? 0,
+                scrollerOverflowX: scroller ? getComputedStyle(scroller).overflowX : '',
               };
             });
-          const visibleErrors = [
-            ...document.querySelectorAll('.sb-errordisplay, [data-testid="storyError"]'),
-          ]
-            .filter((element) => {
-              const style = getComputedStyle(element);
-              const rect = element.getBoundingClientRect();
-              return style.display !== 'none' && style.visibility !== 'hidden' && rect.height > 0;
-            })
-            .map((element) => element.textContent?.trim().replace(/\s+/g, ' ').slice(0, 300) ?? '');
+            const openFrames = [...document.querySelectorAll('.docs-story [open]')]
+              .filter((element) => element.localName.startsWith('lr-'))
+              .map((element) => {
+                const canvas = element.closest('.docs-story');
+                const preview = element.closest('.sbdocs-preview');
+                const zoomWrapper = canvas?.querySelector(
+                  ':scope > div:has(> .innerZoomElementWrapper)',
+                );
+                return {
+                  tag: element.localName,
+                  canvasOverflow: canvas ? getComputedStyle(canvas).overflow : '',
+                  previewOverflow: preview ? getComputedStyle(preview).overflow : '',
+                  zoomTransform: zoomWrapper ? getComputedStyle(zoomWrapper).transform : '',
+                };
+              });
+            const visibleErrors = [
+              ...document.querySelectorAll('.sb-errordisplay, [data-testid="storyError"]'),
+            ]
+              .filter((element) => {
+                const style = getComputedStyle(element);
+                const rect = element.getBoundingClientRect();
+                return style.display !== 'none' && style.visibility !== 'hidden' && rect.height > 0;
+              })
+              .map((element) => element.textContent?.trim().replace(/\s+/g, ' ').slice(0, 300) ?? '');
+            const primaryCanvas = document.querySelector('.docs-story');
 
-          return {
-            documentClientWidth: document.documentElement.clientWidth,
-            documentScrollWidth: document.documentElement.scrollWidth,
-            apiTables,
-            openFrames,
-            visibleErrors,
-          };
-        });
+            return {
+              documentClientWidth: document.documentElement.clientWidth,
+              documentScrollWidth: document.documentElement.scrollWidth,
+              apiTables,
+              openFrames,
+              visibleErrors,
+              primaryCanvasOwnsTag: Boolean(primaryCanvas?.querySelector(ownedTag)),
+              direction: getComputedStyle(document.documentElement).direction,
+              directionDataset: document.documentElement.dataset.lyraDirection,
+            };
+          }, expectedTag);
 
-        const pageFailures = [];
-        if (layout.documentScrollWidth > layout.documentClientWidth + 1) {
-          pageFailures.push(
-            `document width ${layout.documentScrollWidth}px exceeds ${layout.documentClientWidth}px`,
+          const pageFailures = [];
+          if (layout.direction !== matrix.direction || layout.directionDataset !== matrix.direction) {
+            pageFailures.push(
+              `direction did not settle to ${matrix.direction}: ${JSON.stringify({
+                direction: layout.direction,
+                dataset: layout.directionDataset,
+              })}`,
+            );
+          }
+          if (layout.documentScrollWidth > layout.documentClientWidth + 1) {
+            pageFailures.push(
+              `document width ${layout.documentScrollWidth}px exceeds ${layout.documentClientWidth}px`,
+            );
+          }
+          for (const table of layout.apiTables) {
+            if (
+              table.tableWidth > table.scrollerClientWidth + 1 &&
+              (!['auto', 'scroll'].includes(table.scrollerOverflowX) ||
+                table.scrollerScrollWidth <= table.scrollerClientWidth)
+            ) {
+              pageFailures.push(`wide API table is not locally scrollable: ${JSON.stringify(table)}`);
+            }
+          }
+          for (const frame of layout.openFrames) {
+            if (
+              frame.canvasOverflow !== 'visible' ||
+              frame.previewOverflow !== 'visible' ||
+              frame.zoomTransform !== 'none'
+            ) {
+              pageFailures.push(`open ${frame.tag} is trapped by its Docs frame: ${JSON.stringify(frame)}`);
+            }
+          }
+          pageFailures.push(...layout.visibleErrors.map((error) => `Storybook error display: ${error}`));
+          if (!layout.primaryCanvasOwnsTag) {
+            pageFailures.push(`primary canvas did not render ${expectedTag}`);
+          }
+          if (pageFailures.length) {
+            failures.push(`${entry.id} [${matrix.name}]: ${pageFailures.join('; ')}`);
+          }
+        }
+
+        const diagnosticFailures = findUnexpectedDiagnostics({ id: entry.id, diagnostics });
+        if (diagnosticFailures.length) {
+          failures.push(
+            `${entry.id} [diagnostics]: ${diagnosticFailures
+              .map((diagnostic) => `${diagnostic.kind}: ${JSON.stringify(diagnostic.value)}`)
+              .join('; ')}`,
           );
         }
-        for (const table of layout.apiTables) {
-          if (
-            table.tableWidth > table.scrollerClientWidth + 1 &&
-            (!['auto', 'scroll'].includes(table.scrollerOverflowX) ||
-              table.scrollerScrollWidth <= table.scrollerClientWidth)
-          ) {
-            pageFailures.push(`wide API table is not locally scrollable: ${JSON.stringify(table)}`);
-          }
-        }
-        for (const frame of layout.openFrames) {
-          if (
-            frame.canvasOverflow !== 'visible' ||
-            frame.previewOverflow !== 'visible' ||
-            frame.zoomTransform !== 'none'
-          ) {
-            pageFailures.push(`open ${frame.tag} is trapped by its Docs frame: ${JSON.stringify(frame)}`);
-          }
-        }
-        pageFailures.push(...layout.visibleErrors.map((error) => `Storybook error display: ${error}`));
-        pageFailures.push(...browserErrors);
-        if (pageFailures.length) {
-          failures.push(`${entry.id} [${matrix.name}]: ${pageFailures.join('; ')}`);
-        }
       } catch (error) {
-        failures.push(`${entry.id} [${matrix.name}]: ${error instanceof Error ? error.message : error}`);
+        failures.push(`${entry.id}: ${error instanceof Error ? error.message : error}`);
       } finally {
         auditPage.off('pageerror', onPageError);
         auditPage.off('console', onConsole);
         auditPage.off('requestfailed', onRequestFailed);
         auditPage.off('response', onResponse);
+        await auditPage.close().catch(() => {});
       }
     }
-    await auditPage.close();
   }
 
-  await Promise.all(Array.from({ length: 6 }, () => worker()));
+  await Promise.all(Array.from({ length: docsAuditConcurrency }, () => worker()));
   if (failures.length) {
     throw new Error(
-      `Docs layout audit failed on ${failures.length} of ${work.length} page/viewport checks:\n${failures.join('\n')}`,
+      `Docs layout audit failed with ${failures.length} issue(s) across ${work.length * 3} page/viewport checks:\n${failures.join('\n')}`,
     );
   }
 
-  return { pages: entries.length, checks: work.length };
+  return { pages: entries.length, checks: work.length * 3 };
 }
 
 async function main() {
@@ -432,7 +490,6 @@ async function main() {
   const componentEntries = Object.values(index.entries ?? {}).filter((entry) =>
     entry.importPath?.includes('/src/components/'),
   );
-  const componentDocsEntries = componentEntries.filter((entry) => entry.type === 'docs');
   const ungroupedEntries = componentEntries.filter((entry) => !familyLabels.has(entry.title?.split('/')[0]));
   if (ungroupedEntries.length) {
     throw new Error(
@@ -443,6 +500,27 @@ async function main() {
     );
   }
 
+  const storyRoot = join(root, 'packages/lyra-ui/src/components');
+  const storyPaths = (await componentStoryFiles(storyRoot)).map(
+    (file) => `./${relative(root, file).split(sep).join('/')}`,
+  );
+  const storyOwners = await collectStoryOwners(storyPaths, (importPath) =>
+    readFile(join(root, importPath.slice(2)), 'utf8'),
+  );
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  const ownershipFailures = findStoryOwnershipFailures(manifestTagNames(manifest), storyOwners);
+  const { docs: componentDocs, failures: docsOwnershipFailures } = resolveStoryOwnerDocs(
+    componentEntries,
+    storyOwners,
+  );
+  if (ownershipFailures.length || docsOwnershipFailures.length) {
+    throw new Error(
+      `Storybook component ownership is incomplete:\n${[
+        ...ownershipFailures,
+        ...docsOwnershipFailures,
+      ].join('\n')}`,
+    );
+  }
   const assetNames = await readdir(join(staticRoot, 'assets'));
   if (!assetNames.some((name) => name.startsWith('maplibre-gl-worker-'))) {
     throw new Error(
@@ -453,29 +531,29 @@ async function main() {
   const server = createServer(serve);
   const baseUrl = await listen(server);
   const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
+  const smokeContext = await browser.newContext({
+    viewport: { width: 1280, height: 800 },
+    deviceScaleFactor: 1,
+  });
+  const page = await smokeContext.newPage();
+  let docsContext;
   const browserErrors = [];
-  // map--default fetches live tiles from tile.openstreetmap.org; a CI runner without egress to
-  // that host (or a transient hiccup) shouldn't fail this otherwise-passing smoke/a11y check.
-  // A blocked/failed tile request can surface in more than one URL-less, host-less shape depending
-  // on exactly how it fails: Chromium's own automatic "Failed to load resource: net::ERR_*"
-  // network-log line (emitted for every failed request regardless of JS-level handling), or --
-  // if a rejected fetch() promise goes uncaught -- the generic `TypeError: Failed to fetch`.
-  // Only ignore these network-failure shapes while map--default itself is the current story, so a
-  // real network-error bug surfacing in some other component still fails the check.
-  const isIgnorableNetworkError = (text) =>
-    /tile\.openstreetmap\.org/.test(text) ||
-    (currentStoryId === 'map--default' && /Failed to fetch|Failed to load resource|net::ERR_/.test(text));
   page.on('pageerror', (error) => {
-    const text = String(error);
-    if (!isIgnorableNetworkError(text)) browserErrors.push(text);
+    browserErrors.push(`${currentStoryId}: pageerror: ${String(error)}`);
   });
   page.on('console', (message) => {
-    if (
-      (message.type() === 'error' || isHydrationWarning(message)) &&
-      !isIgnorableNetworkError(message.text())
-    ) {
-      browserErrors.push(message.text());
+    if (message.type() === 'error' || isHydrationWarning(message)) {
+      browserErrors.push(`${currentStoryId}: console: ${message.text()}`);
+    }
+  });
+  page.on('requestfailed', (request) => {
+    browserErrors.push(
+      `${currentStoryId}: request failed: ${request.url()} (${request.failure()?.errorText ?? 'unknown error'})`,
+    );
+  });
+  page.on('response', (response) => {
+    if (response.status() >= 400) {
+      browserErrors.push(`${currentStoryId}: HTTP ${response.status()}: ${response.url()}`);
     }
   });
 
@@ -626,11 +704,9 @@ async function main() {
       );
     }
 
-    const narrowDocsPage = await browser.newPage({
-      viewport: { width: 390, height: 800 },
-      deviceScaleFactor: 1,
-    });
+    const narrowDocsPage = await smokeContext.newPage();
     try {
+      await narrowDocsPage.setViewportSize({ width: 390, height: 800 });
       await narrowDocsPage.goto(
         `${baseUrl}/iframe.html?id=overlay-dropdown--docs&viewMode=docs&globals=theme:dark`,
         { waitUntil: 'domcontentloaded', timeout: 20_000 },
@@ -660,16 +736,15 @@ async function main() {
       await narrowDocsPage.close();
     }
 
-    for (const id of requiredStories) {
-      await waitForStory(page, baseUrl, id, { width: 1280, height: 800 });
-      await expectSelector(page, id, storyChecks.get(id));
-    }
+    // Every other required story is loaded immediately below for its deeper interaction/a11y
+    // contract. Keep the one selector-only smoke story here instead of rendering all 21 twice.
+    await waitForCheckedStory(page, baseUrl, 'layout-page--desktop', { width: 1280, height: 800 });
 
     // Read the RESOLVED values, not `documentElement.style`. Storybook used to write the theme as
     // inline custom properties from its own preview palette; it now calls the production
     // `setLyraTheme()`, which sets `data-lr-theme` and lets theme.css supply the tokens. Asserting
     // the inline style therefore tested the harness rather than the shipped theme.
-    await waitForStory(page, baseUrl, 'checkbox--default', { width: 1280, height: 800 }, 'dark');
+    await waitForCheckedStory(page, baseUrl, 'checkbox--default', { width: 1280, height: 800 }, 'dark');
     const darkTheme = await page.evaluate(() => {
       const styles = getComputedStyle(document.documentElement);
       return {
@@ -685,16 +760,16 @@ async function main() {
     }
     await runA11y(page, 'checkbox--default/dark');
 
-    await waitForStory(page, baseUrl, 'dialog--open-initially', { width: 1280, height: 800 });
+    await waitForCheckedStory(page, baseUrl, 'dialog--open-initially', { width: 1280, height: 800 });
     await runA11y(page, 'dialog--open-initially');
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => !document.querySelector('lr-dialog')?.hasAttribute('open'));
 
-    await waitForStory(page, baseUrl, 'toast--triggers', { width: 1280, height: 800 });
+    await waitForCheckedStory(page, baseUrl, 'toast--triggers', { width: 1280, height: 800 });
     await page.getByRole('button', { name: 'Neutral' }).click();
     await page.waitForSelector('lr-toast', { state: 'attached', timeout: 3000 });
 
-    await waitForStory(page, baseUrl, 'codeblock--plain-fallback', { width: 1280, height: 800 });
+    await waitForCheckedStory(page, baseUrl, 'codeblock--plain-fallback', { width: 1280, height: 800 });
     const codeFallback = await page.locator('lr-code-block').evaluate((element) => ({
       pre: Boolean(element.shadowRoot?.querySelector('[part="pre"]')),
       code: element.shadowRoot?.querySelector('[part="code"]')?.textContent ?? '',
@@ -703,7 +778,7 @@ async function main() {
       throw new Error(`plain code fallback did not render as expected: ${JSON.stringify(codeFallback)}`);
     }
 
-    await waitForStory(page, baseUrl, 'responsivepanel--forced-overlay-bottom-sheet', { width: 390, height: 800 });
+    await waitForCheckedStory(page, baseUrl, 'responsivepanel--forced-overlay-bottom-sheet', { width: 390, height: 800 });
     if (await page.locator('lr-responsive-panel').evaluate((element) => element.hasAttribute('open'))) {
       await page.keyboard.press('Escape');
       await page.waitForFunction(() => !document.querySelector('lr-responsive-panel')?.hasAttribute('open'));
@@ -716,7 +791,7 @@ async function main() {
     }
 
     for (const id of ['apprail--forced-icon-only', 'table--default', 'charts-litechart--default', 'map--default', 'graph--default']) {
-      await waitForStory(page, baseUrl, id, { width: 1280, height: 800 });
+      await waitForCheckedStory(page, baseUrl, id, { width: 1280, height: 800 });
       await runA11y(page, id);
     }
 
@@ -727,7 +802,7 @@ async function main() {
     // its SVG surface renders (like graph--default/map--default); the document viewers assert their
     // actually-rendered content.
 
-    await waitForStory(page, baseUrl, 'emoji-picker--with-supplied-groups', { width: 1280, height: 800 });
+    await waitForCheckedStory(page, baseUrl, 'emoji-picker--with-supplied-groups', { width: 1280, height: 800 });
     await runA11y(page, 'emoji-picker--with-supplied-groups');
     await page.locator('lr-emoji-picker').locator('[part="emoji"]').first().click();
     const pickedEmoji = await page.locator('lr-emoji-picker').evaluate((element) => element.value);
@@ -735,7 +810,7 @@ async function main() {
       throw new Error(`emoji-picker did not commit the clicked emoji: got ${JSON.stringify(pickedEmoji)}`);
     }
 
-    await waitForStory(page, baseUrl, 'voice-picker--default', { width: 1280, height: 800 });
+    await waitForCheckedStory(page, baseUrl, 'voice-picker--default', { width: 1280, height: 800 });
     await runA11y(page, 'voice-picker--default');
     await page.locator('lr-voice-picker').locator('[part="trigger"]').click();
     await page.locator('lr-voice-picker').locator('[part="option"]').first().click();
@@ -744,7 +819,7 @@ async function main() {
       throw new Error(`voice-picker did not commit the selected option: got ${JSON.stringify(pickedVoice)}`);
     }
 
-    await waitForStory(page, baseUrl, 'source-picker--default', { width: 1280, height: 800 });
+    await waitForCheckedStory(page, baseUrl, 'source-picker--default', { width: 1280, height: 800 });
     await runA11y(page, 'source-picker--default');
     await page.locator('lr-source-picker').locator('[part="item"]').last().click();
     const selectedIds = await page.locator('lr-source-picker').evaluate((element) => element.selectedIds);
@@ -752,7 +827,7 @@ async function main() {
       throw new Error(`source-picker did not toggle the clicked leaf into selectedIds: got ${JSON.stringify(selectedIds)}`);
     }
 
-    await waitForStory(page, baseUrl, 'entity-card--default', { width: 1280, height: 800 });
+    await waitForCheckedStory(page, baseUrl, 'entity-card--default', { width: 1280, height: 800 });
     await runA11y(page, 'entity-card--default');
     await page.evaluate(() => {
       window.__lyraEntityActivations = [];
@@ -766,7 +841,7 @@ async function main() {
       throw new Error(`entity-card focus button did not emit lr-entity-activate for e1: got ${JSON.stringify(entityActivations)}`);
     }
 
-    await waitForStory(page, baseUrl, 'flow-canvas--default', { width: 1280, height: 800 });
+    await waitForCheckedStory(page, baseUrl, 'flow-canvas--default', { width: 1280, height: 800 });
     const flowEdgesSurface = await page.locator('lr-flow-canvas').locator('[part="edges"]').count();
     const flowNodeCount = await page.locator('lr-flow-canvas').locator('[part="node"]').count();
     if (flowEdgesSurface === 0 || flowNodeCount !== 3) {
@@ -774,7 +849,7 @@ async function main() {
     }
     await runA11y(page, 'flow-canvas--default');
 
-    await waitForStory(page, baseUrl, 'graph-legend--default', { width: 1280, height: 800 });
+    await waitForCheckedStory(page, baseUrl, 'graph-legend--default', { width: 1280, height: 800 });
     await runA11y(page, 'graph-legend--default');
     await page.locator('lr-graph-legend').locator('[part="item"]').first().click();
     const hiddenTypes = await page.locator('lr-graph-legend').evaluate((element) => element.hiddenTypes);
@@ -782,7 +857,7 @@ async function main() {
       throw new Error(`graph-legend did not toggle the clicked type into hiddenTypes: got ${JSON.stringify(hiddenTypes)}`);
     }
 
-    await waitForStory(page, baseUrl, 'documentviewer-notebookviewer--default', { width: 1280, height: 800 });
+    await waitForCheckedStory(page, baseUrl, 'documentviewer-notebookviewer--default', { width: 1280, height: 800 });
     const notebookCellCount = await waitForLocatorCount(
       page.locator('lr-notebook-viewer').locator('[part="cell"]'),
       (count) => count === 2,
@@ -795,7 +870,7 @@ async function main() {
     }
     await runA11y(page, 'documentviewer-notebookviewer--default');
 
-    await waitForStory(page, baseUrl, 'archiveviewer--default', { width: 1280, height: 800 });
+    await waitForCheckedStory(page, baseUrl, 'archiveviewer--default', { width: 1280, height: 800 });
     await page.locator('lr-archive-viewer').locator('[part="entry-name"], [part="error"]').first().waitFor({ timeout: 10_000 });
     const archiveErrorCount = await page.locator('lr-archive-viewer').locator('[part="error"]').count();
     if (archiveErrorCount > 0) {
@@ -808,14 +883,14 @@ async function main() {
     }
     await runA11y(page, 'archiveviewer--default');
 
-    await waitForStory(page, baseUrl, 'documentviewer-xmlviewer--default', { width: 1280, height: 800 });
+    await waitForCheckedStory(page, baseUrl, 'documentviewer-xmlviewer--default', { width: 1280, height: 800 });
     const xmlRootTag = await page.locator('lr-xml-viewer').locator('[part="tag"]').first().textContent();
     if (xmlRootTag !== 'rss') {
       throw new Error(`xml-viewer did not render the parsed document's root tag: got ${JSON.stringify(xmlRootTag)}`);
     }
     await runA11y(page, 'documentviewer-xmlviewer--default');
 
-    await waitForStory(page, baseUrl, 'threadlist--default', { width: 1280, height: 800 });
+    await waitForCheckedStory(page, baseUrl, 'threadlist--default', { width: 1280, height: 800 });
     await runA11y(page, 'threadlist--default');
     const threadItemsLocator = page.locator('lr-thread-list').locator('lr-conversation-item');
     const threadCountBeforeSearch = await waitForLocatorCount(threadItemsLocator, (count) => count === 5);
@@ -828,15 +903,28 @@ async function main() {
       );
     }
 
-    const docsAudit = await auditComponentDocs(browser, baseUrl, componentDocsEntries);
-
+    // Release the smoke story and its manager iframe before loading hundreds of complete autodocs
+    // pages. It otherwise keeps observers, animations, and remote-content work alive throughout
+    // the audit and can emit a late error attributed to whichever docs page happens to be current.
+    await page.close();
+    await smokeContext.close();
     if (browserErrors.length) throw new Error(`Storybook browser errors:\n${browserErrors.join('\n')}`);
+
+    // One dedicated context preserves page isolation while sharing the HTTP cache across workers.
+    // The old browser.newPage() workers each had a private context and reloaded the multi-megabyte
+    // Storybook runtime for every lane.
+    docsContext = await browser.newContext();
+    const docsAudit = await auditComponentDocs(docsContext, baseUrl, componentDocs);
+    await docsContext.close();
+    docsContext = undefined;
 
     console.log(
       `Docs layout audit passed for ${docsAudit.pages} component pages across ${docsAudit.checks} desktop, narrow, and RTL checks.`,
     );
   } finally {
-    await page.close();
+    await page.close().catch(() => {});
+    await smokeContext.close().catch(() => {});
+    await docsContext?.close().catch(() => {});
     await browser.close();
     await new Promise((resolve) => server.close(resolve));
   }

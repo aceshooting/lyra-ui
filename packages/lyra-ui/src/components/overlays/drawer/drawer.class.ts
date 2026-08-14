@@ -110,7 +110,7 @@ export class LyraDrawer extends LyraDialog {
     if (!changed.has('contained') || !this.open) return;
     if (this.modalSurface && this.isConnected) this.activateOverlay();
     else {
-      this.deactivateOverlay();
+      this.deactivateOverlay({ restoreFocus: false });
       this.leaveTopLayer();
     }
   }

@@ -43,7 +43,7 @@ interface ResolvedCellHighlight {
   parsed: ParsedCellRange;
 }
 
-export interface LyraSpreadsheetViewerEventMap extends LyraAnchorTargetEventMap {
+export interface LyraSpreadsheetViewerEventMap extends Omit<LyraAnchorTargetEventMap, 'lr-text-select'> {
   'lr-render-error': CustomEvent<{ error: unknown }>;
   /** Fired whenever the search query, match count, or active match index changes, from
    *  `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. */

@@ -186,6 +186,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
     if (changed.has('value')) {
       const internal = this.pendingInternalValue?.value === this.value;
       this.pendingInternalValue = undefined;

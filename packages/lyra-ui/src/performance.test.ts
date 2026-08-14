@@ -39,7 +39,7 @@ import type { LyraHighlight } from './components/viewers/document-viewer/anchors
  * its own resize callback (see `beginResizeDelivery()` there). Every occurrence came from the
  * `virtualListMs` benchmark's list, none from the stress mounts.
  *
- * It is kept regardless, as defense-in-depth for those genuinely RO-heavy batches, which remain
+ * It is kept regardless, as defense-in-depth for genuinely ResizeObserver-heavy updates, which remain
  * capable of it on a slower machine than the one that measurement ran on. It is no longer
  * load-bearing for `<lr-virtual-list>`: that component owns a dedicated regression test asserting
  * zero such errors, so a reintroduced loop fails there loudly instead of being hidden here.
@@ -89,9 +89,8 @@ const BUDGETS = {
   // Chromium median across several local runs: ~80-125ms (pushCardPropsAll() indexes the 1,000
   // light-DOM children once, then forwards the changed decoration properties to each card). This
   // whole file's budgets are Chromium-tuned (see the block comment above), but this one is the
-  // sole exception with a real cross-engine measurement behind it: `test-all-browsers.yml`'s
-  // per-browser matrix (added 2026-08-04) was the first CI path to ever run this benchmark against
-  // a real Firefox engine late in an unsharded, single-process 456-file run -- the same "many prior
+  // sole exception with a real cross-engine measurement behind it: Firefox reached this benchmark
+  // late in an unsharded, single-process 456-file run -- the same "many prior
   // tests already ran in this process" context `test:coverage` already exercises on Chromium every
   // push without issue, so this reflects genuine Firefox GC/scheduling overhead under sustained
   // load, not CI noise (two runs measured the identical 376ms). 500 keeps proportionally similar
@@ -422,7 +421,7 @@ it('keeps notebook-viewer cell churn within the notebook-scale budget', async ()
 
 // -- fetch-based grid viewers (dataset-viewer / csv-viewer / spreadsheet-viewer) ------------------
 //
-// These three compose <lr-virtual-list> for their body rows (per an earlier audit finding), so
+// These three compose <lr-virtual-list> for their body rows, so
 // the budget below targets each viewer's OWN per-row work -- resolving `highlights` against the
 // parsed grid inside `renderRow()` -- layered on top of virtual-list's already-covered cost, not
 // virtual-list's own virtualization (see the `virtual-list/10000` benchmark above for that).

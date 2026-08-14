@@ -165,7 +165,7 @@ describe('lr-agent-trace', () => {
     const noAgentSpans = SPANS.filter((s) => s.kind !== 'agent');
     const el = (await fixture(html`<lr-agent-trace .spans=${noAgentSpans}></lr-agent-trace>`)) as LyraAgentTrace;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="handoffs"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="handoffs"]')) == null).to.be.true;
   });
 
   it('clicking a handoff entry sets activeSpanId, forwards it into lr-trace-tree, and emits lr-span-select', async () => {
@@ -228,8 +228,8 @@ describe('lr-agent-trace', () => {
     await el.updateComplete;
     const tree = el.shadowRoot!.querySelector('lr-trace-tree') as LyraTraceTree;
     expect(tree.shadowRoot!.querySelector('lr-empty')).to.exist;
-    expect(el.shadowRoot!.querySelector('[part="filter"]')).to.not.exist;
-    expect(el.shadowRoot!.querySelector('[part="handoffs"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="filter"]')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part="handoffs"]')) == null).to.be.true;
   });
 
   it('registers lr-trace-tree, lr-graph-legend, and lr-handoff-divider as a side effect of importing agent-trace.js (regression)', async () => {
@@ -298,10 +298,9 @@ describe('lr-agent-trace', () => {
       expect(getComputedStyle(active).backgroundColor).to.equal(unset);
     });
 
-    // No axe assertion on the active state here: setting `activeSpanId` also lights up the matching
-    // row inside the composed `<lr-trace-tree>`, whose active-row default background
-    // (`--lr-color-brand-quiet`) fails WCAG-AA contrast against that row's smaller
-    // `status-text`/`duration` text. That is a pre-existing `<lr-trace-tree>` gap (unchanged by this
-    // byte-identical cssprop) reported for separate remediation, not a regression of this change.
+    it('is accessible with the matching composed trace-tree row active', async () => {
+      const el = await activeFixture();
+      await expect(el).to.be.accessible();
+    });
   });
 });

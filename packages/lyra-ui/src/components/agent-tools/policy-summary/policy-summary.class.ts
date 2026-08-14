@@ -38,8 +38,7 @@ export interface PolicyDecision {
   detail?: string;
 }
 
-/** `allow` -> success, `deny` -> danger, `needs-review` -> warning -- shared by the state badge
- *  and the explanation callout so both always agree on a decision's visual weight. */
+/** `allow` -> success, `deny` -> danger, `needs-review` -> warning for the state badge. */
 const STATE_VARIANT: Record<PolicyDecisionState, BadgeVariant> = {
   allow: 'success',
   deny: 'danger',

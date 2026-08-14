@@ -314,7 +314,13 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
       this.rehomeCellFocus =
         activeElementIn(this.renderRoot as ShadowRoot)?.getAttribute("part") ===
         "cell";
-      this.syncDefaultCells();
+      // Server rendering has neither an owner document nor observable light-DOM children. The
+      // model-driven cell wrappers/slots remain complete without synthesizing default light-DOM
+      // widgets; the browser creates those after upgrade, where their node ownership is real.
+      if (this.ownerDocument) {
+        if (this.hasUpdated) this.syncDefaultCells();
+        else this.seedFirstRenderState(() => this.syncDefaultCells());
+      }
       const cells = this.sortedLayout;
       const retainedIndex = cells.findIndex(
         (cell) => cell.id === this.activeCellId
