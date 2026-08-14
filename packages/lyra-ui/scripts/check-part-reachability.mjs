@@ -1,5 +1,5 @@
-// Part-reachability checker: two static rules over src/components that catch `::part()`-related
-// CSS which parses fine, ships fine, and never matches anything. Both classes of bug are invisible
+// Part-reachability checker: three static rules over src/components that catch `::part()`-related
+// CSS which parses fine, ships fine, and never matches anything. All three bug classes are invisible
 // to tsc, to the style policy, and to any test that inspects stylesheet *text* rather than the
 // rendered result.
 //   cross-root-part   A component whose template mounts `<lr-virtual-list>` and hands it a
@@ -15,6 +15,11 @@
 //                     `::part(a) .descendant` therefore parse but never match --
 //                     `CSS.supports('selector(x::part(a)[data-b])')` is false. `::part(a):hover`,
 //                     `::part(a)::selection` and the part-list form `::part(a b)` are all fine.
+//   recursive-part-forwarding
+//                     A component that recursively renders its own custom-element tag inside its
+//                     shadow template creates another shadow boundary per depth. When the class
+//                     documents CSS parts, the recursive child edge needs `exportparts` or the
+//                     outer instance's public `::part()` surface stops at depth zero.
 // Deliberately conservative -- a false positive costs a contributor a noisy suppression, which is
 // worse than slightly narrow coverage:
 //   * cross-root-part only fires when the styles file has *no* `::part(<name>)` rule for that name
@@ -26,13 +31,15 @@
 //   * Only *literal* part names are collected -- the static words of `part="..."` and the string
 //     literals of a bound `part=${...}` -- so a name assembled at runtime is simply not known to
 //     this check. It would rather miss one than invent a name a stylesheet coincidentally mentions.
+//   * recursive-part-forwarding only examines the component's own literal opening tag in a real
+//     markup template, and only when the class actually documents `@csspart` entries.
 //   * part-compound scans `*.styles.ts` only -- the stylesheet corpus. It is exact and needs no
 //     allowlist, because the pattern is never correct.
-// Fixtures for both rules, including the shapes that must NOT be flagged, live in
+// Fixtures for all three rules, including the shapes that must NOT be flagged, live in
 // scripts/check-part-reachability.test.mjs (run by the same chain).
-// Suppression (cross-root-part only): a comment on the flagged line, or in the contiguous comment
-// block immediately above it, of the form
-//   policy-allow(cross-root-part): specific reason
+// Suppression (cross-root-part and recursive-part-forwarding): a comment on the flagged line, or in
+// the contiguous comment block immediately above it, using that rule's id, for example
+//   policy-allow(recursive-part-forwarding): specific reason
 // Run directly: `node scripts/check-part-reachability.mjs`. Wired into `pnpm run contract-policy`.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -118,6 +125,82 @@ function stripJsComments(source) {
  */
 function stripStyleComments(source) {
   return stripJsComments(source).replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, ' '));
+}
+
+/**
+ * Keeps only the literal markup inside real `html` / `staticHtml` tagged templates, preserving byte
+ * offsets and newlines. JavaScript comments, ordinary strings, untagged templates, and `${...}`
+ * expressions are blanked; nested markup templates inside an expression are scanned independently.
+ * This avoids mistaking diagnostics such as `console.warn('<lr-x> ...')` or JSDoc examples for
+ * rendered tags.
+ */
+function htmlTemplateSurface(source) {
+  const out = [...source].map((char) => (char === '\n' ? '\n' : ' '));
+
+  const skipQuoted = (start, quote) => {
+    for (let i = start + 1; i < source.length; i++) {
+      if (source[i] === '\\') i++;
+      else if (source[i] === quote) return i + 1;
+    }
+    return source.length;
+  };
+
+  const precedingIdentifier = (index) => {
+    let end = index;
+    while (end > 0 && /\s/.test(source[end - 1])) end--;
+    let start = end;
+    while (start > 0 && /[A-Za-z0-9_$]/.test(source[start - 1])) start--;
+    return source.slice(start, end);
+  };
+
+  let scanCode;
+  const scanTemplate = (start, keep) => {
+    for (let i = start + 1; i < source.length; i++) {
+      const pair = source.slice(i, i + 2);
+      if (source[i] === '\\') {
+        if (keep) {
+          out[i] = source[i];
+          if (i + 1 < source.length) out[i + 1] = source[i + 1];
+        }
+        i++;
+      } else if (pair === '${') {
+        i = scanCode(i + 2, true) - 1;
+      } else if (source[i] === '`') {
+        return i + 1;
+      } else if (keep) {
+        out[i] = source[i];
+      }
+    }
+    return source.length;
+  };
+
+  scanCode = (start, stopAtBrace = false) => {
+    let depth = stopAtBrace ? 1 : 0;
+    for (let i = start; i < source.length; i++) {
+      const char = source[i];
+      const pair = source.slice(i, i + 2);
+      if (pair === '//') {
+        const end = source.indexOf('\n', i + 2);
+        i = end < 0 ? source.length : end - 1;
+      } else if (pair === '/*') {
+        const end = source.indexOf('*/', i + 2);
+        i = end < 0 ? source.length : end + 1;
+      } else if (char === "'" || char === '"') {
+        i = skipQuoted(i, char) - 1;
+      } else if (char === '`') {
+        i = scanTemplate(i, ['html', 'staticHtml'].includes(precedingIdentifier(i))) - 1;
+      } else if (stopAtBrace && char === '{') {
+        depth++;
+      } else if (stopAtBrace && char === '}' && --depth === 0) {
+        return i + 1;
+      }
+    }
+    return source.length;
+  };
+
+  scanCode(0);
+  const surface = out.join('');
+  return surface.replace(/<!--[\s\S]*?-->/g, (comment) => comment.replace(/[^\n]/g, ' '));
 }
 
 const lineOf = (source, index) => source.slice(0, index).split('\n').length;
@@ -383,7 +466,66 @@ export function checkCrossRootParts(classFile, classSource, styleFile, styleSour
 }
 
 // ---------------------------------------------------------------------------
-// Rule 2: part-compound
+// Rule 2: recursive-part-forwarding
+// ---------------------------------------------------------------------------
+
+/** Finds the end of one literal custom-element opening tag. Lit binding expressions are skipped as
+ * balanced JavaScript blocks so a comparison operator inside `${...}` cannot masquerade as the
+ * markup's closing `>`. */
+function openingTagEnd(source, start) {
+  let quote = '';
+  for (let i = start; i < source.length; i++) {
+    const char = source[i];
+    const pair = source.slice(i, i + 2);
+    if (pair === '${') {
+      i = blockEnd(source, i + 1) - 1;
+      continue;
+    }
+    if (quote) {
+      if (char === quote) quote = '';
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === '>') return i + 1;
+  }
+  return source.length;
+}
+
+/**
+ * Findings for a component that renders its own public-part-bearing tag recursively without an
+ * `exportparts` edge. JSDoc examples and prose comments are blanked before scanning.
+ */
+export function checkRecursivePartForwarding(classFile, classSource) {
+  if (!/@csspart\s+[A-Za-z0-9_-]+/.test(classSource)) return [];
+  const tag = /@customElement\s+(lr-[a-z0-9-]+)/.exec(classSource)?.[1];
+  if (!tag) return [];
+
+  const stripped = htmlTemplateSurface(classSource);
+  const rawLines = classSource.split('\n');
+  const strippedLines = stripped.split('\n');
+  const escapedTag = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const openings = new RegExp(`<${escapedTag}\\b`, 'g');
+  const findings = [];
+  for (const match of stripped.matchAll(openings)) {
+    const line = lineOf(stripped, match.index);
+    const opening = stripped.slice(match.index, openingTagEnd(stripped, match.index));
+    if (/\bexportparts\s*=/.test(opening)) continue;
+    if (isSuppressed(rawLines, strippedLines, line, 'recursive-part-forwarding')) continue;
+    findings.push(
+      `${rel(classFile)}:${line} [recursive-part-forwarding] <${tag}> recursively renders its own ` +
+        `documented CSS-part surface without exportparts, so an outer <${tag}>::part(...) selector ` +
+        `cannot reach descendants -- forward the public parts on this child edge or add a ` +
+        `policy-allow(recursive-part-forwarding) suppression`,
+    );
+  }
+  return findings;
+}
+
+// ---------------------------------------------------------------------------
+// Rule 3: part-compound
 // ---------------------------------------------------------------------------
 
 /**
@@ -433,11 +575,20 @@ function run() {
 
   const findings = [];
   let consumers = 0;
+  let recursivePartComponents = 0;
 
   for (const classFile of classFiles) {
+    const classSource = fs.readFileSync(classFile, 'utf8');
+    const recursiveFindings = checkRecursivePartForwarding(classFile, classSource);
+    const templateSurface = htmlTemplateSurface(classSource);
+    if (templateSurface.match(/<lr-[a-z0-9-]+\b/) && /@csspart\s+/.test(classSource)) {
+      const ownTag = /@customElement\s+(lr-[a-z0-9-]+)/.exec(classSource)?.[1];
+      if (ownTag && templateSurface.includes(`<${ownTag}`)) recursivePartComponents++;
+    }
+    findings.push(...recursiveFindings);
+
     const styleFile = classFile.replace(/\.class\.ts$/, '.styles.ts');
     if (!fs.existsSync(styleFile)) continue;
-    const classSource = fs.readFileSync(classFile, 'utf8');
     // Comment-stripped, so a `<lr-virtual-list>` in a JSDoc example does not count as a mount.
     if (!stripJsComments(classSource).includes(`<${HOST_TAG}`)) continue;
     consumers++;
@@ -454,7 +605,7 @@ function run() {
     process.exitCode = 1;
   } else {
     console.log(
-      `Part reachability passed: ${consumers} <${HOST_TAG}> consumer(s) and ${styleFiles.length} style file(s) checked.`,
+      `Part reachability passed: ${consumers} <${HOST_TAG}> consumer(s), ${recursivePartComponents} recursive public-part component(s), and ${styleFiles.length} style file(s) checked.`,
     );
   }
 }
@@ -463,4 +614,3 @@ const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPat
 if (isMain) run();
 
 export { run, stripJsComments };
-

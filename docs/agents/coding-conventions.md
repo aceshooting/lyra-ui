@@ -163,11 +163,13 @@
   rendered result** — `getComputedStyle` on the real element in the real state, or a hit test —
   never the stylesheet text. When adding a rule with an unusual selector, prove it matches:
   `CSS.supports('selector(...)')` for exotic selectors, plus a deliberately-perturbed value to
-  confirm the assertion actually bites. Two cases now have a real gate,
+  confirm the assertion actually bites. Three cases now have a real gate,
   `scripts/check-part-reachability.mjs` (in contract-policy): (a) a bare `[part='x']` selector
   for a part the component renders through `<lr-virtual-list>`'s `renderItem` — it lands in
-  *that* element's shadow root where the selector can never reach; and (b) an invalid `::part()`
-  compound — `::part(x)` is a pseudo-element, so per Selectors L4 only *pseudo-classes* may
+  *that* element's shadow root where the selector can never reach; (b) a public-part-bearing
+  component recursively rendering its own tag without `exportparts` — every child introduces a
+  shadow boundary that stops an outer `::part()` selector; and (c) an invalid `::part()` compound
+  — `::part(x)` is a pseudo-element, so per Selectors L4 only *pseudo-classes* may
   follow it: `::part(x):hover`, `::part(x)::selection`, and the part-list form `::part(a b)` are
   fine, while `::part(x)[attr]`, `::part(x).cls`, and `::part(x) .descendant` all parse and
   silently never match. Encode state in the part name instead (`part="page page-current"`),
@@ -175,9 +177,9 @@
   `[part='x']:hover`, but `::part(x-current)` and `::part(x):hover` are equal, so the state arm
   usually needs its own `:hover` companion. A component that legitimately renders the same parts
   into both its own shadow root and the virtual list's needs both selectors and is exempt
-  automatically; anything else genuinely exceptional takes a
-  `policy-allow(cross-root-part): reason` comment, the same marker `check-source-policy.mjs`
-  uses.
+  automatically. A genuinely exceptional virtual-list or recursive boundary takes a
+  `policy-allow(cross-root-part): reason` or `policy-allow(recursive-part-forwarding): reason`
+  comment, respectively; these use the same marker shape as `check-source-policy.mjs`.
 - **Granular, tree-shakeable exports.** Each component's `.class.ts` file is a side-effect-free class
   export; a matching side-effectful entry point registers the tag. `src/lyra.ts` is the pure package
   root, containing only curated named re-exports of classes/types/helpers. `src/all.ts` is the

@@ -28,6 +28,49 @@ export const Default: Story = {
 };
 
 /**
+ * Data-model children live behind another shadow root at every depth. This one selector matches
+ * only the generated top-level host, whose same-name part forwarding carries the theme through
+ * every recursively rendered child.
+ */
+export const RecursivePartTheming: Story = {
+  render: () => html`
+    <style>
+      lr-tree.recursive-parts-demo > lr-tree-item::part(row) {
+        border-inline-start: var(--lr-border-width-medium) solid var(--lr-color-brand);
+        background: var(--lr-color-brand-quiet);
+      }
+
+      lr-tree.recursive-parts-demo > lr-tree-item::part(label) {
+        color: var(--lr-color-brand);
+        font-weight: var(--lr-font-weight-semibold);
+      }
+    </style>
+    <lr-tree
+      class="recursive-parts-demo"
+      style="max-inline-size: var(--lr-size-20rem)"
+      label="Documentation"
+      .data=${[
+        {
+          id: 'guides',
+          label: 'Guides',
+          children: [
+            {
+              id: 'installation',
+              label: 'Installation',
+              children: [{ id: 'setup', label: 'Setup' }],
+            },
+          ],
+        },
+      ] satisfies TreeItem[]}
+    ></lr-tree>
+  `,
+  play: async ({ canvasElement }) => {
+    const tree = canvasElement.querySelector('lr-tree') as HTMLElement & { expandAll: () => Promise<void> };
+    await tree.expandAll();
+  },
+};
+
+/**
  * The declarative child model: nested `<lr-tree-item>` elements, no `data` property anywhere. Each
  * item's label is its own slotted content (or its `label` attribute), and `expanded`/`disabled`/
  * `selected` are plain attributes. This is the shape `wa-tree`/`sl-tree` markup renames into.

@@ -7,7 +7,12 @@
 // must NOT be flagged.
 
 import assert from 'node:assert/strict';
-import { checkCrossRootParts, checkPartCompounds, virtualizedPartNames } from './check-part-reachability.mjs';
+import {
+  checkCrossRootParts,
+  checkPartCompounds,
+  checkRecursivePartForwarding,
+  virtualizedPartNames,
+} from './check-part-reachability.mjs';
 
 // Quiet by default (it runs inside the `pnpm lint` contract-policy chain); `--verbose` prints the
 // per-case lines.
@@ -227,6 +232,90 @@ test('a suppression comment does not leak past an intervening code line', () => 
   assert.match(findings[0], /part 'row-label'/);
 });
 
+// --- recursive-part-forwarding ---------------------------------------------------------------
+
+const recursiveParts = (source) => checkRecursivePartForwarding('fixture.class.ts', source);
+
+test('flags a documented part surface recursively rendered without exportparts', () => {
+  const source = `
+    /**
+     * @customElement lr-branch
+     * @csspart row - One branch row.
+     * @csspart label - The branch label.
+     */
+    export class Fixture extends LyraElement {
+      override render() {
+        return html\`<div part="row"><span part="label">Root</span>
+          <lr-branch .item=\${this.child}></lr-branch>
+        </div>\`;
+      }
+    }
+  `;
+  const findings = recursiveParts(source);
+  assert.equal(findings.length, 1);
+  assert.match(findings[0], /\[recursive-part-forwarding\]/);
+  assert.match(findings[0], /<lr-branch>/);
+  assert.match(findings[0], /fixture\.class\.ts:10/);
+});
+
+test('accepts a recursively rendered public part surface with exportparts forwarding', () => {
+  const source = `
+    /** @customElement lr-branch @csspart row - One branch row. */
+    export class Fixture extends LyraElement {
+      override render() {
+        return html\`<lr-branch exportparts=\${BRANCH_EXPORT_PARTS}></lr-branch>\`;
+      }
+    }
+  `;
+  assert.deepEqual(recursiveParts(source), []);
+});
+
+test('checks recursive tags rendered through staticHtml templates', () => {
+  const source = `
+    /** @customElement lr-branch @csspart row - One branch row. */
+    export class Fixture extends LyraElement {
+      override render() { return staticHtml\`<lr-branch></lr-branch>\`; }
+    }
+  `;
+  assert.equal(recursiveParts(source).length, 1);
+});
+
+test('ignores a self tag that appears only in a comment or JSDoc example', () => {
+  const source = `
+    /** @customElement lr-branch @csspart row - One branch row.
+     * @example html\`<lr-branch></lr-branch>\`
+     */
+    export class Fixture extends LyraElement {
+      // A nested <lr-branch> would need exportparts.
+      override render() { return html\`<div part="row"></div>\`; }
+    }
+  `;
+  assert.deepEqual(recursiveParts(source), []);
+});
+
+test('ignores a self tag that appears only in an ordinary diagnostic string', () => {
+  const source = `
+    /** @customElement lr-branch @csspart row - One branch row. */
+    export class Fixture extends LyraElement {
+      override render() {
+        console.warn('<lr-branch> needs an item');
+        return html\`<div part="row"></div>\`;
+      }
+    }
+  `;
+  assert.deepEqual(recursiveParts(source), []);
+});
+
+test('does not impose forwarding on a self-rendering component with no public CSS parts', () => {
+  const source = `
+    /** @customElement lr-private-branch */
+    export class Fixture extends LyraElement {
+      override render() { return html\`<lr-private-branch></lr-private-branch>\`; }
+    }
+  `;
+  assert.deepEqual(recursiveParts(source), []);
+});
+
 // --- part-compound ----------------------------------------------------------------------------
 
 test('flags ::part() followed by an attribute, class, id, combinator or descendant', () => {
@@ -275,4 +364,3 @@ if (failures > 0) {
 } else {
   console.log(`Part reachability checker self-test passed (${passes} cases).`);
 }
-

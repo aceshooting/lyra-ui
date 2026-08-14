@@ -177,7 +177,8 @@ Full rules, incidents, and patterns:
   an innocent line far below. `${` in a comment is the same trap.
 - Silently-inert CSS is invisible to all tooling — assert rendered results
   (`getComputedStyle`/hit test), never stylesheet text; only pseudo-classes may follow
-  `::part(x)`; encode state in the part name.
+  `::part(x)`; encode state in the part name; and forward every documented part with
+  `exportparts` when a component recursively renders its own tag behind another shadow root.
 - Tree-shakeable exports: side-effect-free class module + side-effectful registration entry;
   inventory metadata generates root imports and BOTH dist/src `package.json#sideEffects` forms,
   while named exports stay curated by hand (`pnpm registrations`).

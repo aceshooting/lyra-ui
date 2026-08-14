@@ -640,6 +640,93 @@ describe('tree-item declarative child model', () => {
   });
 });
 
+describe('recursive data-model CSS parts', () => {
+  const publicParts = [
+    'base',
+    'tree-item',
+    'row',
+    'toggle',
+    'icon',
+    'content',
+    'label',
+    'description',
+    'badge',
+    'group',
+    'item',
+    'item--disabled',
+    'item--expanded',
+    'item--indeterminate',
+    'item--selected',
+    'indentation',
+    'expand-button',
+    'spinner',
+    'spinner__base',
+    'children',
+    'checkbox',
+    'checkbox__base',
+    'checkbox__control',
+    'checkbox__control--checked',
+    'checkbox__control--indeterminate',
+    'checkbox__checked-icon',
+    'checkbox__indeterminate-icon',
+    'checkbox__label',
+  ];
+
+  it('forwards every public part and lets one consumer rule style rows at three depths', async () => {
+    const style = document.createElement('style');
+    style.textContent = `
+      lr-tree-item.nested-parts-probe::part(row) { padding-block-start: 13px; }
+      lr-tree-item.nested-parts-probe::part(label) { letter-spacing: 3px; }
+    `;
+    document.head.append(style);
+    try {
+      const root = (await fixture(html`<lr-tree-item
+        class="nested-parts-probe"
+        .item=${{
+          id: 'root',
+          label: 'Root',
+          children: [
+            {
+              id: 'child',
+              label: 'Child',
+              children: [{ id: 'grandchild', label: 'Grandchild' }],
+            },
+          ],
+        }}
+      ></lr-tree-item>`)) as LyraTreeItem;
+      await root.updateComplete;
+
+      const child = root.shadowRoot!.querySelector<LyraTreeItem>('lr-tree-item');
+      expect(child !== null).to.equal(true);
+      await child!.updateComplete;
+      const grandchild = child!.shadowRoot!.querySelector<LyraTreeItem>('lr-tree-item');
+      expect(grandchild !== null).to.equal(true);
+      await grandchild!.updateComplete;
+
+      for (const nested of [child!, grandchild!]) {
+        const exported = new Set(
+          (nested.getAttribute('exportparts') ?? '')
+            .split(',')
+            .map((mapping) => mapping.trim().split(':')[0]!.trim())
+            .filter(Boolean),
+        );
+        for (const part of publicParts) {
+          expect(exported.has(part), `${nested.item!.id} exports ${part}`).to.equal(true);
+        }
+      }
+
+      for (const item of [root, child!, grandchild!]) {
+        const row = item.shadowRoot!.querySelector<HTMLElement>('[part~="row"]')!;
+        const label = item.shadowRoot!.querySelector<HTMLElement>('[part~="label"]')!;
+        expect(getComputedStyle(row).paddingBlockStart, `${item.item!.id} row`).to.equal('13px');
+        expect(getComputedStyle(label).letterSpacing, `${item.item!.id} label`).to.equal('3px');
+      }
+    } finally {
+      style.remove();
+    }
+  });
+});
+
 // Regression tests for `depth`/`setSize`/`posInSet`: these feed `aria-level`/`aria-setsize`/
 // `aria-posinset` directly in `willUpdate()`. Per the ARIA spec those attributes must be positive
 // integers (aria-setsize additionally permits the `-1` "unknown" sentinel) -- a NaN/negative value

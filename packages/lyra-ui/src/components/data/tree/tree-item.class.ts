@@ -28,6 +28,39 @@ import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.ge
  *  label the way `wa-tree-item`/`sl-tree-item` markup expects. Assigned by this component. */
 const CHILDREN_SLOT = 'children';
 
+/** Same-name forwarding keeps every public part reachable through each recursively rendered
+ * data-model child. Keep this list aligned with the class JSDoc's complete @csspart vocabulary. */
+const TREE_ITEM_EXPORT_PARTS = [
+  'base',
+  'tree-item',
+  'row',
+  'toggle',
+  'icon',
+  'content',
+  'label',
+  'description',
+  'badge',
+  'group',
+  'item',
+  'item--disabled',
+  'item--expanded',
+  'item--indeterminate',
+  'item--selected',
+  'indentation',
+  'expand-button',
+  'spinner',
+  'spinner__base',
+  'children',
+  'checkbox',
+  'checkbox__base',
+  'checkbox__control',
+  'checkbox__control--checked',
+  'checkbox__control--indeterminate',
+  'checkbox__checked-icon',
+  'checkbox__indeterminate-icon',
+  'checkbox__label',
+].join(', ');
+
 export interface LyraTreeItemEventMap {
   'lr-node-toggle': CustomEvent<{ id: string; expanded: boolean }>;
   'lr-node-select': CustomEvent<{ id: string }>;
@@ -65,6 +98,10 @@ export interface LyraTreeItemEventMap {
  * forwarding slots; a host `aria-label` keeps precedence by presence in both models. A data
  * item's `accessibleLabel` is reflected only while the component owns that attribute, so an
  * initial or later author override survives object refreshes.
+ * Every documented CSS part is forwarded under the same name through recursively rendered data-
+ * model children. A consumer selector on the outer item therefore reaches matching row, label,
+ * state, checkbox, badge, and disclosure parts at every rendered depth. Declarative children stay
+ * in consumer light DOM and remain directly selectable as their own `<lr-tree-item>` hosts.
  *
  * `role="treeitem"` (plus `aria-expanded`/`aria-level`/`aria-setsize`/
  * `aria-posinset` and the roving `tabindex`, driven by `<lr-tree>`) live on
@@ -1026,6 +1063,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
                 this.keyedChildren(item.children),
                 (entry) => entry.key,
                 ({ child }, i) => html`<lr-tree-item
+                  exportparts=${TREE_ITEM_EXPORT_PARTS}
                   .item=${child}
                   .treeIdentityContext=${this.childIdentityContext(i)}
                   .depth=${this.depth + 1}
